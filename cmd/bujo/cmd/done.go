@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -20,9 +19,9 @@ Examples:
   bujo done 15`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := strconv.ParseInt(args[0], 10, 64)
+		id, err := parseEntryID(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid ID: %s", args[0])
+			return err
 		}
 
 		err = bujoService.MarkDone(cmd.Context(), id)

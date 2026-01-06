@@ -3,11 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tj/go-naturaldate"
 )
 
 var migrateTo string
@@ -32,12 +29,12 @@ Examples:
 			return fmt.Errorf("--to flag is required")
 		}
 
-		id, err := strconv.ParseInt(args[0], 10, 64)
+		id, err := parseEntryID(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid entry ID: %s", args[0])
+			return err
 		}
 
-		toDate, err := parseMigrateDate(migrateTo)
+		toDate, err := parseFutureDate(migrateTo)
 		if err != nil {
 			return err
 		}
@@ -56,21 +53,4 @@ Examples:
 func init() {
 	migrateCmd.Flags().StringVar(&migrateTo, "to", "", "Target date (e.g., 'tomorrow', 'next monday', '2026-01-15')")
 	rootCmd.AddCommand(migrateCmd)
-}
-
-func parseMigrateDate(s string) (time.Time, error) {
-	now := time.Now()
-
-	// Try standard date format first
-	if parsed, err := time.Parse("2006-01-02", s); err == nil {
-		return parsed, nil
-	}
-
-	// Try natural language parsing (future direction)
-	parsed, err := naturaldate.Parse(s, now, naturaldate.WithDirection(naturaldate.Future))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date: %s", s)
-	}
-
-	return parsed, nil
 }

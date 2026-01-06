@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -21,29 +19,24 @@ Examples:
   bujo habit rename #1 "Morning Workout"`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		oldNameOrID := args[0]
 		newName := args[1]
 
-		var err error
-		var displayOld string
+		name, id, isID, err := parseHabitNameOrID(args[0])
+		if err != nil {
+			return err
+		}
 
-		if strings.HasPrefix(oldNameOrID, "#") {
-			habitID, parseErr := strconv.ParseInt(oldNameOrID[1:], 10, 64)
-			if parseErr != nil {
-				return fmt.Errorf("invalid habit ID: %s", oldNameOrID)
-			}
-			err = habitService.RenameHabitByID(cmd.Context(), habitID, newName)
-			displayOld = oldNameOrID
+		if isID {
+			err = habitService.RenameHabitByID(cmd.Context(), id, newName)
 		} else {
-			err = habitService.RenameHabit(cmd.Context(), oldNameOrID, newName)
-			displayOld = oldNameOrID
+			err = habitService.RenameHabit(cmd.Context(), name, newName)
 		}
 
 		if err != nil {
 			return fmt.Errorf("failed to rename habit: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "✓ Renamed %s to %s\n", displayOld, newName)
+		fmt.Fprintf(os.Stderr, "✓ Renamed %s to %s\n", args[0], newName)
 		return nil
 	},
 }

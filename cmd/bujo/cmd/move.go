@@ -3,11 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tj/go-naturaldate"
 	"github.com/typingincolor/bujo/internal/service"
 )
 
@@ -35,9 +32,9 @@ Examples:
   bujo move 42 --parent 10 --logged "last monday"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := strconv.ParseInt(args[0], 10, 64)
+		id, err := parseEntryID(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid entry ID: %s", args[0])
+			return err
 		}
 
 		if moveParent == "" && moveLogged == "" && !moveRoot {
@@ -53,7 +50,7 @@ Examples:
 		if moveRoot {
 			opts.MoveToRoot = &moveRoot
 		} else if moveParent != "" {
-			parentID, err := strconv.ParseInt(moveParent, 10, 64)
+			parentID, err := parseEntryID(moveParent)
 			if err != nil {
 				return fmt.Errorf("invalid parent ID: %s", moveParent)
 			}
@@ -61,7 +58,7 @@ Examples:
 		}
 
 		if moveLogged != "" {
-			loggedDate, err := parseMoveDate(moveLogged)
+			loggedDate, err := parsePastDate(moveLogged)
 			if err != nil {
 				return err
 			}
@@ -82,19 +79,4 @@ func init() {
 	moveCmd.Flags().BoolVar(&moveRoot, "root", false, "Move entry to root (no parent)")
 	moveCmd.Flags().StringVar(&moveLogged, "logged", "", "New logged date (e.g., 'yesterday', '2026-01-05')")
 	rootCmd.AddCommand(moveCmd)
-}
-
-func parseMoveDate(s string) (time.Time, error) {
-	now := time.Now()
-
-	if parsed, err := time.Parse("2006-01-02", s); err == nil {
-		return parsed, nil
-	}
-
-	parsed, err := naturaldate.Parse(s, now)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date: %s", s)
-	}
-
-	return parsed, nil
 }

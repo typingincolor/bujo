@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,9 +18,9 @@ Examples:
   bujo edit 1 "Updated task description"`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := strconv.ParseInt(args[0], 10, 64)
+		id, err := parseEntryID(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid entry ID: %s", args[0])
+			return err
 		}
 
 		newContent := strings.Join(args[1:], " ")

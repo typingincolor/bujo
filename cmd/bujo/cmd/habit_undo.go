@@ -3,8 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -22,28 +20,22 @@ Examples:
   bujo habit undo #1`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		nameOrID := args[0]
+		name, id, isID, err := parseHabitNameOrID(args[0])
+		if err != nil {
+			return err
+		}
 
-		var err error
-		var displayName string
-
-		if strings.HasPrefix(nameOrID, "#") {
-			habitID, parseErr := strconv.ParseInt(nameOrID[1:], 10, 64)
-			if parseErr != nil {
-				return fmt.Errorf("invalid habit ID: %s", nameOrID)
-			}
-			err = habitService.UndoLastLogByID(cmd.Context(), habitID)
-			displayName = nameOrID
+		if isID {
+			err = habitService.UndoLastLogByID(cmd.Context(), id)
 		} else {
-			err = habitService.UndoLastLog(cmd.Context(), nameOrID)
-			displayName = nameOrID
+			err = habitService.UndoLastLog(cmd.Context(), name)
 		}
 
 		if err != nil {
 			return fmt.Errorf("failed to undo habit: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "✓ Undid last log for: %s\n", displayName)
+		fmt.Fprintf(os.Stderr, "✓ Undid last log for: %s\n", args[0])
 		return nil
 	},
 }

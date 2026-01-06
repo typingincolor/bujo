@@ -36,6 +36,28 @@ func NewHabitService(habitRepo HabitRepository, logRepo HabitLogRepository) *Hab
 	}
 }
 
+func (s *HabitService) getHabitByID(ctx context.Context, id int64) (*domain.Habit, error) {
+	habit, err := s.habitRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if habit == nil {
+		return nil, fmt.Errorf("habit not found: %d", id)
+	}
+	return habit, nil
+}
+
+func (s *HabitService) getHabitByName(ctx context.Context, name string) (*domain.Habit, error) {
+	habit, err := s.habitRepo.GetByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if habit == nil {
+		return nil, fmt.Errorf("habit not found: %s", name)
+	}
+	return habit, nil
+}
+
 func (s *HabitService) LogHabit(ctx context.Context, name string, count int) error {
 	return s.LogHabitForDate(ctx, name, count, time.Now())
 }
@@ -61,12 +83,8 @@ func (s *HabitService) LogHabitByID(ctx context.Context, habitID int64, count in
 }
 
 func (s *HabitService) LogHabitByIDForDate(ctx context.Context, habitID int64, count int, date time.Time) error {
-	habit, err := s.habitRepo.GetByID(ctx, habitID)
-	if err != nil {
+	if _, err := s.getHabitByID(ctx, habitID); err != nil {
 		return err
-	}
-	if habit == nil {
-		return fmt.Errorf("habit not found: %d", habitID)
 	}
 
 	log := domain.HabitLog{
@@ -75,29 +93,22 @@ func (s *HabitService) LogHabitByIDForDate(ctx context.Context, habitID int64, c
 		LoggedAt: date,
 	}
 
-	_, err = s.logRepo.Insert(ctx, log)
+	_, err := s.logRepo.Insert(ctx, log)
 	return err
 }
 
 func (s *HabitService) UndoLastLog(ctx context.Context, name string) error {
-	habit, err := s.habitRepo.GetByName(ctx, name)
+	habit, err := s.getHabitByName(ctx, name)
 	if err != nil {
 		return err
-	}
-	if habit == nil {
-		return fmt.Errorf("habit not found: %s", name)
 	}
 
 	return s.undoLastLogForHabit(ctx, habit.ID)
 }
 
 func (s *HabitService) UndoLastLogByID(ctx context.Context, habitID int64) error {
-	habit, err := s.habitRepo.GetByID(ctx, habitID)
-	if err != nil {
+	if _, err := s.getHabitByID(ctx, habitID); err != nil {
 		return err
-	}
-	if habit == nil {
-		return fmt.Errorf("habit not found: %d", habitID)
 	}
 
 	return s.undoLastLogForHabit(ctx, habitID)
@@ -128,12 +139,9 @@ func (s *HabitService) DeleteLog(ctx context.Context, logID int64) error {
 }
 
 func (s *HabitService) RenameHabit(ctx context.Context, oldName, newName string) error {
-	habit, err := s.habitRepo.GetByName(ctx, oldName)
+	habit, err := s.getHabitByName(ctx, oldName)
 	if err != nil {
 		return err
-	}
-	if habit == nil {
-		return fmt.Errorf("habit not found: %s", oldName)
 	}
 
 	habit.Name = newName
@@ -141,12 +149,9 @@ func (s *HabitService) RenameHabit(ctx context.Context, oldName, newName string)
 }
 
 func (s *HabitService) RenameHabitByID(ctx context.Context, habitID int64, newName string) error {
-	habit, err := s.habitRepo.GetByID(ctx, habitID)
+	habit, err := s.getHabitByID(ctx, habitID)
 	if err != nil {
 		return err
-	}
-	if habit == nil {
-		return fmt.Errorf("habit not found: %d", habitID)
 	}
 
 	habit.Name = newName
@@ -163,24 +168,18 @@ type HabitDetails struct {
 }
 
 func (s *HabitService) InspectHabit(ctx context.Context, name string, from, to, today time.Time) (*HabitDetails, error) {
-	habit, err := s.habitRepo.GetByName(ctx, name)
+	habit, err := s.getHabitByName(ctx, name)
 	if err != nil {
 		return nil, err
-	}
-	if habit == nil {
-		return nil, fmt.Errorf("habit not found: %s", name)
 	}
 
 	return s.inspectHabitByHabit(ctx, habit, from, to, today)
 }
 
 func (s *HabitService) InspectHabitByID(ctx context.Context, habitID int64, from, to, today time.Time) (*HabitDetails, error) {
-	habit, err := s.habitRepo.GetByID(ctx, habitID)
+	habit, err := s.getHabitByID(ctx, habitID)
 	if err != nil {
 		return nil, err
-	}
-	if habit == nil {
-		return nil, fmt.Errorf("habit not found: %d", habitID)
 	}
 
 	return s.inspectHabitByHabit(ctx, habit, from, to, today)

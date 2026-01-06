@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/typingincolor/bujo/internal/adapter/cli"
 	"github.com/typingincolor/bujo/internal/domain"
 )
 
@@ -26,9 +25,9 @@ Examples:
   bujo view 42 -u 2      # Show great-grandparent context`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id, err := strconv.ParseInt(args[0], 10, 64)
+		id, err := parseEntryID(args[0])
 		if err != nil {
-			return fmt.Errorf("invalid ID: %s", args[0])
+			return err
 		}
 
 		entries, err := bujoService.GetEntryContext(cmd.Context(), id, viewAncestors)
@@ -45,12 +44,6 @@ func init() {
 	viewCmd.Flags().IntVarP(&viewAncestors, "up", "u", 0, "Number of additional ancestor levels to show")
 	rootCmd.AddCommand(viewCmd)
 }
-
-var (
-	viewGreen  = color.New(color.FgGreen).SprintFunc()
-	viewYellow = color.New(color.FgYellow, color.Bold).SprintFunc()
-	viewDimmed = color.New(color.Faint).SprintFunc()
-)
 
 func renderViewTree(entries []domain.Entry, highlightID int64) string {
 	var sb strings.Builder
@@ -93,19 +86,19 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 
 	// Highlight the requested entry
 	if entry.ID == highlightID {
-		idStr = viewYellow(idStr)
-		content = viewYellow(content)
-		symbol = viewYellow(symbol)
+		idStr = cli.Highlight(idStr)
+		content = cli.Highlight(content)
+		symbol = cli.Highlight(symbol)
 	} else {
 		switch entry.Type {
 		case domain.EntryTypeDone:
-			content = viewGreen(content)
-			symbol = viewGreen(symbol)
-			idStr = viewGreen(idStr)
+			content = cli.Green(content)
+			symbol = cli.Green(symbol)
+			idStr = cli.Green(idStr)
 		case domain.EntryTypeMigrated:
-			content = viewDimmed(content)
-			symbol = viewDimmed(symbol)
-			idStr = viewDimmed(idStr)
+			content = cli.Dimmed(content)
+			symbol = cli.Dimmed(symbol)
+			idStr = cli.Dimmed(idStr)
 		}
 	}
 

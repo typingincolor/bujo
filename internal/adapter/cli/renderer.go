@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	cyan    = color.New(color.FgCyan).SprintFunc()
-	green   = color.New(color.FgGreen).SprintFunc()
-	red     = color.New(color.FgRed).SprintFunc()
-	yellow  = color.New(color.FgYellow).SprintFunc()
-	bold    = color.New(color.Bold).SprintFunc()
-	dimmed  = color.New(color.Faint).SprintFunc()
+	Cyan      = color.New(color.FgCyan).SprintFunc()
+	Green     = color.New(color.FgGreen).SprintFunc()
+	Red       = color.New(color.FgRed).SprintFunc()
+	Yellow    = color.New(color.FgYellow).SprintFunc()
+	Bold      = color.New(color.Bold).SprintFunc()
+	Dimmed    = color.New(color.Faint).SprintFunc()
+	Highlight = color.New(color.FgYellow, color.Bold).SprintFunc()
 )
 
 const separator = "---------------------------------------------------------"
@@ -27,15 +28,15 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	// Header line with date and location
 	dateStr := agenda.Date.Format("Monday, Jan 2, 2006")
 	if agenda.Location != nil {
-		sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", cyan(bold(dateStr)), yellow(*agenda.Location)))
+		sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", Cyan(Bold(dateStr)), Yellow(*agenda.Location)))
 	} else {
-		sb.WriteString(fmt.Sprintf("📅 %s\n", cyan(bold(dateStr))))
+		sb.WriteString(fmt.Sprintf("📅 %s\n", Cyan(Bold(dateStr))))
 	}
-	sb.WriteString(dimmed(separator) + "\n")
+	sb.WriteString(Dimmed(separator) + "\n")
 
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", red(bold("OVERDUE"))))
+		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
 		for _, entry := range agenda.Overdue {
 			sb.WriteString(renderEntry(entry, 0, true))
 		}
@@ -44,13 +45,13 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 
 	// Today section
 	if len(agenda.Today) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", bold("TODAY")))
+		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
 		renderEntryTree(&sb, agenda.Today, 0)
 	} else if len(agenda.Overdue) == 0 {
-		sb.WriteString(dimmed("No entries for today\n"))
+		sb.WriteString(Dimmed("No entries for today\n"))
 	}
 
-	sb.WriteString(dimmed(separator) + "\n")
+	sb.WriteString(Dimmed(separator) + "\n")
 
 	return sb.String()
 }
@@ -95,18 +96,18 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	// Color based on type
 	switch entry.Type {
 	case domain.EntryTypeDone:
-		content = green(content)
-		symbol = green(symbol)
-		idStr = green(idStr)
+		content = Green(content)
+		symbol = Green(symbol)
+		idStr = Green(idStr)
 	case domain.EntryTypeMigrated:
-		content = dimmed(content)
-		symbol = dimmed(symbol)
-		idStr = dimmed(idStr)
+		content = Dimmed(content)
+		symbol = Dimmed(symbol)
+		idStr = Dimmed(idStr)
 	}
 
 	if overdue {
-		content = red(content)
-		idStr = red(idStr)
+		content = Red(content)
+		idStr = Red(idStr)
 	}
 
 	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, idStr, symbol, content)
@@ -115,32 +116,32 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 func RenderHabitTracker(status *service.TrackerStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", cyan(bold("Habit Tracker"))))
+	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", Cyan(Bold("Habit Tracker"))))
 
 	if len(status.Habits) == 0 {
-		sb.WriteString(dimmed("No habits tracked yet\n"))
+		sb.WriteString(Dimmed("No habits tracked yet\n"))
 		return sb.String()
 	}
 
 	for _, habit := range status.Habits {
 		// Habit name and streak
-		streakColor := green
+		streakColor := Green
 		if habit.CurrentStreak == 0 {
-			streakColor = red
+			streakColor = Red
 		}
 
-		sb.WriteString(fmt.Sprintf("%s %s\n", bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
+		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
 
 		// Sparkline for last 7 days
 		sparkline := renderSparkline(habit.DayHistory)
 		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
 
 		// Completion percentage
-		completionColor := green
+		completionColor := Green
 		if habit.CompletionPercent < 50 {
-			completionColor = red
+			completionColor = Red
 		} else if habit.CompletionPercent < 80 {
-			completionColor = yellow
+			completionColor = Yellow
 		}
 		sb.WriteString(fmt.Sprintf("  %s completion\n\n", completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent))))
 	}
@@ -159,9 +160,9 @@ func renderSparkline(days []service.DayStatus) string {
 	for i := start; i >= 0; i-- {
 		day := days[i]
 		if day.Completed {
-			sb.WriteString(green("●"))
+			sb.WriteString(Green("●"))
 		} else {
-			sb.WriteString(dimmed("○"))
+			sb.WriteString(Dimmed("○"))
 		}
 		sb.WriteString(" ")
 	}
@@ -171,7 +172,7 @@ func renderSparkline(days []service.DayStatus) string {
 	for i := start; i >= 0; i-- {
 		day := days[i]
 		label := day.Date.Format("Mon")[:1]
-		sb.WriteString(dimmed(label))
+		sb.WriteString(Dimmed(label))
 		sb.WriteString(" ")
 	}
 
@@ -181,31 +182,31 @@ func renderSparkline(days []service.DayStatus) string {
 func RenderHabitMonth(status *service.TrackerStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", cyan(bold("Habit Tracker - Month View"))))
+	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", Cyan(Bold("Habit Tracker - Month View"))))
 
 	if len(status.Habits) == 0 {
-		sb.WriteString(dimmed("No habits tracked yet\n"))
+		sb.WriteString(Dimmed("No habits tracked yet\n"))
 		return sb.String()
 	}
 
 	for _, habit := range status.Habits {
 		// Habit name and streak
-		streakColor := green
+		streakColor := Green
 		if habit.CurrentStreak == 0 {
-			streakColor = red
+			streakColor = Red
 		}
 
-		sb.WriteString(fmt.Sprintf("%s %s\n", bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
+		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
 
 		// Month calendar
 		sb.WriteString(renderMonthCalendar(habit.DayHistory))
 
 		// Completion percentage
-		completionColor := green
+		completionColor := Green
 		if habit.CompletionPercent < 50 {
-			completionColor = red
+			completionColor = Red
 		} else if habit.CompletionPercent < 80 {
-			completionColor = yellow
+			completionColor = Yellow
 		}
 		sb.WriteString(fmt.Sprintf("  %s completion (last 30 days)\n\n", completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent))))
 	}
@@ -219,7 +220,7 @@ func renderMonthCalendar(days []service.DayStatus) string {
 	// Header with week days
 	sb.WriteString("  ")
 	for _, d := range []string{"M", "T", "W", "T", "F", "S", "S"} {
-		sb.WriteString(dimmed(d) + " ")
+		sb.WriteString(Dimmed(d) + " ")
 	}
 	sb.WriteString("\n")
 
@@ -251,11 +252,11 @@ func renderMonthCalendar(days []service.DayStatus) string {
 		key := current.Format("2006-01-02")
 
 		if current.Before(oldest) || current.After(newest) {
-			sb.WriteString(dimmed("·") + " ")
+			sb.WriteString(Dimmed("·") + " ")
 		} else if completed[key] {
-			sb.WriteString(green("●") + " ")
+			sb.WriteString(Green("●") + " ")
 		} else {
-			sb.WriteString(dimmed("○") + " ")
+			sb.WriteString(Dimmed("○") + " ")
 		}
 
 		// New line on Sunday
@@ -278,12 +279,12 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 	var sb strings.Builder
 
 	// Header
-	sb.WriteString(fmt.Sprintf("📋 %s\n", cyan(bold(details.Name))))
+	sb.WriteString(fmt.Sprintf("📋 %s\n", Cyan(Bold(details.Name))))
 
 	// Stats line
-	streakColor := green
+	streakColor := Green
 	if details.CurrentStreak == 0 {
-		streakColor = red
+		streakColor = Red
 	}
 	sb.WriteString(fmt.Sprintf("Streak: %s | Goal: %d/day\n\n",
 		streakColor(fmt.Sprintf("%d days", details.CurrentStreak)),
@@ -291,10 +292,10 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 
 	// Logs table
 	if len(details.Logs) == 0 {
-		sb.WriteString(dimmed("No logs in this period\n"))
+		sb.WriteString(Dimmed("No logs in this period\n"))
 	} else {
-		sb.WriteString(bold("Logs:\n"))
-		sb.WriteString(dimmed("  ID      Date         Count\n"))
+		sb.WriteString(Bold("Logs:\n"))
+		sb.WriteString(Dimmed("  ID      Date         Count\n"))
 		for _, log := range details.Logs {
 			sb.WriteString(fmt.Sprintf("  %-6d  %-11s  %d\n",
 				log.ID,
@@ -303,7 +304,7 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("\n%s %d\n", dimmed("Habit ID:"), details.ID))
+	sb.WriteString(fmt.Sprintf("\n%s %d\n", Dimmed("Habit ID:"), details.ID))
 
 	return sb.String()
 }

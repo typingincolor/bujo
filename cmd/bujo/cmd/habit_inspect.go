@@ -2,12 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tj/go-naturaldate"
 	"github.com/typingincolor/bujo/internal/adapter/cli"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -32,7 +29,11 @@ Examples:
   bujo habit inspect Gym --from 2025-12-01 --to 2025-12-31`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		nameOrID := args[0]
+		name, id, isID, err := parseHabitNameOrID(args[0])
+		if err != nil {
+			return err
+		}
+
 		today := time.Now()
 
 		// Default: last 30 days
@@ -40,7 +41,7 @@ Examples:
 		to := today
 
 		if inspectFrom != "" {
-			parsed, err := parseInspectDate(inspectFrom)
+			parsed, err := parsePastDate(inspectFrom)
 			if err != nil {
 				return err
 			}
@@ -48,7 +49,7 @@ Examples:
 		}
 
 		if inspectTo != "" {
-			parsed, err := parseInspectDate(inspectTo)
+			parsed, err := parsePastDate(inspectTo)
 			if err != nil {
 				return err
 			}
@@ -56,16 +57,11 @@ Examples:
 		}
 
 		var details *service.HabitDetails
-		var err error
 
-		if strings.HasPrefix(nameOrID, "#") {
-			habitID, parseErr := strconv.ParseInt(nameOrID[1:], 10, 64)
-			if parseErr != nil {
-				return fmt.Errorf("invalid habit ID: %s", nameOrID)
-			}
-			details, err = habitService.InspectHabitByID(cmd.Context(), habitID, from, to, today)
+		if isID {
+			details, err = habitService.InspectHabitByID(cmd.Context(), id, from, to, today)
 		} else {
-			details, err = habitService.InspectHabit(cmd.Context(), nameOrID, from, to, today)
+			details, err = habitService.InspectHabit(cmd.Context(), name, from, to, today)
 		}
 
 		if err != nil {
@@ -81,21 +77,4 @@ func init() {
 	habitInspectCmd.Flags().StringVar(&inspectFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
 	habitInspectCmd.Flags().StringVar(&inspectTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
 	habitCmd.AddCommand(habitInspectCmd)
-}
-
-func parseInspectDate(s string) (time.Time, error) {
-	now := time.Now()
-
-	// Try standard date format first
-	if parsed, err := time.Parse("2006-01-02", s); err == nil {
-		return parsed, nil
-	}
-
-	// Try natural language parsing
-	parsed, err := naturaldate.Parse(s, now, naturaldate.WithDirection(naturaldate.Past))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date: %s", s)
-	}
-
-	return parsed, nil
 }
