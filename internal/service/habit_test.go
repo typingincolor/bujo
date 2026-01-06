@@ -14,7 +14,7 @@ func setupHabitService(t *testing.T) *HabitService {
 	t.Helper()
 	db, err := sqlite.OpenAndMigrate(":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	habitRepo := sqlite.NewHabitRepository(db)
 	logRepo := sqlite.NewHabitLogRepository(db)
