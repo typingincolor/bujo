@@ -88,7 +88,7 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 		treePrefix = "└── "
 	}
 
-	symbol := getEntrySymbol(entry.Type)
+	symbol := entry.Type.Symbol()
 	content := entry.Content
 	idStr := fmt.Sprintf("%3d", entry.ID)
 
@@ -110,23 +110,6 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	}
 
 	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, idStr, symbol, content)
-}
-
-func getEntrySymbol(t domain.EntryType) string {
-	switch t {
-	case domain.EntryTypeTask:
-		return "."
-	case domain.EntryTypeNote:
-		return "-"
-	case domain.EntryTypeEvent:
-		return "o"
-	case domain.EntryTypeDone:
-		return "x"
-	case domain.EntryTypeMigrated:
-		return ">"
-	default:
-		return "."
-	}
 }
 
 func RenderHabitTracker(status *service.TrackerStatus) string {

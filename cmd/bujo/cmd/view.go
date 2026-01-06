@@ -87,7 +87,7 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 		prefix = "└── "
 	}
 
-	symbol := getViewSymbol(entry.Type)
+	symbol := entry.Type.Symbol()
 	idStr := fmt.Sprintf("%3d", entry.ID)
 	content := entry.Content
 
@@ -113,22 +113,5 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 
 	for _, child := range children[entry.ID] {
 		renderViewEntry(sb, child, children, depth+1, highlightID)
-	}
-}
-
-func getViewSymbol(t domain.EntryType) string {
-	switch t {
-	case domain.EntryTypeTask:
-		return "."
-	case domain.EntryTypeNote:
-		return "-"
-	case domain.EntryTypeEvent:
-		return "o"
-	case domain.EntryTypeDone:
-		return "x"
-	case domain.EntryTypeMigrated:
-		return ">"
-	default:
-		return "."
 	}
 }
