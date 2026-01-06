@@ -1,5 +1,11 @@
 # bujo
 
+[![CI](https://github.com/typingincolor/bujo/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/ci.yml)
+[![Release](https://github.com/typingincolor/bujo/actions/workflows/release.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/release.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/typingincolor/bujo)](https://goreportcard.com/report/github.com/typingincolor/bujo)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/typingincolor/bujo)](https://github.com/typingincolor/bujo/releases/latest)
+
 A command-line Bullet Journal for rapid task capture, habit tracking, and daily planning.
 
 ## Features
