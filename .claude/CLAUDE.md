@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API.
 
-**Tech Stack:** Go 1.25.5, SQLite, Cobra CLI, Gemini API
+**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API
 
 ## Build Commands
 
