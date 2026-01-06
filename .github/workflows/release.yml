@@ -1,9 +1,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
@@ -12,10 +13,14 @@ jobs:
   release:
     name: Release
     runs-on: macos-latest
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
 
       - name: Set up Go
@@ -23,9 +28,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: Run tests
-        run: go test -v ./...
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
