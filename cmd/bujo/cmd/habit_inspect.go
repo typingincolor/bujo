@@ -56,6 +56,10 @@ Examples:
 			to = parsed
 		}
 
+		if err := validateDateRange(from, to); err != nil {
+			return err
+		}
+
 		var details *service.HabitDetails
 
 		if isID {

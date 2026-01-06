@@ -43,6 +43,13 @@ func parsePastDate(s string) (time.Time, error) {
 	return parsed, nil
 }
 
+func validateDateRange(from, to time.Time) error {
+	if from.After(to) {
+		return fmt.Errorf("--from date must be before --to date")
+	}
+	return nil
+}
+
 func parseFutureDate(s string) (time.Time, error) {
 	now := time.Now()
 
