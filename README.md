@@ -83,31 +83,33 @@ bujo habit
 
 ### `bujo ls`
 
-Display today's agenda including overdue tasks and current location.
+Display today's agenda including overdue tasks and current location. Each entry shows its ID for use with `bujo done`.
 
 ```
-📅 Tuesday, January 6, 2026
-📍 Home Office
-
-⚠️  Overdue
-. Finish quarterly report
-
-Today
-. Buy groceries
-  - Remember the milk
-o Team standup at 10am
+📅 Tuesday, Jan 6, 2026 | 📍 Home Office
+---------------------------------------------------------
+TODAY
+  1 . Buy groceries
+  2 . Finish report
+  └──   3 - Remember to include Q4 data
+  4 o Team standup at 10am
+---------------------------------------------------------
 ```
 
 ### `bujo add [entries...]`
 
-Add one or more entries to today's journal.
+Add one or more entries to today's journal. Returns the ID of each entry added (one per line).
 
 ```bash
-# Single entry
+# Single entry (returns ID)
 bujo add ". Call mom"
+# Output: 1
 
 # Multiple entries (each argument is one entry)
 bujo add ". Task one" ". Task two"
+# Output:
+# 2
+# 3
 
 # Hierarchical entries via pipe
 echo ". Project planning
@@ -120,6 +122,9 @@ cat daily-tasks.txt | bujo add
 
 # With location override
 bujo add --at "Coffee Shop" ". Write blog post"
+
+# Use in scripts (mark task done immediately after adding)
+id=$(bujo add ". Quick task" 2>/dev/null) && bujo done $id
 ```
 
 ### `bujo work <location>`
