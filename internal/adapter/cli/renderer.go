@@ -92,6 +92,7 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	checkbox := getCheckbox(entry.Type)
 	symbol := getEntrySymbol(entry.Type)
 	content := entry.Content
+	idStr := fmt.Sprintf("%3d", entry.ID)
 
 	// Color based on type
 	switch entry.Type {
@@ -99,18 +100,21 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 		content = green(content)
 		symbol = green(symbol)
 		checkbox = green(checkbox)
+		idStr = green(idStr)
 	case domain.EntryTypeMigrated:
 		content = dimmed(content)
 		symbol = dimmed(symbol)
 		checkbox = dimmed(checkbox)
+		idStr = dimmed(idStr)
 	}
 
 	if overdue {
 		content = red(content)
 		checkbox = red(checkbox)
+		idStr = red(idStr)
 	}
 
-	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, checkbox, symbol, content)
+	return fmt.Sprintf("%s%s%s %s %s %s\n", indent, treePrefix, checkbox, idStr, symbol, content)
 }
 
 func getCheckbox(t domain.EntryType) string {

@@ -153,3 +153,34 @@ func TestBujoService_GetDailyAgenda_WithLocation(t *testing.T) {
 	require.NotNil(t, agenda.Location)
 	assert.Equal(t, "Home", *agenda.Location)
 }
+
+func TestBujoService_MarkDone(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// Add a task
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	// Mark it done
+	err = service.MarkDone(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Verify it's marked as done
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeDone, entry.Type)
+}
+
+func TestBujoService_MarkDone_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.MarkDone(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}

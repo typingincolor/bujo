@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -12,6 +13,7 @@ type EntryRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]domain.Entry, error)
 	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
+	Update(ctx context.Context, entry domain.Entry) error
 }
 
 type DayContextRepository interface {
@@ -116,4 +118,17 @@ func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location 
 		Location: &location,
 	}
 	return s.dayCtxRepo.Upsert(ctx, dayCtx)
+}
+
+func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
+	entry, err := s.entryRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return fmt.Errorf("entry %d not found", id)
+	}
+
+	entry.Type = domain.EntryTypeDone
+	return s.entryRepo.Update(ctx, *entry)
 }
