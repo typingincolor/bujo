@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tj/go-naturaldate"
 )
 
 var habitLogDate string
@@ -65,23 +66,23 @@ Examples:
 }
 
 func init() {
-	habitLogCmd.Flags().StringVarP(&habitLogDate, "date", "d", "", "Date to log for (YYYY-MM-DD or 'yesterday')")
+	habitLogCmd.Flags().StringVarP(&habitLogDate, "date", "d", "", "Date to log for (e.g., 'yesterday', 'last monday', '2 weeks ago')")
 	habitCmd.AddCommand(habitLogCmd)
 }
 
 func parseDate(s string) (time.Time, error) {
-	today := time.Now()
+	now := time.Now()
 
-	switch s {
-	case "yesterday":
-		return today.AddDate(0, 0, -1), nil
-	case "today":
-		return today, nil
-	default:
-		parsed, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("invalid date format (use YYYY-MM-DD or 'yesterday'): %s", s)
-		}
+	// Try standard date format first
+	if parsed, err := time.Parse("2006-01-02", s); err == nil {
 		return parsed, nil
 	}
+
+	// Try natural language parsing
+	parsed, err := naturaldate.Parse(s, now, naturaldate.WithDirection(naturaldate.Past))
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid date: %s", s)
+	}
+
+	return parsed, nil
 }

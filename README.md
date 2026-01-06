@@ -207,8 +207,10 @@ bujo habit log Gym
 bujo habit log Water 8
 bujo habit log "Morning Pages" 3
 
-# Log for a different date
+# Log for a different date (natural language supported)
 bujo habit log Gym --date yesterday
+bujo habit log Gym -d "last monday"
+bujo habit log Gym -d "2 weeks ago"
 bujo habit log Gym -d 2026-01-05
 ```
 
