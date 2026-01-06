@@ -84,11 +84,14 @@ func CalculateCompletion(logs []HabitLog, days int, today time.Time) float64 {
 		return 0.0
 	}
 
-	loggedDays := make(map[string]bool)
-	startDate := today.AddDate(0, 0, -(days - 1))
+	// Normalize to start of day for consistent date comparisons
+	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	todayEnd := todayStart.AddDate(0, 0, 1)
+	startDate := todayStart.AddDate(0, 0, -(days - 1))
 
+	loggedDays := make(map[string]bool)
 	for _, log := range logs {
-		if !log.LoggedAt.Before(startDate) && !log.LoggedAt.After(today) {
+		if !log.LoggedAt.Before(startDate) && log.LoggedAt.Before(todayEnd) {
 			dayKey := log.LoggedAt.Format("2006-01-02")
 			loggedDays[dayKey] = true
 		}

@@ -1,0 +1,155 @@
+package service
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/typingincolor/bujo/internal/domain"
+	"github.com/typingincolor/bujo/internal/repository/sqlite"
+)
+
+func setupBujoService(t *testing.T) (*BujoService, *sqlite.EntryRepository, *sqlite.DayContextRepository) {
+	t.Helper()
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
+
+	entryRepo := sqlite.NewEntryRepository(db)
+	dayCtxRepo := sqlite.NewDayContextRepository(db)
+	parser := domain.NewTreeParser()
+
+	service := NewBujoService(entryRepo, dayCtxRepo, parser)
+	return service, entryRepo, dayCtxRepo
+}
+
+func TestBujoService_LogEntries_SingleEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	input := ". Buy groceries"
+	opts := LogEntriesOptions{
+		Date: time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+	}
+
+	ids, err := service.LogEntries(ctx, input, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, ids, 1)
+}
+
+func TestBujoService_LogEntries_MultipleEntries(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	input := `. Task one
+- Note one
+o Event one`
+	opts := LogEntriesOptions{
+		Date: time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+	}
+
+	ids, err := service.LogEntries(ctx, input, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, ids, 3)
+}
+
+func TestBujoService_LogEntries_WithLocation(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	input := ". Task with location"
+	location := "Home Office"
+	opts := LogEntriesOptions{
+		Date:     time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+		Location: &location,
+	}
+
+	ids, err := service.LogEntries(ctx, input, opts)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	require.NotNil(t, entry.Location)
+	assert.Equal(t, "Home Office", *entry.Location)
+}
+
+func TestBujoService_LogEntries_NestedEntries(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	input := `o Meeting
+  - Attendees: Alice, Bob
+  . Follow up`
+	opts := LogEntriesOptions{
+		Date: time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC),
+	}
+
+	ids, err := service.LogEntries(ctx, input, opts)
+	require.NoError(t, err)
+	assert.Len(t, ids, 3)
+
+	// Verify parent-child relationships
+	child, err := entryRepo.GetByID(ctx, ids[1])
+	require.NoError(t, err)
+	require.NotNil(t, child.ParentID)
+	assert.Equal(t, ids[0], *child.ParentID)
+}
+
+func TestBujoService_GetDailyAgenda(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	// Add overdue task
+	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: yesterday})
+	require.NoError(t, err)
+
+	// Add today's tasks
+	_, err = service.LogEntries(ctx, `. Today's task
+- Today's note`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	agenda, err := service.GetDailyAgenda(ctx, today)
+
+	require.NoError(t, err)
+	assert.Len(t, agenda.Overdue, 1)
+	assert.Len(t, agenda.Today, 2)
+}
+
+func TestBujoService_SetLocation(t *testing.T) {
+	service, _, dayCtxRepo := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, today, "Manchester Office")
+
+	require.NoError(t, err)
+
+	dayCtx, err := dayCtxRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, dayCtx)
+	assert.Equal(t, "Manchester Office", *dayCtx.Location)
+}
+
+func TestBujoService_GetDailyAgenda_WithLocation(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, today, "Home")
+	require.NoError(t, err)
+
+	agenda, err := service.GetDailyAgenda(ctx, today)
+
+	require.NoError(t, err)
+	require.NotNil(t, agenda.Location)
+	assert.Equal(t, "Home", *agenda.Location)
+}
