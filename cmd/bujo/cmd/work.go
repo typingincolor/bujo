@@ -2,34 +2,36 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 )
 
 var workCmd = &cobra.Command{
-	Use:   "work <location>",
-	Short: "Set today's work location",
-	Long: `Set the location context for today.
+	Use:   "work",
+	Short: "Manage work locations",
+	Long: `Manage work locations for days.
 
-This location will be displayed in the daily agenda and can be used
-for location-based summaries.
+When called without a subcommand, shows today's location.
 
 Examples:
-  bujo work "Home Office"
-  bujo work Manchester`,
-	Args: cobra.MinimumNArgs(1),
+  bujo work                         # Show today's location
+  bujo work set "Home Office"       # Set today's location
+  bujo work set "Office" -d monday  # Set location for a past date
+  bujo work inspect --from "last week"  # View location history
+  bujo work clear -d yesterday      # Clear a day's location`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		location := strings.Join(args, " ")
-
-		err := bujoService.SetLocation(cmd.Context(), time.Now(), location)
+		today := time.Now()
+		loc, err := bujoService.GetLocation(cmd.Context(), today)
 		if err != nil {
-			return fmt.Errorf("failed to set location: %w", err)
+			return fmt.Errorf("failed to get location: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "📍 Location set to: %s\n", location)
+		if loc == nil {
+			fmt.Println("No location set for today")
+		} else {
+			fmt.Printf("Today's location: %s\n", *loc)
+		}
 		return nil
 	},
 }

@@ -23,6 +23,8 @@ type EntryRepository interface {
 type DayContextRepository interface {
 	Upsert(ctx context.Context, dayCtx domain.DayContext) error
 	GetByDate(ctx context.Context, date time.Time) (*domain.DayContext, error)
+	GetRange(ctx context.Context, start, end time.Time) ([]domain.DayContext, error)
+	Delete(ctx context.Context, date time.Time) error
 }
 
 type BujoService struct {
@@ -116,6 +118,17 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 	return agenda, nil
 }
 
+func (s *BujoService) getEntry(ctx context.Context, id int64) (*domain.Entry, error) {
+	entry, err := s.entryRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("entry %d not found", id)
+	}
+	return entry, nil
+}
+
 func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location string) error {
 	dayCtx := domain.DayContext{
 		Date:     date,
@@ -124,13 +137,29 @@ func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location 
 	return s.dayCtxRepo.Upsert(ctx, dayCtx)
 }
 
+func (s *BujoService) GetLocationHistory(ctx context.Context, from, to time.Time) ([]domain.DayContext, error) {
+	return s.dayCtxRepo.GetRange(ctx, from, to)
+}
+
+func (s *BujoService) GetLocation(ctx context.Context, date time.Time) (*string, error) {
+	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
+	if err != nil {
+		return nil, err
+	}
+	if dayCtx == nil {
+		return nil, nil
+	}
+	return dayCtx.Location, nil
+}
+
+func (s *BujoService) ClearLocation(ctx context.Context, date time.Time) error {
+	return s.dayCtxRepo.Delete(ctx, date)
+}
+
 func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	entry.Type = domain.EntryTypeDone
@@ -138,12 +167,9 @@ func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
 }
 
 func (s *BujoService) Undo(ctx context.Context, id int64) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	entry.Type = domain.EntryTypeTask
@@ -151,12 +177,9 @@ func (s *BujoService) Undo(ctx context.Context, id int64) error {
 }
 
 func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	entry.Content = newContent
@@ -164,24 +187,17 @@ func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string
 }
 
 func (s *BujoService) DeleteEntry(ctx context.Context, id int64) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
-	if err != nil {
+	if _, err := s.getEntry(ctx, id); err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	return s.entryRepo.DeleteWithChildren(ctx, id)
 }
 
 func (s *BujoService) DeleteEntryAndReparent(ctx context.Context, id int64) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	// Get children of this entry
@@ -216,12 +232,9 @@ func (s *BujoService) HasChildren(ctx context.Context, id int64) (bool, error) {
 }
 
 func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Time) (int64, error) {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return 0, err
-	}
-	if entry == nil {
-		return 0, fmt.Errorf("entry %d not found", id)
 	}
 
 	// Only tasks can be migrated
@@ -253,12 +266,9 @@ type MoveOptions struct {
 }
 
 func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions) error {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
-	}
-	if entry == nil {
-		return fmt.Errorf("entry %d not found", id)
 	}
 
 	oldDepth := entry.Depth
@@ -321,12 +331,9 @@ func (s *BujoService) updateChildrenDepths(ctx context.Context, parentID int64, 
 }
 
 func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLevels int) ([]domain.Entry, error) {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return nil, err
-	}
-	if entry == nil {
-		return nil, fmt.Errorf("entry %d not found", id)
 	}
 
 	// Walk up to find the root of the context we want to show

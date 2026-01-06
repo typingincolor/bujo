@@ -154,6 +154,75 @@ func TestBujoService_GetDailyAgenda_WithLocation(t *testing.T) {
 	assert.Equal(t, "Home", *agenda.Location)
 }
 
+func TestBujoService_GetLocationHistory(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	day3 := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, day1, "Home")
+	require.NoError(t, err)
+	err = service.SetLocation(ctx, day2, "Office")
+	require.NoError(t, err)
+	err = service.SetLocation(ctx, day3, "Client Site")
+	require.NoError(t, err)
+
+	history, err := service.GetLocationHistory(ctx, day1, day3)
+	require.NoError(t, err)
+	require.Len(t, history, 3)
+	assert.Equal(t, "Home", *history[0].Location)
+	assert.Equal(t, "Office", *history[1].Location)
+	assert.Equal(t, "Client Site", *history[2].Location)
+
+	// Test partial range
+	history, err = service.GetLocationHistory(ctx, day2, day2)
+	require.NoError(t, err)
+	require.Len(t, history, 1)
+	assert.Equal(t, "Office", *history[0].Location)
+}
+
+func TestBujoService_GetLocation(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// No location set
+	loc, err := service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	assert.Nil(t, loc)
+
+	// Set location
+	err = service.SetLocation(ctx, today, "Office")
+	require.NoError(t, err)
+
+	loc, err = service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, loc)
+	assert.Equal(t, "Office", *loc)
+}
+
+func TestBujoService_ClearLocation(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// Set then clear
+	err := service.SetLocation(ctx, today, "Office")
+	require.NoError(t, err)
+
+	err = service.ClearLocation(ctx, today)
+	require.NoError(t, err)
+
+	// Should be gone
+	loc, err := service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	assert.Nil(t, loc)
+}
+
 func TestBujoService_MarkDone(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

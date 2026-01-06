@@ -42,6 +42,12 @@ func (r *DayContextRepository) GetByDate(ctx context.Context, date time.Time) (*
 	return r.scanDayContext(row)
 }
 
+func (r *DayContextRepository) Delete(ctx context.Context, date time.Time) error {
+	dateStr := date.Format("2006-01-02")
+	_, err := r.db.ExecContext(ctx, "DELETE FROM day_context WHERE date = ?", dateStr)
+	return err
+}
+
 func (r *DayContextRepository) GetRange(ctx context.Context, start, end time.Time) ([]domain.DayContext, error) {
 	startStr := start.Format("2006-01-02")
 	endStr := end.Format("2006-01-02")
