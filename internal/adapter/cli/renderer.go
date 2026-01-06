@@ -88,8 +88,6 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 		treePrefix = "└── "
 	}
 
-	// Checkbox for tasks
-	checkbox := getCheckbox(entry.Type)
 	symbol := getEntrySymbol(entry.Type)
 	content := entry.Content
 	idStr := fmt.Sprintf("%3d", entry.ID)
@@ -99,35 +97,19 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	case domain.EntryTypeDone:
 		content = green(content)
 		symbol = green(symbol)
-		checkbox = green(checkbox)
 		idStr = green(idStr)
 	case domain.EntryTypeMigrated:
 		content = dimmed(content)
 		symbol = dimmed(symbol)
-		checkbox = dimmed(checkbox)
 		idStr = dimmed(idStr)
 	}
 
 	if overdue {
 		content = red(content)
-		checkbox = red(checkbox)
 		idStr = red(idStr)
 	}
 
-	return fmt.Sprintf("%s%s%s %s %s %s\n", indent, treePrefix, checkbox, idStr, symbol, content)
-}
-
-func getCheckbox(t domain.EntryType) string {
-	switch t {
-	case domain.EntryTypeTask:
-		return "[ ]"
-	case domain.EntryTypeDone:
-		return "[x]"
-	case domain.EntryTypeMigrated:
-		return "[>]"
-	default:
-		return "   " // Notes and events don't have checkboxes
-	}
+	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, idStr, symbol, content)
 }
 
 func getEntrySymbol(t domain.EntryType) string {
