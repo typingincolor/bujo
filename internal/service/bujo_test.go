@@ -184,3 +184,35 @@ func TestBujoService_MarkDone_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestBujoService_Undo(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// Add a task and mark it done
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	err = service.MarkDone(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Undo it
+	err = service.Undo(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Verify it's back to task
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_Undo_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.Undo(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}

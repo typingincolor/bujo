@@ -148,6 +148,14 @@ bujo done 42
 bujo done 15
 ```
 
+### `bujo undo <id>`
+
+Mark a completed task as incomplete. Reverses `bujo done`.
+
+```bash
+bujo undo 42
+```
+
 ### `bujo habit`
 
 Display the habit tracker with 7-day history, streaks, and completion rates.

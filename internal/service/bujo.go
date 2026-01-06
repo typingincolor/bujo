@@ -132,3 +132,16 @@ func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
 	entry.Type = domain.EntryTypeDone
 	return s.entryRepo.Update(ctx, *entry)
 }
+
+func (s *BujoService) Undo(ctx context.Context, id int64) error {
+	entry, err := s.entryRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return fmt.Errorf("entry %d not found", id)
+	}
+
+	entry.Type = domain.EntryTypeTask
+	return s.entryRepo.Update(ctx, *entry)
+}
