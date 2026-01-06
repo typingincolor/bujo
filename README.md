@@ -112,8 +112,8 @@ echo ". Project planning
   - Estimate timeline
   . Schedule kickoff meeting" | bujo add
 
-# With location tag
-bujo add --location "Coffee Shop" ". Write blog post"
+# With location override
+bujo add --at "Coffee Shop" ". Write blog post"
 ```
 
 ### `bujo work <location>`

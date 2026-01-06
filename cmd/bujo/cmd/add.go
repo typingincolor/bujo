@@ -31,7 +31,7 @@ Examples:
   bujo add ". Buy groceries"
   bujo add ". Task one" "- Note one"
   echo ". Task from pipe" | bujo add
-  bujo add --location "Home Office" ". Work on project"`,
+  bujo add --at "Home Office" ". Work on project"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var input string
 
@@ -71,6 +71,6 @@ Examples:
 }
 
 func init() {
-	addCmd.Flags().StringVarP(&addLocation, "location", "l", "", "Set location for entries")
+	addCmd.Flags().StringVarP(&addLocation, "at", "a", "", "Set location for entries")
 	rootCmd.AddCommand(addCmd)
 }
