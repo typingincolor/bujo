@@ -1,0 +1,74 @@
+package domain
+
+import (
+	"errors"
+	"time"
+)
+
+type EntryType string
+
+const (
+	EntryTypeTask     EntryType = "task"
+	EntryTypeNote     EntryType = "note"
+	EntryTypeEvent    EntryType = "event"
+	EntryTypeDone     EntryType = "done"
+	EntryTypeMigrated EntryType = "migrated"
+)
+
+var validEntryTypes = map[EntryType]string{
+	EntryTypeTask:     ".",
+	EntryTypeNote:     "-",
+	EntryTypeEvent:    "o",
+	EntryTypeDone:     "x",
+	EntryTypeMigrated: ">",
+}
+
+func (et EntryType) IsValid() bool {
+	_, ok := validEntryTypes[et]
+	return ok
+}
+
+func (et EntryType) Symbol() string {
+	return validEntryTypes[et]
+}
+
+type Entry struct {
+	ID            int64
+	Type          EntryType
+	Content       string
+	ParentID      *int64
+	Depth         int
+	Location      *string
+	ScheduledDate *time.Time
+	CreatedAt     time.Time
+}
+
+func (e Entry) IsComplete() bool {
+	return e.Type == EntryTypeDone
+}
+
+func (e Entry) IsOverdue(today time.Time) bool {
+	if e.IsComplete() {
+		return false
+	}
+	if e.Type == EntryTypeNote {
+		return false
+	}
+	if e.ScheduledDate == nil {
+		return false
+	}
+	return e.ScheduledDate.Before(today)
+}
+
+func (e Entry) Validate() error {
+	if !e.Type.IsValid() {
+		return errors.New("invalid entry type")
+	}
+	if e.Content == "" {
+		return errors.New("content cannot be empty")
+	}
+	if e.Depth < 0 {
+		return errors.New("depth cannot be negative")
+	}
+	return nil
+}
