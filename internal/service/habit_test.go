@@ -116,7 +116,7 @@ func TestHabitService_GetTrackerStatus_CalculatesCompletion(t *testing.T) {
 	assert.InDelta(t, 57.14, status.Habits[0].CompletionPercent, 1.0)
 }
 
-func TestHabitService_GetTrackerStatus_Last7Days(t *testing.T) {
+func TestHabitService_GetTrackerStatus_DayHistory(t *testing.T) {
 	service := setupHabitService(t)
 	ctx := context.Background()
 
@@ -131,6 +131,6 @@ func TestHabitService_GetTrackerStatus_Last7Days(t *testing.T) {
 	status, err := service.GetTrackerStatus(ctx, today, 7)
 
 	require.NoError(t, err)
-	assert.Len(t, status.Habits[0].Last7Days, 7)
+	assert.Len(t, status.Habits[0].DayHistory, 7)
 	assert.InDelta(t, 100.0, status.Habits[0].CompletionPercent, 0.1)
 }

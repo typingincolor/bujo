@@ -167,7 +167,7 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 		sb.WriteString(fmt.Sprintf("%s %s\n", bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
 
 		// Sparkline for last 7 days
-		sparkline := renderSparkline(habit.Last7Days)
+		sparkline := renderSparkline(habit.DayHistory)
 		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
 
 		// Completion percentage
@@ -186,8 +186,12 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 func renderSparkline(days []service.DayStatus) string {
 	var sb strings.Builder
 
-	// Reverse to show oldest first
-	for i := len(days) - 1; i >= 0; i-- {
+	// Reverse to show oldest first (only show last 7)
+	start := len(days) - 1
+	if start > 6 {
+		start = 6
+	}
+	for i := start; i >= 0; i-- {
 		day := days[i]
 		if day.Completed {
 			sb.WriteString(green("●"))
@@ -199,12 +203,104 @@ func renderSparkline(days []service.DayStatus) string {
 
 	// Add day labels
 	sb.WriteString("\n  ")
-	for i := len(days) - 1; i >= 0; i-- {
+	for i := start; i >= 0; i-- {
 		day := days[i]
 		label := day.Date.Format("Mon")[:1]
 		sb.WriteString(dimmed(label))
 		sb.WriteString(" ")
 	}
+
+	return sb.String()
+}
+
+func RenderHabitMonth(status *service.TrackerStatus) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", cyan(bold("Habit Tracker - Month View"))))
+
+	if len(status.Habits) == 0 {
+		sb.WriteString(dimmed("No habits tracked yet\n"))
+		return sb.String()
+	}
+
+	for _, habit := range status.Habits {
+		// Habit name and streak
+		streakColor := green
+		if habit.CurrentStreak == 0 {
+			streakColor = red
+		}
+
+		sb.WriteString(fmt.Sprintf("%s %s\n", bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
+
+		// Month calendar
+		sb.WriteString(renderMonthCalendar(habit.DayHistory))
+
+		// Completion percentage
+		completionColor := green
+		if habit.CompletionPercent < 50 {
+			completionColor = red
+		} else if habit.CompletionPercent < 80 {
+			completionColor = yellow
+		}
+		sb.WriteString(fmt.Sprintf("  %s completion (last 30 days)\n\n", completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent))))
+	}
+
+	return sb.String()
+}
+
+func renderMonthCalendar(days []service.DayStatus) string {
+	var sb strings.Builder
+
+	// Header with week days
+	sb.WriteString("  ")
+	for _, d := range []string{"M", "T", "W", "T", "F", "S", "S"} {
+		sb.WriteString(dimmed(d) + " ")
+	}
+	sb.WriteString("\n")
+
+	// Build a map of date -> completed
+	completed := make(map[string]bool)
+	for _, day := range days {
+		key := day.Date.Format("2006-01-02")
+		completed[key] = day.Completed
+	}
+
+	// Find the start of the calendar (go back to find a Monday)
+	if len(days) == 0 {
+		return sb.String()
+	}
+
+	oldest := days[len(days)-1].Date
+	newest := days[0].Date
+
+	// Start from oldest, find the Monday of that week
+	startDate := oldest
+	for startDate.Weekday() != time.Monday {
+		startDate = startDate.AddDate(0, 0, -1)
+	}
+
+	// Render weeks
+	sb.WriteString("  ")
+	current := startDate
+	for !current.After(newest) {
+		key := current.Format("2006-01-02")
+
+		if current.Before(oldest) || current.After(newest) {
+			sb.WriteString(dimmed("·") + " ")
+		} else if completed[key] {
+			sb.WriteString(green("●") + " ")
+		} else {
+			sb.WriteString(dimmed("○") + " ")
+		}
+
+		// New line on Sunday
+		if current.Weekday() == time.Sunday {
+			sb.WriteString("\n  ")
+		}
+
+		current = current.AddDate(0, 0, 1)
+	}
+	sb.WriteString("\n")
 
 	return sb.String()
 }

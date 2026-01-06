@@ -55,7 +55,7 @@ type HabitStatus struct {
 	CurrentStreak     int
 	CompletionPercent float64
 	TodayCount        int
-	Last7Days         []DayStatus
+	DayHistory        []DayStatus
 }
 
 type DayStatus struct {
@@ -95,7 +95,7 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 			CurrentStreak:     domain.CalculateStreak(logs, todayStart),
 			CompletionPercent: domain.CalculateCompletion(logs, days, todayStart),
 			TodayCount:        domain.SumCountForDay(logs, todayStart),
-			Last7Days:         buildLast7Days(logs, todayStart),
+			DayHistory:        buildDayHistory(logs, todayStart, days),
 		}
 
 		status.Habits = append(status.Habits, habitStatus)
@@ -104,10 +104,10 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 	return status, nil
 }
 
-func buildLast7Days(logs []domain.HabitLog, today time.Time) []DayStatus {
-	days := make([]DayStatus, 7)
+func buildDayHistory(logs []domain.HabitLog, today time.Time, numDays int) []DayStatus {
+	history := make([]DayStatus, numDays)
 
-	for i := 0; i < 7; i++ {
+	for i := 0; i < numDays; i++ {
 		day := today.AddDate(0, 0, -i)
 		dayLogs := domain.GetLogsForDay(logs, day)
 
@@ -116,12 +116,12 @@ func buildLast7Days(logs []domain.HabitLog, today time.Time) []DayStatus {
 			count += log.Count
 		}
 
-		days[i] = DayStatus{
+		history[i] = DayStatus{
 			Date:      day,
 			Completed: len(dayLogs) > 0,
 			Count:     count,
 		}
 	}
 
-	return days
+	return history
 }
