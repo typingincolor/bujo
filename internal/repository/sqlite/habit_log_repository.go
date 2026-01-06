@@ -29,6 +29,27 @@ func (r *HabitLogRepository) Insert(ctx context.Context, log domain.HabitLog) (i
 	return result.LastInsertId()
 }
 
+func (r *HabitLogRepository) GetByID(ctx context.Context, id int64) (*domain.HabitLog, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, habit_id, count, logged_at
+		FROM habit_logs WHERE id = ?
+	`, id)
+
+	var log domain.HabitLog
+	var loggedAt string
+
+	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	log.LoggedAt, _ = time.Parse(time.RFC3339, loggedAt)
+	return &log, nil
+}
+
 func (r *HabitLogRepository) GetByHabitID(ctx context.Context, habitID int64) ([]domain.HabitLog, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, habit_id, count, logged_at
@@ -76,6 +97,30 @@ func (r *HabitLogRepository) GetAllRange(ctx context.Context, start, end time.Ti
 func (r *HabitLogRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, "DELETE FROM habit_logs WHERE id = ?", id)
 	return err
+}
+
+func (r *HabitLogRepository) GetLastByHabitID(ctx context.Context, habitID int64) (*domain.HabitLog, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, habit_id, count, logged_at
+		FROM habit_logs
+		WHERE habit_id = ?
+		ORDER BY logged_at DESC, id DESC
+		LIMIT 1
+	`, habitID)
+
+	var log domain.HabitLog
+	var loggedAt string
+
+	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	log.LoggedAt, _ = time.Parse(time.RFC3339, loggedAt)
+	return &log, nil
 }
 
 func (r *HabitLogRepository) scanLogs(rows *sql.Rows) ([]domain.HabitLog, error) {

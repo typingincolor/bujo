@@ -273,3 +273,37 @@ func renderMonthCalendar(days []service.DayStatus) string {
 func FormatDate(t time.Time) string {
 	return t.Format("2006-01-02")
 }
+
+func RenderHabitInspect(details *service.HabitDetails) string {
+	var sb strings.Builder
+
+	// Header
+	sb.WriteString(fmt.Sprintf("📋 %s\n", cyan(bold(details.Name))))
+
+	// Stats line
+	streakColor := green
+	if details.CurrentStreak == 0 {
+		streakColor = red
+	}
+	sb.WriteString(fmt.Sprintf("Streak: %s | Goal: %d/day\n\n",
+		streakColor(fmt.Sprintf("%d days", details.CurrentStreak)),
+		details.GoalPerDay))
+
+	// Logs table
+	if len(details.Logs) == 0 {
+		sb.WriteString(dimmed("No logs in this period\n"))
+	} else {
+		sb.WriteString(bold("Logs:\n"))
+		sb.WriteString(dimmed("  ID      Date         Count\n"))
+		for _, log := range details.Logs {
+			sb.WriteString(fmt.Sprintf("  %-6d  %-11s  %d\n",
+				log.ID,
+				log.LoggedAt.Format("Jan 2, 2006"),
+				log.Count))
+		}
+	}
+
+	sb.WriteString(fmt.Sprintf("\n%s %d\n", dimmed("Habit ID:"), details.ID))
+
+	return sb.String()
+}
