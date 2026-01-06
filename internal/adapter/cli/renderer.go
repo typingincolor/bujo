@@ -56,6 +56,38 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	return sb.String()
 }
 
+func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
+	var sb strings.Builder
+
+	// Overdue section
+	if len(agenda.Overdue) > 0 {
+		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
+		for _, entry := range agenda.Overdue {
+			sb.WriteString(renderEntry(entry, 0, true))
+		}
+		sb.WriteString("\n")
+	}
+
+	// Each day
+	for _, day := range agenda.Days {
+		dateStr := day.Date.Format("Monday, Jan 2")
+		if day.Location != nil {
+			sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", Cyan(Bold(dateStr)), Yellow(*day.Location)))
+		} else {
+			sb.WriteString(fmt.Sprintf("📅 %s\n", Cyan(Bold(dateStr))))
+		}
+
+		if len(day.Entries) > 0 {
+			renderEntryTree(&sb, day.Entries, 0)
+		} else {
+			sb.WriteString(Dimmed("  No entries\n"))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
 func renderEntryTree(sb *strings.Builder, entries []domain.Entry, depth int) {
 	// Build parent-child map
 	children := make(map[int64][]domain.Entry)
