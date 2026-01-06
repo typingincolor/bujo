@@ -1,0 +1,217 @@
+package domain
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestParseEntryType(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected EntryType
+	}{
+		{"task from dot", ". Do something", EntryTypeTask},
+		{"note from dash", "- Some note", EntryTypeNote},
+		{"event from o", "o Meeting @ 10am", EntryTypeEvent},
+		{"done from x", "x Completed task", EntryTypeDone},
+		{"migrated from >", "> Moved to tomorrow", EntryTypeMigrated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseEntryType(tt.line)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseIndentation(t *testing.T) {
+	tests := []struct {
+		name          string
+		line          string
+		expectedDepth int
+		expectedRest  string
+	}{
+		{"no indentation", ". Task", 0, ". Task"},
+		{"two spaces", "  . Child task", 1, ". Child task"},
+		{"four spaces", "    . Grandchild", 2, ". Grandchild"},
+		{"one tab", "\t. Child task", 1, ". Child task"},
+		{"two tabs", "\t\t. Grandchild", 2, ". Grandchild"},
+		{"mixed spaces", "      . Third level", 3, ". Third level"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			depth, rest := ParseIndentation(tt.line)
+			assert.Equal(t, tt.expectedDepth, depth)
+			assert.Equal(t, tt.expectedRest, rest)
+		})
+	}
+}
+
+func TestParseContent(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected string
+	}{
+		{"task content", ". Do something", "Do something"},
+		{"note content", "- Some note here", "Some note here"},
+		{"event content", "o Meeting @ 10am", "Meeting @ 10am"},
+		{"content with extra spaces", ".   Multiple spaces", "Multiple spaces"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseContent(tt.line)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestTreeParser_Parse_SingleEntry(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Buy groceries"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, EntryTypeTask, entries[0].Type)
+	assert.Equal(t, "Buy groceries", entries[0].Content)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Nil(t, entries[0].ParentID)
+}
+
+func TestTreeParser_Parse_MultipleRootEntries(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Task one
+- Note one
+o Event one`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	assert.Equal(t, EntryTypeTask, entries[0].Type)
+	assert.Equal(t, "Task one", entries[0].Content)
+	assert.Nil(t, entries[0].ParentID)
+
+	assert.Equal(t, EntryTypeNote, entries[1].Type)
+	assert.Equal(t, "Note one", entries[1].Content)
+	assert.Nil(t, entries[1].ParentID)
+
+	assert.Equal(t, EntryTypeEvent, entries[2].Type)
+	assert.Equal(t, "Event one", entries[2].Content)
+	assert.Nil(t, entries[2].ParentID)
+}
+
+func TestTreeParser_Parse_NestedEntries(t *testing.T) {
+	parser := NewTreeParser()
+	input := `o Project Kickoff
+  - Attendees: Alice, Bob
+  . Send follow-up email
+    - Include PDF attachment`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 4)
+
+	// Root entry
+	assert.Equal(t, EntryTypeEvent, entries[0].Type)
+	assert.Equal(t, "Project Kickoff", entries[0].Content)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Nil(t, entries[0].ParentID)
+
+	// First child - note
+	assert.Equal(t, EntryTypeNote, entries[1].Type)
+	assert.Equal(t, "Attendees: Alice, Bob", entries[1].Content)
+	assert.Equal(t, 1, entries[1].Depth)
+	require.NotNil(t, entries[1].ParentID)
+	assert.Equal(t, int64(0), *entries[1].ParentID)
+
+	// Second child - task
+	assert.Equal(t, EntryTypeTask, entries[2].Type)
+	assert.Equal(t, "Send follow-up email", entries[2].Content)
+	assert.Equal(t, 1, entries[2].Depth)
+	require.NotNil(t, entries[2].ParentID)
+	assert.Equal(t, int64(0), *entries[2].ParentID)
+
+	// Grandchild - note under task
+	assert.Equal(t, EntryTypeNote, entries[3].Type)
+	assert.Equal(t, "Include PDF attachment", entries[3].Content)
+	assert.Equal(t, 2, entries[3].Depth)
+	require.NotNil(t, entries[3].ParentID)
+	assert.Equal(t, int64(2), *entries[3].ParentID)
+}
+
+func TestTreeParser_Parse_TabIndentation(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Parent task
+	. Child task
+		. Grandchild task`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Nil(t, entries[0].ParentID)
+
+	assert.Equal(t, 1, entries[1].Depth)
+	require.NotNil(t, entries[1].ParentID)
+	assert.Equal(t, int64(0), *entries[1].ParentID)
+
+	assert.Equal(t, 2, entries[2].Depth)
+	require.NotNil(t, entries[2].ParentID)
+	assert.Equal(t, int64(1), *entries[2].ParentID)
+}
+
+func TestTreeParser_Parse_EmptyInput(t *testing.T) {
+	parser := NewTreeParser()
+
+	entries, err := parser.Parse("")
+
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}
+
+func TestTreeParser_Parse_SkipsEmptyLines(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Task one
+
+. Task two`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+}
+
+func TestTreeParser_Parse_InvalidIndentation(t *testing.T) {
+	parser := NewTreeParser()
+	// Child without parent (jumps to depth 2 without depth 1)
+	input := `. Root task
+      . Invalid grandchild`
+
+	_, err := parser.Parse(input)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid indentation")
+}
+
+func TestTreeParser_Parse_UnknownSymbol(t *testing.T) {
+	parser := NewTreeParser()
+	input := "? Unknown symbol"
+
+	_, err := parser.Parse(input)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown entry type")
+}
