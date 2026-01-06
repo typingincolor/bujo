@@ -15,7 +15,7 @@ func setupBujoService(t *testing.T) (*BujoService, *sqlite.EntryRepository, *sql
 	t.Helper()
 	db, err := sqlite.OpenAndMigrate(":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	entryRepo := sqlite.NewEntryRepository(db)
 	dayCtxRepo := sqlite.NewDayContextRepository(db)

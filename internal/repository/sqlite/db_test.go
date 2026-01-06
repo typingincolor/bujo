@@ -53,6 +53,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := OpenAndMigrate(":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
