@@ -646,3 +646,86 @@ func TestBujoService_MoveEntry_ParentNotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parent")
 }
+
+func TestBujoService_GetMultiDayAgenda_ReturnsEntriesGroupedByDate(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	day3 := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	_, err := service.LogEntries(ctx, ". Task on day 1", LogEntriesOptions{Date: day1})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Task on day 2", LogEntriesOptions{Date: day2})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Task on day 3", LogEntriesOptions{Date: day3})
+	require.NoError(t, err)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, day1, day3)
+
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 3)
+	assert.Len(t, agenda.Days[0].Entries, 1)
+	assert.Len(t, agenda.Days[1].Entries, 1)
+	assert.Len(t, agenda.Days[2].Entries, 1)
+}
+
+func TestBujoService_GetMultiDayAgenda_IncludesOverdueOnFirstDay(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	oldDate := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// Overdue task from before the range
+	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: oldDate})
+	require.NoError(t, err)
+
+	_, err = service.LogEntries(ctx, ". Task on day 1", LogEntriesOptions{Date: day1})
+	require.NoError(t, err)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, day1, day2)
+
+	require.NoError(t, err)
+	assert.Len(t, agenda.Overdue, 1)
+	assert.Equal(t, "Overdue task", agenda.Overdue[0].Content)
+}
+
+func TestBujoService_GetMultiDayAgenda_IncludesLocations(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, day1, "Home")
+	require.NoError(t, err)
+	err = service.SetLocation(ctx, day2, "Office")
+	require.NoError(t, err)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, day1, day2)
+
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 2)
+	require.NotNil(t, agenda.Days[0].Location)
+	assert.Equal(t, "Home", *agenda.Days[0].Location)
+	require.NotNil(t, agenda.Days[1].Location)
+	assert.Equal(t, "Office", *agenda.Days[1].Location)
+}
+
+func TestBujoService_GetMultiDayAgenda_EmptyRange(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, day1, day2)
+
+	require.NoError(t, err)
+	assert.Len(t, agenda.Days, 2)
+	assert.Empty(t, agenda.Days[0].Entries)
+	assert.Empty(t, agenda.Days[1].Entries)
+}

@@ -60,6 +60,23 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 	return r.scanEntries(rows)
 }
 
+func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+	fromStr := from.Format("2006-01-02")
+	toStr := to.Format("2006-01-02")
+
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at
+		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ?
+		ORDER BY scheduled_date, created_at
+	`, fromStr, toStr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanEntries(rows)
+}
+
 func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error) {
 	dateStr := date.Format("2006-01-02")
 
