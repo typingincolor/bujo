@@ -53,6 +53,7 @@ jobs:
 
   build:
     name: Build
+    needs: [test, lint]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
