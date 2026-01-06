@@ -47,7 +47,6 @@ func init() {
 }
 
 var (
-	viewCyan   = color.New(color.FgCyan).SprintFunc()
 	viewGreen  = color.New(color.FgGreen).SprintFunc()
 	viewYellow = color.New(color.FgYellow, color.Bold).SprintFunc()
 	viewDimmed = color.New(color.Faint).SprintFunc()
