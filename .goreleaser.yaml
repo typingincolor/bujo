@@ -64,3 +64,18 @@ release:
   draft: false
   prerelease: auto
   name_template: "v{{.Version}}"
+
+brews:
+  - name: bujo
+    repository:
+      owner: typingincolor
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/typingincolor/bujo"
+    description: "A command-line Bullet Journal for rapid task capture and habit tracking"
+    license: "MIT"
+    install: |
+      bin.install "bujo"
+    test: |
+      system "#{bin}/bujo", "version"
