@@ -118,6 +118,34 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
+func (r *EntryRepository) GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at
+		FROM entries WHERE parent_id = ?
+		ORDER BY id
+	`, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanEntries(rows)
+}
+
+func (r *EntryRepository) DeleteWithChildren(ctx context.Context, id int64) error {
+	// Use recursive CTE to find all descendants, then delete
+	_, err := r.db.ExecContext(ctx, `
+		WITH RECURSIVE tree AS (
+			SELECT id FROM entries WHERE id = ?
+			UNION ALL
+			SELECT e.id FROM entries e
+			JOIN tree t ON e.parent_id = t.id
+		)
+		DELETE FROM entries WHERE id IN (SELECT id FROM tree)
+	`, id)
+	return err
+}
+
 func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 	var entry domain.Entry
 	var typeStr string
