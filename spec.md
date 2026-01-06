@@ -29,7 +29,7 @@ OVERDUE
 TODAY
  [ ]  45  . Call the bank regarding mortgage
  [x]  46  x Morning meditation
- [ ]  47  o Team Sync @ 10:00 AM
+      47  o Team Sync @ 10:00 AM
  [ ]  48  o Project Alpha Kickoff
           ├── - Attendees: Alice, Bob, Charlie
           └── [ ] . Send follow-up email to Alice
