@@ -13,6 +13,7 @@ type EntryRepository interface {
 	GetByID(ctx context.Context, id int64) (*domain.Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]domain.Entry, error)
 	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
+	GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error)
 	Update(ctx context.Context, entry domain.Entry) error
 }
 
@@ -144,4 +145,41 @@ func (s *BujoService) Undo(ctx context.Context, id int64) error {
 
 	entry.Type = domain.EntryTypeTask
 	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLevels int) ([]domain.Entry, error) {
+	entry, err := s.entryRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("entry %d not found", id)
+	}
+
+	// Walk up to find the root of the context we want to show
+	rootID := id
+	current := entry
+
+	// Default behavior: go up to parent (if exists)
+	if current.ParentID != nil {
+		rootID = *current.ParentID
+		parent, err := s.entryRepo.GetByID(ctx, rootID)
+		if err != nil {
+			return nil, err
+		}
+		current = parent
+	}
+
+	// Go up additional ancestor levels
+	for i := 0; i < ancestorLevels && current.ParentID != nil; i++ {
+		rootID = *current.ParentID
+		parent, err := s.entryRepo.GetByID(ctx, rootID)
+		if err != nil {
+			return nil, err
+		}
+		current = parent
+	}
+
+	// Get the root and all its children
+	return s.entryRepo.GetWithChildren(ctx, rootID)
 }

@@ -216,3 +216,70 @@ func TestBujoService_Undo_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestBujoService_GetEntryContext_RootEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, `. Parent
+  - Child 1
+  - Child 2`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// View the parent - should show parent and its children
+	entries, err := service.GetEntryContext(ctx, ids[0], 0)
+
+	require.NoError(t, err)
+	assert.Len(t, entries, 3)
+	assert.Equal(t, "Parent", entries[0].Content)
+}
+
+func TestBujoService_GetEntryContext_ChildEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, `. Parent
+  - Child 1
+  - Child 2`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// View a child - should show parent and all siblings
+	entries, err := service.GetEntryContext(ctx, ids[1], 0)
+
+	require.NoError(t, err)
+	assert.Len(t, entries, 3)
+	assert.Equal(t, "Parent", entries[0].Content)
+}
+
+func TestBujoService_GetEntryContext_WithAncestors(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, `. Grandparent
+  - Parent
+    . Grandchild`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// View grandchild with default (0) - shows from parent down
+	entries, err := service.GetEntryContext(ctx, ids[2], 0)
+	require.NoError(t, err)
+	assert.Len(t, entries, 2) // Parent + Grandchild
+
+	// View grandchild with 1 additional ancestor level - shows from grandparent down
+	entries, err = service.GetEntryContext(ctx, ids[2], 1)
+	require.NoError(t, err)
+	assert.Len(t, entries, 3) // All three
+}
+
+func TestBujoService_GetEntryContext_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	_, err := service.GetEntryContext(ctx, 99999, 0)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}

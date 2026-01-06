@@ -156,6 +156,22 @@ Mark a completed task as incomplete. Reverses `bujo done`.
 bujo undo 42
 ```
 
+### `bujo view <id>`
+
+View an entry with its parent and siblings for context. The requested entry is highlighted.
+
+```bash
+bujo view 42           # Show parent context
+bujo view 42 --up 1    # Show grandparent context
+bujo view 42 -u 2      # Show great-grandparent context
+```
+
+```
+  2 - Requirements
+  └──   3 . Review specs
+  └──   4 . Write tests      <- highlighted
+```
+
 ### `bujo habit`
 
 Display the habit tracker with 7-day history, streaks, and completion rates.
