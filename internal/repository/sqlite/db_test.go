@@ -11,7 +11,7 @@ import (
 func TestOpenAndMigrate(t *testing.T) {
 	db, err := OpenAndMigrate(":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	tables := []string{"entries", "habits", "habit_logs", "day_context", "summaries"}
 	for _, table := range tables {
@@ -30,7 +30,7 @@ func TestOpenAndMigrate(t *testing.T) {
 func TestOpen_EnablesForeignKeys(t *testing.T) {
 	db, err := Open(":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var fkEnabled int
 	err = db.QueryRow("PRAGMA foreign_keys").Scan(&fkEnabled)
@@ -41,7 +41,7 @@ func TestOpen_EnablesForeignKeys(t *testing.T) {
 func TestOpen_EnablesWAL(t *testing.T) {
 	db, err := Open(":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var journalMode string
 	err = db.QueryRow("PRAGMA journal_mode").Scan(&journalMode)

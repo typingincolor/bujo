@@ -54,7 +54,7 @@ func (r *SummaryRepository) GetByHorizon(ctx context.Context, horizon domain.Sum
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var summaries []domain.Summary
 	for rows.Next() {

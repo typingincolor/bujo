@@ -79,7 +79,7 @@ func (r *HabitRepository) GetAll(ctx context.Context) ([]domain.Habit, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var habits []domain.Habit
 	for rows.Next() {

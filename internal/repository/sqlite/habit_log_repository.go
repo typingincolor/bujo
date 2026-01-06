@@ -38,7 +38,7 @@ func (r *HabitLogRepository) GetByHabitID(ctx context.Context, habitID int64) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanLogs(rows)
 }
@@ -53,7 +53,7 @@ func (r *HabitLogRepository) GetRange(ctx context.Context, habitID int64, start,
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanLogs(rows)
 }
@@ -68,7 +68,7 @@ func (r *HabitLogRepository) GetAllRange(ctx context.Context, start, end time.Ti
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanLogs(rows)
 }
