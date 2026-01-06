@@ -1,24 +1,25 @@
-Technical Specification: bujo (typingincolor)
-1. Project Vision
-bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It acts as a "Life Log" that captures tasks, notes, events, habits, and locations. It uses TDD, Hexagonal Architecture, and Gemini AI to provide deep, rolling reflections on a user's life.
+# Technical Specification: bujo (typingincolor)
 
-2. Architectural Principles
-Web-Ready Hexagonal Design: Business logic is isolated in internal/domain. The CLI and a future Web Server are merely "adapters" to this shared logic.
+## 1. Project Vision
+bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It acts as a Life Log that captures tasks, notes, events, habits, and locations. It uses TDD, Hexagonal Architecture, and Gemini AI to provide deep, rolling reflections on a user's life.
 
-Stateless Service Layer: All "rules" (parsing, habit logic, AI prompts) reside in service structs. The app state persists entirely in SQLite.
+## 2. Architectural Principles
+* Web-Ready Hexagonal Design: Business logic is isolated in internal/domain. The CLI and a future Web Server are merely adapters to this shared logic.
+* Stateless Service Layer: All rules (parsing, habit logic, AI prompts) reside in service structs. The app state persists entirely in SQLite.
+* 12-Factor Lite:
+    * Config: Via environment variables (GEMINI_API_KEY, DB_PATH).
+    * Dependencies: Strict management via go.mod.
+    * Logs: Diagnostic messages (errors, status updates) MUST go to stderr. Only actual data (the journal tree, habits, summaries) should go to stdout. 
+* TDD Mandate: 100% logic coverage in internal/domain before implementation.
 
-12-Factor Lite: Configuration via environment variables (GEMINI_API_KEY, DB_PATH), and strict dependency management via go.mod.
 
-Logging and Streams: Diagnostic messages (errors, status updates) MUST go to stderr. Only actual data (the journal tree, habits, summaries) should go to stdout.
 
-TDD Mandate: 100% logic coverage in internal/domain before implementation.
+## 3. UX & CLI Interface Examples
 
-3. UX & CLI Interface Examples
-A. The Daily Agenda (bujo ls)
+### A. The Daily Agenda (bujo ls)
 Displays current location, overdue items, and today's hierarchical notes.
 
-Plaintext
-
+Example Output:
 📅 Tuesday, Jan 6, 2026 | 📍 Manchester Office
 ---------------------------------------------------------
 OVERDUE
@@ -33,12 +34,11 @@ TODAY
           └── [ ] . Send follow-up email to Alice
               └── - Include the PDF attachment
 ---------------------------------------------------------
-B. Habit Tracking (bujo habit)
-Displays a 7-day sparkline status and the monthly "GitHub-style" heatmap.
 
-Bash
+### B. Habit Tracking (bujo habit)
+Displays a 7-day sparkline status and the monthly GitHub-style heatmap.
 
-# Weekly Sparkline View
+Example Output:
 $ bujo habit
 🔥 HABIT TRACKER (Last 7 Days)
 ---------------------------------------------------------
@@ -47,17 +47,11 @@ Water  [8] [7] [8] [8] [6] [8] [4]  (Avg: 7.1)
 Med    [X] [X] [X] [X] [X] [X] [X]  (7/7)  STREAK: 14
 ---------------------------------------------------------
 
-# Monthly Heatmap
-$ bujo habit map Gym
-GYM: JANUARY 2026
-      S M T W T F S
-W1      X . X X . X
-W2    X X . X . . . 
-W3    . . . . . . .
-(X = Goal Met, . = Missed)
-C. AI Reflections (bujo summary --weekly)
-Plaintext
 
+
+### C. AI Reflections (bujo summary --weekly)
+
+Example Output:
 🤖 WEEKLY REFLECTION (Jan 5 - Jan 11)
 ---------------------------------------------------------
 CORE THEMES:
@@ -69,53 +63,41 @@ AI INSIGHT:
 Manchester Office, your 'Note' volume increases by 40% while 'Task' 
 completion drops. Consider Manchester for brainstorming and Home for execution."
 ---------------------------------------------------------
-4. Core Features
-A. Hierarchical Tree Parser
+
+## 4. Core Features
+
+### A. Hierarchical Tree Parser
 Support for nested items using indentation (2 spaces or 1 tab).
+* Symbols: . (Task), - (Note), o (Event), x (Done), > (Migrated).
+* Logic: Piped input or multi-line arguments are parsed into a parent-child tree structure.
+* Storage: entries table uses parent_id and depth for recursion.
 
-Symbols: . (Task), - (Note), o (Event), x (Done), > (Migrated).
-
-Logic: Piped input or multi-line arguments are parsed into a parent-child tree structure.
-
-Storage: entries table uses parent_id and depth for recursion.
-
-B. Location & Context Tracking
+### B. Location & Context Tracking
 Every day has a primary location context.
+* Command: bujo work <location> updates the day_context table.
+* Metadata: Entries logged inherit the active location unless overridden via --at.
 
-Command: bujo work <location> updates the day_context table.
-
-Metadata: Entries logged inherit the active location unless overridden via --at.
-
-C. Multi-Log Habit Tracker
+### C. Multi-Log Habit Tracker
 A quantitative tracker for recurring habits.
+* Command: bujo habit log <name> [--count N] [--date YYYY-MM-DD]
+* Multi-Log: Allows logging a habit multiple times per day (e.g., water intake). 
+* Feedback: Status updates (e.g., [LOG] Habit 'Water' recorded (3/8 today)) are sent to stderr.
 
-Command: bujo habit log <name> [--count N] [--date YYYY-MM-DD]
-
-Feedback: Status updates (e.g., [LOG] Habit 'Water' recorded (3/8 today)) are sent to stderr.
-
-D. Rolling AI Summaries (Gemini)
+### D. Rolling AI Summaries (Gemini)
 Hierarchical summarization to manage context windows and find long-term trends.
+* Flow: Daily -> Weekly -> Quarterly -> Annual.
+* Storage: Summaries are cached in a dedicated summaries table to minimize API usage.
 
-Flow: Daily -> Weekly -> Quarterly -> Annual.
+## 5. Data Schema (SQLite)
+* entries: id, type, content, parent_id (FK), location, scheduled_date, created_at
+* habits: id, name, goal_per_day, created_at
+* habit_logs: id, habit_id (FK), completed_at
+* day_context: date (PK), location, mood, weather
+* summaries: id, horizon, content, start_date, end_date
 
-Storage: Summaries are cached in a dedicated summaries table to minimize API usage.
-
-5. Data Schema (SQLite)
-entries: id, type, content, parent_id (FK), location, scheduled_date, created_at
-
-habits & habit_logs: habits (goal_per_day), habit_logs (completed_at)
-
-day_context: date (PK), location, mood, weather
-
-summaries: id, horizon, content, start_date, end_date
-
-6. Implementation Roadmap
-Domain Layer: Define core types (Entry, Habit, Summary) and the TreeParser with 100% TDD.
-
-Service Layer: Build BujoService and HabitService to coordinate domain logic.
-
-Infrastructure: SQLite repository implementation using golang-migrate.
-
-Adapter (CLI): Build the CLI using cobra, ensuring stderr for logging and stdout for data.
-
-Adapter (AI): Implement the Gemini integration with the hierarchical rolling logic.
+## 6. Implementation Roadmap
+1. Domain Layer: Define core types (Entry, Habit, Summary) and the TreeParser with 100% TDD.
+2. Service Layer: Build BujoService and HabitService to coordinate domain logic. Ensure services are UI-agnostic (CLI vs Web).
+3. Infrastructure: SQLite repository implementation using golang-migrate.
+4. Adapter (CLI): Build the CLI using cobra, ensuring stderr for logging and stdout for data.
+5. Adapter (AI): Implement the Gemini integration with the hierarchical rolling logic.
