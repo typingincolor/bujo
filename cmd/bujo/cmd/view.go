@@ -109,7 +109,7 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("%s%s%s %s %s\n", indent, prefix, idStr, symbol, content))
+	fmt.Fprintf(sb, "%s%s%s %s %s\n", indent, prefix, idStr, symbol, content)
 
 	for _, child := range children[entry.ID] {
 		renderViewEntry(sb, child, children, depth+1, highlightID)

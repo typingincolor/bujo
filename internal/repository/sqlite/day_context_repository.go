@@ -55,7 +55,7 @@ func (r *DayContextRepository) GetRange(ctx context.Context, start, end time.Tim
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var contexts []domain.DayContext
 	for rows.Next() {

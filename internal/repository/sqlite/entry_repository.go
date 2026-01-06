@@ -55,7 +55,7 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanEntries(rows)
 }
@@ -72,7 +72,7 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanEntries(rows)
 }
@@ -92,7 +92,7 @@ func (r *EntryRepository) GetWithChildren(ctx context.Context, id int64) ([]doma
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return r.scanEntries(rows)
 }

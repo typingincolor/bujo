@@ -23,11 +23,12 @@ func ParseEntryType(line string) EntryType {
 
 func ParseIndentation(line string) (depth int, rest string) {
 	for i, ch := range line {
-		if ch == ' ' {
+		switch ch {
+		case ' ':
 			depth++
-		} else if ch == '\t' {
+		case '\t':
 			depth += 2
-		} else {
+		default:
 			return depth / 2, line[i:]
 		}
 	}
