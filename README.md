@@ -55,8 +55,11 @@ o Team standup at 10am" | bujo add
 # Set your work location
 bujo work "Home Office"
 
-# View today's agenda
+# View today's agenda (shows entry IDs)
 bujo ls
+
+# Mark a task complete
+bujo done 1
 
 # Log a habit
 bujo habit log Gym
@@ -112,6 +115,9 @@ echo ". Project planning
   - Estimate timeline
   . Schedule kickoff meeting" | bujo add
 
+# From a file
+cat daily-tasks.txt | bujo add
+
 # With location override
 bujo add --at "Coffee Shop" ". Write blog post"
 ```
@@ -128,9 +134,23 @@ bujo work "Coffee Shop"
 
 Run again to change the location if you set it incorrectly.
 
+### `bujo done <id>`
+
+Mark a task as complete by its ID. Use `bujo ls` to see entry IDs.
+
+```bash
+bujo done 42
+bujo done 15
+```
+
 ### `bujo habit`
 
 Display the habit tracker with 7-day history, streaks, and completion rates.
+
+```bash
+bujo habit          # 7-day sparkline view
+bujo habit --month  # 30-day calendar view
+```
 
 ```
 🔥 Habit Tracker
@@ -157,6 +177,10 @@ bujo habit log Gym
 # Log with count
 bujo habit log Water 8
 bujo habit log "Morning Pages" 3
+
+# Log for a different date
+bujo habit log Gym --date yesterday
+bujo habit log Gym -d 2026-01-05
 ```
 
 ### `bujo version`
