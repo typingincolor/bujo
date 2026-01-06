@@ -14,7 +14,8 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
 - **Habit Tracking** - Track daily habits with streaks and completion rates
 - **Location Context** - Set your work location for the day
-- **Daily Agenda** - View today's tasks, overdue items, and location at a glance
+- **Weekly View** - See entries from the last 7 days at a glance
+- **Entry Management** - Edit, delete, migrate, and reorganize entries
 
 ## Installation
 
@@ -43,27 +44,24 @@ Available platforms:
 ## Quick Start
 
 ```bash
-# Add some tasks for today
+# Add tasks for today
 bujo add ". Buy groceries"
 bujo add ". Finish report" "- Remember to include Q4 data"
 
-# Or pipe multiple entries
-echo ". Call dentist
-- Note: morning appointments preferred
-o Team standup at 10am" | bujo add
+# View last 7 days
+bujo ls
+
+# View today only
+bujo today
 
 # Set your work location
-bujo work "Home Office"
-
-# View today's agenda (shows entry IDs)
-bujo ls
+bujo work set "Home Office"
 
 # Mark a task complete
 bujo done 1
 
 # Log a habit
 bujo habit log Gym
-bujo habit log Water 8
 
 # View habit tracker
 bujo habit
@@ -81,9 +79,22 @@ bujo habit
 
 ## Commands
 
-### `bujo ls`
+### Viewing Entries
 
-Display today's agenda including overdue tasks and current location. Each entry shows its ID for use with `bujo done`.
+#### `bujo ls`
+
+Display entries for the last 7 days, including overdue tasks.
+
+```bash
+bujo ls                              # Last 7 days
+bujo ls --from yesterday             # From yesterday to today
+bujo ls --from "last monday" --to today
+bujo ls --from 2026-01-01 --to 2026-01-07
+```
+
+#### `bujo today`
+
+Display today's entries with overdue tasks and location.
 
 ```
 📅 Tuesday, Jan 6, 2026 | 📍 Home Office
@@ -92,89 +103,127 @@ TODAY
   1 . Buy groceries
   2 . Finish report
   └──   3 - Remember to include Q4 data
-  4 o Team standup at 10am
 ---------------------------------------------------------
 ```
 
-### `bujo add [entries...]`
+#### `bujo view <id>`
 
-Add one or more entries to today's journal. Returns the ID of each entry added (one per line).
-
-```bash
-# Single entry (returns ID)
-bujo add ". Call mom"
-# Output: 1
-
-# Multiple entries (each argument is one entry)
-bujo add ". Task one" ". Task two"
-# Output:
-# 2
-# 3
-
-# Hierarchical entries via pipe
-echo ". Project planning
-  - Review requirements
-  - Estimate timeline
-  . Schedule kickoff meeting" | bujo add
-
-# From a file
-cat daily-tasks.txt | bujo add
-
-# With location override
-bujo add --at "Coffee Shop" ". Write blog post"
-
-# Use in scripts (mark task done immediately after adding)
-id=$(bujo add ". Quick task" 2>/dev/null) && bujo done $id
-```
-
-### `bujo work <location>`
-
-Set the location context for today. This appears in your daily agenda.
+View an entry with its parent and siblings for context.
 
 ```bash
-bujo work "Home Office"
-bujo work "Manchester Office"
-bujo work "Coffee Shop"
+bujo view 42           # Show parent context
+bujo view 42 --up 1    # Show grandparent context
 ```
 
-Run again to change the location if you set it incorrectly.
+### Adding Entries
 
-### `bujo done <id>`
+#### `bujo add [entries...]`
 
-Mark a task as complete by its ID. Use `bujo ls` to see entry IDs.
+Add entries to today's journal. Returns the ID of each entry.
+
+```bash
+bujo add ". Call mom"                    # Single entry
+bujo add ". Task one" ". Task two"       # Multiple entries
+echo ". Task from pipe" | bujo add       # From stdin
+cat tasks.txt | bujo add                 # From file
+bujo add --at "Coffee Shop" ". Write"    # With location
+```
+
+### Completing Tasks
+
+#### `bujo done <id>`
+
+Mark a task as complete.
 
 ```bash
 bujo done 42
-bujo done 15
 ```
 
-### `bujo undo <id>`
+#### `bujo undo <id>`
 
-Mark a completed task as incomplete. Reverses `bujo done`.
+Mark a completed task as incomplete.
 
 ```bash
 bujo undo 42
 ```
 
-### `bujo view <id>`
+### Editing Entries
 
-View an entry with its parent and siblings for context. The requested entry is highlighted.
+#### `bujo edit <id> <new-content>`
+
+Edit an entry's content.
 
 ```bash
-bujo view 42           # Show parent context
-bujo view 42 --up 1    # Show grandparent context
-bujo view 42 -u 2      # Show great-grandparent context
+bujo edit 42 "Buy milk instead"
 ```
 
-```
-  2 - Requirements
-  └──   3 . Review specs
-  └──   4 . Write tests      <- highlighted
+#### `bujo delete <id>`
+
+Delete an entry. Prompts if entry has children.
+
+```bash
+bujo delete 42
+bujo delete 42 --force    # Skip prompt, delete with children
 ```
 
-### `bujo habit`
+#### `bujo migrate <id> --to <date>`
 
-Display the habit tracker with 7-day history, streaks, and completion rates.
+Migrate a task to a future date. Original is marked as migrated.
+
+```bash
+bujo migrate 42 --to tomorrow
+bujo migrate 42 --to "next monday"
+bujo migrate 42 --to 2026-01-15
+```
+
+#### `bujo move <id>`
+
+Reorganize entries (change parent or logged date).
+
+```bash
+bujo move 42 --parent 10         # Make child of entry 10
+bujo move 42 --root              # Make root entry (no parent)
+bujo move 42 --logged yesterday  # Change logged date
+```
+
+### Work Location
+
+#### `bujo work`
+
+Show today's work location.
+
+#### `bujo work set <location>`
+
+Set location for today (or a specific date).
+
+```bash
+bujo work set "Home Office"
+bujo work set "Manchester" --date yesterday
+```
+
+#### `bujo work inspect`
+
+Show location history.
+
+```bash
+bujo work inspect
+bujo work inspect --from "last week"
+```
+
+#### `bujo work clear`
+
+Clear location for a day.
+
+```bash
+bujo work clear
+bujo work clear --date yesterday
+```
+
+### Habit Tracking
+
+#### `bujo habit`
+
+Display habit tracker with streaks and completion rates.
 
 ```bash
 bujo habit          # 7-day sparkline view
@@ -188,53 +237,70 @@ Gym (3 day streak)
   ○ ○ ○ ○ ● ● ●
   W T F S S M T
   43% completion
-
-Water (7 day streak)
-  ● ● ● ● ● ● ●
-  W T F S S M T
-  100% completion
 ```
 
-### `bujo habit log <name> [count]`
+#### `bujo habit log <name> [count]`
 
 Log a habit completion. Creates the habit if it doesn't exist.
 
 ```bash
-# Log once (count defaults to 1)
 bujo habit log Gym
-
-# Log with count
 bujo habit log Water 8
-bujo habit log "Morning Pages" 3
-
-# Log for a different date (natural language supported)
 bujo habit log Gym --date yesterday
-bujo habit log Gym -d "last monday"
-bujo habit log Gym -d "2 weeks ago"
-bujo habit log Gym -d 2026-01-05
+bujo habit log #1 5              # By ID with count
 ```
 
-### `bujo version`
+#### `bujo habit inspect <name|#id>`
+
+Show habit details and log history.
+
+```bash
+bujo habit inspect Gym
+bujo habit inspect #1
+bujo habit inspect Gym --from "last month"
+```
+
+#### `bujo habit undo <name|#id>`
+
+Delete the most recent log for a habit.
+
+```bash
+bujo habit undo Gym
+bujo habit undo #1
+```
+
+#### `bujo habit rename <old> <new>`
+
+Rename a habit (logs are preserved).
+
+```bash
+bujo habit rename Gym Workout
+bujo habit rename #1 "Morning Workout"
+```
+
+#### `bujo habit delete-log <log-id>`
+
+Delete a specific log entry by ID (use `habit inspect` to see IDs).
+
+```bash
+bujo habit delete-log 42
+```
+
+### Other
+
+#### `bujo version`
 
 Display version information.
 
-```
-bujo v0.1.0
-  commit: abc1234
-  built:  2026-01-06T12:00:00Z
-```
+#### `bujo completion <shell>`
+
+Generate shell completion scripts (bash, zsh, fish, powershell).
 
 ## Data Storage
 
-bujo stores all data in a SQLite database at:
+bujo stores all data in a SQLite database at `~/.bujo/bujo.db`.
 
-```
-~/.bujo/bujo.db
-```
-
-This location is the same regardless of how you install bujo (Homebrew, go install, or direct download).
-
-To use a different database location:
+To use a different location:
 
 ```bash
 bujo --db-path /path/to/custom.db ls
@@ -242,42 +308,16 @@ bujo --db-path /path/to/custom.db ls
 
 ### Backup
 
-To backup your data, simply copy the database file:
-
 ```bash
 cp ~/.bujo/bujo.db ~/.bujo/bujo.db.backup
 ```
 
-### Database Migrations
-
-Migrations run automatically when bujo starts. Your data is preserved across updates.
-
-## Configuration
-
-### Global Flags
+## Global Flags
 
 | Flag | Description |
 |------|-------------|
 | `--db-path` | Path to database file (default: `~/.bujo/bujo.db`) |
 | `-v, --verbose` | Enable verbose output |
-
-## Shell Completion
-
-Generate completion scripts for your shell:
-
-```bash
-# Bash
-bujo completion bash > /etc/bash_completion.d/bujo
-
-# Zsh
-bujo completion zsh > "${fpath[1]}/_bujo"
-
-# Fish
-bujo completion fish > ~/.config/fish/completions/bujo.fish
-
-# PowerShell
-bujo completion powershell > bujo.ps1
-```
 
 ## Building from Source
 
@@ -285,11 +325,6 @@ bujo completion powershell > bujo.ps1
 git clone https://github.com/typingincolor/bujo.git
 cd bujo
 go build -o bujo ./cmd/bujo
-```
-
-### Running Tests
-
-```bash
 go test ./...
 ```
 
