@@ -19,23 +19,23 @@ var (
 	dimmed  = color.New(color.Faint).SprintFunc()
 )
 
+const separator = "---------------------------------------------------------"
+
 func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	var sb strings.Builder
 
-	// Header
-	dateStr := agenda.Date.Format("Monday, January 2, 2006")
-	sb.WriteString(fmt.Sprintf("📅 %s\n", cyan(bold(dateStr))))
-
-	// Location
+	// Header line with date and location
+	dateStr := agenda.Date.Format("Monday, Jan 2, 2006")
 	if agenda.Location != nil {
-		sb.WriteString(fmt.Sprintf("📍 %s\n", yellow(*agenda.Location)))
+		sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", cyan(bold(dateStr)), yellow(*agenda.Location)))
+	} else {
+		sb.WriteString(fmt.Sprintf("📅 %s\n", cyan(bold(dateStr))))
 	}
-
-	sb.WriteString("\n")
+	sb.WriteString(dimmed(separator) + "\n")
 
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", red(bold("⚠️  Overdue"))))
+		sb.WriteString(fmt.Sprintf("%s\n", red(bold("OVERDUE"))))
 		for _, entry := range agenda.Overdue {
 			sb.WriteString(renderEntry(entry, 0, true))
 		}
@@ -44,11 +44,13 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 
 	// Today section
 	if len(agenda.Today) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", bold("Today")))
+		sb.WriteString(fmt.Sprintf("%s\n", bold("TODAY")))
 		renderEntryTree(&sb, agenda.Today, 0)
 	} else if len(agenda.Overdue) == 0 {
 		sb.WriteString(dimmed("No entries for today\n"))
 	}
+
+	sb.WriteString(dimmed(separator) + "\n")
 
 	return sb.String()
 }
@@ -81,11 +83,13 @@ func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children m
 
 func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	indent := strings.Repeat("  ", depth)
-	prefix := "├── "
-	if depth == 0 {
-		prefix = ""
+	treePrefix := ""
+	if depth > 0 {
+		treePrefix = "└── "
 	}
 
+	// Checkbox for tasks
+	checkbox := getCheckbox(entry.Type)
 	symbol := getEntrySymbol(entry.Type)
 	content := entry.Content
 
@@ -94,16 +98,32 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 	case domain.EntryTypeDone:
 		content = green(content)
 		symbol = green(symbol)
+		checkbox = green(checkbox)
 	case domain.EntryTypeMigrated:
 		content = dimmed(content)
 		symbol = dimmed(symbol)
+		checkbox = dimmed(checkbox)
 	}
 
 	if overdue {
 		content = red(content)
+		checkbox = red(checkbox)
 	}
 
-	return fmt.Sprintf("%s%s%s %s\n", indent, prefix, symbol, content)
+	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, checkbox, symbol, content)
+}
+
+func getCheckbox(t domain.EntryType) string {
+	switch t {
+	case domain.EntryTypeTask:
+		return "[ ]"
+	case domain.EntryTypeDone:
+		return "[x]"
+	case domain.EntryTypeMigrated:
+		return "[>]"
+	default:
+		return "   " // Notes and events don't have checkboxes
+	}
 }
 
 func getEntrySymbol(t domain.EntryType) string {
