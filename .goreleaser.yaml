@@ -10,12 +10,17 @@ builds:
     main: ./cmd/bujo
     binary: bujo
     env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     goos:
       - darwin
+      - linux
+      - windows
     goarch:
       - amd64
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
     ldflags:
       - -s -w
       - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
