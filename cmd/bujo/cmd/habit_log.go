@@ -23,7 +23,8 @@ Examples:
   bujo habit log Gym
   bujo habit log Water 8
   bujo habit log "Morning Run"
-  bujo habit log Gym --date 2026-01-05`,
+  bujo habit log Gym --date yesterday
+  bujo habit log Gym -d 2026-01-05`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -39,11 +40,11 @@ Examples:
 
 		logDate := time.Now()
 		if habitLogDate != "" {
-			var err error
-			logDate, err = time.Parse("2006-01-02", habitLogDate)
+			parsed, err := parseDate(habitLogDate)
 			if err != nil {
-				return fmt.Errorf("invalid date format (use YYYY-MM-DD): %s", habitLogDate)
+				return err
 			}
+			logDate = parsed
 		}
 
 		err := habitService.LogHabitForDate(cmd.Context(), name, count, logDate)
@@ -64,6 +65,23 @@ Examples:
 }
 
 func init() {
-	habitLogCmd.Flags().StringVarP(&habitLogDate, "date", "d", "", "Date to log for (YYYY-MM-DD)")
+	habitLogCmd.Flags().StringVarP(&habitLogDate, "date", "d", "", "Date to log for (YYYY-MM-DD or 'yesterday')")
 	habitCmd.AddCommand(habitLogCmd)
+}
+
+func parseDate(s string) (time.Time, error) {
+	today := time.Now()
+
+	switch s {
+	case "yesterday":
+		return today.AddDate(0, 0, -1), nil
+	case "today":
+		return today, nil
+	default:
+		parsed, err := time.Parse("2006-01-02", s)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid date format (use YYYY-MM-DD or 'yesterday'): %s", s)
+		}
+		return parsed, nil
+	}
 }
