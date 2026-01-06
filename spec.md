@@ -16,10 +16,11 @@ bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It a
 
 ## 3. UX & CLI Interface Examples
 
-### A. The Daily Agenda (bujo ls)
+### A. The Daily Agenda (`bujo ls`)
 Displays current location, overdue items, and today's hierarchical notes.
 
 Example Output:
+```
 📅 Tuesday, Jan 6, 2026 | 📍 Manchester Office
 ---------------------------------------------------------
 OVERDUE
@@ -34,11 +35,12 @@ TODAY
           └── [ ] . Send follow-up email to Alice
               └── - Include the PDF attachment
 ---------------------------------------------------------
-
-### B. Habit Tracking (bujo habit)
+```
+### B. Habit Tracking (`bujo habit`)
 Displays a 7-day sparkline status and the monthly GitHub-style heatmap.
 
 Example Output:
+```
 $ bujo habit
 🔥 HABIT TRACKER (Last 7 Days)
 ---------------------------------------------------------
@@ -46,12 +48,13 @@ Gym    [X] [ ] [X] [X] [ ] [X] [X]  (5/7)  STREAK: 2
 Water  [8] [7] [8] [8] [6] [8] [4]  (Avg: 7.1)
 Med    [X] [X] [X] [X] [X] [X] [X]  (7/7)  STREAK: 14
 ---------------------------------------------------------
+```
 
 
-
-### C. AI Reflections (bujo summary --weekly)
+### C. AI Reflections (`bujo summary --weekly`)
 
 Example Output:
+```
 🤖 WEEKLY REFLECTION (Jan 5 - Jan 11)
 ---------------------------------------------------------
 CORE THEMES:
@@ -63,7 +66,7 @@ AI INSIGHT:
 Manchester Office, your 'Note' volume increases by 40% while 'Task' 
 completion drops. Consider Manchester for brainstorming and Home for execution."
 ---------------------------------------------------------
-
+```
 ## 4. Core Features
 
 ### A. Hierarchical Tree Parser
@@ -89,11 +92,11 @@ Hierarchical summarization to manage context windows and find long-term trends.
 * Storage: Summaries are cached in a dedicated summaries table to minimize API usage.
 
 ## 5. Data Schema (SQLite)
-* entries: id, type, content, parent_id (FK), location, scheduled_date, created_at
-* habits: id, name, goal_per_day, created_at
-* habit_logs: id, habit_id (FK), completed_at
-* day_context: date (PK), location, mood, weather
-* summaries: id, horizon, content, start_date, end_date
+* `entries`: `id`, `type`, `content`, `parent_id (FK)`, `location`, `scheduled_date`, `created_at`
+* `habits`: `id`, `name`, `goal_per_day`, `created_at`
+* `habit_logs`: `id`, `habit_id (FK)`, `completed_at`
+* `day_context`: `date (PK)`, `location`, `mood`, `weather`
+* `summaries`: `id`, `horizon`, `content`, `start_date`, `end_date`
 
 ## 6. Implementation Roadmap
 1. Domain Layer: Define core types (Entry, Habit, Summary) and the TreeParser with 100% TDD.
