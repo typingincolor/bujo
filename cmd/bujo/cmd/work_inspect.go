@@ -48,6 +48,10 @@ Examples:
 			to = parsed
 		}
 
+		if err := validateDateRange(from, to); err != nil {
+			return err
+		}
+
 		history, err := bujoService.GetLocationHistory(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get location history: %w", err)

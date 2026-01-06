@@ -49,6 +49,10 @@ Examples:
 			to = parsed
 		}
 
+		if err := validateDateRange(from, to); err != nil {
+			return err
+		}
+
 		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get entries: %w", err)

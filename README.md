@@ -92,6 +92,8 @@ bujo ls --from "last monday" --to today
 bujo ls --from 2026-01-01 --to 2026-01-07
 ```
 
+**Note:** `--from` must be before or equal to `--to`.
+
 #### `bujo today`
 
 Display today's entries with overdue tasks and location.
@@ -100,9 +102,9 @@ Display today's entries with overdue tasks and location.
 📅 Tuesday, Jan 6, 2026 | 📍 Home Office
 ---------------------------------------------------------
 TODAY
-  1 . Buy groceries
-  2 . Finish report
-  └──   3 - Remember to include Q4 data
+. Buy groceries (1)
+. Finish report (2)
+└── - Remember to include Q4 data (3)
 ---------------------------------------------------------
 ```
 

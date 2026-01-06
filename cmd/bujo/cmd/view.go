@@ -81,7 +81,7 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 	}
 
 	symbol := entry.Type.Symbol()
-	idStr := fmt.Sprintf("%3d", entry.ID)
+	idStr := fmt.Sprintf("(%d)", entry.ID)
 	content := entry.Content
 
 	// Highlight the requested entry
@@ -102,7 +102,7 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 		}
 	}
 
-	fmt.Fprintf(sb, "%s%s%s %s %s\n", indent, prefix, idStr, symbol, content)
+	fmt.Fprintf(sb, "%s%s%s %s %s\n", indent, prefix, symbol, content, idStr)
 
 	for _, child := range children[entry.ID] {
 		renderViewEntry(sb, child, children, depth+1, highlightID)

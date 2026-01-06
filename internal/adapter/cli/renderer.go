@@ -123,7 +123,7 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 
 	symbol := entry.Type.Symbol()
 	content := entry.Content
-	idStr := fmt.Sprintf("%3d", entry.ID)
+	idStr := fmt.Sprintf("(%d)", entry.ID)
 
 	// Color based on type
 	switch entry.Type {
@@ -142,7 +142,7 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 		idStr = Red(idStr)
 	}
 
-	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, idStr, symbol, content)
+	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, symbol, content, idStr)
 }
 
 func RenderHabitTracker(status *service.TrackerStatus) string {
