@@ -13,6 +13,11 @@ import (
 )
 
 var (
+	// Version info set by goreleaser via ldflags
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+
 	dbPath  string
 	verbose bool
 
