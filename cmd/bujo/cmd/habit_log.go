@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
+var habitLogDate string
+
 var habitLogCmd = &cobra.Command{
 	Use:   "log <habit-name> [count]",
 	Short: "Log a habit completion",
-	Long: `Log a habit completion for today.
+	Long: `Log a habit completion for today or a specific date.
 
 If the habit doesn't exist, it will be created automatically.
 Count defaults to 1 if not specified.
@@ -19,7 +22,8 @@ Count defaults to 1 if not specified.
 Examples:
   bujo habit log Gym
   bujo habit log Water 8
-  bujo habit log "Morning Run"`,
+  bujo habit log "Morning Run"
+  bujo habit log Gym --date 2026-01-05`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -33,12 +37,23 @@ Examples:
 			}
 		}
 
-		err := habitService.LogHabit(cmd.Context(), name, count)
+		logDate := time.Now()
+		if habitLogDate != "" {
+			var err error
+			logDate, err = time.Parse("2006-01-02", habitLogDate)
+			if err != nil {
+				return fmt.Errorf("invalid date format (use YYYY-MM-DD): %s", habitLogDate)
+			}
+		}
+
+		err := habitService.LogHabitForDate(cmd.Context(), name, count, logDate)
 		if err != nil {
 			return fmt.Errorf("failed to log habit: %w", err)
 		}
 
-		if count == 1 {
+		if habitLogDate != "" {
+			fmt.Fprintf(os.Stderr, "✓ Logged: %s for %s\n", name, habitLogDate)
+		} else if count == 1 {
 			fmt.Fprintf(os.Stderr, "✓ Logged: %s\n", name)
 		} else {
 			fmt.Fprintf(os.Stderr, "✓ Logged: %s (x%d)\n", name, count)
@@ -49,5 +64,6 @@ Examples:
 }
 
 func init() {
+	habitLogCmd.Flags().StringVarP(&habitLogDate, "date", "d", "", "Date to log for (YYYY-MM-DD)")
 	habitCmd.AddCommand(habitLogCmd)
 }
