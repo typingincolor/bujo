@@ -369,6 +369,13 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 		}
 	}
 
+	// Update children dates if logged date changed
+	if opts.NewLoggedDate != nil {
+		if err := s.updateChildrenDates(ctx, id, *opts.NewLoggedDate); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -385,6 +392,25 @@ func (s *BujoService) updateChildrenDepths(ctx context.Context, parentID int64, 
 		}
 		// Recursively update grandchildren
 		if err := s.updateChildrenDepths(ctx, child.ID, depthDelta); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *BujoService) updateChildrenDates(ctx context.Context, parentID int64, newDate time.Time) error {
+	children, err := s.entryRepo.GetChildren(ctx, parentID)
+	if err != nil {
+		return err
+	}
+
+	for _, child := range children {
+		child.ScheduledDate = &newDate
+		if err := s.entryRepo.Update(ctx, child); err != nil {
+			return err
+		}
+		if err := s.updateChildrenDates(ctx, child.ID, newDate); err != nil {
 			return err
 		}
 	}
