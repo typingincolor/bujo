@@ -61,6 +61,37 @@ SQLite with these tables:
 
 **TEST-DRIVEN DEVELOPMENT IS NON-NEGOTIABLE.** Every line of production code must be written in response to a failing test. No exceptions.
 
+## TDD Checkpoints (MANDATORY)
+
+Before writing ANY production code, you MUST:
+
+1. **Say "RED:" explicitly** - Write "RED: Writing failing test for [specific behavior]"
+2. **Write the test first** - Create the test file/function
+3. **Run and show failure** - Execute `go test` and display the failure
+4. **Only then say "GREEN:"** - Write "GREEN: Implementing [specific behavior]"
+5. **Write minimum code** - Just enough to pass the test
+6. **Run and show success** - Execute `go test` and display passing
+7. **Say "REFACTOR:"** - Assess if refactoring adds value, do it if so
+
+**If you catch yourself writing production code without a failing test, STOP IMMEDIATELY:**
+- Delete the production code you wrote
+- Go back to step 1
+- This applies even for "simple" fixes
+
+## "Hard to Test" is Not an Excuse
+
+If something feels hard to test (CLI commands, integration points, etc.):
+
+1. **Extract the logic** into a pure, testable function
+2. **Write the test FIRST** for that extracted function
+3. **Then integrate** the tested function into the harder-to-test code
+
+Never skip tests because:
+- "It's just CLI glue code"
+- "It's an integration point"
+- "It's a simple one-liner"
+- "I'll add tests later"
+
 ## Development Workflow
 
 **RED-GREEN-REFACTOR:**
