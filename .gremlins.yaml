@@ -1,0 +1,15 @@
+unleash:
+  timeout-coefficient: 20
+  workers: 2
+  test-cpu: 2
+  threshold:
+    efficacy: 80
+    mutant-coverage: 0
+
+mutants:
+  arithmetic-base: true
+  conditionals-boundary: true
+  conditionals-negation: true
+  increment-decrement: true
+  invert-logical: true
+  invert-negatives: true
