@@ -412,3 +412,71 @@ func TestHabitService_RenameHabit_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestHabitService_SetHabitGoal(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create a habit
+	err := service.LogHabit(ctx, "Water", 1)
+	require.NoError(t, err)
+
+	// Set goal to 8
+	err = service.SetHabitGoal(ctx, "Water", 8)
+	require.NoError(t, err)
+
+	// Verify goal via inspect
+	today := time.Now()
+	from := today.AddDate(0, 0, -30)
+	details, err := service.InspectHabit(ctx, "Water", from, today, today)
+	require.NoError(t, err)
+	assert.Equal(t, 8, details.GoalPerDay)
+}
+
+func TestHabitService_SetHabitGoalByID(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create a habit
+	err := service.LogHabit(ctx, "Water", 1)
+	require.NoError(t, err)
+
+	status, err := service.GetTrackerStatus(ctx, time.Now(), 7)
+	require.NoError(t, err)
+	habitID := status.Habits[0].ID
+
+	// Set goal by ID
+	err = service.SetHabitGoalByID(ctx, habitID, 10)
+	require.NoError(t, err)
+
+	// Verify goal
+	today := time.Now()
+	from := today.AddDate(0, 0, -30)
+	details, err := service.InspectHabitByID(ctx, habitID, from, today, today)
+	require.NoError(t, err)
+	assert.Equal(t, 10, details.GoalPerDay)
+}
+
+func TestHabitService_SetHabitGoal_NotFound(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	err := service.SetHabitGoal(ctx, "NonExistent", 5)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestHabitService_SetHabitGoal_InvalidGoal(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create a habit
+	err := service.LogHabit(ctx, "Water", 1)
+	require.NoError(t, err)
+
+	// Try to set invalid goal
+	err = service.SetHabitGoal(ctx, "Water", 0)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "goal must be at least 1")
+}

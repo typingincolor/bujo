@@ -158,6 +158,34 @@ func (s *HabitService) RenameHabitByID(ctx context.Context, habitID int64, newNa
 	return s.habitRepo.Update(ctx, *habit)
 }
 
+func (s *HabitService) SetHabitGoal(ctx context.Context, name string, goal int) error {
+	if goal < 1 {
+		return fmt.Errorf("goal must be at least 1")
+	}
+
+	habit, err := s.getHabitByName(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerDay = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
+func (s *HabitService) SetHabitGoalByID(ctx context.Context, habitID int64, goal int) error {
+	if goal < 1 {
+		return fmt.Errorf("goal must be at least 1")
+	}
+
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerDay = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
 type HabitDetails struct {
 	ID                int64
 	Name              string

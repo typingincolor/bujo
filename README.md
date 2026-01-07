@@ -310,7 +310,7 @@ bujo habit --month  # 30-day calendar view
 Gym (3 day streak)
   ○ ○ ○ ○ ● ● ●
   W T F S S M T
-  43% completion
+  1/1 today | 43% completion
 ```
 
 #### `bujo habit log <name> [count]`
@@ -322,6 +322,15 @@ bujo habit log Gym
 bujo habit log Water 8
 bujo habit log Gym --date yesterday
 bujo habit log #1 5              # By ID with count
+```
+
+#### `bujo habit set-goal <name|#id> <goal>`
+
+Set the daily goal for a habit. Goals are shown in the tracker display.
+
+```bash
+bujo habit set-goal Water 8
+bujo habit set-goal #1 10
 ```
 
 #### `bujo habit inspect <name|#id>`
