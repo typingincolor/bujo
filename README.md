@@ -118,6 +118,16 @@ Display tomorrow's entries.
 
 Display entries for the next 7 days (today through 6 days ahead).
 
+#### `bujo tasks`
+
+Show outstanding tasks only (incomplete tasks, excluding notes, events, done, and migrated).
+
+```bash
+bujo tasks                             # Last 30 days
+bujo tasks --from "last week"          # Custom range
+bujo tasks --from 2026-01-01 --to 2026-01-31
+```
+
 #### `bujo view <id>`
 
 View an entry with its parent and siblings for context.

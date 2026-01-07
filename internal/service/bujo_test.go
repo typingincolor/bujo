@@ -916,3 +916,69 @@ func TestBujoService_ClearWeather(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, weather)
 }
+
+func TestBujoService_GetOutstandingTasks(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+
+	// Add a mix of entry types
+	input := `. Task 1
+- Note (not a task)
+o Event (not a task)
+x Done task (completed)
+> Migrated task`
+
+	_, err := service.LogEntries(ctx, input, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Add task from yesterday
+	_, err = service.LogEntries(ctx, ". Yesterday task", LogEntriesOptions{Date: yesterday})
+	require.NoError(t, err)
+
+	// Get outstanding tasks for today only
+	tasks, err := service.GetOutstandingTasks(ctx, today, today)
+	require.NoError(t, err)
+
+	// Should only get "Task 1" (not note, event, done, or migrated)
+	assert.Len(t, tasks, 1)
+	assert.Equal(t, "Task 1", tasks[0].Content)
+	assert.Equal(t, domain.EntryTypeTask, tasks[0].Type)
+}
+
+func TestBujoService_GetOutstandingTasks_DateRange(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+	twoDaysAgo := today.AddDate(0, 0, -2)
+
+	// Add tasks on different days
+	_, err := service.LogEntries(ctx, ". Task today", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Task yesterday", LogEntriesOptions{Date: yesterday})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Task old", LogEntriesOptions{Date: twoDaysAgo})
+	require.NoError(t, err)
+
+	// Get tasks from yesterday to today (should exclude 2 days ago)
+	tasks, err := service.GetOutstandingTasks(ctx, yesterday, today)
+	require.NoError(t, err)
+
+	assert.Len(t, tasks, 2)
+}
+
+func TestBujoService_GetOutstandingTasks_Empty(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// No entries at all
+	tasks, err := service.GetOutstandingTasks(ctx, today, today)
+	require.NoError(t, err)
+	assert.Empty(t, tasks)
+}

@@ -496,6 +496,22 @@ func (s *BujoService) updateChildrenDates(ctx context.Context, parentID int64, n
 	return nil
 }
 
+func (s *BujoService) GetOutstandingTasks(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+	entries, err := s.entryRepo.GetByDateRange(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	var tasks []domain.Entry
+	for _, entry := range entries {
+		if entry.Type == domain.EntryTypeTask {
+			tasks = append(tasks, entry)
+		}
+	}
+
+	return tasks, nil
+}
+
 func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLevels int) ([]domain.Entry, error) {
 	entry, err := s.getEntry(ctx, id)
 	if err != nil {
