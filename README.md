@@ -19,6 +19,7 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Weather Tracking** - Record daily weather conditions
 - **Weekly View** - See entries from the last 7 days at a glance
 - **Entry Management** - Edit, delete, migrate, and reorganize entries
+- **Interactive TUI** - Navigate and manage entries with keyboard shortcuts
 
 ## Installation
 
@@ -492,6 +493,37 @@ Delete a list. Requires `--force` if list has items.
 bujo list delete "#1"
 bujo list delete Shopping --force    # Delete with items
 ```
+
+### Interactive TUI
+
+#### `bujo tui`
+
+Launch an interactive terminal UI for viewing and managing entries.
+
+```
+OVERDUE
+  . Urgent task (1)
+
+Tuesday, Jan 7 | Home Office
+▸ . Buy groceries (2)             ← selected
+  . Finish report (3)
+  └── - Remember Q4 data (4)
+
+j/k: move  space: done  d: delete  q: quit  ?: help
+```
+
+**Keyboard shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `g` | Jump to top |
+| `G` | Jump to bottom |
+| `Space` | Toggle done/undone |
+| `d` | Delete entry |
+| `?` | Toggle help |
+| `q` | Quit |
 
 ### Other
 
