@@ -603,3 +603,23 @@ func TestModel_Update_AddMode_RootItemAddsAtRoot(t *testing.T) {
 		t.Error("parentID should be nil when selected item is root")
 	}
 }
+
+func TestModel_Update_AddRootMode_AddsAtRootFromNestedItem(t *testing.T) {
+	parentID := int64(10)
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 22, Content: "Child item", ParentID: &parentID}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Fatal("should enter add mode")
+	}
+	if m.addMode.parentID != nil {
+		t.Error("pressing 'r' should add at root regardless of selected item's parent")
+	}
+}

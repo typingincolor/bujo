@@ -12,6 +12,7 @@ type KeyMap struct {
 	Edit     key.Binding
 	Add      key.Binding
 	AddChild key.Binding
+	AddRoot  key.Binding
 	Migrate  key.Binding
 	Confirm  key.Binding
 	Cancel   key.Binding
@@ -57,6 +58,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("A"),
 			key.WithHelp("A", "add child"),
 		),
+		AddRoot: key.NewBinding(
+			key.WithKeys("r"),
+			key.WithHelp("r", "add root"),
+		),
 		Migrate: key.NewBinding(
 			key.WithKeys("m"),
 			key.WithHelp("m", "migrate"),
@@ -87,7 +92,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.Done, k.Edit, k.Add, k.AddChild, k.Migrate, k.Delete},
+		{k.Done, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Delete},
 		{k.Quit, k.Help},
 	}
 }

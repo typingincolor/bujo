@@ -154,6 +154,20 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.AddRoot):
+		ti := textinput.New()
+		ti.Placeholder = ". task, - note, o event"
+		ti.Focus()
+		ti.CharLimit = 256
+		ti.Width = m.width - 10
+		m.addMode = addState{
+			active:   true,
+			asChild:  false,
+			parentID: nil,
+			input:    ti,
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Migrate):
 		if len(m.entries) == 0 {
 			return m, nil
