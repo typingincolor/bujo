@@ -57,6 +57,49 @@ func validateDateRange(from, to time.Time) error {
 	return nil
 }
 
+func parseAddArgs(args []string) (entries []string, location, date string, help bool) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "-a" || arg == "--at":
+			if i+1 < len(args) {
+				location = args[i+1]
+				i++
+			}
+		case arg == "-d" || arg == "--date":
+			if i+1 < len(args) {
+				date = args[i+1]
+				i++
+			}
+		case strings.HasPrefix(arg, "-a="):
+			location = arg[3:]
+		case strings.HasPrefix(arg, "--at="):
+			location = arg[5:]
+		case strings.HasPrefix(arg, "-d="):
+			date = arg[3:]
+		case strings.HasPrefix(arg, "--date="):
+			date = arg[7:]
+		case arg == "-h" || arg == "--help":
+			help = true
+			return
+		case arg == "--":
+			entries = append(entries, args[i+1:]...)
+			return
+		case arg == "--db-path":
+			if i+1 < len(args) {
+				i++
+			}
+		case strings.HasPrefix(arg, "--db-path="):
+			// skip
+		case arg == "-v" || arg == "--verbose":
+			// skip
+		default:
+			entries = append(entries, arg)
+		}
+	}
+	return
+}
+
 func parseFutureDate(s string) (time.Time, error) {
 	now := time.Now()
 

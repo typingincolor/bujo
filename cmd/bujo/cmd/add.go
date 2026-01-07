@@ -10,11 +10,6 @@ import (
 	"github.com/typingincolor/bujo/internal/service"
 )
 
-var (
-	addLocation string
-	addDate     string
-)
-
 var addCmd = &cobra.Command{
 	Use:   "add [entries...]",
 	Short: "Add entries to today's journal",
@@ -38,46 +33,9 @@ Examples:
 `,
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Manually parse flags to allow entries starting with '-'
-		var entries []string
-		for i := 0; i < len(args); i++ {
-			arg := args[i]
-			switch {
-			case arg == "-a" || arg == "--at":
-				if i+1 < len(args) {
-					addLocation = args[i+1]
-					i++
-				}
-			case arg == "-d" || arg == "--date":
-				if i+1 < len(args) {
-					addDate = args[i+1]
-					i++
-				}
-			case strings.HasPrefix(arg, "-a="):
-				addLocation = arg[3:]
-			case strings.HasPrefix(arg, "--at="):
-				addLocation = arg[5:]
-			case strings.HasPrefix(arg, "-d="):
-				addDate = arg[3:]
-			case strings.HasPrefix(arg, "--date="):
-				addDate = arg[7:]
-			case arg == "-h" || arg == "--help":
-				return cmd.Help()
-			case arg == "--":
-				entries = append(entries, args[i+1:]...)
-				i = len(args) // break loop
-			// Skip global flags (handled by parent)
-			case arg == "--db-path":
-				if i+1 < len(args) {
-					i++ // skip value
-				}
-			case strings.HasPrefix(arg, "--db-path="):
-				// skip
-			case arg == "-v" || arg == "--verbose":
-				// skip
-			default:
-				entries = append(entries, arg)
-			}
+		entries, addLocation, addDate, showHelp := parseAddArgs(args)
+		if showHelp {
+			return cmd.Help()
 		}
 
 		var input string
@@ -132,7 +90,8 @@ Examples:
 }
 
 func init() {
-	addCmd.Flags().StringVarP(&addLocation, "at", "a", "", "Set location for entries")
-	addCmd.Flags().StringVarP(&addDate, "date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
+	// Flags defined for help text only - actual parsing done by parseAddArgs
+	addCmd.Flags().StringP("at", "a", "", "Set location for entries")
+	addCmd.Flags().StringP("date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	rootCmd.AddCommand(addCmd)
 }
