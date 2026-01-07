@@ -14,6 +14,7 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
 - **Habit Tracking** - Track daily habits with streaks and completion rates
 - **Location Context** - Set your work location for the day
+- **Mood Tracking** - Track your daily mood with history
 - **Weekly View** - See entries from the last 7 days at a glance
 - **Entry Management** - Edit, delete, migrate, and reorganize entries
 
@@ -221,6 +222,40 @@ Clear location for a day.
 ```bash
 bujo work clear
 bujo work clear --date yesterday
+```
+
+### Mood Tracking
+
+#### `bujo mood`
+
+Show today's mood.
+
+#### `bujo mood set <mood>`
+
+Set mood for today (or a specific date).
+
+```bash
+bujo mood set happy
+bujo mood set "tired but productive"
+bujo mood set energetic --date yesterday
+```
+
+#### `bujo mood inspect`
+
+Show mood history.
+
+```bash
+bujo mood inspect
+bujo mood inspect --from "last week"
+```
+
+#### `bujo mood clear`
+
+Clear mood for a day.
+
+```bash
+bujo mood clear
+bujo mood clear --date yesterday
 ```
 
 ### Habit Tracking

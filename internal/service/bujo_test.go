@@ -762,3 +762,80 @@ func TestBujoService_GetMultiDayAgenda_EmptyRange(t *testing.T) {
 	assert.Empty(t, agenda.Days[0].Entries)
 	assert.Empty(t, agenda.Days[1].Entries)
 }
+
+// Mood tracking tests
+
+func TestBujoService_SetMood(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetMood(ctx, today, "happy")
+
+	require.NoError(t, err)
+}
+
+func TestBujoService_GetMood(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetMood(ctx, today, "energetic")
+	require.NoError(t, err)
+
+	mood, err := service.GetMood(ctx, today)
+
+	require.NoError(t, err)
+	require.NotNil(t, mood)
+	assert.Equal(t, "energetic", *mood)
+}
+
+func TestBujoService_GetMood_NotSet(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	mood, err := service.GetMood(ctx, today)
+
+	require.NoError(t, err)
+	assert.Nil(t, mood)
+}
+
+func TestBujoService_GetMoodHistory(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	day3 := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetMood(ctx, day1, "happy")
+	require.NoError(t, err)
+	err = service.SetMood(ctx, day2, "tired")
+	require.NoError(t, err)
+	err = service.SetMood(ctx, day3, "focused")
+	require.NoError(t, err)
+
+	history, err := service.GetMoodHistory(ctx, day1, day3)
+
+	require.NoError(t, err)
+	assert.Len(t, history, 3)
+}
+
+func TestBujoService_ClearMood(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetMood(ctx, today, "happy")
+	require.NoError(t, err)
+
+	err = service.ClearMood(ctx, today)
+	require.NoError(t, err)
+
+	mood, err := service.GetMood(ctx, today)
+	require.NoError(t, err)
+	assert.Nil(t, mood)
+}
