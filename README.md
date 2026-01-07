@@ -110,6 +110,14 @@ TODAY
 ---------------------------------------------------------
 ```
 
+#### `bujo tomorrow`
+
+Display tomorrow's entries.
+
+#### `bujo next`
+
+Display entries for the next 7 days (today through 6 days ahead).
+
 #### `bujo view <id>`
 
 View an entry with its parent and siblings for context.
