@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -530,5 +531,75 @@ func TestModel_Update_MigrateMode_NoOpOnNonTask(t *testing.T) {
 
 	if m.migrateMode.active {
 		t.Error("pressing m on a note should not enter migrate mode")
+	}
+}
+
+func TestModel_Update_ErrorCanBeDismissed(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.err = fmt.Errorf("some error")
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.err != nil {
+		t.Error("pressing Escape should dismiss error")
+	}
+}
+
+func TestModel_Update_ErrorCanBeDismissedWithAnyKey(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.err = fmt.Errorf("some error")
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.err != nil {
+		t.Error("pressing any key should dismiss error")
+	}
+}
+
+func TestModel_Update_AddMode_InheritsParentFromSelected(t *testing.T) {
+	parentID := int64(10)
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 22, Content: "Child item", ParentID: &parentID}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Fatal("should enter add mode")
+	}
+	if m.addMode.parentID == nil {
+		t.Error("parentID should be inherited from selected item")
+	}
+	if m.addMode.parentID != nil && *m.addMode.parentID != 10 {
+		t.Errorf("parentID should be 10 (same as selected's parent), got %d", *m.addMode.parentID)
+	}
+}
+
+func TestModel_Update_AddMode_RootItemAddsAtRoot(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Root item", ParentID: nil}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Fatal("should enter add mode")
+	}
+	if m.addMode.parentID != nil {
+		t.Error("parentID should be nil when selected item is root")
 	}
 }

@@ -45,6 +45,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		if m.err != nil {
+			m.err = nil
+			return m, nil
+		}
 		if m.editMode.active {
 			return m.handleEditMode(msg)
 		}
@@ -119,10 +123,15 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		ti.Focus()
 		ti.CharLimit = 256
 		ti.Width = m.width - 10
+		var parentID *int64
+		if len(m.entries) > 0 {
+			parentID = m.entries[m.selectedIdx].Entry.ParentID
+		}
 		m.addMode = addState{
-			active:  true,
-			asChild: false,
-			input:   ti,
+			active:   true,
+			asChild:  false,
+			parentID: parentID,
+			input:    ti,
 		}
 		return m, nil
 
