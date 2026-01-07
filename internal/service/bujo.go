@@ -302,6 +302,10 @@ func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
 		return err
 	}
 
+	if entry.Type != domain.EntryTypeTask {
+		return fmt.Errorf("only tasks can be marked done, this is a %s", entry.Type)
+	}
+
 	entry.Type = domain.EntryTypeDone
 	return s.entryRepo.Update(ctx, *entry)
 }

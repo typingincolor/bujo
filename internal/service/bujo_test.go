@@ -254,6 +254,28 @@ func TestBujoService_MarkDone_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_MarkDone_OnlyTasks(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	// Try to mark a note as done
+	noteIDs, err := service.LogEntries(ctx, "- This is a note", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkDone(ctx, noteIDs[0])
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks")
+
+	// Try to mark an event as done
+	eventIDs, err := service.LogEntries(ctx, "o Meeting at 3pm", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkDone(ctx, eventIDs[0])
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks")
+}
+
 func TestBujoService_Undo(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

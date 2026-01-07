@@ -393,6 +393,11 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 	entry := m.entries[m.selectedIdx].Entry
 
+	// Only tasks and done entries can be toggled
+	if entry.Type != domain.EntryTypeTask && entry.Type != domain.EntryTypeDone {
+		return nil
+	}
+
 	return func() tea.Msg {
 		ctx := context.Background()
 		var err error
