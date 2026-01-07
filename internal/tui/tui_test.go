@@ -335,3 +335,200 @@ func TestKeyMap_KeyBindings(t *testing.T) {
 		})
 	}
 }
+
+func TestModel_Update_EditMode_EntersOnE(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Test entry", Type: domain.EntryTypeTask}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.editMode.active {
+		t.Error("pressing e should enter edit mode")
+	}
+	if m.editMode.entryID != 1 {
+		t.Errorf("editMode.entryID should be 1, got %d", m.editMode.entryID)
+	}
+}
+
+func TestModel_Update_EditMode_InitializesWithContent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Original content", Type: domain.EntryTypeTask}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.editMode.input.Value() != "Original content" {
+		t.Errorf("input should be initialized with entry content, got %s", m.editMode.input.Value())
+	}
+}
+
+func TestModel_Update_EditMode_CancelsOnEsc(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Test entry", Type: domain.EntryTypeTask}},
+	}
+	model.editMode = editState{
+		active:  true,
+		entryID: 1,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.editMode.active {
+		t.Error("pressing ESC should exit edit mode")
+	}
+}
+
+func TestModel_Update_EditMode_NoOpOnEmptyEntries(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.editMode.active {
+		t.Error("pressing e with no entries should not enter edit mode")
+	}
+}
+
+func TestModel_Update_AddMode_EntersOnA(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Error("pressing a should enter add mode")
+	}
+	if m.addMode.asChild {
+		t.Error("pressing a should add as sibling, not child")
+	}
+}
+
+func TestModel_Update_AddMode_EntersAsChildOnShiftA(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Parent"}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'A'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Error("pressing A should enter add mode")
+	}
+	if !m.addMode.asChild {
+		t.Error("pressing A should add as child")
+	}
+	if m.addMode.parentID == nil || *m.addMode.parentID != 1 {
+		t.Error("parentID should be set to selected entry ID")
+	}
+}
+
+func TestModel_Update_AddMode_CancelsOnEsc(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.addMode = addState{active: true}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.addMode.active {
+		t.Error("pressing ESC should exit add mode")
+	}
+}
+
+func TestModel_Update_AddMode_StartsEmpty(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.addMode.input.Value() != "" {
+		t.Errorf("add mode input should start empty, got %s", m.addMode.input.Value())
+	}
+}
+
+func TestModel_Update_MigrateMode_EntersOnM(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Task", Type: domain.EntryTypeTask}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.migrateMode.active {
+		t.Error("pressing m should enter migrate mode")
+	}
+	if m.migrateMode.entryID != 1 {
+		t.Errorf("migrateMode.entryID should be 1, got %d", m.migrateMode.entryID)
+	}
+}
+
+func TestModel_Update_MigrateMode_CancelsOnEsc(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.migrateMode = migrateState{active: true, entryID: 1}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.migrateMode.active {
+		t.Error("pressing ESC should exit migrate mode")
+	}
+}
+
+func TestModel_Update_MigrateMode_NoOpOnEmptyEntries(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.migrateMode.active {
+		t.Error("pressing m with no entries should not enter migrate mode")
+	}
+}
+
+func TestModel_Update_MigrateMode_NoOpOnNonTask(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: 1, Content: "Note", Type: domain.EntryTypeNote}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.migrateMode.active {
+		t.Error("pressing m on a note should not enter migrate mode")
+	}
+}

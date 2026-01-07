@@ -46,7 +46,19 @@ func (m Model) View() string {
 		}
 	}
 
-	if m.confirmMode.active {
+	if m.editMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderEditInput())
+		sb.WriteString("\n")
+	} else if m.addMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAddInput())
+		sb.WriteString("\n")
+	} else if m.migrateMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMigrateInput())
+		sb.WriteString("\n")
+	} else if m.confirmMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderConfirmDialog())
 		sb.WriteString("\n")
@@ -93,4 +105,32 @@ func (m Model) renderConfirmDialog() string {
   n - No, cancel`
 
 	return ConfirmStyle.Render(dialog)
+}
+
+func (m Model) renderEditInput() string {
+	var sb strings.Builder
+	sb.WriteString("Edit entry:\n")
+	sb.WriteString(m.editMode.input.View())
+	sb.WriteString("\n\nEnter to save, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderAddInput() string {
+	var sb strings.Builder
+	if m.addMode.asChild {
+		sb.WriteString("Add child entry:\n")
+	} else {
+		sb.WriteString("Add entry:\n")
+	}
+	sb.WriteString(m.addMode.input.View())
+	sb.WriteString("\n\nEnter to add, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderMigrateInput() string {
+	var sb strings.Builder
+	sb.WriteString("Migrate to date:\n")
+	sb.WriteString(m.migrateMode.input.View())
+	sb.WriteString("\n\nEnter to migrate, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
 }

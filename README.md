@@ -521,6 +521,10 @@ j/k: move  space: done  d: delete  q: quit  ?: help
 | `g` | Jump to top |
 | `G` | Jump to bottom |
 | `Space` | Toggle done/undone |
+| `e` | Edit entry content |
+| `a` | Add new entry |
+| `A` | Add child entry (under selected) |
+| `m` | Migrate task to future date |
 | `d` | Delete entry |
 | `?` | Toggle help |
 | `q` | Quit |
