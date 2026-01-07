@@ -13,6 +13,7 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Rapid Entry** - Add tasks, notes, and events with simple symbols
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
 - **Habit Tracking** - Track daily habits with streaks and completion rates
+- **List Management** - Organize items in separate lists (shopping, projects, etc.)
 - **Location Context** - Set your work location for the day
 - **Mood Tracking** - Track your daily mood with history
 - **Weather Tracking** - Record daily weather conditions
@@ -386,6 +387,110 @@ Delete a specific log entry by ID (use `habit inspect` to see IDs).
 
 ```bash
 bujo habit delete-log 42
+```
+
+### List Management
+
+Lists are separate from your daily journal - useful for shopping lists, project backlogs, or any collection of items.
+
+#### `bujo list`
+
+Show all lists with progress.
+
+```
+Lists
+---------------------------------------------------------
+#1 Shopping List 1/4 done
+#2 Work
+```
+
+#### `bujo list create <name>`
+
+Create a new list. Names can include spaces if quoted.
+
+```bash
+bujo list create Shopping
+bujo list create "Shopping List"
+```
+
+#### `bujo list show <list>`
+
+Show items in a list. Reference by name or ID (#1).
+
+```bash
+bujo list show Shopping
+bujo list show "#1"
+```
+
+```
+#1 Shopping List
+---------------------------------------------------------
+(1) . Buy milk
+(2) . Buy bread
+(3) - Remember eggs
+---------------------------------------------------------
+0/3 done
+```
+
+#### `bujo list add <list> <content>`
+
+Add an item to a list. Prefix with symbol for type (default: task).
+
+```bash
+bujo list add Shopping "Buy milk"
+bujo list add "#1" "Buy bread"
+bujo list add "#1" -- "- Remember eggs"    # Note type
+```
+
+#### `bujo list done <item-id>`
+
+Mark a list item as complete.
+
+```bash
+bujo list done 42
+```
+
+#### `bujo list undo <item-id>`
+
+Mark a completed item as incomplete.
+
+```bash
+bujo list undo 42
+```
+
+#### `bujo list remove <item-id>`
+
+Remove an item from a list.
+
+```bash
+bujo list remove 42
+```
+
+#### `bujo list move <item-id> <target-list>`
+
+Move an item to another list.
+
+```bash
+bujo list move 42 Work
+bujo list move 42 "#2"
+```
+
+#### `bujo list rename <list> <new-name>`
+
+Rename a list.
+
+```bash
+bujo list rename Shopping Groceries
+bujo list rename "#1" "New Name"
+```
+
+#### `bujo list delete <list>`
+
+Delete a list. Requires `--force` if list has items.
+
+```bash
+bujo list delete "#1"
+bujo list delete Shopping --force    # Delete with items
 ```
 
 ### Other

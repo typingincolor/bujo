@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,6 +27,32 @@ func parseHabitNameOrID(s string) (name string, id int64, isID bool, err error) 
 		return "", id, true, nil
 	}
 	return s, 0, false, nil
+}
+
+func parseListNameOrID(s string) (name string, id int64, isID bool, err error) {
+	if strings.HasPrefix(s, "#") {
+		id, err = strconv.ParseInt(s[1:], 10, 64)
+		if err != nil {
+			return "", 0, false, fmt.Errorf("invalid list ID: %s", s)
+		}
+		return "", id, true, nil
+	}
+	return s, 0, false, nil
+}
+
+func resolveListID(ctx context.Context, s string) (int64, error) {
+	name, id, isID, err := parseListNameOrID(s)
+	if err != nil {
+		return 0, err
+	}
+	if isID {
+		return id, nil
+	}
+	list, err := listService.GetListByName(ctx, name)
+	if err != nil {
+		return 0, err
+	}
+	return list.ID, nil
 }
 
 func parsePastDate(s string) (time.Time, error) {
