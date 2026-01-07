@@ -27,7 +27,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.selectedIdx >= len(m.entries) {
 			m.selectedIdx = max(0, len(m.entries)-1)
 		}
-		return m, nil
+		m.scrollOffset = 0
+		return m.ensuredVisible(), nil
 
 	case errMsg:
 		m.err = msg.err
@@ -83,16 +84,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
-			m.ensureVisible()
 		}
-		return m, nil
+		return m.ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.selectedIdx < len(m.entries)-1 {
 			m.selectedIdx++
-			m.ensureVisible()
 		}
-		return m, nil
+		return m.ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Top):
 		m.selectedIdx = 0
@@ -102,9 +101,8 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Bottom):
 		if len(m.entries) > 0 {
 			m.selectedIdx = len(m.entries) - 1
-			m.ensureVisible()
 		}
-		return m, nil
+		return m.ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()

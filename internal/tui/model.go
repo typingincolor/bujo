@@ -93,16 +93,19 @@ func (m Model) Init() tea.Cmd {
 	return m.loadAgendaCmd()
 }
 
-func (m *Model) ensureVisible() {
-	visibleHeight := m.height - 4
-	if visibleHeight < 5 {
-		visibleHeight = 5
+func (m Model) visibleHeight() int {
+	h := m.height - 4
+	if h < 5 {
+		h = 5
 	}
-
-	// Adjust for scroll indicator at top
 	if m.scrollOffset > 0 {
-		visibleHeight--
+		h--
 	}
+	return h
+}
+
+func (m Model) ensuredVisible() Model {
+	visibleHeight := m.visibleHeight()
 
 	// If selected is above visible area, scroll up
 	if m.selectedIdx < m.scrollOffset {
@@ -113,6 +116,8 @@ func (m *Model) ensureVisible() {
 	if m.selectedIdx >= m.scrollOffset+visibleHeight {
 		m.scrollOffset = m.selectedIdx - visibleHeight + 1
 	}
+
+	return m
 }
 
 func (m Model) loadAgendaCmd() tea.Cmd {
