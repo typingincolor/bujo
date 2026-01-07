@@ -24,8 +24,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case agendaLoadedMsg:
 		m.agenda = msg.agenda
 		m.entries = m.flattenAgenda(msg.agenda)
+		// Keep selection if valid, otherwise reset to start
 		if m.selectedIdx >= len(m.entries) {
-			m.selectedIdx = max(0, len(m.entries)-1)
+			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
 		return m.ensuredVisible(), nil

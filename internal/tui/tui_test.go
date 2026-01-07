@@ -178,8 +178,8 @@ func TestModel_FlattenAgenda_WithOverdue(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(result))
 	}
-	if result[0].DayHeader != "OVERDUE" {
-		t.Errorf("expected OVERDUE header, got %s", result[0].DayHeader)
+	if result[0].DayHeader != "⚠️  OVERDUE" {
+		t.Errorf("expected ⚠️  OVERDUE header, got %s", result[0].DayHeader)
 	}
 	if !result[0].IsOverdue {
 		t.Error("entry should be marked as overdue")

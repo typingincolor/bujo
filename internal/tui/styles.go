@@ -47,4 +47,17 @@ var (
 
 	LocationStyle = lipgloss.NewStyle().
 			Foreground(YellowColor)
+
+	ToolbarStyle = lipgloss.NewStyle().
+			Foreground(CyanColor).
+			Bold(true)
+
+	ErrorStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(RedColor).
+			Padding(1, 2)
+
+	ErrorTitleStyle = lipgloss.NewStyle().
+			Foreground(RedColor).
+			Bold(true)
 )

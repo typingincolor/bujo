@@ -9,7 +9,7 @@ import (
 
 func (m Model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n\nPress any key to continue.", m.err)
+		return m.renderErrorPopup()
 	}
 
 	if m.agenda == nil {
@@ -18,34 +18,60 @@ func (m Model) View() string {
 
 	var sb strings.Builder
 
+	// Toolbar
+	toolbar := m.renderToolbar()
+	sb.WriteString(toolbar)
+	sb.WriteString("\n")
+	sb.WriteString(strings.Repeat("─", min(m.width, 60)))
+	sb.WriteString("\n")
+
 	if len(m.entries) == 0 {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
 		sb.WriteString("\n\n")
 	} else {
-		// Calculate visible area (reserve lines for help bar)
-		visibleHeight := m.height - 4
-		if visibleHeight < 5 {
-			visibleHeight = 5
+		// Calculate available lines (reserve for toolbar, help bar and padding)
+		availableLines := m.height - 6 // 2 for toolbar, 2 for help, 2 for padding
+		if availableLines < 5 {
+			availableLines = 5
 		}
 
 		// Show scroll indicator if there's content above
 		if m.scrollOffset > 0 {
 			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↑ %d more above", m.scrollOffset)))
 			sb.WriteString("\n")
-			visibleHeight--
+			availableLines--
 		}
 
-		// Render visible entries
-		endIdx := m.scrollOffset + visibleHeight
-		if endIdx > len(m.entries) {
-			endIdx = len(m.entries)
-		}
+		// Reserve line for "more below" indicator
+		reserveForBelow := 1
 
-		for i := m.scrollOffset; i < endIdx; i++ {
+		// Render entries, counting lines used
+		linesUsed := 0
+		endIdx := m.scrollOffset
+		for i := m.scrollOffset; i < len(m.entries); i++ {
 			item := m.entries[i]
+			linesNeeded := 1 // entry line
+			if item.DayHeader != "" {
+				linesNeeded += 2 // header + blank line before (except first)
+				if i == m.scrollOffset {
+					linesNeeded = 2 // no blank line before first header
+				}
+			}
+
+			// Check if we have room (leave space for "more below" if not at end)
+			spaceNeeded := linesNeeded
+			if i < len(m.entries)-1 {
+				spaceNeeded += reserveForBelow
+			}
+			if linesUsed+spaceNeeded > availableLines {
+				break
+			}
+
+			// Render this entry
 			if item.DayHeader != "" {
 				if i > m.scrollOffset {
 					sb.WriteString("\n")
+					linesUsed++
 				}
 				if item.IsOverdue {
 					sb.WriteString(OverdueHeaderStyle.Render(item.DayHeader))
@@ -53,16 +79,17 @@ func (m Model) View() string {
 					sb.WriteString(DateHeaderStyle.Render(item.DayHeader))
 				}
 				sb.WriteString("\n")
+				linesUsed++
 			}
 
 			line := m.renderEntry(item)
-
 			if i == m.selectedIdx {
 				line = SelectedStyle.Render(line)
 			}
-
 			sb.WriteString(line)
 			sb.WriteString("\n")
+			linesUsed++
+			endIdx = i + 1
 		}
 
 		// Show scroll indicator if there's content below
@@ -110,9 +137,8 @@ func (m Model) renderEntry(item EntryItem) string {
 
 	symbol := entry.Type.Symbol()
 	content := entry.Content
-	idStr := fmt.Sprintf("(%d)", entry.ID)
 
-	base := fmt.Sprintf("%s%s%s %s %s", indent, treePrefix, symbol, content, idStr)
+	base := fmt.Sprintf("%s%s%s %s", indent, treePrefix, symbol, content)
 
 	switch entry.Type {
 	case domain.EntryTypeDone:
@@ -123,8 +149,7 @@ func (m Model) renderEntry(item EntryItem) string {
 		if item.IsOverdue {
 			return OverdueStyle.Render(base)
 		}
-		styled := fmt.Sprintf("%s%s%s %s %s", indent, treePrefix, symbol, content, IDStyle.Render(idStr))
-		return styled
+		return base
 	}
 }
 
@@ -171,4 +196,43 @@ func (m Model) renderGotoInput() string {
 	sb.WriteString(m.gotoMode.input.View())
 	sb.WriteString("\n\nEnter to go, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderToolbar() string {
+	viewModeStr := "Day"
+	if m.viewMode == ViewModeWeek {
+		viewModeStr = "Week"
+	}
+
+	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
+
+	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s", viewModeStr, dateStr))
+}
+
+func (m Model) renderErrorPopup() string {
+	headerText := "Error"
+	message := fmt.Sprintf("%v", m.err)
+	footer := "Press any key to dismiss"
+
+	// Find the longest line
+	maxLen := len(footer)
+	if len(message) > maxLen {
+		maxLen = len(message)
+	}
+
+	// Pad header to match longest line
+	headerPad := maxLen - len(headerText)
+	if headerPad < 0 {
+		headerPad = 0
+	}
+
+	var sb strings.Builder
+	sb.WriteString(ErrorTitleStyle.Render(headerText))
+	sb.WriteString(strings.Repeat(" ", headerPad))
+	sb.WriteString("\n\n")
+	sb.WriteString(message)
+	sb.WriteString("\n\n")
+	sb.WriteString(footer)
+
+	return ErrorStyle.Render(sb.String())
 }

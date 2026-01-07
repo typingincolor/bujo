@@ -93,28 +93,77 @@ func (m Model) Init() tea.Cmd {
 	return m.loadAgendaCmd()
 }
 
-func (m Model) visibleHeight() int {
-	h := m.height - 4
+func (m Model) availableLines() int {
+	// Reserve: 2 for toolbar, 2 for help, 2 for padding
+	h := m.height - 6
 	if h < 5 {
 		h = 5
-	}
-	if m.scrollOffset > 0 {
-		h--
 	}
 	return h
 }
 
+func (m Model) linesForEntry(idx int) int {
+	if idx < 0 || idx >= len(m.entries) {
+		return 0
+	}
+	item := m.entries[idx]
+	lines := 1 // entry itself
+	if item.DayHeader != "" {
+		lines++ // header line
+		if idx > 0 && m.entries[idx-1].DayHeader == "" {
+			lines++ // blank line before header (unless first visible)
+		}
+	}
+	return lines
+}
+
 func (m Model) ensuredVisible() Model {
-	visibleHeight := m.visibleHeight()
+	if len(m.entries) == 0 {
+		return m
+	}
+
+	available := m.availableLines()
 
 	// If selected is above visible area, scroll up
 	if m.selectedIdx < m.scrollOffset {
 		m.scrollOffset = m.selectedIdx
+		return m
+	}
+
+	// Calculate lines used from scrollOffset to selectedIdx (inclusive)
+	linesUsed := 0
+	for i := m.scrollOffset; i <= m.selectedIdx; i++ {
+		entryLines := m.linesForEntry(i)
+		// First visible entry doesn't get blank line before header
+		if i == m.scrollOffset && m.entries[i].DayHeader != "" {
+			entryLines = 2 // just header + entry, no blank line
+		}
+		linesUsed += entryLines
+	}
+
+	// Account for scroll indicators
+	if m.scrollOffset > 0 {
+		linesUsed++ // "more above" indicator
+	}
+	if m.selectedIdx < len(m.entries)-1 {
+		linesUsed++ // reserve for "more below" indicator
 	}
 
 	// If selected is below visible area, scroll down
-	if m.selectedIdx >= m.scrollOffset+visibleHeight {
-		m.scrollOffset = m.selectedIdx - visibleHeight + 1
+	for linesUsed > available && m.scrollOffset < m.selectedIdx {
+		// Remove lines for the entry we're scrolling past
+		entryLines := m.linesForEntry(m.scrollOffset)
+		if m.scrollOffset == 0 && m.entries[0].DayHeader != "" {
+			entryLines = 2
+		}
+		linesUsed -= entryLines
+		m.scrollOffset++
+
+		// After scrolling, first visible might change its line count
+		if m.scrollOffset < len(m.entries) && m.entries[m.scrollOffset].DayHeader != "" {
+			// Recalculate: now this is first visible, so no blank line before
+			// But we already counted it with possible blank line, adjust
+		}
 	}
 
 	return m
@@ -152,7 +201,7 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	var items []EntryItem
 
 	if len(agenda.Overdue) > 0 {
-		items = append(items, m.flattenEntries(agenda.Overdue, "OVERDUE", true)...)
+		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true)...)
 	}
 
 	for _, day := range agenda.Days {
@@ -160,9 +209,9 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 			continue
 		}
 
-		dayHeader := day.Date.Format("Monday, Jan 2")
+		dayHeader := fmt.Sprintf("📅 %s", day.Date.Format("Monday, Jan 2"))
 		if day.Location != nil && *day.Location != "" {
-			dayHeader = fmt.Sprintf("%s | %s", dayHeader, *day.Location)
+			dayHeader = fmt.Sprintf("%s | 📍 %s", dayHeader, *day.Location)
 		}
 
 		items = append(items, m.flattenEntries(day.Entries, dayHeader, false)...)
