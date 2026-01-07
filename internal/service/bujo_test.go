@@ -526,6 +526,62 @@ func TestBujoService_MigrateEntry_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_MigrateEntry_WithChildren(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Create parent with children
+	ids, err := service.LogEntries(ctx, `. Parent task
+  - Child note
+  . Child task`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 3)
+
+	parentID := ids[0]
+	childNoteID := ids[1]
+	childTaskID := ids[2]
+
+	// Migrate parent
+	newParentID, err := service.MigrateEntry(ctx, parentID, tomorrow)
+	require.NoError(t, err)
+
+	// Old parent should be marked as migrated
+	oldParent, err := entryRepo.GetByID(ctx, parentID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeMigrated, oldParent.Type)
+
+	// Old children should also be marked as migrated
+	oldChildNote, err := entryRepo.GetByID(ctx, childNoteID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeMigrated, oldChildNote.Type)
+
+	oldChildTask, err := entryRepo.GetByID(ctx, childTaskID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeMigrated, oldChildTask.Type)
+
+	// New parent should exist on tomorrow
+	newParent, err := entryRepo.GetByID(ctx, newParentID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, newParent.Type)
+	assert.Equal(t, "Parent task", newParent.Content)
+
+	// New children should exist and be linked to new parent
+	children, err := entryRepo.GetChildren(ctx, newParentID)
+	require.NoError(t, err)
+	assert.Len(t, children, 2)
+
+	// Verify children types preserved
+	childTypes := make(map[string]domain.EntryType)
+	for _, c := range children {
+		childTypes[c.Content] = c.Type
+	}
+	assert.Equal(t, domain.EntryTypeNote, childTypes["Child note"])
+	assert.Equal(t, domain.EntryTypeTask, childTypes["Child task"])
+}
+
 func TestBujoService_MoveEntry_ChangeParent(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

@@ -382,10 +382,29 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		return 0, fmt.Errorf("only tasks can be migrated, this is a %s", entry.Type)
 	}
 
+	// Get all children and save their original types before marking as migrated
+	children, err := s.entryRepo.GetChildren(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+
+	originalChildTypes := make([]domain.EntryType, len(children))
+	for i, child := range children {
+		originalChildTypes[i] = child.Type
+	}
+
 	// Mark old entry as migrated
 	entry.Type = domain.EntryTypeMigrated
 	if err := s.entryRepo.Update(ctx, *entry); err != nil {
 		return 0, err
+	}
+
+	// Mark all children as migrated
+	for i := range children {
+		children[i].Type = domain.EntryTypeMigrated
+		if err := s.entryRepo.Update(ctx, children[i]); err != nil {
+			return 0, err
+		}
 	}
 
 	// Create new task on target date
@@ -396,7 +415,26 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		CreatedAt:     time.Now(),
 	}
 
-	return s.entryRepo.Insert(ctx, newEntry)
+	newParentID, err := s.entryRepo.Insert(ctx, newEntry)
+	if err != nil {
+		return 0, err
+	}
+
+	// Create new children linked to new parent with original types
+	for i, child := range children {
+		newChild := domain.Entry{
+			Type:          originalChildTypes[i],
+			Content:       child.Content,
+			ParentID:      &newParentID,
+			ScheduledDate: &toDate,
+			CreatedAt:     time.Now(),
+		}
+		if _, err := s.entryRepo.Insert(ctx, newChild); err != nil {
+			return 0, err
+		}
+	}
+
+	return newParentID, nil
 }
 
 type MoveOptions struct {
