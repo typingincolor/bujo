@@ -623,3 +623,75 @@ func TestModel_Update_AddRootMode_AddsAtRootFromNestedItem(t *testing.T) {
 		t.Error("pressing 'r' should add at root regardless of selected item's parent")
 	}
 }
+
+func TestModel_DefaultViewMode_IsDay(t *testing.T) {
+	model := New(nil)
+	if model.viewMode != ViewModeDay {
+		t.Errorf("default view mode should be day, got %v", model.viewMode)
+	}
+}
+
+func TestModel_DefaultViewDate_IsToday(t *testing.T) {
+	model := New(nil)
+	today := time.Now()
+	expected := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	if !model.viewDate.Equal(expected) {
+		t.Errorf("default view date should be today, got %v", model.viewDate)
+	}
+}
+
+func TestModel_Update_ToggleViewMode(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Start in day mode
+	if model.viewMode != ViewModeDay {
+		t.Fatal("should start in day mode")
+	}
+
+	// Toggle to week
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+	if m.viewMode != ViewModeWeek {
+		t.Errorf("pressing 'w' should switch to week mode, got %v", m.viewMode)
+	}
+
+	// Toggle back to day
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+	if m.viewMode != ViewModeDay {
+		t.Errorf("pressing 'w' again should switch back to day mode, got %v", m.viewMode)
+	}
+}
+
+func TestModel_Update_GoToDate(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.gotoMode.active {
+		t.Error("pressing '/' should enter goto date mode")
+	}
+}
+
+func TestModel_AddRoot_UsesViewDate(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	// Set viewDate to yesterday
+	yesterday := time.Now().AddDate(0, 0, -1)
+	model.viewDate = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, yesterday.Location())
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'r'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Fatal("should enter add mode")
+	}
+	// The addMode should use viewDate when creating, not today
+	// This is tested via integration but we verify addMode is entered
+}

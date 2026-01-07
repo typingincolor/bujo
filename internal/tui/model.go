@@ -17,10 +17,13 @@ type Model struct {
 	agenda      *service.MultiDayAgenda
 	entries     []EntryItem
 	selectedIdx int
+	viewMode    ViewMode
+	viewDate    time.Time
 	confirmMode confirmState
 	editMode    editState
 	addMode     addState
 	migrateMode migrateState
+	gotoMode    gotoState
 	help        help.Model
 	keyMap      KeyMap
 	width       int
@@ -53,6 +56,18 @@ type migrateState struct {
 	input   textinput.Model
 }
 
+type gotoState struct {
+	active bool
+	input  textinput.Model
+}
+
+type ViewMode int
+
+const (
+	ViewModeDay ViewMode = iota
+	ViewModeWeek
+)
+
 type EntryItem struct {
 	Entry     domain.Entry
 	DayHeader string
@@ -61,8 +76,12 @@ type EntryItem struct {
 }
 
 func New(bujoSvc *service.BujoService) Model {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return Model{
 		bujoService: bujoSvc,
+		viewMode:    ViewModeDay,
+		viewDate:    today,
 		help:        help.New(),
 		keyMap:      DefaultKeyMap(),
 	}
@@ -73,11 +92,20 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) loadAgendaCmd() tea.Cmd {
+	viewMode := m.viewMode
+	viewDate := m.viewDate
 	return func() tea.Msg {
 		ctx := context.Background()
-		today := time.Now()
-		from := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location()).AddDate(0, 0, -6)
-		to := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+		var from, to time.Time
+
+		switch viewMode {
+		case ViewModeDay:
+			from = viewDate
+			to = viewDate
+		case ViewModeWeek:
+			from = viewDate.AddDate(0, 0, -6)
+			to = viewDate
+		}
 
 		agenda, err := m.bujoService.GetMultiDayAgenda(ctx, from, to)
 		if err != nil {
@@ -112,11 +140,6 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	}
 
 	return items
-}
-
-func (m Model) getTodayDate() time.Time {
-	now := time.Now()
-	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
 
 func (m Model) flattenEntries(entries []domain.Entry, header string, isOverdue bool) []EntryItem {

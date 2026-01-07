@@ -36,6 +36,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case entryUpdatedMsg, entryDeletedMsg:
 		return m, m.loadAgendaCmd()
 
+	case gotoDateMsg:
+		m.viewDate = msg.date
+		m.selectedIdx = 0
+		return m, m.loadAgendaCmd()
+
 	case confirmDeleteMsg:
 		m.confirmMode = confirmState{
 			active:      true,
@@ -60,6 +65,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.confirmMode.active {
 			return m.handleConfirmMode(msg)
+		}
+		if m.gotoMode.active {
+			return m.handleGotoMode(msg)
 		}
 		return m.handleNormalMode(msg)
 	}
@@ -188,6 +196,26 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.ToggleView):
+		if m.viewMode == ViewModeDay {
+			m.viewMode = ViewModeWeek
+		} else {
+			m.viewMode = ViewModeDay
+		}
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.GotoDate):
+		ti := textinput.New()
+		ti.Placeholder = "today, yesterday, 2026-01-15"
+		ti.Focus()
+		ti.CharLimit = 64
+		ti.Width = m.width - 10
+		m.gotoMode = gotoState{
+			active: true,
+			input:  ti,
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Help):
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil
@@ -262,10 +290,10 @@ func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) addEntryCmd(content string, parentID *int64) tea.Cmd {
+	viewDate := m.viewDate
 	return func() tea.Msg {
 		ctx := context.Background()
-		today := m.getTodayDate()
-		opts := service.LogEntriesOptions{Date: today}
+		opts := service.LogEntriesOptions{Date: viewDate}
 		ids, err := m.bujoService.LogEntries(ctx, content, opts)
 		if err != nil {
 			return errMsg{err}
@@ -304,6 +332,37 @@ func (m Model) handleMigrateMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.migrateMode.input, cmd = m.migrateMode.input.Update(msg)
 	return m, cmd
+}
+
+func (m Model) handleGotoMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.gotoMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		dateStr := m.gotoMode.input.Value()
+		if dateStr == "" {
+			m.gotoMode.active = false
+			return m, nil
+		}
+		m.gotoMode.active = false
+		return m, m.gotoDateCmd(dateStr)
+	}
+
+	var cmd tea.Cmd
+	m.gotoMode.input, cmd = m.gotoMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
+	return func() tea.Msg {
+		toDate, err := parseDate(dateStr)
+		if err != nil {
+			return errMsg{err}
+		}
+		return gotoDateMsg{date: toDate}
+	}
 }
 
 func (m Model) migrateEntryCmd(id int64, dateStr string) tea.Cmd {

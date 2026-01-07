@@ -527,6 +527,8 @@ j/k: move  space: done  d: delete  q: quit  ?: help
 | `r` | Add root entry |
 | `m` | Migrate task to future date |
 | `d` | Delete entry |
+| `w` | Toggle day/week view |
+| `/` | Go to date |
 | `?` | Toggle help |
 | `q` | Quit |
 

@@ -1,6 +1,10 @@
 package tui
 
-import "github.com/typingincolor/bujo/internal/service"
+import (
+	"time"
+
+	"github.com/typingincolor/bujo/internal/service"
+)
 
 type errMsg struct {
 	err error
@@ -21,4 +25,8 @@ type entryDeletedMsg struct {
 type confirmDeleteMsg struct {
 	entryID     int64
 	hasChildren bool
+}
+
+type gotoDateMsg struct {
+	date time.Time
 }

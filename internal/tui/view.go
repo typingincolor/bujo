@@ -62,6 +62,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderConfirmDialog())
 		sb.WriteString("\n")
+	} else if m.gotoMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderGotoInput())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
@@ -132,5 +136,13 @@ func (m Model) renderMigrateInput() string {
 	sb.WriteString("Migrate to date:\n")
 	sb.WriteString(m.migrateMode.input.View())
 	sb.WriteString("\n\nEnter to migrate, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderGotoInput() string {
+	var sb strings.Builder
+	sb.WriteString("Go to date:\n")
+	sb.WriteString(m.gotoMode.input.View())
+	sb.WriteString("\n\nEnter to go, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }

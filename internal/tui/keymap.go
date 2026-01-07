@@ -3,21 +3,23 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type KeyMap struct {
-	Up       key.Binding
-	Down     key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	Done     key.Binding
-	Delete   key.Binding
-	Edit     key.Binding
-	Add      key.Binding
-	AddChild key.Binding
-	AddRoot  key.Binding
-	Migrate  key.Binding
-	Confirm  key.Binding
-	Cancel   key.Binding
-	Quit     key.Binding
-	Help     key.Binding
+	Up         key.Binding
+	Down       key.Binding
+	Top        key.Binding
+	Bottom     key.Binding
+	Done       key.Binding
+	Delete     key.Binding
+	Edit       key.Binding
+	Add        key.Binding
+	AddChild   key.Binding
+	AddRoot    key.Binding
+	Migrate    key.Binding
+	ToggleView key.Binding
+	GotoDate   key.Binding
+	Confirm    key.Binding
+	Cancel     key.Binding
+	Quit       key.Binding
+	Help       key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -66,6 +68,14 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("m"),
 			key.WithHelp("m", "migrate"),
 		),
+		ToggleView: key.NewBinding(
+			key.WithKeys("w"),
+			key.WithHelp("w", "day/week"),
+		),
+		GotoDate: key.NewBinding(
+			key.WithKeys("/"),
+			key.WithHelp("/", "go to date"),
+		),
 		Confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),
 			key.WithHelp("y", "confirm"),
@@ -93,6 +103,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
 		{k.Done, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Delete},
-		{k.Quit, k.Help},
+		{k.ToggleView, k.GotoDate, k.Quit, k.Help},
 	}
 }
