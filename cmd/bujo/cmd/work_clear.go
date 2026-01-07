@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -22,16 +21,12 @@ Examples:
   bujo work clear --date yesterday
   bujo work clear -d "last monday"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		targetDate := time.Now()
-		if workClearDate != "" {
-			parsed, err := parsePastDate(workClearDate)
-			if err != nil {
-				return err
-			}
-			targetDate = parsed
+		targetDate, err := parseDateOrToday(workClearDate)
+		if err != nil {
+			return err
 		}
 
-		err := bujoService.ClearLocation(cmd.Context(), targetDate)
+		err = bujoService.ClearLocation(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear location: %w", err)
 		}

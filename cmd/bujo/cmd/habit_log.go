@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -43,13 +42,9 @@ Examples:
 			}
 		}
 
-		logDate := time.Now()
-		if habitLogDate != "" {
-			parsed, err := parsePastDate(habitLogDate)
-			if err != nil {
-				return err
-			}
-			logDate = parsed
+		logDate, err := parseDateOrToday(habitLogDate)
+		if err != nil {
+			return err
 		}
 
 		if isID {

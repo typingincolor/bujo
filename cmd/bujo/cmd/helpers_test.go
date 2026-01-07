@@ -53,6 +53,36 @@ func TestParsePastDate_ISOFormat(t *testing.T) {
 	}
 }
 
+func TestParseDateOrToday(t *testing.T) {
+	t.Run("empty string returns today", func(t *testing.T) {
+		result, err := parseDateOrToday("")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		today := time.Now()
+		if result.Year() != today.Year() || result.Month() != today.Month() || result.Day() != today.Day() {
+			t.Errorf("expected today, got %v", result)
+		}
+	})
+
+	t.Run("valid date string is parsed", func(t *testing.T) {
+		result, err := parseDateOrToday("2026-01-05")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Year() != 2026 || result.Month() != 1 || result.Day() != 5 {
+			t.Errorf("expected 2026-01-05, got %v", result)
+		}
+	})
+
+	t.Run("invalid date returns error", func(t *testing.T) {
+		_, err := parseDateOrToday("not-a-date")
+		if err == nil {
+			t.Error("expected error for invalid date")
+		}
+	})
+}
+
 func TestValidateDateRange(t *testing.T) {
 	tests := []struct {
 		name    string

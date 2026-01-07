@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/service"
@@ -55,13 +54,9 @@ Examples:
 			return fmt.Errorf("no entries provided; use arguments or pipe input")
 		}
 
-		date := time.Now()
-		if addDate != "" {
-			parsed, err := parsePastDate(addDate)
-			if err != nil {
-				return err
-			}
-			date = parsed
+		date, err := parseDateOrToday(addDate)
+		if err != nil {
+			return err
 		}
 
 		opts := service.LogEntriesOptions{

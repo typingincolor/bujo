@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -28,16 +27,12 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		location := strings.Join(args, " ")
 
-		targetDate := time.Now()
-		if workSetDate != "" {
-			parsed, err := parsePastDate(workSetDate)
-			if err != nil {
-				return err
-			}
-			targetDate = parsed
+		targetDate, err := parseDateOrToday(workSetDate)
+		if err != nil {
+			return err
 		}
 
-		err := bujoService.SetLocation(cmd.Context(), targetDate, location)
+		err = bujoService.SetLocation(cmd.Context(), targetDate, location)
 		if err != nil {
 			return fmt.Errorf("failed to set location: %w", err)
 		}
