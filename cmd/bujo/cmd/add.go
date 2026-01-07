@@ -13,12 +13,13 @@ import (
 
 var (
 	addLocation string
+	addDate     string
 )
 
 var addCmd = &cobra.Command{
 	Use:   "add [entries...]",
 	Short: "Add entries to today's journal",
-	Long: `Add one or more entries to today's journal.
+	Long: `Add one or more entries to today's journal (or a specific date).
 
 Entries can be provided as arguments or piped via stdin.
 
@@ -31,7 +32,9 @@ Examples:
   bujo add ". Buy groceries"
   bujo add ". Task one" "- Note one"
   echo ". Task from pipe" | bujo add
-  bujo add --at "Home Office" ". Work on project"`,
+  bujo add --at "Home Office" ". Work on project"
+  bujo add --date yesterday ". Forgot to log this"
+  bujo add -d "last monday" ". Backfill task"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var input string
 
@@ -52,8 +55,17 @@ Examples:
 			return fmt.Errorf("no entries provided; use arguments or pipe input")
 		}
 
+		date := time.Now()
+		if addDate != "" {
+			parsed, err := parsePastDate(addDate)
+			if err != nil {
+				return err
+			}
+			date = parsed
+		}
+
 		opts := service.LogEntriesOptions{
-			Date: time.Now(),
+			Date: date,
 		}
 
 		if addLocation != "" {
@@ -77,5 +89,6 @@ Examples:
 
 func init() {
 	addCmd.Flags().StringVarP(&addLocation, "at", "a", "", "Set location for entries")
+	addCmd.Flags().StringVarP(&addDate, "date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	rootCmd.AddCommand(addCmd)
 }
