@@ -13,22 +13,23 @@ import (
 )
 
 type Model struct {
-	bujoService *service.BujoService
-	agenda      *service.MultiDayAgenda
-	entries     []EntryItem
-	selectedIdx int
-	viewMode    ViewMode
-	viewDate    time.Time
-	confirmMode confirmState
-	editMode    editState
-	addMode     addState
-	migrateMode migrateState
-	gotoMode    gotoState
-	help        help.Model
-	keyMap      KeyMap
-	width       int
-	height      int
-	err         error
+	bujoService  *service.BujoService
+	agenda       *service.MultiDayAgenda
+	entries      []EntryItem
+	selectedIdx  int
+	scrollOffset int
+	viewMode     ViewMode
+	viewDate     time.Time
+	confirmMode  confirmState
+	editMode     editState
+	addMode      addState
+	migrateMode  migrateState
+	gotoMode     gotoState
+	help         help.Model
+	keyMap       KeyMap
+	width        int
+	height       int
+	err          error
 }
 
 type confirmState struct {
@@ -90,6 +91,28 @@ func New(bujoSvc *service.BujoService) Model {
 
 func (m Model) Init() tea.Cmd {
 	return m.loadAgendaCmd()
+}
+
+func (m *Model) ensureVisible() {
+	visibleHeight := m.height - 4
+	if visibleHeight < 5 {
+		visibleHeight = 5
+	}
+
+	// Adjust for scroll indicator at top
+	if m.scrollOffset > 0 {
+		visibleHeight--
+	}
+
+	// If selected is above visible area, scroll up
+	if m.selectedIdx < m.scrollOffset {
+		m.scrollOffset = m.selectedIdx
+	}
+
+	// If selected is below visible area, scroll down
+	if m.selectedIdx >= m.scrollOffset+visibleHeight {
+		m.scrollOffset = m.selectedIdx - visibleHeight + 1
+	}
 }
 
 func (m Model) loadAgendaCmd() tea.Cmd {

@@ -83,22 +83,26 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
+			m.ensureVisible()
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.selectedIdx < len(m.entries)-1 {
 			m.selectedIdx++
+			m.ensureVisible()
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Top):
 		m.selectedIdx = 0
+		m.scrollOffset = 0
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Bottom):
 		if len(m.entries) > 0 {
 			m.selectedIdx = len(m.entries) - 1
+			m.ensureVisible()
 		}
 		return m, nil
 

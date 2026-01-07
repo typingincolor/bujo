@@ -9,7 +9,7 @@ import (
 
 func (m Model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n\nPress q to quit.", m.err)
+		return fmt.Sprintf("Error: %v\n\nPress any key to continue.", m.err)
 	}
 
 	if m.agenda == nil {
@@ -22,9 +22,29 @@ func (m Model) View() string {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
 		sb.WriteString("\n\n")
 	} else {
-		for i, item := range m.entries {
+		// Calculate visible area (reserve lines for help bar)
+		visibleHeight := m.height - 4
+		if visibleHeight < 5 {
+			visibleHeight = 5
+		}
+
+		// Show scroll indicator if there's content above
+		if m.scrollOffset > 0 {
+			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↑ %d more above", m.scrollOffset)))
+			sb.WriteString("\n")
+			visibleHeight--
+		}
+
+		// Render visible entries
+		endIdx := m.scrollOffset + visibleHeight
+		if endIdx > len(m.entries) {
+			endIdx = len(m.entries)
+		}
+
+		for i := m.scrollOffset; i < endIdx; i++ {
+			item := m.entries[i]
 			if item.DayHeader != "" {
-				if i > 0 {
+				if i > m.scrollOffset {
 					sb.WriteString("\n")
 				}
 				if item.IsOverdue {
@@ -42,6 +62,12 @@ func (m Model) View() string {
 			}
 
 			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+
+		// Show scroll indicator if there's content below
+		if endIdx < len(m.entries) {
+			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↓ %d more below", len(m.entries)-endIdx)))
 			sb.WriteString("\n")
 		}
 	}
