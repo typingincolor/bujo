@@ -14,6 +14,8 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
 - **Habit Tracking** - Track daily habits with streaks and completion rates
 - **Location Context** - Set your work location for the day
+- **Mood Tracking** - Track your daily mood with history
+- **Weather Tracking** - Record daily weather conditions
 - **Weekly View** - See entries from the last 7 days at a glance
 - **Entry Management** - Edit, delete, migrate, and reorganize entries
 
@@ -108,6 +110,24 @@ TODAY
 ---------------------------------------------------------
 ```
 
+#### `bujo tomorrow`
+
+Display tomorrow's entries.
+
+#### `bujo next`
+
+Display entries for the next 7 days (today through 6 days ahead).
+
+#### `bujo tasks`
+
+Show outstanding tasks only (incomplete tasks, excluding notes, events, done, and migrated).
+
+```bash
+bujo tasks                             # Last 30 days
+bujo tasks --from "last week"          # Custom range
+bujo tasks --from 2026-01-01 --to 2026-01-31
+```
+
 #### `bujo view <id>`
 
 View an entry with its parent and siblings for context.
@@ -127,7 +147,8 @@ Add entries to today's journal. Returns the ID of each entry.
 bujo add ". Call mom"                    # Single entry
 bujo add ". Task one" ". Task two"       # Multiple entries
 echo ". Task from pipe" | bujo add       # From stdin
-cat tasks.txt | bujo add                 # From file
+bujo add --file tasks.txt                # From file
+bujo add -f tasks.txt --at "Home"        # File with location
 bujo add --at "Coffee Shop" ". Write"    # With location
 bujo add --date yesterday ". Backfill"   # Add to specific date
 bujo add -d "last monday" ". Forgot"     # Natural language dates
@@ -223,6 +244,74 @@ bujo work clear
 bujo work clear --date yesterday
 ```
 
+### Mood Tracking
+
+#### `bujo mood`
+
+Show today's mood.
+
+#### `bujo mood set <mood>`
+
+Set mood for today (or a specific date).
+
+```bash
+bujo mood set happy
+bujo mood set "tired but productive"
+bujo mood set energetic --date yesterday
+```
+
+#### `bujo mood inspect`
+
+Show mood history.
+
+```bash
+bujo mood inspect
+bujo mood inspect --from "last week"
+```
+
+#### `bujo mood clear`
+
+Clear mood for a day.
+
+```bash
+bujo mood clear
+bujo mood clear --date yesterday
+```
+
+### Weather Tracking
+
+#### `bujo weather`
+
+Show today's weather.
+
+#### `bujo weather set <weather>`
+
+Set weather for today (or a specific date).
+
+```bash
+bujo weather set sunny
+bujo weather set "Rainy, 15°C"
+bujo weather set cloudy --date yesterday
+```
+
+#### `bujo weather inspect`
+
+Show weather history.
+
+```bash
+bujo weather inspect
+bujo weather inspect --from "last week"
+```
+
+#### `bujo weather clear`
+
+Clear weather for a day.
+
+```bash
+bujo weather clear
+bujo weather clear --date yesterday
+```
+
 ### Habit Tracking
 
 #### `bujo habit`
@@ -240,7 +329,7 @@ bujo habit --month  # 30-day calendar view
 Gym (3 day streak)
   ○ ○ ○ ○ ● ● ●
   W T F S S M T
-  43% completion
+  1/1 today | 43% completion
 ```
 
 #### `bujo habit log <name> [count]`
@@ -252,6 +341,15 @@ bujo habit log Gym
 bujo habit log Water 8
 bujo habit log Gym --date yesterday
 bujo habit log #1 5              # By ID with count
+```
+
+#### `bujo habit set-goal <name|#id> <goal>`
+
+Set the daily goal for a habit. Goals are shown in the tracker display.
+
+```bash
+bujo habit set-goal Water 8
+bujo habit set-goal #1 10
 ```
 
 #### `bujo habit inspect <name|#id>`

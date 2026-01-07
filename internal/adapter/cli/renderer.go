@@ -168,17 +168,27 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 		sparkline := renderSparkline(habit.DayHistory)
 		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
 
-		// Completion percentage
-		completionColor := Green
-		if habit.CompletionPercent < 50 {
-			completionColor = Red
-		} else if habit.CompletionPercent < 80 {
-			completionColor = Yellow
-		}
-		sb.WriteString(fmt.Sprintf("  %s completion\n\n", completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent))))
+		sb.WriteString(renderHabitProgress(habit, ""))
 	}
 
 	return sb.String()
+}
+
+func renderHabitProgress(habit service.HabitStatus, suffix string) string {
+	todayColor := Green
+	if habit.TodayCount < habit.GoalPerDay {
+		todayColor = Yellow
+	}
+	completionColor := Green
+	if habit.CompletionPercent < 50 {
+		completionColor = Red
+	} else if habit.CompletionPercent < 80 {
+		completionColor = Yellow
+	}
+	return fmt.Sprintf("  %s today | %s completion%s\n\n",
+		todayColor(fmt.Sprintf("%d/%d", habit.TodayCount, habit.GoalPerDay)),
+		completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent)),
+		suffix)
 }
 
 func renderSparkline(days []service.DayStatus) string {
@@ -233,14 +243,7 @@ func RenderHabitMonth(status *service.TrackerStatus) string {
 		// Month calendar
 		sb.WriteString(renderMonthCalendar(habit.DayHistory))
 
-		// Completion percentage
-		completionColor := Green
-		if habit.CompletionPercent < 50 {
-			completionColor = Red
-		} else if habit.CompletionPercent < 80 {
-			completionColor = Yellow
-		}
-		sb.WriteString(fmt.Sprintf("  %s completion (last 30 days)\n\n", completionColor(fmt.Sprintf("%.0f%%", habit.CompletionPercent))))
+		sb.WriteString(renderHabitProgress(habit, " (last 30 days)"))
 	}
 
 	return sb.String()

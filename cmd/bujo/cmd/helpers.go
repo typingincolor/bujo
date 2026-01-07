@@ -57,7 +57,7 @@ func validateDateRange(from, to time.Time) error {
 	return nil
 }
 
-func parseAddArgs(args []string) (entries []string, location, date string, help bool) {
+func parseAddArgs(args []string) (entries []string, location, date, file string, help bool) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
@@ -71,6 +71,11 @@ func parseAddArgs(args []string) (entries []string, location, date string, help 
 				date = args[i+1]
 				i++
 			}
+		case arg == "-f" || arg == "--file":
+			if i+1 < len(args) {
+				file = args[i+1]
+				i++
+			}
 		case strings.HasPrefix(arg, "-a="):
 			location = arg[3:]
 		case strings.HasPrefix(arg, "--at="):
@@ -79,6 +84,10 @@ func parseAddArgs(args []string) (entries []string, location, date string, help 
 			date = arg[3:]
 		case strings.HasPrefix(arg, "--date="):
 			date = arg[7:]
+		case strings.HasPrefix(arg, "-f="):
+			file = arg[3:]
+		case strings.HasPrefix(arg, "--file="):
+			file = arg[7:]
 		case arg == "-h" || arg == "--help":
 			help = true
 			return
