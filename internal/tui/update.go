@@ -189,10 +189,16 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		ti.Focus()
 		ti.CharLimit = 64
 		ti.Width = m.width - 10
+		// Use entry's scheduled date as reference for natural date parsing
+		fromDate := m.viewDate
+		if entry.ScheduledDate != nil {
+			fromDate = *entry.ScheduledDate
+		}
 		m.migrateMode = migrateState{
-			active:  true,
-			entryID: entry.ID,
-			input:   ti,
+			active:   true,
+			entryID:  entry.ID,
+			fromDate: fromDate,
+			input:    ti,
 		}
 		return m, nil
 
@@ -325,8 +331,9 @@ func (m Model) handleMigrateMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entryID := m.migrateMode.entryID
+		fromDate := m.migrateMode.fromDate
 		m.migrateMode.active = false
-		return m, m.migrateEntryCmd(entryID, dateStr)
+		return m, m.migrateEntryCmd(entryID, dateStr, fromDate)
 	}
 
 	var cmd tea.Cmd
@@ -365,10 +372,10 @@ func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
 	}
 }
 
-func (m Model) migrateEntryCmd(id int64, dateStr string) tea.Cmd {
+func (m Model) migrateEntryCmd(id int64, dateStr string, fromDate time.Time) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		toDate, err := parseDate(dateStr)
+		toDate, err := parseDateFrom(dateStr, fromDate)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -438,13 +445,15 @@ func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 }
 
 func parseDate(s string) (time.Time, error) {
-	now := time.Now()
+	return parseDateFrom(s, time.Now())
+}
 
+func parseDateFrom(s string, reference time.Time) (time.Time, error) {
 	if parsed, err := time.Parse("2006-01-02", s); err == nil {
 		return parsed, nil
 	}
 
-	parsed, err := naturaldate.Parse(s, now, naturaldate.WithDirection(naturaldate.Future))
+	parsed, err := naturaldate.Parse(s, reference, naturaldate.WithDirection(naturaldate.Future))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("invalid date: %s", s)
 	}

@@ -51,9 +51,10 @@ type addState struct {
 }
 
 type migrateState struct {
-	active  bool
-	entryID int64
-	input   textinput.Model
+	active   bool
+	entryID  int64
+	fromDate time.Time
+	input    textinput.Model
 }
 
 type gotoState struct {
