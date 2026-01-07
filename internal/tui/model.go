@@ -158,12 +158,6 @@ func (m Model) ensuredVisible() Model {
 		}
 		linesUsed -= entryLines
 		m.scrollOffset++
-
-		// After scrolling, first visible might change its line count
-		if m.scrollOffset < len(m.entries) && m.entries[m.scrollOffset].DayHeader != "" {
-			// Recalculate: now this is first visible, so no blank line before
-			// But we already counted it with possible blank line, adjust
-		}
 	}
 
 	return m
