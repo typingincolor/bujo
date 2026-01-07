@@ -129,7 +129,8 @@ Add entries to today's journal. Returns the ID of each entry.
 bujo add ". Call mom"                    # Single entry
 bujo add ". Task one" ". Task two"       # Multiple entries
 echo ". Task from pipe" | bujo add       # From stdin
-cat tasks.txt | bujo add                 # From file
+bujo add --file tasks.txt                # From file
+bujo add -f tasks.txt --at "Home"        # File with location
 bujo add --at "Coffee Shop" ". Write"    # With location
 bujo add --date yesterday ". Backfill"   # Add to specific date
 bujo add -d "last monday" ". Forgot"     # Natural language dates
