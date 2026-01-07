@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
@@ -17,6 +18,9 @@ type Model struct {
 	entries     []EntryItem
 	selectedIdx int
 	confirmMode confirmState
+	editMode    editState
+	addMode     addState
+	migrateMode migrateState
 	help        help.Model
 	keyMap      KeyMap
 	width       int
@@ -28,6 +32,25 @@ type confirmState struct {
 	active      bool
 	entryID     int64
 	hasChildren bool
+}
+
+type editState struct {
+	active  bool
+	entryID int64
+	input   textinput.Model
+}
+
+type addState struct {
+	active   bool
+	asChild  bool
+	parentID *int64
+	input    textinput.Model
+}
+
+type migrateState struct {
+	active  bool
+	entryID int64
+	input   textinput.Model
 }
 
 type EntryItem struct {
@@ -89,6 +112,11 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	}
 
 	return items
+}
+
+func (m Model) getTodayDate() time.Time {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
 
 func (m Model) flattenEntries(entries []domain.Entry, header string, isOverdue bool) []EntryItem {
