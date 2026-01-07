@@ -1,6 +1,6 @@
 module github.com/typingincolor/bujo
 
-go 1.24.0
+go 1.25
 
 require (
 	github.com/fatih/color v1.18.0
