@@ -9,10 +9,14 @@ type EntryRepository interface {
 	Insert(ctx context.Context, entry Entry) (int64, error)
 	GetByID(ctx context.Context, id int64) (*Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]Entry, error)
+	GetByDateRange(ctx context.Context, from, to time.Time) ([]Entry, error)
 	GetOverdue(ctx context.Context, date time.Time) ([]Entry, error)
 	GetWithChildren(ctx context.Context, id int64) ([]Entry, error)
+	GetChildren(ctx context.Context, parentID int64) ([]Entry, error)
+	GetByListID(ctx context.Context, listID int64) ([]Entry, error)
 	Update(ctx context.Context, entry Entry) error
 	Delete(ctx context.Context, id int64) error
+	DeleteWithChildren(ctx context.Context, id int64) error
 }
 
 type HabitRepository interface {
@@ -44,4 +48,15 @@ type SummaryRepository interface {
 	Get(ctx context.Context, horizon SummaryHorizon, start, end time.Time) (*Summary, error)
 	GetByHorizon(ctx context.Context, horizon SummaryHorizon) ([]Summary, error)
 	Delete(ctx context.Context, id int64) error
+}
+
+type ListRepository interface {
+	Create(ctx context.Context, name string) (*List, error)
+	GetByID(ctx context.Context, id int64) (*List, error)
+	GetByName(ctx context.Context, name string) (*List, error)
+	GetAll(ctx context.Context) ([]List, error)
+	Rename(ctx context.Context, id int64, newName string) error
+	Delete(ctx context.Context, id int64) error
+	GetItemCount(ctx context.Context, listID int64) (int, error)
+	GetDoneCount(ctx context.Context, listID int64) (int, error)
 }
