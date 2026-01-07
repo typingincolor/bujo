@@ -15,6 +15,7 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Habit Tracking** - Track daily habits with streaks and completion rates
 - **Location Context** - Set your work location for the day
 - **Mood Tracking** - Track your daily mood with history
+- **Weather Tracking** - Record daily weather conditions
 - **Weekly View** - See entries from the last 7 days at a glance
 - **Entry Management** - Edit, delete, migrate, and reorganize entries
 
@@ -256,6 +257,40 @@ Clear mood for a day.
 ```bash
 bujo mood clear
 bujo mood clear --date yesterday
+```
+
+### Weather Tracking
+
+#### `bujo weather`
+
+Show today's weather.
+
+#### `bujo weather set <weather>`
+
+Set weather for today (or a specific date).
+
+```bash
+bujo weather set sunny
+bujo weather set "Rainy, 15°C"
+bujo weather set cloudy --date yesterday
+```
+
+#### `bujo weather inspect`
+
+Show weather history.
+
+```bash
+bujo weather inspect
+bujo weather inspect --from "last week"
+```
+
+#### `bujo weather clear`
+
+Clear weather for a day.
+
+```bash
+bujo weather clear
+bujo weather clear --date yesterday
 ```
 
 ### Habit Tracking

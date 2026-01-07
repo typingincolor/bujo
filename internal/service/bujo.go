@@ -257,6 +257,45 @@ func (s *BujoService) ClearMood(ctx context.Context, date time.Time) error {
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 
+func (s *BujoService) SetWeather(ctx context.Context, date time.Time, weather string) error {
+	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
+	if err != nil {
+		return err
+	}
+	if dayCtx == nil {
+		dayCtx = &domain.DayContext{Date: date}
+	}
+	dayCtx.Weather = &weather
+	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
+}
+
+func (s *BujoService) GetWeather(ctx context.Context, date time.Time) (*string, error) {
+	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
+	if err != nil {
+		return nil, err
+	}
+	if dayCtx == nil {
+		return nil, nil
+	}
+	return dayCtx.Weather, nil
+}
+
+func (s *BujoService) GetWeatherHistory(ctx context.Context, from, to time.Time) ([]domain.DayContext, error) {
+	return s.dayCtxRepo.GetRange(ctx, from, to)
+}
+
+func (s *BujoService) ClearWeather(ctx context.Context, date time.Time) error {
+	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
+	if err != nil {
+		return err
+	}
+	if dayCtx == nil {
+		return nil
+	}
+	dayCtx.Weather = nil
+	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
+}
+
 func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
 	entry, err := s.getEntry(ctx, id)
 	if err != nil {

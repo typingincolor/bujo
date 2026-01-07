@@ -839,3 +839,80 @@ func TestBujoService_ClearMood(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, mood)
 }
+
+// Weather tracking tests
+
+func TestBujoService_SetWeather(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetWeather(ctx, today, "sunny")
+
+	require.NoError(t, err)
+}
+
+func TestBujoService_GetWeather(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetWeather(ctx, today, "rainy, 15°C")
+	require.NoError(t, err)
+
+	weather, err := service.GetWeather(ctx, today)
+
+	require.NoError(t, err)
+	require.NotNil(t, weather)
+	assert.Equal(t, "rainy, 15°C", *weather)
+}
+
+func TestBujoService_GetWeather_NotSet(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	weather, err := service.GetWeather(ctx, today)
+
+	require.NoError(t, err)
+	assert.Nil(t, weather)
+}
+
+func TestBujoService_GetWeatherHistory(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	day3 := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetWeather(ctx, day1, "sunny")
+	require.NoError(t, err)
+	err = service.SetWeather(ctx, day2, "cloudy")
+	require.NoError(t, err)
+	err = service.SetWeather(ctx, day3, "rainy")
+	require.NoError(t, err)
+
+	history, err := service.GetWeatherHistory(ctx, day1, day3)
+
+	require.NoError(t, err)
+	assert.Len(t, history, 3)
+}
+
+func TestBujoService_ClearWeather(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetWeather(ctx, today, "sunny")
+	require.NoError(t, err)
+
+	err = service.ClearWeather(ctx, today)
+	require.NoError(t, err)
+
+	weather, err := service.GetWeather(ctx, today)
+	require.NoError(t, err)
+	assert.Nil(t, weather)
+}
