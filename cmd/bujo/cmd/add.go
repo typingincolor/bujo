@@ -10,11 +10,6 @@ import (
 	"github.com/typingincolor/bujo/internal/service"
 )
 
-var (
-	addLocation string
-	addDate     string
-)
-
 var addCmd = &cobra.Command{
 	Use:   "add [entries...]",
 	Short: "Add entries to today's journal",
@@ -33,24 +28,36 @@ Examples:
   echo ". Task from pipe" | bujo add
   bujo add --at "Home Office" ". Work on project"
   bujo add --date yesterday ". Forgot to log this"
-  bujo add -d "last monday" ". Backfill task"`,
+  bujo add -d "last monday" ". Backfill task"
+
+`,
+	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		entries, addLocation, addDate, showHelp := parseAddArgs(args)
+		if showHelp {
+			return cmd.Help()
+		}
+
 		var input string
 
-		// Check if input is piped
-		stat, _ := os.Stdin.Stat()
-		if (stat.Mode() & os.ModeCharDevice) == 0 {
-			// Reading from pipe
-			scanner := bufio.NewScanner(os.Stdin)
-			var lines []string
-			for scanner.Scan() {
-				lines = append(lines, scanner.Text())
-			}
-			input = strings.Join(lines, "\n")
-		} else if len(args) > 0 {
-			// Reading from arguments
-			input = strings.Join(args, "\n")
+		// Prefer args over stdin if args were provided
+		if len(entries) > 0 {
+			input = strings.Join(entries, "\n")
 		} else {
+			// Check if input is piped
+			stat, _ := os.Stdin.Stat()
+			if (stat.Mode() & os.ModeCharDevice) == 0 {
+				// Reading from pipe
+				scanner := bufio.NewScanner(os.Stdin)
+				var lines []string
+				for scanner.Scan() {
+					lines = append(lines, scanner.Text())
+				}
+				input = strings.Join(lines, "\n")
+			}
+		}
+
+		if input == "" {
 			return fmt.Errorf("no entries provided; use arguments or pipe input")
 		}
 
@@ -83,7 +90,8 @@ Examples:
 }
 
 func init() {
-	addCmd.Flags().StringVarP(&addLocation, "at", "a", "", "Set location for entries")
-	addCmd.Flags().StringVarP(&addDate, "date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
+	// Flags defined for help text only - actual parsing done by parseAddArgs
+	addCmd.Flags().StringP("at", "a", "", "Set location for entries")
+	addCmd.Flags().StringP("date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	rootCmd.AddCommand(addCmd)
 }

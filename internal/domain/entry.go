@@ -51,7 +51,7 @@ func (e Entry) IsOverdue(today time.Time) bool {
 	if e.IsComplete() {
 		return false
 	}
-	if e.Type == EntryTypeNote {
+	if e.Type == EntryTypeNote || e.Type == EntryTypeEvent {
 		return false
 	}
 	if e.ScheduledDate == nil {

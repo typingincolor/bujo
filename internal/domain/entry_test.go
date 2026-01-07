@@ -129,6 +129,11 @@ func TestEntry_IsOverdue(t *testing.T) {
 			entry:    Entry{Type: EntryTypeNote, ScheduledDate: &yesterday},
 			expected: false,
 		},
+		{
+			name:     "event is never overdue",
+			entry:    Entry{Type: EntryTypeEvent, ScheduledDate: &yesterday},
+			expected: false,
+		},
 	}
 
 	for _, tt := range tests {

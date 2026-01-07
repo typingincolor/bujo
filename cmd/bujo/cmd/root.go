@@ -27,9 +27,10 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "bujo",
-	Short: "A command-line Bullet Journal",
-	Long:  `bujo is a CLI-based Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.`,
+	Use:              "bujo",
+	Short:            "A command-line Bullet Journal",
+	Long:             `bujo is a CLI-based Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.`,
+	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		// Skip DB initialization for help commands
 		if cmd.Name() == "help" || cmd.Name() == "completion" {

@@ -570,6 +570,39 @@ func TestBujoService_MoveEntry_ChangeLoggedDate(t *testing.T) {
 	assert.Equal(t, yesterday.Format("2006-01-02"), entry.ScheduledDate.Format("2006-01-02"))
 }
 
+func TestBujoService_MoveEntry_ChangeLoggedDateMovesChildren(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	monday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	ids, err := service.LogEntries(ctx, `- Parent with children
+  - Child note
+  . Grandchild task`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 3)
+
+	// Move parent to Monday - children should follow
+	err = service.MoveEntry(ctx, ids[0], MoveOptions{NewLoggedDate: &monday})
+	require.NoError(t, err)
+
+	// Parent should be on Monday
+	parent, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, monday.Format("2006-01-02"), parent.ScheduledDate.Format("2006-01-02"))
+
+	// Child should also be on Monday
+	child, err := entryRepo.GetByID(ctx, ids[1])
+	require.NoError(t, err)
+	assert.Equal(t, monday.Format("2006-01-02"), child.ScheduledDate.Format("2006-01-02"))
+
+	// Grandchild should also be on Monday
+	grandchild, err := entryRepo.GetByID(ctx, ids[2])
+	require.NoError(t, err)
+	assert.Equal(t, monday.Format("2006-01-02"), grandchild.ScheduledDate.Format("2006-01-02"))
+}
+
 func TestBujoService_MoveEntry_MoveToRoot(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
