@@ -83,7 +83,7 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, parent_id, depth, location, scheduled_date, list_id, created_at
 		FROM entries
-		WHERE scheduled_date < ? AND type NOT IN ('done', 'migrated') AND list_id IS NULL
+		WHERE scheduled_date < ? AND type NOT IN ('done', 'migrated', 'note', 'event') AND list_id IS NULL
 		ORDER BY scheduled_date, created_at
 	`, dateStr)
 	if err != nil {

@@ -143,6 +143,47 @@ func TestEntryRepository_GetOverdue(t *testing.T) {
 	assert.Len(t, results, 2)
 }
 
+func TestEntryRepository_GetOverdue_ExcludesEventsAndNotes(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	overdueTask := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Overdue task",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	pastEvent := domain.Entry{
+		Type:          domain.EntryTypeEvent,
+		Content:       "Past event",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	pastNote := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "Past note",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+
+	_, err := repo.Insert(ctx, overdueTask)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, pastEvent)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, pastNote)
+	require.NoError(t, err)
+
+	results, err := repo.GetOverdue(ctx, today)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1, "GetOverdue should only return tasks, not events or notes")
+	assert.Equal(t, "Overdue task", results[0].Content)
+}
+
 func TestEntryRepository_Insert_WithParent(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)
