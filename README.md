@@ -108,9 +108,9 @@ Display today's entries with overdue tasks and location.
 📅 Tuesday, Jan 6, 2026 | 📍 Home Office
 ---------------------------------------------------------
 TODAY
-. Buy groceries (1)
-. Finish report (2)
-└── - Remember to include Q4 data (3)
+• Buy groceries (1)
+• Finish report (2)
+  – Remember to include Q4 data (3)
 ---------------------------------------------------------
 ```
 
@@ -328,7 +328,7 @@ bujo habit --month  # 30-day calendar view
 ```
 
 ```
-🔥 Habit Tracker
+Habit Tracker
 
 Gym (3 day streak)
   ○ ○ ○ ○ ● ● ●
@@ -428,9 +428,9 @@ bujo list show "#1"          # By ID (must quote)
 ```
 #1 Shopping List
 ---------------------------------------------------------
-(1) . Buy milk
-(2) . Buy bread
-(3) - Remember eggs
+(1) • Buy milk
+(2) • Buy bread
+(3) – Remember eggs
 ---------------------------------------------------------
 0/3 done
 ```
@@ -507,12 +507,12 @@ Launch an interactive terminal UI for viewing and managing entries.
 
 ```
 OVERDUE
-  . Urgent task (1)
+  • Urgent task (1)
 
 Tuesday, Jan 7 | Home Office
-▸ . Buy groceries (2)             ← selected
-  . Finish report (3)
-  └── - Remember Q4 data (4)
+▸ • Buy groceries (2)             ← selected
+  • Finish report (3)
+    – Remember Q4 data (4)
 
 j/k: move  space: done  d: delete  q: quit  ?: help
 ```
