@@ -13,13 +13,35 @@ This issue encompasses:
 
 ## Motivation
 
-1. **Issue #54 reveals a domain boundary problem**: `ListService.RemoveItem` can delete any entry, not just list items. Rather than adding validation checks, separating tables enforces this at the schema level.
+1. **Issue #54 reveals a domain boundary problem**: `ListService.RemoveItem` can delete any entry, not just list items. Separating list items into their own table enforces this at the schema level.
 
-2. **Issue #50 requires restructuring all tables**: Adding versioning columns to every table is the right time to also reconsider table structure.
+2. **List items are fundamentally different from journal entries**: Journal entries (tasks, notes, events) are temporal - they belong to a scheduled date, form hierarchies, and have location context. List items are persistent collections - they belong to a list, are flat, and have no scheduling. This warrants separate tables.
 
-3. **Issue #47 becomes critical with event sourcing**: Append-only data means the database grows indefinitely. A backup strategy must include both regular backups and archival of old versions.
+3. **Journal entry types (task, note, event) should stay unified**: They share the same structure (scheduled_date, parent_id hierarchy, location, depth) and are queried together ("show me today"). The `type` column distinguishes them adequately.
 
-4. **Combined approach avoids multiple migrations**: Doing all changes together minimizes disruption.
+4. **Issue #50 requires restructuring all tables**: Adding versioning columns to every table is the right time to also separate list items.
+
+5. **Issue #47 becomes critical with event sourcing**: Append-only data means the database grows indefinitely. A backup strategy must include both regular backups and archival of old versions.
+
+6. **Combined approach avoids multiple migrations**: Doing all changes together minimizes disruption.
+
+## Domain Model
+
+```
+Journal Entries (entries table)       List Items (list_items table)
+─────────────────────────────────     ─────────────────────────────
+• Temporal (belong to a date)         • Persistent (belong to a list)
+• Hierarchical (parent/child trees)   • Flat (no hierarchy)
+• Types: task, note, event, done      • Types: task, done only
+• Has: scheduled_date, location       • Has: list_id
+• Query: "show me today/this week"    • Query: "show me this list"
+```
+
+**Why not separate tasks/notes/events too?**
+- They share identical structure and behavior
+- They're created and viewed together in daily workflow
+- Parent-child relationships span across types (a task can have note children)
+- Separation would add complexity without benefit
 
 ## Proposed Schema
 
