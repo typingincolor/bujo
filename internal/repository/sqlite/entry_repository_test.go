@@ -143,6 +143,101 @@ func TestEntryRepository_GetOverdue(t *testing.T) {
 	assert.Len(t, results, 2)
 }
 
+func TestEntryRepository_GetOverdue_ExcludesEventsAndNotesWithoutOverdueChildren(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	overdueTask := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Overdue task",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	pastEvent := domain.Entry{
+		Type:          domain.EntryTypeEvent,
+		Content:       "Past event with no children",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	pastNote := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "Past note with no children",
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+
+	_, err := repo.Insert(ctx, overdueTask)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, pastEvent)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, pastNote)
+	require.NoError(t, err)
+
+	results, err := repo.GetOverdue(ctx, today)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1, "GetOverdue should exclude events and notes without overdue children")
+	assert.Equal(t, "Overdue task", results[0].Content)
+}
+
+func TestEntryRepository_GetOverdue_IncludesParentChainForOverdueTasks(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	parentEvent := domain.Entry{
+		Type:          domain.EntryTypeEvent,
+		Content:       "Meeting with team",
+		Depth:         0,
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	parentEventID, err := repo.Insert(ctx, parentEvent)
+	require.NoError(t, err)
+
+	childNote := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "Discussion notes",
+		ParentID:      &parentEventID,
+		Depth:         1,
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	childNoteID, err := repo.Insert(ctx, childNote)
+	require.NoError(t, err)
+
+	grandchildTask := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Follow up action",
+		ParentID:      &childNoteID,
+		Depth:         2,
+		ScheduledDate: &yesterday,
+		CreatedAt:     time.Now(),
+	}
+	_, err = repo.Insert(ctx, grandchildTask)
+	require.NoError(t, err)
+
+	results, err := repo.GetOverdue(ctx, today)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 3, "GetOverdue should include parent chain for overdue tasks")
+
+	contents := make([]string, len(results))
+	for i, r := range results {
+		contents[i] = r.Content
+	}
+	assert.Contains(t, contents, "Meeting with team", "Should include grandparent event")
+	assert.Contains(t, contents, "Discussion notes", "Should include parent note")
+	assert.Contains(t, contents, "Follow up action", "Should include overdue task")
+}
+
 func TestEntryRepository_Insert_WithParent(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)

@@ -81,10 +81,23 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 	dateStr := date.Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, list_id, created_at
-		FROM entries
-		WHERE scheduled_date < ? AND type NOT IN ('done', 'migrated') AND list_id IS NULL
-		ORDER BY scheduled_date, created_at
+		WITH RECURSIVE
+		overdue_tasks AS (
+			SELECT id, type, content, parent_id, depth, location, scheduled_date, list_id, created_at
+			FROM entries
+			WHERE scheduled_date < ? AND type = 'task' AND list_id IS NULL
+		),
+		parent_chain AS (
+			SELECT id, type, content, parent_id, depth, location, scheduled_date, list_id, created_at
+			FROM overdue_tasks
+			UNION
+			SELECT e.id, e.type, e.content, e.parent_id, e.depth, e.location, e.scheduled_date, e.list_id, e.created_at
+			FROM entries e
+			INNER JOIN parent_chain pc ON e.id = pc.parent_id
+		)
+		SELECT DISTINCT id, type, content, parent_id, depth, location, scheduled_date, list_id, created_at
+		FROM parent_chain
+		ORDER BY scheduled_date, depth, created_at
 	`, dateStr)
 	if err != nil {
 		return nil, err
