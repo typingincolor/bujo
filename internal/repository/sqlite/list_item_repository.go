@@ -249,3 +249,24 @@ func (r *ListItemRepository) scanItems(rows *sql.Rows) ([]domain.ListItem, error
 
 	return items, rows.Err()
 }
+
+func (r *ListItemRepository) CountArchivable(ctx context.Context, olderThan time.Time) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM list_items
+		WHERE valid_to IS NOT NULL AND valid_to < ?
+	`, olderThan.Format(time.RFC3339)).Scan(&count)
+	return count, err
+}
+
+func (r *ListItemRepository) DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error) {
+	result, err := r.db.ExecContext(ctx, `
+		DELETE FROM list_items
+		WHERE valid_to IS NOT NULL AND valid_to < ?
+	`, olderThan.Format(time.RFC3339))
+	if err != nil {
+		return 0, err
+	}
+	affected, err := result.RowsAffected()
+	return int(affected), err
+}
