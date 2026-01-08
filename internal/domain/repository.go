@@ -8,6 +8,7 @@ import (
 type EntryRepository interface {
 	Insert(ctx context.Context, entry Entry) (int64, error)
 	GetByID(ctx context.Context, id int64) (*Entry, error)
+	GetByEntityID(ctx context.Context, entityID EntityID) (*Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]Entry, error)
 	GetByDateRange(ctx context.Context, from, to time.Time) ([]Entry, error)
 	GetOverdue(ctx context.Context, date time.Time) ([]Entry, error)
@@ -17,6 +18,8 @@ type EntryRepository interface {
 	Update(ctx context.Context, entry Entry) error
 	Delete(ctx context.Context, id int64) error
 	DeleteWithChildren(ctx context.Context, id int64) error
+	GetHistory(ctx context.Context, entityID EntityID) ([]Entry, error)
+	GetAsOf(ctx context.Context, entityID EntityID, asOf time.Time) (*Entry, error)
 }
 
 type HabitRepository interface {
@@ -54,9 +57,24 @@ type ListRepository interface {
 	Create(ctx context.Context, name string) (*List, error)
 	GetByID(ctx context.Context, id int64) (*List, error)
 	GetByName(ctx context.Context, name string) (*List, error)
+	GetByEntityID(ctx context.Context, entityID EntityID) (*List, error)
 	GetAll(ctx context.Context) ([]List, error)
 	Rename(ctx context.Context, id int64, newName string) error
 	Delete(ctx context.Context, id int64) error
 	GetItemCount(ctx context.Context, listID int64) (int, error)
 	GetDoneCount(ctx context.Context, listID int64) (int, error)
+}
+
+type ListItemRepository interface {
+	Insert(ctx context.Context, item ListItem) (int64, error)
+	GetByID(ctx context.Context, id int64) (*ListItem, error)
+	GetByEntityID(ctx context.Context, entityID EntityID) (*ListItem, error)
+	GetByListEntityID(ctx context.Context, listEntityID EntityID) ([]ListItem, error)
+	GetByListID(ctx context.Context, listID int64) ([]ListItem, error)
+	Update(ctx context.Context, item ListItem) error
+	Delete(ctx context.Context, id int64) error
+	GetHistory(ctx context.Context, entityID EntityID) ([]ListItem, error)
+	GetAtVersion(ctx context.Context, entityID EntityID, version int) (*ListItem, error)
+	CountArchivable(ctx context.Context, olderThan time.Time) (int, error)
+	DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error)
 }

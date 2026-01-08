@@ -17,6 +17,11 @@ func TestParsePastDate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "compact date format YYYYMMDD",
+			input:   "20260106",
+			wantErr: false,
+		},
+		{
 			name:    "natural language yesterday",
 			input:   "yesterday",
 			wantErr: false,
@@ -50,6 +55,16 @@ func TestParsePastDate_ISOFormat(t *testing.T) {
 	}
 	if parsed.Year() != 2026 || parsed.Month() != 1 || parsed.Day() != 5 {
 		t.Errorf("expected 2026-01-05, got %v", parsed)
+	}
+}
+
+func TestParsePastDate_CompactFormat(t *testing.T) {
+	parsed, err := parsePastDate("20260106")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if parsed.Year() != 2026 || parsed.Month() != 1 || parsed.Day() != 6 {
+		t.Errorf("expected 2026-01-06, got %v", parsed)
 	}
 }
 

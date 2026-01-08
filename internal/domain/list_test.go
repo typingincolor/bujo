@@ -76,3 +76,9 @@ func TestNewList_TrimsWhitespace(t *testing.T) {
 
 	assert.Equal(t, "Shopping List", list.Name)
 }
+
+func TestNewList_GeneratesEntityID(t *testing.T) {
+	list := NewList("Shopping")
+
+	assert.False(t, list.EntityID.IsEmpty())
+}

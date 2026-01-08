@@ -160,19 +160,19 @@ func TestListRepository_Delete(t *testing.T) {
 func TestListRepository_GetItemCount(t *testing.T) {
 	db := setupTestDB(t)
 	listRepo := NewListRepository(db)
-	entryRepo := NewEntryRepository(db)
+	listItemRepo := NewListItemRepository(db)
 	ctx := context.Background()
 
 	list, err := listRepo.Create(ctx, "Shopping")
 	require.NoError(t, err)
 
-	// Add entries to the list
-	entry1 := domain.Entry{Type: domain.EntryTypeTask, Content: "Milk", ListID: &list.ID}
-	_, err = entryRepo.Insert(ctx, entry1)
+	// Add items to the list
+	item1 := domain.NewListItem(list.EntityID, domain.ListItemTypeTask, "Milk")
+	_, err = listItemRepo.Insert(ctx, item1)
 	require.NoError(t, err)
 
-	entry2 := domain.Entry{Type: domain.EntryTypeTask, Content: "Bread", ListID: &list.ID}
-	_, err = entryRepo.Insert(ctx, entry2)
+	item2 := domain.NewListItem(list.EntityID, domain.ListItemTypeTask, "Bread")
+	_, err = listItemRepo.Insert(ctx, item2)
 	require.NoError(t, err)
 
 	count, err := listRepo.GetItemCount(ctx, list.ID)
@@ -184,23 +184,51 @@ func TestListRepository_GetItemCount(t *testing.T) {
 func TestListRepository_GetDoneCount(t *testing.T) {
 	db := setupTestDB(t)
 	listRepo := NewListRepository(db)
-	entryRepo := NewEntryRepository(db)
+	listItemRepo := NewListItemRepository(db)
 	ctx := context.Background()
 
 	list, err := listRepo.Create(ctx, "Shopping")
 	require.NoError(t, err)
 
-	// Add entries - one done, one not
-	entry1 := domain.Entry{Type: domain.EntryTypeDone, Content: "Milk", ListID: &list.ID}
-	_, err = entryRepo.Insert(ctx, entry1)
+	// Add items - one done, one not
+	item1 := domain.NewListItem(list.EntityID, domain.ListItemTypeDone, "Milk")
+	_, err = listItemRepo.Insert(ctx, item1)
 	require.NoError(t, err)
 
-	entry2 := domain.Entry{Type: domain.EntryTypeTask, Content: "Bread", ListID: &list.ID}
-	_, err = entryRepo.Insert(ctx, entry2)
+	item2 := domain.NewListItem(list.EntityID, domain.ListItemTypeTask, "Bread")
+	_, err = listItemRepo.Insert(ctx, item2)
 	require.NoError(t, err)
 
 	count, err := listRepo.GetDoneCount(ctx, list.ID)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
+}
+
+func TestListRepository_GetByEntityID(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	created, err := repo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	found, err := repo.GetByEntityID(ctx, created.EntityID)
+
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, created.ID, found.ID)
+	assert.Equal(t, created.EntityID, found.EntityID)
+	assert.Equal(t, "Shopping", found.Name)
+}
+
+func TestListRepository_GetByEntityID_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	found, err := repo.GetByEntityID(ctx, domain.NewEntityID())
+
+	require.NoError(t, err)
+	assert.Nil(t, found)
 }

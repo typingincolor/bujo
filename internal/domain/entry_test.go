@@ -182,3 +182,48 @@ func TestEntry_Validate(t *testing.T) {
 		})
 	}
 }
+
+func TestEntry_WithEntityID_Validates(t *testing.T) {
+	entry := Entry{
+		EntityID: NewEntityID(),
+		Type:     EntryTypeTask,
+		Content:  "Do something",
+	}
+
+	err := entry.Validate()
+
+	assert.NoError(t, err)
+	assert.False(t, entry.EntityID.IsEmpty())
+}
+
+func TestNewEntry_GeneratesEntityID(t *testing.T) {
+	scheduledDate := time.Now()
+
+	entry := NewEntry(EntryTypeTask, "Do something", &scheduledDate)
+
+	assert.False(t, entry.EntityID.IsEmpty())
+	assert.Equal(t, EntryTypeTask, entry.Type)
+	assert.Equal(t, "Do something", entry.Content)
+	assert.Equal(t, &scheduledDate, entry.ScheduledDate)
+	assert.False(t, entry.CreatedAt.IsZero())
+}
+
+func TestEntry_HasParent_WhenParentEntityIDSet_ReturnsTrue(t *testing.T) {
+	parentID := NewEntityID()
+	entry := Entry{
+		Type:           EntryTypeTask,
+		Content:        "Child task",
+		ParentEntityID: &parentID,
+	}
+
+	assert.True(t, entry.HasParent())
+}
+
+func TestEntry_HasParent_WhenParentEntityIDNil_ReturnsFalse(t *testing.T) {
+	entry := Entry{
+		Type:    EntryTypeTask,
+		Content: "Root task",
+	}
+
+	assert.False(t, entry.HasParent())
+}

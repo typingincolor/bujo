@@ -62,6 +62,10 @@ func parsePastDate(s string) (time.Time, error) {
 		return parsed, nil
 	}
 
+	if parsed, err := time.Parse("20060102", s); err == nil {
+		return parsed, nil
+	}
+
 	parsed, err := naturaldate.Parse(s, now, naturaldate.WithDirection(naturaldate.Past))
 	if err != nil {
 		return time.Time{}, fmt.Errorf("invalid date: %s", s)
@@ -140,6 +144,10 @@ func parseFutureDate(s string) (time.Time, error) {
 	now := time.Now()
 
 	if parsed, err := time.Parse("2006-01-02", s); err == nil {
+		return parsed, nil
+	}
+
+	if parsed, err := time.Parse("20060102", s); err == nil {
 		return parsed, nil
 	}
 

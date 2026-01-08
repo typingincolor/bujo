@@ -274,3 +274,32 @@ func TestSumCountForDay(t *testing.T) {
 
 	assert.Equal(t, 5, result)
 }
+
+func TestHabit_WithEntityID(t *testing.T) {
+	habit := Habit{
+		EntityID:   NewEntityID(),
+		Name:       "Gym",
+		GoalPerDay: 1,
+	}
+
+	err := habit.Validate()
+
+	assert.NoError(t, err)
+	assert.False(t, habit.EntityID.IsEmpty())
+}
+
+func TestHabitLog_WithEntityID(t *testing.T) {
+	log := HabitLog{
+		EntityID:      NewEntityID(),
+		HabitEntityID: NewEntityID(),
+		HabitID:       1,
+		Count:         1,
+		LoggedAt:      time.Now(),
+	}
+
+	err := log.Validate()
+
+	assert.NoError(t, err)
+	assert.False(t, log.EntityID.IsEmpty())
+	assert.False(t, log.HabitEntityID.IsEmpty())
+}

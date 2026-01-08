@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
 )
@@ -12,6 +11,7 @@ type ListRepository interface {
 	Create(ctx context.Context, name string) (*domain.List, error)
 	GetByID(ctx context.Context, id int64) (*domain.List, error)
 	GetByName(ctx context.Context, name string) (*domain.List, error)
+	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.List, error)
 	GetAll(ctx context.Context) ([]domain.List, error)
 	Rename(ctx context.Context, id int64, newName string) error
 	Delete(ctx context.Context, id int64) error
@@ -19,24 +19,15 @@ type ListRepository interface {
 	GetDoneCount(ctx context.Context, listID int64) (int, error)
 }
 
-type ListEntryRepository interface {
-	Insert(ctx context.Context, entry domain.Entry) (int64, error)
-	GetByID(ctx context.Context, id int64) (*domain.Entry, error)
-	GetByListID(ctx context.Context, listID int64) ([]domain.Entry, error)
-	Update(ctx context.Context, entry domain.Entry) error
-	Delete(ctx context.Context, id int64) error
-	DeleteWithChildren(ctx context.Context, id int64) error
-}
-
 type ListService struct {
-	listRepo  ListRepository
-	entryRepo ListEntryRepository
+	listRepo     ListRepository
+	listItemRepo domain.ListItemRepository
 }
 
-func NewListService(listRepo ListRepository, entryRepo ListEntryRepository) *ListService {
+func NewListService(listRepo ListRepository, listItemRepo domain.ListItemRepository) *ListService {
 	return &ListService{
-		listRepo:  listRepo,
-		entryRepo: entryRepo,
+		listRepo:     listRepo,
+		listItemRepo: listItemRepo,
 	}
 }
 
@@ -51,15 +42,15 @@ func (s *ListService) getListByID(ctx context.Context, id int64) (*domain.List, 
 	return list, nil
 }
 
-func (s *ListService) getEntryByID(ctx context.Context, id int64) (*domain.Entry, error) {
-	entry, err := s.entryRepo.GetByID(ctx, id)
+func (s *ListService) getItemByID(ctx context.Context, id int64) (*domain.ListItem, error) {
+	item, err := s.listItemRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, fmt.Errorf("entry not found: %d", id)
+	if item == nil {
+		return nil, fmt.Errorf("item not found: %d", id)
 	}
-	return entry, nil
+	return item, nil
 }
 
 func (s *ListService) CreateList(ctx context.Context, name string) (*domain.List, error) {
@@ -107,12 +98,12 @@ func (s *ListService) DeleteList(ctx context.Context, id int64, force bool) erro
 	}
 
 	if count > 0 {
-		items, err := s.entryRepo.GetByListID(ctx, id)
+		items, err := s.listItemRepo.GetByListID(ctx, id)
 		if err != nil {
 			return err
 		}
 		for _, item := range items {
-			if err := s.entryRepo.DeleteWithChildren(ctx, item.ID); err != nil {
+			if err := s.listItemRepo.Delete(ctx, item.RowID); err != nil {
 				return err
 			}
 		}
@@ -122,63 +113,68 @@ func (s *ListService) DeleteList(ctx context.Context, id int64, force bool) erro
 }
 
 func (s *ListService) AddItem(ctx context.Context, listID int64, entryType domain.EntryType, content string) (int64, error) {
-	if _, err := s.getListByID(ctx, listID); err != nil {
+	if entryType != domain.EntryTypeTask && entryType != domain.EntryTypeDone {
+		return 0, fmt.Errorf("only tasks can be added to lists")
+	}
+
+	list, err := s.getListByID(ctx, listID)
+	if err != nil {
 		return 0, err
 	}
 
-	entry := domain.Entry{
-		Type:      entryType,
-		Content:   content,
-		ListID:    &listID,
-		CreatedAt: time.Now(),
+	itemType := domain.ListItemTypeTask
+	if entryType == domain.EntryTypeDone {
+		itemType = domain.ListItemTypeDone
 	}
 
-	return s.entryRepo.Insert(ctx, entry)
+	item := domain.NewListItem(list.EntityID, itemType, content)
+	return s.listItemRepo.Insert(ctx, item)
 }
 
-func (s *ListService) GetListItems(ctx context.Context, listID int64) ([]domain.Entry, error) {
-	return s.entryRepo.GetByListID(ctx, listID)
+func (s *ListService) GetListItems(ctx context.Context, listID int64) ([]domain.ListItem, error) {
+	return s.listItemRepo.GetByListID(ctx, listID)
 }
 
-func (s *ListService) RemoveItem(ctx context.Context, entryID int64) error {
-	if _, err := s.getEntryByID(ctx, entryID); err != nil {
+func (s *ListService) RemoveItem(ctx context.Context, itemID int64) error {
+	if _, err := s.getItemByID(ctx, itemID); err != nil {
 		return err
 	}
-	return s.entryRepo.Delete(ctx, entryID)
+	return s.listItemRepo.Delete(ctx, itemID)
 }
 
-func (s *ListService) MarkDone(ctx context.Context, entryID int64) error {
-	entry, err := s.getEntryByID(ctx, entryID)
+func (s *ListService) MarkDone(ctx context.Context, itemID int64) error {
+	item, err := s.getItemByID(ctx, itemID)
 	if err != nil {
 		return err
 	}
 
-	entry.Type = domain.EntryTypeDone
-	return s.entryRepo.Update(ctx, *entry)
+	item.Type = domain.ListItemTypeDone
+	return s.listItemRepo.Update(ctx, *item)
 }
 
-func (s *ListService) MarkUndone(ctx context.Context, entryID int64) error {
-	entry, err := s.getEntryByID(ctx, entryID)
+func (s *ListService) MarkUndone(ctx context.Context, itemID int64) error {
+	item, err := s.getItemByID(ctx, itemID)
 	if err != nil {
 		return err
 	}
 
-	entry.Type = domain.EntryTypeTask
-	return s.entryRepo.Update(ctx, *entry)
+	item.Type = domain.ListItemTypeTask
+	return s.listItemRepo.Update(ctx, *item)
 }
 
-func (s *ListService) MoveItem(ctx context.Context, entryID int64, targetListID int64) error {
-	entry, err := s.getEntryByID(ctx, entryID)
+func (s *ListService) MoveItem(ctx context.Context, itemID int64, targetListID int64) error {
+	item, err := s.getItemByID(ctx, itemID)
 	if err != nil {
 		return err
 	}
 
-	if _, err := s.getListByID(ctx, targetListID); err != nil {
+	targetList, err := s.getListByID(ctx, targetListID)
+	if err != nil {
 		return err
 	}
 
-	entry.ListID = &targetListID
-	return s.entryRepo.Update(ctx, *entry)
+	item.ListEntityID = targetList.EntityID
+	return s.listItemRepo.Update(ctx, *item)
 }
 
 type ListSummary struct {

@@ -8,12 +8,14 @@ import (
 
 type List struct {
 	ID        int64
+	EntityID  EntityID
 	Name      string
 	CreatedAt time.Time
 }
 
 func NewList(name string) List {
 	return List{
+		EntityID:  NewEntityID(),
 		Name:      strings.TrimSpace(name),
 		CreatedAt: time.Now(),
 	}
