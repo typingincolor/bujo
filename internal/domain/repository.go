@@ -74,6 +74,7 @@ type ListItemRepository interface {
 	Update(ctx context.Context, item ListItem) error
 	Delete(ctx context.Context, id int64) error
 	GetHistory(ctx context.Context, entityID EntityID) ([]ListItem, error)
+	GetAtVersion(ctx context.Context, entityID EntityID, version int) (*ListItem, error)
 	CountArchivable(ctx context.Context, olderThan time.Time) (int, error)
 	DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error)
 }

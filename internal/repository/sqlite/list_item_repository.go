@@ -250,6 +250,16 @@ func (r *ListItemRepository) scanItems(rows *sql.Rows) ([]domain.ListItem, error
 	return items, rows.Err()
 }
 
+func (r *ListItemRepository) GetAtVersion(ctx context.Context, entityID domain.EntityID, version int) (*domain.ListItem, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT row_id, entity_id, version, valid_from, valid_to, op_type, list_entity_id, type, content, created_at
+		FROM list_items
+		WHERE entity_id = ? AND version = ?
+	`, entityID.String(), version)
+
+	return r.scanItem(row)
+}
+
 func (r *ListItemRepository) CountArchivable(ctx context.Context, olderThan time.Time) (int, error) {
 	var count int
 	err := r.db.QueryRowContext(ctx, `
