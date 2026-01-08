@@ -20,6 +20,8 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 - **Weekly View** - See entries from the last 7 days at a glance
 - **Entry Management** - Edit, delete, migrate, and reorganize entries
 - **Interactive TUI** - Navigate and manage entries with keyboard shortcuts
+- **Backup & Restore** - Built-in database backups with verification
+- **Version History** - View and restore previous versions of list items
 
 ## Installation
 
@@ -416,11 +418,11 @@ bujo list create "Shopping List"
 
 #### `bujo list show <list>`
 
-Show items in a list. Reference by name or ID (#1).
+Show items in a list. Reference by name or ID (`#1`). Always quote `#` IDs.
 
 ```bash
-bujo list show Shopping
-bujo list show "#1"
+bujo list show Shopping      # By name
+bujo list show "#1"          # By ID (must quote)
 ```
 
 ```
@@ -437,10 +439,13 @@ bujo list show "#1"
 
 Add an item to a list. Prefix with symbol for type (default: task).
 
+**Important:** When referencing lists by ID (`#1`), always quote the ID to prevent shell interpretation.
+
 ```bash
-bujo list add Shopping "Buy milk"
-bujo list add "#1" "Buy bread"
-bujo list add "#1" -- "- Remember eggs"    # Note type
+bujo list add Shopping "Buy milk"          # By name
+bujo list add "#1" "Buy bread"             # By ID (must quote #1)
+bujo list add "#1" ". Buy eggs"            # Task with explicit symbol
+bujo list add "#1" -- "- Remember eggs"    # Note type (use -- before dash)
 ```
 
 #### `bujo list done <item-id>`
@@ -554,8 +559,73 @@ bujo --db-path /path/to/custom.db ls
 
 ### Backup
 
+bujo includes built-in backup functionality using SQLite's VACUUM INTO for consistent snapshots.
+
+#### `bujo backup`
+
+List existing backups.
+
 ```bash
-cp ~/.bujo/bujo.db ~/.bujo/bujo.db.backup
+bujo backup
+```
+
+#### `bujo backup create`
+
+Create a new backup. Backups are stored in `~/.bujo/backups/` with timestamps.
+
+```bash
+bujo backup create
+# Output: Backup created: /Users/you/.bujo/backups/bujo-2026-01-08-143052.db
+```
+
+#### `bujo backup verify <path>`
+
+Verify the integrity of a backup file.
+
+```bash
+bujo backup verify ~/.bujo/backups/bujo-2026-01-08-143052.db
+```
+
+### Archive
+
+Clean up old data versions to reduce database size. bujo uses event sourcing which keeps historical versions of changed records.
+
+#### `bujo archive`
+
+Show how many old versions can be archived (dry run).
+
+```bash
+bujo archive                           # Check archivable count
+bujo archive --older-than 2025-01-01   # Only versions before date
+```
+
+#### `bujo archive --execute`
+
+Actually perform the archive operation.
+
+```bash
+bujo archive --execute
+bujo archive --older-than 2025-06-01 --execute
+```
+
+### History
+
+View and restore previous versions of list items.
+
+#### `bujo history show <entity-id>`
+
+Display all versions of an item.
+
+```bash
+bujo history show abc123-def456-...
+```
+
+#### `bujo history restore <entity-id> <version>`
+
+Restore an item to a previous version. Creates a new version with the old content.
+
+```bash
+bujo history restore abc123-def456-... 1
 ```
 
 ## Global Flags
@@ -564,6 +634,42 @@ cp ~/.bujo/bujo.db ~/.bujo/bujo.db.backup
 |------|-------------|
 | `--db-path` | Path to database file (default: `~/.bujo/bujo.db`) |
 | `-v, --verbose` | Enable verbose output |
+
+## Shell Completions
+
+bujo supports shell completions for tab-completion of commands and flags.
+
+### Bash
+
+```bash
+# Add to ~/.bashrc
+source <(bujo completion bash)
+```
+
+### Zsh
+
+```bash
+# Add to ~/.zshrc
+source <(bujo completion zsh)
+
+# Or install to fpath
+bujo completion zsh > "${fpath[1]}/_bujo"
+```
+
+### Fish
+
+```bash
+bujo completion fish | source
+
+# Or install permanently
+bujo completion fish > ~/.config/fish/completions/bujo.fish
+```
+
+### PowerShell
+
+```powershell
+bujo completion powershell | Out-String | Invoke-Expression
+```
 
 ## Building from Source
 
