@@ -541,8 +541,13 @@ Phase 7.1
   - `bujo history show <entity-id>` shows version history
   - `bujo history restore <entity-id> <version>` restores to previous version
 
+- [x] Phase 5: Database migrations for entries versioning
+  - Migration 000009: Add entity_id, version, valid_from, valid_to, op_type columns
+  - Migration 000010: Populate entity_ids for existing entries
+  - Updated EntryRepository with GetByEntityID, GetHistory, GetAsOf
+  - All queries filter out soft-deleted/superseded rows
+
 ### Remaining Work
 
-- [ ] Phase 5: Database migrations for entries versioning (add entity_id, version, valid_from, valid_to, op_type to entries table)
 - [ ] Migrate ListService to use ListItemRepository instead of EntryRepository for list items
 - [ ] Phase 7: Cleanup deprecated fields after full migration
