@@ -428,9 +428,9 @@ bujo list show "#1"          # By ID (must quote)
 ```
 #1 Shopping List
 ---------------------------------------------------------
-(1) • Buy milk
-(2) • Buy bread
-(3) – Remember eggs
+(1) . Buy milk
+(2) . Buy bread
+(3) . Remember eggs
 ---------------------------------------------------------
 0/3 done
 ```
