@@ -37,10 +37,10 @@ type ListItem struct {
 func NewListItem(listEntityID EntityID, itemType ListItemType, content string) ListItem {
 	return ListItem{
 		VersionInfo: VersionInfo{
-			EntityID: NewEntityID(),
-			Version:  1,
+			EntityID:  NewEntityID(),
+			Version:   1,
 			ValidFrom: time.Now(),
-			OpType:   OpTypeInsert,
+			OpType:    OpTypeInsert,
 		},
 		ListEntityID: listEntityID,
 		Type:         itemType,

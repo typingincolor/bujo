@@ -60,4 +60,8 @@ var (
 	ErrorTitleStyle = lipgloss.NewStyle().
 			Foreground(RedColor).
 			Bold(true)
+
+	SearchHighlightStyle = lipgloss.NewStyle().
+				Background(YellowColor).
+				Foreground(lipgloss.Color("0"))
 )

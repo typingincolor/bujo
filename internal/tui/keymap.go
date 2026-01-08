@@ -16,6 +16,7 @@ type KeyMap struct {
 	Migrate    key.Binding
 	ToggleView key.Binding
 	GotoDate   key.Binding
+	Capture    key.Binding
 	Confirm    key.Binding
 	Cancel     key.Binding
 	Quit       key.Binding
@@ -76,6 +77,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("/"),
 			key.WithHelp("/", "go to date"),
 		),
+		Capture: key.NewBinding(
+			key.WithKeys("c"),
+			key.WithHelp("c", "capture"),
+		),
 		Confirm: key.NewBinding(
 			key.WithKeys("y", "Y"),
 			key.WithHelp("y", "confirm"),
@@ -96,13 +101,13 @@ func DefaultKeyMap() KeyMap {
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Done, k.Edit, k.Add, k.Migrate, k.Delete, k.Quit, k.Help}
+	return []key.Binding{k.Up, k.Down, k.Done, k.Edit, k.Add, k.Capture, k.Delete, k.Quit, k.Help}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.Done, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Delete},
+		{k.Done, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Capture, k.Delete},
 		{k.ToggleView, k.GotoDate, k.Quit, k.Help},
 	}
 }

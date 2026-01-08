@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	archiveService *service.ArchiveService
+	archiveService   *service.ArchiveService
 	archiveOlderThan string
 	archiveExecute   bool
 )

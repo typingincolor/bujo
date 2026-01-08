@@ -12,6 +12,10 @@ func (m Model) View() string {
 		return m.renderErrorPopup()
 	}
 
+	if m.captureMode.active {
+		return m.renderCaptureMode()
+	}
+
 	if m.agenda == nil {
 		return "Loading..."
 	}
@@ -83,6 +87,10 @@ func (m Model) View() string {
 			}
 
 			line := m.renderEntry(item)
+			// Highlight search matches
+			if m.searchMode.active && m.searchMode.query != "" {
+				line = m.highlightSearchTerm(line)
+			}
 			if i == m.selectedIdx {
 				line = SelectedStyle.Render(line)
 			}
@@ -119,6 +127,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderGotoInput())
 		sb.WriteString("\n")
+	} else if m.searchMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSearchInput())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
@@ -130,15 +142,11 @@ func (m Model) View() string {
 func (m Model) renderEntry(item EntryItem) string {
 	entry := item.Entry
 	indent := strings.Repeat("  ", item.Indent)
-	treePrefix := ""
-	if item.Indent > 0 {
-		treePrefix = "└── "
-	}
 
 	symbol := entry.Type.Symbol()
 	content := entry.Content
 
-	base := fmt.Sprintf("%s%s%s %s", indent, treePrefix, symbol, content)
+	base := fmt.Sprintf("%s%s %s", indent, symbol, content)
 
 	switch entry.Type {
 	case domain.EntryTypeDone:
@@ -198,6 +206,46 @@ func (m Model) renderGotoInput() string {
 	return ConfirmStyle.Render(sb.String())
 }
 
+func (m Model) renderSearchInput() string {
+	direction := "forward"
+	if !m.searchMode.forward {
+		direction = "reverse"
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Search (%s): %s█", direction, m.searchMode.query))
+	sb.WriteString("\n\nEnter to find, Ctrl+S/R to find next/prev, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) highlightSearchTerm(line string) string {
+	query := m.searchMode.query
+	if query == "" {
+		return line
+	}
+
+	// Case-insensitive search and highlight
+	lowerLine := strings.ToLower(line)
+	lowerQuery := strings.ToLower(query)
+
+	var result strings.Builder
+	remaining := line
+	lowerRemaining := lowerLine
+
+	for {
+		idx := strings.Index(lowerRemaining, lowerQuery)
+		if idx < 0 {
+			result.WriteString(remaining)
+			break
+		}
+		result.WriteString(remaining[:idx])
+		result.WriteString(SearchHighlightStyle.Render(remaining[idx : idx+len(query)]))
+		remaining = remaining[idx+len(query):]
+		lowerRemaining = lowerRemaining[idx+len(query):]
+	}
+
+	return result.String()
+}
+
 func (m Model) renderToolbar() string {
 	viewModeStr := "Day"
 	if m.viewMode == ViewModeWeek {
@@ -207,6 +255,187 @@ func (m Model) renderToolbar() string {
 	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
 
 	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s", viewModeStr, dateStr))
+}
+
+func (m Model) renderCaptureMode() string {
+	var sb strings.Builder
+
+	// Header
+	header := "CAPTURE MODE"
+	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
+	sb.WriteString(ToolbarStyle.Render(fmt.Sprintf("📝 %s | %s", header, dateStr)))
+	sb.WriteString("\n")
+
+	maxWidth := m.width
+	if maxWidth > 80 {
+		maxWidth = 80
+	}
+	if maxWidth < 20 {
+		maxWidth = 20
+	}
+
+	sb.WriteString(strings.Repeat("─", maxWidth))
+	sb.WriteString("\n")
+
+	// Calculate editor height
+	editorHeight := m.height - 8 // Reserve for header, status, help
+	if editorHeight < 5 {
+		editorHeight = 5
+	}
+
+	editorLines := strings.Split(m.captureMode.content, "\n")
+	if m.captureMode.content == "" {
+		editorLines = []string{""}
+	}
+
+	// Calculate scroll offset to keep cursor visible
+	scrollOffset := m.captureMode.scrollOffset
+	if m.captureMode.cursorLine < scrollOffset {
+		scrollOffset = m.captureMode.cursorLine
+	}
+	if m.captureMode.cursorLine >= scrollOffset+editorHeight {
+		scrollOffset = m.captureMode.cursorLine - editorHeight + 1
+	}
+
+	// Show scroll indicator if needed
+	if scrollOffset > 0 {
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↑ %d more lines above", scrollOffset)))
+		sb.WriteString("\n")
+		editorHeight--
+	}
+
+	// Show editor lines with cursor and search highlighting
+	searchQuery := m.captureMode.searchQuery
+	linesShown := 0
+	for i := scrollOffset; i < len(editorLines) && linesShown < editorHeight; i++ {
+		origLine := editorLines[i]
+		line := origLine
+
+		// Insert cursor on current line first (before highlighting)
+		cursorCol := -1
+		if i == m.captureMode.cursorLine {
+			cursorCol = m.captureMode.cursorCol
+			if cursorCol > len(origLine) {
+				cursorCol = len(origLine)
+			}
+		}
+
+		// Apply search highlighting to the original line content
+		if m.captureMode.searchMode && searchQuery != "" && strings.Contains(origLine, searchQuery) {
+			var highlighted strings.Builder
+			pos := 0
+			remaining := origLine
+			for {
+				idx := strings.Index(remaining, searchQuery)
+				if idx < 0 {
+					// No more matches - add remaining content with cursor if needed
+					if cursorCol >= 0 && cursorCol >= pos {
+						relCol := cursorCol - pos
+						if relCol < len(remaining) {
+							highlighted.WriteString(remaining[:relCol])
+							highlighted.WriteString("█")
+							highlighted.WriteString(remaining[relCol+1:])
+						} else {
+							highlighted.WriteString(remaining)
+							highlighted.WriteString("█")
+						}
+					} else {
+						highlighted.WriteString(remaining)
+					}
+					break
+				}
+
+				matchStart := pos + idx
+				matchEnd := matchStart + len(searchQuery)
+
+				// Add text before match, possibly with cursor
+				if cursorCol >= 0 && cursorCol >= pos && cursorCol < matchStart {
+					relCol := cursorCol - pos
+					highlighted.WriteString(remaining[:relCol])
+					highlighted.WriteString("█")
+					highlighted.WriteString(remaining[relCol+1 : idx])
+					cursorCol = -1
+				} else {
+					highlighted.WriteString(remaining[:idx])
+				}
+
+				// Add highlighted match, possibly with cursor inside
+				if cursorCol >= 0 && cursorCol >= matchStart && cursorCol < matchEnd {
+					relCol := cursorCol - matchStart
+					matchText := searchQuery[:relCol] + "█" + searchQuery[relCol+1:]
+					highlighted.WriteString(SearchHighlightStyle.Render(matchText))
+					cursorCol = -1
+				} else {
+					highlighted.WriteString(SearchHighlightStyle.Render(searchQuery))
+				}
+
+				pos = matchEnd
+				remaining = remaining[idx+len(searchQuery):]
+			}
+			line = highlighted.String()
+		} else if cursorCol >= 0 {
+			// No search highlighting, just add cursor
+			if cursorCol < len(origLine) {
+				line = origLine[:cursorCol] + "█" + origLine[cursorCol+1:]
+			} else {
+				line = origLine + "█"
+			}
+		}
+
+		sb.WriteString("  ")
+		sb.WriteString(line)
+		sb.WriteString("\n")
+		linesShown++
+	}
+
+	// Pad remaining lines
+	for linesShown < editorHeight {
+		sb.WriteString("\n")
+		linesShown++
+	}
+
+	// Show scroll indicator if more below
+	if scrollOffset+editorHeight < len(editorLines) {
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↓ %d more lines below", len(editorLines)-scrollOffset-editorHeight)))
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+
+	// Status bar with error or entry count
+	if m.captureMode.draftExists {
+		sb.WriteString(ErrorStyle.Render("Restore previous draft? (y/n)"))
+	} else if m.captureMode.searchMode {
+		direction := "forward"
+		if !m.captureMode.searchForward {
+			direction = "reverse"
+		}
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("Search (%s): %s", direction, m.captureMode.searchQuery)))
+	} else if m.captureMode.confirmCancel {
+		sb.WriteString(ErrorStyle.Render("Discard changes? (y/n)"))
+	} else if m.captureMode.parseError != nil {
+		sb.WriteString(ErrorStyle.Render(fmt.Sprintf("Error: %v", m.captureMode.parseError)))
+	} else {
+		count := len(m.captureMode.parsedEntries)
+		switch count {
+		case 0:
+			sb.WriteString(HelpStyle.Render("No entries"))
+		case 1:
+			sb.WriteString(HelpStyle.Render("1 entry"))
+		default:
+			sb.WriteString(HelpStyle.Render(fmt.Sprintf("%d entries", count)))
+		}
+	}
+	sb.WriteString("\n\n")
+
+	// Help
+	if m.captureMode.searchMode {
+		sb.WriteString(HelpStyle.Render("Enter/Ctrl+S: next | Ctrl+R: prev | ESC: exit search"))
+	} else {
+		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | Ctrl+S: search"))
+	}
+
+	return sb.String()
 }
 
 func (m Model) renderErrorPopup() string {
