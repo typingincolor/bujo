@@ -1168,6 +1168,26 @@ func TestModel_CaptureMode_Search_EscExitsSearchMode(t *testing.T) {
 	}
 }
 
+func TestModel_CaptureMode_Search_AllowsSpaces(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:        true,
+		content:       ". Task here",
+		searchMode:    true,
+		searchForward: true,
+		searchQuery:   "Task",
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.searchQuery != "Task " {
+		t.Errorf("expected searchQuery 'Task ', got '%s'", m.captureMode.searchQuery)
+	}
+}
+
 func TestModel_CaptureMode_Search_FindsMatch(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}

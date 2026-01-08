@@ -413,6 +413,10 @@ func (m Model) handleCaptureSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case tea.KeySpace:
+		m.captureMode.searchQuery += " "
+		return m, nil
+
 	case tea.KeyRunes:
 		m.captureMode.searchQuery += string(msg.Runes)
 		return m, nil
