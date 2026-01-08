@@ -275,6 +275,17 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCaptureSearchMode(msg)
 	}
 
+	// Handle paste events first (bracketed paste)
+	if msg.Paste && len(msg.Runes) > 0 {
+		// Convert \r to \n for cross-platform paste compatibility
+		pasteContent := strings.ReplaceAll(string(msg.Runes), "\r\n", "\n")
+		pasteContent = strings.ReplaceAll(pasteContent, "\r", "\n")
+		m = m.captureInsertRunes([]rune(pasteContent))
+		m = m.captureEnsureCursorVisible()
+		m = m.captureReparse()
+		return m, nil
+	}
+
 	switch msg.Type {
 	case tea.KeyCtrlX:
 		content := m.captureMode.content
@@ -314,10 +325,12 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyUp:
 		m = m.captureMoveUp()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyDown:
 		m = m.captureMoveDown()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyLeft:
@@ -395,6 +408,7 @@ func (m Model) handleCaptureSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyEnter:
 		m = m.captureSearch()
+		m.captureMode.searchMode = false
 		return m, nil
 
 	case tea.KeyCtrlS:
@@ -434,7 +448,7 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 
 	toInsert := string(runes)
 
-	// Auto-space after entry symbols at line start
+	// Auto-space after entry symbols at line start (single char only)
 	if len(runes) == 1 && isEntrySymbol(runes[0]) && m.isAtLineStart() {
 		toInsert = string(runes) + " "
 	}
@@ -442,7 +456,17 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 	newContent := content[:pos] + toInsert + content[pos:]
 	m.captureMode.content = newContent
 	m.captureMode.cursorPos = pos + len(toInsert)
-	m.captureMode.cursorCol += len(toInsert)
+
+	// Recalculate cursor line and column for multi-line pastes
+	newlineCount := strings.Count(toInsert, "\n")
+	if newlineCount > 0 {
+		m.captureMode.cursorLine += newlineCount
+		// Find column position on the last line
+		lastNewline := strings.LastIndex(toInsert, "\n")
+		m.captureMode.cursorCol = len(toInsert) - lastNewline - 1
+	} else {
+		m.captureMode.cursorCol += len(toInsert)
+	}
 	return m
 }
 
@@ -520,6 +544,34 @@ func (m Model) captureInsertNewline() Model {
 	m.captureMode.cursorPos = pos + 1 + len(indent)
 	m.captureMode.cursorLine++
 	m.captureMode.cursorCol = len(indent)
+	return m
+}
+
+func (m Model) captureEnsureCursorVisible() Model {
+	// Calculate editor height (same as in view)
+	editorHeight := m.height - 8
+	if editorHeight < 5 {
+		editorHeight = 5
+	}
+
+	// Account for scroll indicators taking up lines
+	effectiveHeight := editorHeight
+	if m.captureMode.scrollOffset > 0 {
+		effectiveHeight-- // "more above" indicator
+	}
+	// Reserve space for "more below" indicator
+	lines := strings.Split(m.captureMode.content, "\n")
+	if m.captureMode.scrollOffset+effectiveHeight < len(lines) {
+		effectiveHeight--
+	}
+
+	// Adjust scroll offset to keep cursor visible
+	if m.captureMode.cursorLine < m.captureMode.scrollOffset {
+		m.captureMode.scrollOffset = m.captureMode.cursorLine
+	}
+	if m.captureMode.cursorLine >= m.captureMode.scrollOffset+effectiveHeight {
+		m.captureMode.scrollOffset = m.captureMode.cursorLine - effectiveHeight + 1
+	}
 	return m
 }
 
