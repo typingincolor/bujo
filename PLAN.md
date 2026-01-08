@@ -522,11 +522,27 @@ Phase 7.1
   - `bujo backup create` creates a new backup
   - `bujo backup verify <path>` verifies backup integrity
 
-### Next Steps
+- [x] Phase 4.3: Create ArchiveService
+  - GetArchivableCount for dry-run preview
+  - Archive to delete old versions
+  - DryRun mode for safe preview
 
-- [ ] Phase 4.3: Create ArchiveService
-- [ ] Phase 4.4: Create HistoryService
-- [ ] Phase 5: Database migrations for entries versioning
-- [ ] Phase 6.2: CLI archive command
-- [ ] Phase 6.3: CLI history command
-- [ ] Phase 7: Cleanup deprecated fields
+- [x] Phase 4.4: Create HistoryService
+  - GetItemHistory returns all versions
+  - GetItemAtVersion returns specific version
+  - RestoreItem creates new version from old content
+
+- [x] Phase 6.2: CLI archive command
+  - `bujo archive` shows archivable count (dry run)
+  - `bujo archive --execute` performs actual archive
+  - `--older-than` flag to specify cutoff date
+
+- [x] Phase 6.3: CLI history command
+  - `bujo history show <entity-id>` shows version history
+  - `bujo history restore <entity-id> <version>` restores to previous version
+
+### Remaining Work
+
+- [ ] Phase 5: Database migrations for entries versioning (add entity_id, version, valid_from, valid_to, op_type to entries table)
+- [ ] Migrate ListService to use ListItemRepository instead of EntryRepository for list items
+- [ ] Phase 7: Cleanup deprecated fields after full migration
