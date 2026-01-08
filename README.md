@@ -110,7 +110,7 @@ Display today's entries with overdue tasks and location.
 TODAY
 • Buy groceries (1)
 • Finish report (2)
-  – Remember to include Q4 data (3)
+  └── – Remember to include Q4 data (3)
 ---------------------------------------------------------
 ```
 
