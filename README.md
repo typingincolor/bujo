@@ -328,7 +328,7 @@ bujo habit --month  # 30-day calendar view
 ```
 
 ```
-Habit Tracker
+🔥 Habit Tracker
 
 Gym (3 day streak)
   ○ ○ ○ ○ ● ● ●
