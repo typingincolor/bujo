@@ -7,6 +7,7 @@ Implement an immutable append-only data persistence pattern (event sourcing) whi
 ## Parent Issue
 
 This issue encompasses:
+- [ ] #47 - Create and implement a backup strategy
 - [ ] #50 - Implement Immutable Append-Only Data Persistence Pattern
 - [ ] #54 - Removing a list item does not check whether the item being removed is on a list
 
@@ -16,7 +17,9 @@ This issue encompasses:
 
 2. **Issue #50 requires restructuring all tables**: Adding versioning columns to every table is the right time to also reconsider table structure.
 
-3. **Combined approach avoids two migrations**: Doing both changes together minimizes disruption.
+3. **Issue #47 becomes critical with event sourcing**: Append-only data means the database grows indefinitely. A backup strategy must include both regular backups and archival of old versions.
+
+4. **Combined approach avoids multiple migrations**: Doing all changes together minimizes disruption.
 
 ## Proposed Schema
 
@@ -399,6 +402,117 @@ Version  Op      Date                 Content
 3        DELETE  2024-01-15 10:00:00  (deleted)
 ```
 
+### Phase 6: Backup Strategy
+
+Event sourcing introduces unique backup considerations: the database grows indefinitely, but historical data enables powerful recovery options.
+
+#### Backup Types
+
+| Type | Purpose | Frequency | Retention |
+|------|---------|-----------|-----------|
+| **Full backup** | Complete database copy | Daily | 30 days |
+| **Pre-migration** | Safety net before schema changes | Before each migration | Until migration verified |
+| **Pre-destructive** | Before archival/compaction | Before each archival | 7 days |
+
+#### Implementation
+
+**1. Backup command**
+```bash
+bujo backup                     # Create timestamped backup
+bujo backup --path /my/backups  # Custom location
+bujo backup --list              # Show available backups
+bujo backup --restore <file>    # Restore from backup
+```
+
+**2. Automatic backup locations**
+```
+~/.bujo/backups/
+├── bujo-2024-01-15-090000.db
+├── bujo-2024-01-16-090000.db
+├── bujo-pre-migration-007.db
+└── bujo-pre-archive-2024-01.db
+```
+
+**3. Backup implementation (Go)**
+```go
+func (s *BackupService) CreateBackup(ctx context.Context, opts BackupOptions) (string, error) {
+    timestamp := time.Now().Format("2006-01-02-150405")
+    filename := fmt.Sprintf("bujo-%s.db", timestamp)
+    destPath := filepath.Join(opts.BackupDir, filename)
+
+    // SQLite online backup API for consistency
+    _, err := s.db.ExecContext(ctx, "VACUUM INTO ?", destPath)
+    if err != nil {
+        return "", fmt.Errorf("backup failed: %w", err)
+    }
+
+    return destPath, nil
+}
+```
+
+#### Archival Strategy
+
+With event sourcing, old versions accumulate. Archival moves historical data to separate storage while preserving the ability to query it.
+
+**Archival rules:**
+- Keep current state (`valid_to IS NULL`) always
+- Keep last N versions per entity (configurable, default 10)
+- Keep all versions from last M days (configurable, default 90)
+- Archive older versions to separate file
+
+**Archive command:**
+```bash
+bujo archive                    # Archive according to policy
+bujo archive --dry-run          # Show what would be archived
+bujo archive --keep-versions 5  # Override version retention
+bujo archive --keep-days 30     # Override day retention
+```
+
+**Archival implementation:**
+```sql
+-- Create archive table (separate DB file)
+ATTACH DATABASE 'bujo-archive-2024-01.db' AS archive;
+
+-- Move old versions to archive
+INSERT INTO archive.entries
+SELECT * FROM main.entries
+WHERE valid_to IS NOT NULL
+  AND valid_to < date('now', '-90 days')
+  AND version < (
+      SELECT MAX(version) - 10
+      FROM entries e2
+      WHERE e2.entity_id = entries.entity_id
+  );
+
+-- Delete archived rows from main DB
+DELETE FROM entries
+WHERE rowid IN (SELECT rowid FROM archive.entries);
+
+DETACH DATABASE archive;
+```
+
+#### Storage Growth Projections
+
+| Usage Pattern | Daily Growth | Yearly Size (no archival) | Yearly Size (with archival) |
+|---------------|--------------|---------------------------|----------------------------|
+| Light (10 entries/day, 2 edits each) | ~5 KB | ~2 MB | ~500 KB |
+| Medium (50 entries/day, 3 edits each) | ~50 KB | ~18 MB | ~3 MB |
+| Heavy (200 entries/day, 5 edits each) | ~300 KB | ~110 MB | ~15 MB |
+
+SQLite handles these sizes easily. Archival is optional but recommended for long-term use.
+
+#### Backup Verification
+
+```bash
+bujo backup --verify <file>     # Verify backup integrity
+```
+
+Verification checks:
+1. SQLite integrity check (`PRAGMA integrity_check`)
+2. Schema version matches expected
+3. Row counts are non-zero
+4. Sample queries succeed
+
 ## Query Patterns
 
 ### Get current state
@@ -451,15 +565,19 @@ VALUES (?, (SELECT MAX(version)+1 FROM entries WHERE entity_id = ?), ?, NULL, 'D
 3. **Safe "undo"** - Restore any previous state
 4. **Domain enforcement** - List items physically separate from entries
 5. **Issue #54 resolved** - Cannot delete wrong entity type by design
+6. **Issue #47 resolved** - Comprehensive backup and archival strategy
+7. **Data durability** - Multiple backup types protect against various failure modes
 
 ## Risks and Mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| Storage growth | Add archival strategy for old versions |
+| Storage growth | Archival strategy (Phase 6) moves old versions to separate files |
 | Query complexity | Repository layer abstracts versioning |
-| Migration data loss | Backup before migration, test thoroughly |
+| Migration data loss | Pre-migration backup mandatory (Phase 6), test on copy first |
 | Performance | Partial indexes on `valid_to IS NULL` |
+| Backup file corruption | Verification command validates integrity before restore |
+| Archive data loss | Archives kept indefinitely, multiple backup locations supported |
 
 ## Labels
 
