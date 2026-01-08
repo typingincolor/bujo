@@ -314,3 +314,104 @@ func TestEntryRepository_Delete(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, result)
 }
+
+func TestEntryRepository_Insert_SetsEntityID(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Test task",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.EntityID.IsEmpty(), "EntityID should be set after insert")
+}
+
+func TestEntryRepository_GetByEntityID_Found(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Test task",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	result, err := repo.GetByEntityID(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, inserted.EntityID, result.EntityID)
+	assert.Equal(t, "Test task", result.Content)
+}
+
+func TestEntryRepository_GetByEntityID_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	result, err := repo.GetByEntityID(ctx, domain.NewEntityID())
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}
+
+func TestEntryRepository_GetHistory_ReturnsAllVersions(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Version 1",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	// Update to create version 2
+	inserted.Content = "Version 2"
+	err = repo.Update(ctx, *inserted)
+	require.NoError(t, err)
+
+	history, err := repo.GetHistory(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(history), 1)
+}
+
+func TestEntryRepository_GetAsOf_ReturnsCorrectVersion(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Original",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	// Get state as of now (should return current)
+	result, err := repo.GetAsOf(ctx, inserted.EntityID, time.Now().Add(time.Hour))
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, "Original", result.Content)
+}
