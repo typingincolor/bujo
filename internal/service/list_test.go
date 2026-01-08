@@ -208,6 +208,32 @@ func TestListService_AddItem_ListNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "list not found")
 }
 
+func TestListService_AddItem_RejectsNotes(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	_, err = svc.AddItem(ctx, list.ID, domain.EntryTypeNote, "This is a note")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks can be added to lists")
+}
+
+func TestListService_AddItem_RejectsEvents(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	_, err = svc.AddItem(ctx, list.ID, domain.EntryTypeEvent, "Meeting at 3pm")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks can be added to lists")
+}
+
 func TestListService_GetListItems(t *testing.T) {
 	svc := setupListService(t)
 	ctx := context.Background()

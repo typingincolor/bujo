@@ -113,6 +113,10 @@ func (s *ListService) DeleteList(ctx context.Context, id int64, force bool) erro
 }
 
 func (s *ListService) AddItem(ctx context.Context, listID int64, entryType domain.EntryType, content string) (int64, error) {
+	if entryType != domain.EntryTypeTask && entryType != domain.EntryTypeDone {
+		return 0, fmt.Errorf("only tasks can be added to lists")
+	}
+
 	list, err := s.getListByID(ctx, listID)
 	if err != nil {
 		return 0, err
