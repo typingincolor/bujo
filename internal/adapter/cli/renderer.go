@@ -37,16 +37,14 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		for _, entry := range agenda.Overdue {
-			sb.WriteString(renderEntry(entry, 0, true))
-		}
+		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true)
 		sb.WriteString("\n")
 	}
 
 	// Today section
 	if len(agenda.Today) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
-		renderEntryTree(&sb, agenda.Today, 0)
+		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false)
 	} else if len(agenda.Overdue) == 0 {
 		sb.WriteString(Dimmed("No entries for today\n"))
 	}
@@ -62,9 +60,7 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		for _, entry := range agenda.Overdue {
-			sb.WriteString(renderEntry(entry, 0, true))
-		}
+		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true)
 		sb.WriteString("\n")
 	}
 
@@ -78,7 +74,7 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
 		}
 
 		if len(day.Entries) > 0 {
-			renderEntryTree(&sb, day.Entries, 0)
+			renderEntryTreeWithOverdue(&sb, day.Entries, 0, false)
 		} else {
 			sb.WriteString(Dimmed("  No entries\n"))
 		}
@@ -89,6 +85,10 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
 }
 
 func renderEntryTree(sb *strings.Builder, entries []domain.Entry, depth int) {
+	renderEntryTreeWithOverdue(sb, entries, depth, false)
+}
+
+func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, depth int, overdue bool) {
 	// Build parent-child map
 	children := make(map[int64][]domain.Entry)
 	var roots []domain.Entry
@@ -102,15 +102,15 @@ func renderEntryTree(sb *strings.Builder, entries []domain.Entry, depth int) {
 	}
 
 	for _, root := range roots {
-		renderEntryWithChildren(sb, root, children, depth)
+		renderEntryWithChildren(sb, root, children, depth, overdue)
 	}
 }
 
-func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children map[int64][]domain.Entry, depth int) {
-	sb.WriteString(renderEntry(entry, depth, false))
+func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children map[int64][]domain.Entry, depth int, overdue bool) {
+	sb.WriteString(renderEntry(entry, depth, overdue))
 
 	for _, child := range children[entry.ID] {
-		renderEntryWithChildren(sb, child, children, depth+1)
+		renderEntryWithChildren(sb, child, children, depth+1, overdue)
 	}
 }
 
