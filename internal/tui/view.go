@@ -339,7 +339,6 @@ func (m Model) renderCaptureMode() string {
 							highlighted.WriteString(remaining)
 							highlighted.WriteString("█")
 						}
-						cursorCol = -1 // cursor handled
 					} else {
 						highlighted.WriteString(remaining)
 					}
@@ -418,11 +417,12 @@ func (m Model) renderCaptureMode() string {
 		sb.WriteString(ErrorStyle.Render(fmt.Sprintf("Error: %v", m.captureMode.parseError)))
 	} else {
 		count := len(m.captureMode.parsedEntries)
-		if count == 0 {
+		switch count {
+		case 0:
 			sb.WriteString(HelpStyle.Render("No entries"))
-		} else if count == 1 {
+		case 1:
 			sb.WriteString(HelpStyle.Render("1 entry"))
-		} else {
+		default:
 			sb.WriteString(HelpStyle.Render(fmt.Sprintf("%d entries", count)))
 		}
 	}

@@ -375,7 +375,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.captureMode.confirmCancel {
 		switch msg.String() {
 		case "y", "Y":
-			DeleteDraft(m.draftPath)
+			_ = DeleteDraft(m.draftPath)
 			m.captureMode = captureState{}
 			return m, nil
 		case "n", "N":
@@ -395,7 +395,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.captureReparse()
 			return m, nil
 		case "n", "N":
-			DeleteDraft(m.draftPath)
+			_ = DeleteDraft(m.draftPath)
 			m.captureMode.draftExists = false
 			m.captureMode.draftContent = ""
 			return m, nil
@@ -421,7 +421,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyCtrlX:
 		content := m.captureMode.content
-		DeleteDraft(m.draftPath)
+		_ = DeleteDraft(m.draftPath)
 		m.captureMode = captureState{}
 		if content == "" {
 			return m, nil
@@ -430,7 +430,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyEsc:
 		if m.captureMode.content == "" {
-			DeleteDraft(m.draftPath)
+			_ = DeleteDraft(m.draftPath)
 			m.captureMode = captureState{}
 			return m, nil
 		}
@@ -771,7 +771,7 @@ func (m Model) captureOutdentLine() Model {
 
 func (m Model) captureReparse() Model {
 	m.captureMode.parsedEntries, m.captureMode.parseError = m.parseCapture(m.captureMode.content)
-	SaveDraft(m.draftPath, m.captureMode.content)
+	_ = SaveDraft(m.draftPath, m.captureMode.content)
 	return m
 }
 
@@ -969,7 +969,7 @@ func (m Model) captureSearchFrom(pos int) Model {
 		return m
 	}
 
-	var foundPos int = -1
+	foundPos := -1
 
 	if m.captureMode.searchForward {
 		// Search forward from position
