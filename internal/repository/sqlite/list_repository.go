@@ -145,18 +145,20 @@ func (r *ListRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *ListRepository) GetItemCount(ctx context.Context, listID int64) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM entries WHERE list_id = ?",
-		listID,
-	).Scan(&count)
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM list_items li
+		JOIN lists l ON li.list_entity_id = l.entity_id
+		WHERE l.id = ? AND li.valid_to IS NULL AND li.op_type != 'DELETE'
+	`, listID).Scan(&count)
 	return count, err
 }
 
 func (r *ListRepository) GetDoneCount(ctx context.Context, listID int64) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM entries WHERE list_id = ? AND type = 'done'",
-		listID,
-	).Scan(&count)
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM list_items li
+		JOIN lists l ON li.list_entity_id = l.entity_id
+		WHERE l.id = ? AND li.type = 'done' AND li.valid_to IS NULL AND li.op_type != 'DELETE'
+	`, listID).Scan(&count)
 	return count, err
 }

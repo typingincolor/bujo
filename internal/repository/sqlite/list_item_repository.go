@@ -33,13 +33,30 @@ func (r *ListItemRepository) Insert(ctx context.Context, item domain.ListItem) (
 }
 
 func (r *ListItemRepository) GetByID(ctx context.Context, id int64) (*domain.ListItem, error) {
+	// First try to find by row_id directly (current version)
 	row := r.db.QueryRowContext(ctx, `
 		SELECT row_id, entity_id, version, valid_from, valid_to, op_type, list_entity_id, type, content, created_at
 		FROM list_items
 		WHERE row_id = ? AND valid_to IS NULL
 	`, id)
 
-	return r.scanItem(row)
+	item, err := r.scanItem(row)
+	if err != nil {
+		return nil, err
+	}
+	if item != nil {
+		return item, nil
+	}
+
+	// If not found, the row_id might be an old version. Find the entity_id and get current version.
+	var entityID string
+	err = r.db.QueryRowContext(ctx, `SELECT entity_id FROM list_items WHERE row_id = ?`, id).Scan(&entityID)
+	if err != nil {
+		return nil, nil // Row doesn't exist at all
+	}
+
+	// Now get the current version of this entity
+	return r.GetByEntityID(ctx, domain.EntityID(entityID))
 }
 
 func (r *ListItemRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.ListItem, error) {
@@ -69,10 +86,11 @@ func (r *ListItemRepository) GetByListEntityID(ctx context.Context, listEntityID
 
 func (r *ListItemRepository) GetByListID(ctx context.Context, listID int64) ([]domain.ListItem, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT row_id, entity_id, version, valid_from, valid_to, op_type, list_entity_id, type, content, created_at
-		FROM list_items
-		WHERE list_id = ? AND valid_to IS NULL AND op_type != 'DELETE'
-		ORDER BY row_id
+		SELECT li.row_id, li.entity_id, li.version, li.valid_from, li.valid_to, li.op_type, li.list_entity_id, li.type, li.content, li.created_at
+		FROM list_items li
+		JOIN lists l ON li.list_entity_id = l.entity_id
+		WHERE l.id = ? AND li.valid_to IS NULL AND li.op_type != 'DELETE'
+		ORDER BY li.row_id
 	`, listID)
 	if err != nil {
 		return nil, err

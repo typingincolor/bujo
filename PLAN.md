@@ -547,7 +547,19 @@ Phase 7.1
   - Updated EntryRepository with GetByEntityID, GetHistory, GetAsOf
   - All queries filter out soft-deleted/superseded rows
 
+- [x] Migrate ListService to use ListItemRepository
+  - Updated ListService to use ListItemRepository instead of EntryRepository
+  - Updated GetItemCount and GetDoneCount to query list_items table
+  - Updated GetByListID to join with lists table by entity_id
+  - Fixed GetByID to handle versioned row lookups
+  - Updated all tests to use new repository
+
+- [x] Phase 7: Cleanup deprecated fields
+  - Migration 000012: Remove list_id column from entries table
+  - Removed ListID field from Entry domain struct
+  - Removed GetByListID from EntryRepository
+  - Updated all queries to not reference list_id
+
 ### Remaining Work
 
-- [ ] Migrate ListService to use ListItemRepository instead of EntryRepository for list items
-- [ ] Phase 7: Cleanup deprecated fields after full migration
+None - Event sourcing implementation complete!

@@ -50,12 +50,13 @@ var rootCmd = &cobra.Command{
 		habitRepo := sqlite.NewHabitRepository(db)
 		habitLogRepo := sqlite.NewHabitLogRepository(db)
 		listRepo := sqlite.NewListRepository(db)
+		listItemRepo := sqlite.NewListItemRepository(db)
 		parser := domain.NewTreeParser()
 
 		// Initialize services
 		bujoService = service.NewBujoService(entryRepo, dayCtxRepo, parser)
 		habitService = service.NewHabitService(habitRepo, habitLogRepo)
-		listService = service.NewListService(listRepo, entryRepo)
+		listService = service.NewListService(listRepo, listItemRepo)
 
 		return nil
 	},

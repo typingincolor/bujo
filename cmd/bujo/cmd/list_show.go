@@ -51,11 +51,11 @@ Examples:
 			symbol := item.Type.Symbol()
 			content := item.Content
 
-			if item.Type == domain.EntryTypeDone {
+			if item.Type == domain.ListItemTypeDone {
 				content = green(content)
 			}
 
-			fmt.Printf("%s %s %s\n", gray(fmt.Sprintf("(%d)", item.ID)), symbol, content)
+			fmt.Printf("%s %s %s\n", gray(fmt.Sprintf("(%d)", item.RowID)), symbol, content)
 		}
 
 		summary, _ := listService.GetListSummary(ctx, listID)

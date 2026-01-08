@@ -42,7 +42,6 @@ type Entry struct {
 	Depth          int
 	Location       *string
 	ScheduledDate  *time.Time
-	ListID         *int64
 	CreatedAt      time.Time
 }
 

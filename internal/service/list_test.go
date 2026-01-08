@@ -17,8 +17,8 @@ func setupListService(t *testing.T) *ListService {
 	t.Cleanup(func() { _ = db.Close() })
 
 	listRepo := sqlite.NewListRepository(db)
-	entryRepo := sqlite.NewEntryRepository(db)
-	return NewListService(listRepo, entryRepo)
+	listItemRepo := sqlite.NewListItemRepository(db)
+	return NewListService(listRepo, listItemRepo)
 }
 
 func TestListService_CreateList(t *testing.T) {
@@ -159,7 +159,6 @@ func TestListService_DeleteList_WithItems_NoForce(t *testing.T) {
 	list, err := svc.CreateList(ctx, "Shopping")
 	require.NoError(t, err)
 
-	// Add item to list
 	_, err = svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
 	require.NoError(t, err)
 
@@ -176,7 +175,6 @@ func TestListService_DeleteList_WithItems_Force(t *testing.T) {
 	list, err := svc.CreateList(ctx, "Shopping")
 	require.NoError(t, err)
 
-	// Add item to list
 	_, err = svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
 	require.NoError(t, err)
 
@@ -255,7 +253,7 @@ func TestListService_RemoveItem_NotFound(t *testing.T) {
 	err := svc.RemoveItem(ctx, 99999)
 
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "entry not found")
+	assert.Contains(t, err.Error(), "item not found")
 }
 
 func TestListService_MarkDone(t *testing.T) {
@@ -273,7 +271,7 @@ func TestListService_MarkDone(t *testing.T) {
 
 	items, err := svc.GetListItems(ctx, list.ID)
 	require.NoError(t, err)
-	assert.Equal(t, domain.EntryTypeDone, items[0].Type)
+	assert.Equal(t, domain.ListItemTypeDone, items[0].Type)
 }
 
 func TestListService_MarkUndone(t *testing.T) {
@@ -294,7 +292,7 @@ func TestListService_MarkUndone(t *testing.T) {
 
 	items, err := svc.GetListItems(ctx, list.ID)
 	require.NoError(t, err)
-	assert.Equal(t, domain.EntryTypeTask, items[0].Type)
+	assert.Equal(t, domain.ListItemTypeTask, items[0].Type)
 }
 
 func TestListService_MoveItem(t *testing.T) {
@@ -343,29 +341,4 @@ func TestListService_GetListSummary(t *testing.T) {
 	assert.Equal(t, "Shopping", summary.Name)
 	assert.Equal(t, 2, summary.TotalItems)
 	assert.Equal(t, 1, summary.DoneItems)
-}
-
-func TestListService_RemoveItem_CannotRemoveNonListEntry(t *testing.T) {
-	db, err := sqlite.OpenAndMigrate(":memory:")
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = db.Close() })
-
-	listRepo := sqlite.NewListRepository(db)
-	entryRepo := sqlite.NewEntryRepository(db)
-	svc := NewListService(listRepo, entryRepo)
-	ctx := context.Background()
-
-	// Create a regular entry (not on a list)
-	entry := domain.Entry{
-		Type:    domain.EntryTypeTask,
-		Content: "Regular task not on a list",
-	}
-	entryID, err := entryRepo.Insert(ctx, entry)
-	require.NoError(t, err)
-
-	// Try to remove it via ListService - should fail
-	err = svc.RemoveItem(ctx, entryID)
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not a list item")
 }
