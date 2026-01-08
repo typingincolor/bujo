@@ -27,7 +27,7 @@ Examples:
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}
 
-		fmt.Print(cli.RenderMultiDayAgenda(agenda))
+		fmt.Print(cli.RenderMultiDayAgenda(agenda, today))
 		return nil
 	},
 }

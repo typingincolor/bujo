@@ -18,15 +18,16 @@ This is a shortcut for: bujo ls --from tomorrow --to tomorrow
 Examples:
   bujo tomorrow`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		tomorrow := time.Now().AddDate(0, 0, 1)
-		tomorrow = time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 0, 0, 0, 0, tomorrow.Location())
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		tomorrow := today.AddDate(0, 0, 1)
 
 		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), tomorrow, tomorrow)
 		if err != nil {
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}
 
-		fmt.Print(cli.RenderMultiDayAgenda(agenda))
+		fmt.Print(cli.RenderMultiDayAgenda(agenda, today))
 		return nil
 	},
 }
