@@ -16,11 +16,11 @@ const (
 )
 
 var validEntryTypes = map[EntryType]string{
-	EntryTypeTask:     ".",
-	EntryTypeNote:     "-",
-	EntryTypeEvent:    "o",
-	EntryTypeDone:     "x",
-	EntryTypeMigrated: ">",
+	EntryTypeTask:     "•",
+	EntryTypeNote:     "–",
+	EntryTypeEvent:    "○",
+	EntryTypeDone:     "✓",
+	EntryTypeMigrated: "→",
 }
 
 func (et EntryType) IsValid() bool {

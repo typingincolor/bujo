@@ -6,19 +6,28 @@ import (
 )
 
 var symbolToType = map[rune]EntryType{
+	// ASCII input symbols
 	'.': EntryTypeTask,
 	'-': EntryTypeNote,
 	'o': EntryTypeEvent,
 	'x': EntryTypeDone,
 	'>': EntryTypeMigrated,
+	// Unicode display symbols (also accepted as input)
+	'•': EntryTypeTask,
+	'–': EntryTypeNote,
+	'○': EntryTypeEvent,
+	'✓': EntryTypeDone,
+	'→': EntryTypeMigrated,
 }
 
 func ParseEntryType(line string) EntryType {
 	if len(line) == 0 {
 		return ""
 	}
-	symbol := rune(line[0])
-	return symbolToType[symbol]
+	for _, r := range line {
+		return symbolToType[r]
+	}
+	return ""
 }
 
 func ParseIndentation(line string) (depth int, rest string) {
@@ -36,10 +45,11 @@ func ParseIndentation(line string) (depth int, rest string) {
 }
 
 func ParseContent(line string) string {
-	if len(line) < 2 {
+	runes := []rune(line)
+	if len(runes) < 2 {
 		return ""
 	}
-	return strings.TrimSpace(line[1:])
+	return strings.TrimSpace(string(runes[1:]))
 }
 
 type TreeParser struct{}

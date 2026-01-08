@@ -75,6 +75,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.gotoMode.active {
 			return m.handleGotoMode(msg)
 		}
+		if m.searchMode.active {
+			return m.handleSearchMode(msg)
+		}
 		return m.handleNormalMode(msg)
 	}
 
@@ -106,8 +109,10 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Bottom):
 		if len(m.entries) > 0 {
 			m.selectedIdx = len(m.entries) - 1
+			// Scroll to show the bottom entry
+			m = m.scrollToBottom()
 		}
-		return m.ensuredVisible(), nil
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()
@@ -235,16 +240,142 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Capture):
 		m.captureMode = captureState{active: true}
+		if content, exists := LoadDraft(m.draftPath); exists {
+			m.captureMode.draftExists = true
+			m.captureMode.draftContent = content
+		}
+		return m, nil
+	}
+
+	// Search mode triggers (not in keyMap to avoid conflicts)
+	switch msg.Type {
+	case tea.KeyCtrlS:
+		m.searchMode = searchState{active: true, forward: true}
+		return m, nil
+	case tea.KeyCtrlR:
+		m.searchMode = searchState{active: true, forward: false}
 		return m, nil
 	}
 
 	return m, nil
 }
 
+func (m Model) handleSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.searchMode = searchState{}
+		return m, nil
+
+	case tea.KeyEnter:
+		m = m.searchEntries()
+		m.searchMode.active = false
+		return m.ensuredVisible(), nil
+
+	case tea.KeyCtrlS:
+		m.searchMode.forward = true
+		m = m.searchEntriesNext()
+		return m.ensuredVisible(), nil
+
+	case tea.KeyCtrlR:
+		m.searchMode.forward = false
+		m = m.searchEntriesNext()
+		return m.ensuredVisible(), nil
+
+	case tea.KeyBackspace:
+		if len(m.searchMode.query) > 0 {
+			m.searchMode.query = m.searchMode.query[:len(m.searchMode.query)-1]
+			m = m.searchEntries()
+		}
+		return m.ensuredVisible(), nil
+
+	case tea.KeySpace:
+		m.searchMode.query += " "
+		m = m.searchEntries()
+		return m.ensuredVisible(), nil
+
+	case tea.KeyRunes:
+		m.searchMode.query += string(msg.Runes)
+		m = m.searchEntries()
+		return m.ensuredVisible(), nil
+	}
+
+	return m, nil
+}
+
+func (m Model) searchEntries() Model {
+	if m.searchMode.query == "" || len(m.entries) == 0 {
+		return m
+	}
+
+	query := strings.ToLower(m.searchMode.query)
+
+	// For incremental search, start from current position (include current)
+	// Check current entry first
+	if strings.Contains(strings.ToLower(m.entries[m.selectedIdx].Entry.Content), query) {
+		return m
+	}
+
+	start := m.selectedIdx
+
+	if m.searchMode.forward {
+		// Search forward
+		for i := 1; i < len(m.entries); i++ {
+			idx := (start + i) % len(m.entries)
+			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
+				m.selectedIdx = idx
+				return m
+			}
+		}
+	} else {
+		// Search backward
+		for i := 1; i < len(m.entries); i++ {
+			idx := (start - i + len(m.entries)) % len(m.entries)
+			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
+				m.selectedIdx = idx
+				return m
+			}
+		}
+	}
+
+	return m
+}
+
+func (m Model) searchEntriesNext() Model {
+	if m.searchMode.query == "" || len(m.entries) == 0 {
+		return m
+	}
+
+	query := strings.ToLower(m.searchMode.query)
+	start := m.selectedIdx
+
+	if m.searchMode.forward {
+		// Search forward from next position
+		for i := 1; i <= len(m.entries); i++ {
+			idx := (start + i) % len(m.entries)
+			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
+				m.selectedIdx = idx
+				return m
+			}
+		}
+	} else {
+		// Search backward from prev position
+		for i := 1; i <= len(m.entries); i++ {
+			idx := (start - i + len(m.entries)) % len(m.entries)
+			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
+				m.selectedIdx = idx
+				return m
+			}
+		}
+	}
+
+	return m
+}
+
 func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.captureMode.confirmCancel {
 		switch msg.String() {
 		case "y", "Y":
+			DeleteDraft(m.draftPath)
 			m.captureMode = captureState{}
 			return m, nil
 		case "n", "N":
@@ -264,6 +395,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.captureReparse()
 			return m, nil
 		case "n", "N":
+			DeleteDraft(m.draftPath)
 			m.captureMode.draftExists = false
 			m.captureMode.draftContent = ""
 			return m, nil
@@ -289,6 +421,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyCtrlX:
 		content := m.captureMode.content
+		DeleteDraft(m.draftPath)
 		m.captureMode = captureState{}
 		if content == "" {
 			return m, nil
@@ -297,6 +430,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyEsc:
 		if m.captureMode.content == "" {
+			DeleteDraft(m.draftPath)
 			m.captureMode = captureState{}
 			return m, nil
 		}
@@ -413,26 +547,34 @@ func (m Model) handleCaptureSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyCtrlS:
 		m.captureMode.searchForward = true
-		m = m.captureSearch()
+		m = m.captureSearchNext()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyCtrlR:
 		m.captureMode.searchForward = false
-		m = m.captureSearch()
+		m = m.captureSearchNext()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyBackspace:
 		if len(m.captureMode.searchQuery) > 0 {
 			m.captureMode.searchQuery = m.captureMode.searchQuery[:len(m.captureMode.searchQuery)-1]
+			m = m.captureSearch()
+			m = m.captureEnsureCursorVisible()
 		}
 		return m, nil
 
 	case tea.KeySpace:
 		m.captureMode.searchQuery += " "
+		m = m.captureSearch()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyRunes:
 		m.captureMode.searchQuery += string(msg.Runes)
+		m = m.captureSearch()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 	}
 
@@ -448,9 +590,11 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 
 	toInsert := string(runes)
 
-	// Auto-space after entry symbols at line start (single char only)
-	if len(runes) == 1 && isEntrySymbol(runes[0]) && m.isAtLineStart() {
-		toInsert = string(runes) + " "
+	// Auto-convert ASCII entry symbols to Unicode and add space at line start
+	if len(runes) == 1 && m.isAtLineStart() {
+		if unicode := asciiToUnicodeSymbol(runes[0]); unicode != "" {
+			toInsert = unicode + " "
+		}
 	}
 
 	newContent := content[:pos] + toInsert + content[pos:]
@@ -470,8 +614,21 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 	return m
 }
 
-func isEntrySymbol(r rune) bool {
-	return r == '.' || r == '-' || r == 'o' || r == 'x'
+func asciiToUnicodeSymbol(r rune) string {
+	switch r {
+	case '.':
+		return "•"
+	case '-':
+		return "–"
+	case 'o':
+		return "○"
+	case 'x':
+		return "✓"
+	case '>':
+		return "→"
+	default:
+		return ""
+	}
 }
 
 func (m Model) isAtLineStart() bool {
@@ -614,6 +771,7 @@ func (m Model) captureOutdentLine() Model {
 
 func (m Model) captureReparse() Model {
 	m.captureMode.parsedEntries, m.captureMode.parseError = m.parseCapture(m.captureMode.content)
+	SaveDraft(m.draftPath, m.captureMode.content)
 	return m
 }
 
@@ -784,18 +942,41 @@ func (m Model) captureDeleteChar() Model {
 }
 
 func (m Model) captureSearch() Model {
+	if m.captureMode.searchQuery == "" {
+		return m
+	}
+
+	return m.captureSearchFrom(m.captureMode.cursorPos)
+}
+
+func (m Model) captureSearchNext() Model {
+	if m.captureMode.searchQuery == "" {
+		return m
+	}
+
+	// Start from next position
+	startPos := m.captureMode.cursorPos + 1
+	if !m.captureMode.searchForward {
+		startPos = m.captureMode.cursorPos - 1
+	}
+	return m.captureSearchFrom(startPos)
+}
+
+func (m Model) captureSearchFrom(pos int) Model {
 	content := m.captureMode.content
 	query := m.captureMode.searchQuery
 	if query == "" {
 		return m
 	}
 
-	pos := m.captureMode.cursorPos
 	var foundPos int = -1
 
 	if m.captureMode.searchForward {
-		// Search forward from current position
+		// Search forward from position
 		searchStart := pos
+		if searchStart < 0 {
+			searchStart = 0
+		}
 		if searchStart >= len(content) {
 			searchStart = 0
 		}
@@ -810,8 +991,11 @@ func (m Model) captureSearch() Model {
 			}
 		}
 	} else {
-		// Search backward from current position
+		// Search backward from position
 		searchEnd := pos
+		if searchEnd < 0 {
+			searchEnd = len(content)
+		}
 		if searchEnd > len(content) {
 			searchEnd = len(content)
 		}

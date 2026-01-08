@@ -35,11 +35,11 @@ func TestEntryType_Symbol(t *testing.T) {
 		et       EntryType
 		expected string
 	}{
-		{"task symbol", EntryTypeTask, "."},
-		{"note symbol", EntryTypeNote, "-"},
-		{"event symbol", EntryTypeEvent, "o"},
-		{"done symbol", EntryTypeDone, "x"},
-		{"migrated symbol", EntryTypeMigrated, ">"},
+		{"task symbol", EntryTypeTask, "•"},
+		{"note symbol", EntryTypeNote, "–"},
+		{"event symbol", EntryTypeEvent, "○"},
+		{"done symbol", EntryTypeDone, "✓"},
+		{"migrated symbol", EntryTypeMigrated, "→"},
 	}
 
 	for _, tt := range tests {

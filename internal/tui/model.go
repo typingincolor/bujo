@@ -26,11 +26,19 @@ type Model struct {
 	migrateMode  migrateState
 	gotoMode     gotoState
 	captureMode  captureState
+	searchMode   searchState
 	help         help.Model
 	keyMap       KeyMap
 	width        int
 	height       int
 	err          error
+	draftPath    string
+}
+
+type searchState struct {
+	active  bool
+	forward bool
+	query   string
 }
 
 type confirmState struct {
@@ -104,6 +112,7 @@ func New(bujoSvc *service.BujoService) Model {
 		viewDate:    today,
 		help:        help.New(),
 		keyMap:      DefaultKeyMap(),
+		draftPath:   DraftPath(),
 	}
 }
 
@@ -178,6 +187,37 @@ func (m Model) ensuredVisible() Model {
 		m.scrollOffset++
 	}
 
+	return m
+}
+
+func (m Model) scrollToBottom() Model {
+	if len(m.entries) == 0 {
+		return m
+	}
+
+	available := m.availableLines()
+
+	// Start from the end and work backwards to find the right scroll offset
+	linesNeeded := 0
+	startIdx := len(m.entries) - 1
+
+	for i := len(m.entries) - 1; i >= 0; i-- {
+		entryLines := m.linesForEntry(i)
+		// Account for headers properly
+		if m.entries[i].DayHeader != "" && i > 0 {
+			entryLines = 3 // blank + header + entry
+		} else if m.entries[i].DayHeader != "" {
+			entryLines = 2 // header + entry (no blank before first)
+		}
+
+		if linesNeeded+entryLines > available-1 { // -1 for "more above" indicator
+			break
+		}
+		linesNeeded += entryLines
+		startIdx = i
+	}
+
+	m.scrollOffset = startIdx
 	return m
 }
 

@@ -48,9 +48,9 @@ func TestRenderDailyAgenda_OverdueHierarchy(t *testing.T) {
 			},
 			wantContains: []string{
 				"OVERDUE",
-				"o Meeting 1",
-				"└── - note 1",
-				"└── . Task 1",
+				"○ Meeting 1",
+				"└── – note 1",
+				"└── • Task 1",
 			},
 			wantNotContain: []string{},
 		},
@@ -65,7 +65,7 @@ func TestRenderDailyAgenda_OverdueHierarchy(t *testing.T) {
 			},
 			wantContains: []string{
 				"OVERDUE",
-				". Standalone task",
+				"• Standalone task",
 			},
 			wantNotContain: []string{
 				"└──",
@@ -109,8 +109,8 @@ func TestRenderMultiDayAgenda_OverdueHierarchy(t *testing.T) {
 	stripped := stripANSI(result)
 
 	assert.Contains(t, stripped, "OVERDUE")
-	assert.Contains(t, stripped, "o Meeting 1")
-	assert.Contains(t, stripped, "└── - note 1")
+	assert.Contains(t, stripped, "○ Meeting 1")
+	assert.Contains(t, stripped, "└── – note 1")
 }
 
 func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {

@@ -87,6 +87,10 @@ func (m Model) View() string {
 			}
 
 			line := m.renderEntry(item)
+			// Highlight search matches
+			if m.searchMode.active && m.searchMode.query != "" {
+				line = m.highlightSearchTerm(line)
+			}
 			if i == m.selectedIdx {
 				line = SelectedStyle.Render(line)
 			}
@@ -122,6 +126,10 @@ func (m Model) View() string {
 	} else if m.gotoMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderGotoInput())
+		sb.WriteString("\n")
+	} else if m.searchMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSearchInput())
 		sb.WriteString("\n")
 	}
 
@@ -198,6 +206,46 @@ func (m Model) renderGotoInput() string {
 	return ConfirmStyle.Render(sb.String())
 }
 
+func (m Model) renderSearchInput() string {
+	direction := "forward"
+	if !m.searchMode.forward {
+		direction = "reverse"
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Search (%s): %s█", direction, m.searchMode.query))
+	sb.WriteString("\n\nEnter to find, Ctrl+S/R to find next/prev, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) highlightSearchTerm(line string) string {
+	query := m.searchMode.query
+	if query == "" {
+		return line
+	}
+
+	// Case-insensitive search and highlight
+	lowerLine := strings.ToLower(line)
+	lowerQuery := strings.ToLower(query)
+
+	var result strings.Builder
+	remaining := line
+	lowerRemaining := lowerLine
+
+	for {
+		idx := strings.Index(lowerRemaining, lowerQuery)
+		if idx < 0 {
+			result.WriteString(remaining)
+			break
+		}
+		result.WriteString(remaining[:idx])
+		result.WriteString(SearchHighlightStyle.Render(remaining[idx : idx+len(query)]))
+		remaining = remaining[idx+len(query):]
+		lowerRemaining = lowerRemaining[idx+len(query):]
+	}
+
+	return result.String()
+}
+
 func (m Model) renderToolbar() string {
 	viewModeStr := "Day"
 	if m.viewMode == ViewModeWeek {
@@ -260,52 +308,78 @@ func (m Model) renderCaptureMode() string {
 	searchQuery := m.captureMode.searchQuery
 	linesShown := 0
 	for i := scrollOffset; i < len(editorLines) && linesShown < editorHeight; i++ {
-		line := editorLines[i]
+		origLine := editorLines[i]
+		line := origLine
 
-		// Apply search highlighting
-		if m.captureMode.searchMode && searchQuery != "" && strings.Contains(line, searchQuery) {
+		// Insert cursor on current line first (before highlighting)
+		cursorCol := -1
+		if i == m.captureMode.cursorLine {
+			cursorCol = m.captureMode.cursorCol
+			if cursorCol > len(origLine) {
+				cursorCol = len(origLine)
+			}
+		}
+
+		// Apply search highlighting to the original line content
+		if m.captureMode.searchMode && searchQuery != "" && strings.Contains(origLine, searchQuery) {
 			var highlighted strings.Builder
-			remaining := line
+			pos := 0
+			remaining := origLine
 			for {
 				idx := strings.Index(remaining, searchQuery)
 				if idx < 0 {
-					highlighted.WriteString(remaining)
+					// No more matches - add remaining content with cursor if needed
+					if cursorCol >= 0 && cursorCol >= pos {
+						relCol := cursorCol - pos
+						if relCol < len(remaining) {
+							highlighted.WriteString(remaining[:relCol])
+							highlighted.WriteString("█")
+							highlighted.WriteString(remaining[relCol+1:])
+						} else {
+							highlighted.WriteString(remaining)
+							highlighted.WriteString("█")
+						}
+						cursorCol = -1 // cursor handled
+					} else {
+						highlighted.WriteString(remaining)
+					}
 					break
 				}
-				highlighted.WriteString(remaining[:idx])
-				highlighted.WriteString(SearchHighlightStyle.Render(searchQuery))
+
+				matchStart := pos + idx
+				matchEnd := matchStart + len(searchQuery)
+
+				// Add text before match, possibly with cursor
+				if cursorCol >= 0 && cursorCol >= pos && cursorCol < matchStart {
+					relCol := cursorCol - pos
+					highlighted.WriteString(remaining[:relCol])
+					highlighted.WriteString("█")
+					highlighted.WriteString(remaining[relCol+1 : idx])
+					cursorCol = -1
+				} else {
+					highlighted.WriteString(remaining[:idx])
+				}
+
+				// Add highlighted match, possibly with cursor inside
+				if cursorCol >= 0 && cursorCol >= matchStart && cursorCol < matchEnd {
+					relCol := cursorCol - matchStart
+					matchText := searchQuery[:relCol] + "█" + searchQuery[relCol+1:]
+					highlighted.WriteString(SearchHighlightStyle.Render(matchText))
+					cursorCol = -1
+				} else {
+					highlighted.WriteString(SearchHighlightStyle.Render(searchQuery))
+				}
+
+				pos = matchEnd
 				remaining = remaining[idx+len(searchQuery):]
 			}
 			line = highlighted.String()
-		}
-
-		// Insert cursor on current line
-		if i == m.captureMode.cursorLine {
-			origLine := editorLines[i]
-			col := m.captureMode.cursorCol
-			if col > len(origLine) {
-				col = len(origLine)
-			}
-			if col < len(origLine) {
-				line = origLine[:col] + "█" + origLine[col+1:]
+		} else if cursorCol >= 0 {
+			// No search highlighting, just add cursor
+			if cursorCol < len(origLine) {
+				line = origLine[:cursorCol] + "█" + origLine[cursorCol+1:]
 			} else {
 				line = origLine + "█"
-			}
-			// Re-apply search highlighting after cursor insert
-			if m.captureMode.searchMode && searchQuery != "" {
-				var highlighted strings.Builder
-				remaining := line
-				for {
-					idx := strings.Index(remaining, searchQuery)
-					if idx < 0 {
-						highlighted.WriteString(remaining)
-						break
-					}
-					highlighted.WriteString(remaining[:idx])
-					highlighted.WriteString(SearchHighlightStyle.Render(searchQuery))
-					remaining = remaining[idx+len(searchQuery):]
-				}
-				line = highlighted.String()
 			}
 		}
 

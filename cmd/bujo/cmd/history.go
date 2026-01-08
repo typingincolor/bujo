@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	historyService  *service.HistoryService
-	listItemRepo    *sqlite.ListItemRepository
+	historyService *service.HistoryService
+	listItemRepo   *sqlite.ListItemRepository
 )
 
 var historyCmd = &cobra.Command{

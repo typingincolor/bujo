@@ -530,12 +530,46 @@ j/k: move  space: done  d: delete  q: quit  ?: help
 | `a` | Add new entry (sibling) |
 | `A` | Add child entry (under selected) |
 | `r` | Add root entry |
+| `c` | Enter capture mode (multi-entry) |
 | `m` | Migrate task to future date |
 | `d` | Delete entry |
 | `w` | Toggle day/week view |
 | `/` | Go to date |
+| `Ctrl+S` | Search forward |
+| `Ctrl+R` | Search reverse |
 | `?` | Toggle help |
 | `q` | Quit |
+
+#### Capture Mode
+
+Press `c` to enter capture mode for rapid multi-entry input. Type entries with symbols at the start of each line, using indentation for hierarchy:
+
+```
+. Task one
+. Task two
+  - Note under task two
+  . Subtask
+- General note
+o Event happening
+```
+
+**Capture mode shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `Ctrl+X` | Save entries and exit |
+| `Esc` | Cancel (prompts if content exists) |
+| `Tab` | Indent current line |
+| `Shift+Tab` | Unindent current line |
+| `Ctrl+S` | Search forward in content |
+| `Ctrl+R` | Search reverse in content |
+| Arrow keys | Navigate cursor |
+
+**Draft persistence:** If you exit the app unexpectedly while in capture mode, your draft is saved to `~/.bujo/capture_draft.txt`. On re-entering capture mode, you'll be prompted to restore or discard the draft.
+
+#### Search
+
+Press `Ctrl+S` for forward search or `Ctrl+R` for reverse search. Type your query to incrementally search through entries. Press `Enter` to jump to the match, or `Esc` to cancel. Search is case-insensitive and highlights matches in the view.
 
 ### Other
 

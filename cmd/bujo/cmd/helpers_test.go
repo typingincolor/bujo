@@ -100,13 +100,13 @@ func TestParseDateOrToday(t *testing.T) {
 
 func TestParseAddArgs(t *testing.T) {
 	tests := []struct {
-		name            string
-		args            []string
-		wantEntries     []string
-		wantLocation    string
-		wantDate        string
-		wantFile        string
-		wantHelp        bool
+		name         string
+		args         []string
+		wantEntries  []string
+		wantLocation string
+		wantDate     string
+		wantFile     string
+		wantHelp     bool
 	}{
 		{
 			name:        "simple task entry",
