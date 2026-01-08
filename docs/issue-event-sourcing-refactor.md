@@ -181,26 +181,223 @@ Apply same versioning pattern to each.
 
 ### Phase 4: Migration
 
-1. **Create migration script**
-   - Add new tables with versioning columns
-   - Migrate existing data:
-     - Generate entity_ids for existing records
-     - Split entries with list_id into list_items table
-     - Set valid_from to created_at, valid_to to NULL
-     - Set op_type to 'INSERT', version to 1
+Migration is complex due to SQLite limitations (no `DROP COLUMN`) and the need to generate UUIDs in Go code. This is a **breaking migration** requiring the app to be offline during execution.
 
-2. **Drop old columns**
-   - Remove list_id from entries table
+#### Migration Steps (Migration 007)
+
+```
+007_event_sourcing_refactor
+├── 007a_add_entity_id_columns.up.sql
+├── 007b_generate_uuids.go              (Go migration - generates UUIDs)
+├── 007c_create_id_mapping.up.sql
+├── 007d_add_parent_entity_id.up.sql
+├── 007e_create_list_items_table.up.sql
+├── 007f_migrate_list_items.up.sql
+├── 007g_recreate_entries_table.up.sql  (removes list_id column)
+├── 007h_add_versioning_columns.up.sql
+├── 007i_initialize_versions.up.sql
+└── 007j_cleanup.up.sql
+```
+
+#### Step-by-Step Details
+
+**Step 1: Add entity_id columns (SQL)**
+```sql
+ALTER TABLE entries ADD COLUMN entity_id TEXT;
+ALTER TABLE lists ADD COLUMN entity_id TEXT;
+ALTER TABLE habits ADD COLUMN entity_id TEXT;
+ALTER TABLE habit_logs ADD COLUMN entity_id TEXT;
+ALTER TABLE day_context ADD COLUMN entity_id TEXT;
+ALTER TABLE summaries ADD COLUMN entity_id TEXT;
+```
+
+**Step 2: Generate UUIDs (Go code required)**
+```go
+// SQLite has no UUID function - must use Go
+rows, _ := db.Query("SELECT id FROM entries WHERE entity_id IS NULL")
+for rows.Next() {
+    var id int64
+    rows.Scan(&id)
+    uuid := uuid.New().String()
+    db.Exec("UPDATE entries SET entity_id = ? WHERE id = ?", uuid, id)
+}
+// Repeat for all tables
+```
+
+**Step 3: Create ID mapping table (SQL)**
+```sql
+-- Temporary table to resolve parent_id → parent_entity_id
+CREATE TABLE _id_mapping (
+    table_name TEXT NOT NULL,
+    old_id INTEGER NOT NULL,
+    entity_id TEXT NOT NULL,
+    PRIMARY KEY (table_name, old_id)
+);
+
+INSERT INTO _id_mapping (table_name, old_id, entity_id)
+SELECT 'entries', id, entity_id FROM entries;
+
+INSERT INTO _id_mapping (table_name, old_id, entity_id)
+SELECT 'lists', id, entity_id FROM lists;
+```
+
+**Step 4: Add and populate parent_entity_id (SQL)**
+```sql
+ALTER TABLE entries ADD COLUMN parent_entity_id TEXT;
+
+UPDATE entries
+SET parent_entity_id = (
+    SELECT m.entity_id
+    FROM _id_mapping m
+    WHERE m.table_name = 'entries' AND m.old_id = entries.parent_id
+)
+WHERE parent_id IS NOT NULL;
+```
+
+**Step 5: Create list_items table (SQL)**
+```sql
+CREATE TABLE list_items (
+    row_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
+    valid_from TEXT NOT NULL,
+    valid_to TEXT,
+    op_type TEXT NOT NULL DEFAULT 'INSERT',
+    list_entity_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+```
+
+**Step 6: Migrate list items (SQL)**
+```sql
+INSERT INTO list_items (entity_id, version, valid_from, op_type, list_entity_id, type, content, created_at)
+SELECT
+    e.entity_id,
+    1,
+    e.created_at,
+    'INSERT',
+    (SELECT m.entity_id FROM _id_mapping m WHERE m.table_name = 'lists' AND m.old_id = e.list_id),
+    e.type,
+    e.content,
+    e.created_at
+FROM entries e
+WHERE e.list_id IS NOT NULL;
+
+-- Remove migrated entries
+DELETE FROM entries WHERE list_id IS NOT NULL;
+```
+
+**Step 7: Recreate entries table without list_id (SQL)**
+```sql
+-- SQLite can't DROP COLUMN, must recreate table
+CREATE TABLE entries_new (
+    row_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 1,
+    valid_from TEXT NOT NULL,
+    valid_to TEXT,
+    op_type TEXT NOT NULL DEFAULT 'INSERT',
+    type TEXT NOT NULL,
+    content TEXT NOT NULL,
+    parent_entity_id TEXT,
+    depth INTEGER NOT NULL DEFAULT 0,
+    location TEXT,
+    scheduled_date TEXT,
+    created_at TEXT NOT NULL
+);
+
+INSERT INTO entries_new (entity_id, version, valid_from, op_type, type, content, parent_entity_id, depth, location, scheduled_date, created_at)
+SELECT entity_id, 1, created_at, 'INSERT', type, content, parent_entity_id, depth, location, scheduled_date, created_at
+FROM entries;
+
+DROP TABLE entries;
+ALTER TABLE entries_new RENAME TO entries;
+
+-- Recreate indexes
+CREATE INDEX idx_entries_current ON entries(entity_id, valid_to) WHERE valid_to IS NULL;
+CREATE INDEX idx_entries_scheduled ON entries(scheduled_date) WHERE valid_to IS NULL;
+CREATE INDEX idx_entries_parent ON entries(parent_entity_id) WHERE valid_to IS NULL;
+```
+
+**Step 8: Apply versioning to remaining tables (SQL)**
+
+Repeat the recreate-table pattern for: `lists`, `habits`, `habit_logs`, `day_context`, `summaries`.
+
+**Step 9: Cleanup (SQL)**
+```sql
+DROP TABLE _id_mapping;
+```
+
+#### Migration Testing Strategy
+
+1. **Backup before migration**: `cp bujo.db bujo.db.backup`
+2. **Test on copy first**: Run migration against a copy of production data
+3. **Verify counts**: Entry counts before/after should match (minus list items moved)
+4. **Verify relationships**: Parent-child hierarchies intact
+5. **Verify list items**: All items with list_id now in list_items table
+6. **Smoke test CLI**: Basic commands work after migration
+
+#### Rollback Strategy
+
+If migration fails partway through:
+1. Stop migration
+2. Restore from backup: `cp bujo.db.backup bujo.db`
+3. Fix migration script
+4. Retry
+
+There is no automatic rollback - the migration is destructive. Always backup first.
 
 ### Phase 5: CLI Updates
 
-1. **Update commands to use entity_id**
-   - Display short entity_id prefix for user reference
-   - Accept entity_id or row_id for backwards compatibility
+#### User-Facing ID Strategy
 
-2. **Add history commands** (optional)
-   - `bujo history <entity-id>` - show version history
-   - `bujo snapshot --date <date>` - point-in-time view
+**Decision: Keep row_id for CLI, use entity_id internally**
+
+Users will continue using integer IDs for commands:
+```bash
+bujo done 42        # Still works - row_id
+bujo list remove 7  # Still works - row_id
+```
+
+The `entity_id` (UUID) is internal for:
+- Version tracking across mutations
+- Parent-child relationships (stable across table recreations)
+- Future sync/merge capabilities
+
+**Why not expose entity_id to users?**
+- UUIDs are hard to type and remember
+- row_id is auto-incrementing and user-friendly
+- No practical benefit for CLI users to see UUIDs
+
+#### Display Changes
+
+```
+# Before
+ID  Type  Content
+42  .     Buy groceries
+
+# After (row_id shown, entity_id hidden)
+ID  Type  Content
+42  .     Buy groceries
+```
+
+#### Optional: History Commands
+
+For users who want to see version history:
+```bash
+bujo history 42                    # Show all versions of entry 42
+bujo history 42 --at "2024-01-15"  # Show state as of date
+```
+
+Output:
+```
+Version  Op      Date                 Content
+1        INSERT  2024-01-10 09:00:00  Buy groceries
+2        UPDATE  2024-01-12 14:30:00  Buy groceries and milk
+3        DELETE  2024-01-15 10:00:00  (deleted)
+```
 
 ## Query Patterns
 
