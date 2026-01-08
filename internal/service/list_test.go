@@ -344,3 +344,28 @@ func TestListService_GetListSummary(t *testing.T) {
 	assert.Equal(t, 2, summary.TotalItems)
 	assert.Equal(t, 1, summary.DoneItems)
 }
+
+func TestListService_RemoveItem_CannotRemoveNonListEntry(t *testing.T) {
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	listRepo := sqlite.NewListRepository(db)
+	entryRepo := sqlite.NewEntryRepository(db)
+	svc := NewListService(listRepo, entryRepo)
+	ctx := context.Background()
+
+	// Create a regular entry (not on a list)
+	entry := domain.Entry{
+		Type:    domain.EntryTypeTask,
+		Content: "Regular task not on a list",
+	}
+	entryID, err := entryRepo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	// Try to remove it via ListService - should fail
+	err = svc.RemoveItem(ctx, entryID)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not a list item")
+}

@@ -141,8 +141,12 @@ func (s *ListService) GetListItems(ctx context.Context, listID int64) ([]domain.
 }
 
 func (s *ListService) RemoveItem(ctx context.Context, entryID int64) error {
-	if _, err := s.getEntryByID(ctx, entryID); err != nil {
+	entry, err := s.getEntryByID(ctx, entryID)
+	if err != nil {
 		return err
+	}
+	if entry.ListID == nil {
+		return fmt.Errorf("entry %d is not a list item", entryID)
 	}
 	return s.entryRepo.Delete(ctx, entryID)
 }
@@ -151,6 +155,9 @@ func (s *ListService) MarkDone(ctx context.Context, entryID int64) error {
 	entry, err := s.getEntryByID(ctx, entryID)
 	if err != nil {
 		return err
+	}
+	if entry.ListID == nil {
+		return fmt.Errorf("entry %d is not a list item", entryID)
 	}
 
 	entry.Type = domain.EntryTypeDone
@@ -162,6 +169,9 @@ func (s *ListService) MarkUndone(ctx context.Context, entryID int64) error {
 	if err != nil {
 		return err
 	}
+	if entry.ListID == nil {
+		return fmt.Errorf("entry %d is not a list item", entryID)
+	}
 
 	entry.Type = domain.EntryTypeTask
 	return s.entryRepo.Update(ctx, *entry)
@@ -171,6 +181,9 @@ func (s *ListService) MoveItem(ctx context.Context, entryID int64, targetListID 
 	entry, err := s.getEntryByID(ctx, entryID)
 	if err != nil {
 		return err
+	}
+	if entry.ListID == nil {
+		return fmt.Errorf("entry %d is not a list item", entryID)
 	}
 
 	if _, err := s.getListByID(ctx, targetListID); err != nil {
