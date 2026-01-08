@@ -7,6 +7,7 @@ import (
 
 type Habit struct {
 	ID         int64
+	EntityID   EntityID
 	Name       string
 	GoalPerDay int
 	CreatedAt  time.Time
@@ -23,10 +24,12 @@ func (h Habit) Validate() error {
 }
 
 type HabitLog struct {
-	ID       int64
-	HabitID  int64
-	Count    int
-	LoggedAt time.Time
+	ID            int64
+	EntityID      EntityID
+	HabitID       int64
+	HabitEntityID EntityID
+	Count         int
+	LoggedAt      time.Time
 }
 
 func (l HabitLog) Validate() error {

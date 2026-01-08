@@ -6,6 +6,7 @@ import (
 )
 
 type DayContext struct {
+	EntityID EntityID
 	Date     time.Time
 	Location *string
 	Mood     *string

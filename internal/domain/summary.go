@@ -27,6 +27,7 @@ func (h SummaryHorizon) IsValid() bool {
 
 type Summary struct {
 	ID        int64
+	EntityID  EntityID
 	Horizon   SummaryHorizon
 	Content   string
 	StartDate time.Time
