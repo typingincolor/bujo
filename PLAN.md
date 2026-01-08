@@ -487,6 +487,46 @@ Phase 7.1
 
 ---
 
-## Current Step
+## Progress
 
-**Next:** Phase 1.1 - Create EntityID type and generator
+### Completed
+
+- [x] Phase 1: Domain Layer Foundation (all 13 steps)
+  - EntityID type and generator
+  - OpType constants and VersionInfo struct
+  - ListItemType and ListItem domain types
+  - Added EntityID to Entry, List, Habit, HabitLog, Summary, DayContext
+  - Added ParentEntityID to Entry
+
+- [x] Phase 2: Repository Interfaces
+  - Created ListItemRepository interface
+  - Added versioned methods to EntryRepository
+
+- [x] Phase 3: SQLite Repository Implementation
+  - Created list_items migration (000007)
+  - Implemented ListItemRepository with event sourcing
+  - Added entity_id migration to lists (000008)
+  - Updated ListRepository with GetByEntityID
+
+- [x] Phase 4.1: Fix issue #54
+  - Added validation to RemoveItem, MarkDone, MarkUndone, MoveItem
+  - Non-list entries cannot be operated on by ListService
+
+- [x] Phase 4.2: Create BackupService
+  - CreateBackup using SQLite VACUUM INTO
+  - ListBackups to enumerate existing backups
+  - VerifyBackup to check backup integrity
+
+- [x] Phase 6.1: CLI backup command
+  - `bujo backup` lists backups
+  - `bujo backup create` creates a new backup
+  - `bujo backup verify <path>` verifies backup integrity
+
+### Next Steps
+
+- [ ] Phase 4.3: Create ArchiveService
+- [ ] Phase 4.4: Create HistoryService
+- [ ] Phase 5: Database migrations for entries versioning
+- [ ] Phase 6.2: CLI archive command
+- [ ] Phase 6.3: CLI history command
+- [ ] Phase 7: Cleanup deprecated fields
