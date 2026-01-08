@@ -33,19 +33,35 @@ func (et EntryType) Symbol() string {
 }
 
 type Entry struct {
-	ID            int64
-	Type          EntryType
-	Content       string
-	ParentID      *int64
-	Depth         int
-	Location      *string
-	ScheduledDate *time.Time
-	ListID        *int64
-	CreatedAt     time.Time
+	ID             int64
+	EntityID       EntityID
+	Type           EntryType
+	Content        string
+	ParentID       *int64
+	ParentEntityID *EntityID
+	Depth          int
+	Location       *string
+	ScheduledDate  *time.Time
+	ListID         *int64
+	CreatedAt      time.Time
+}
+
+func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Entry {
+	return Entry{
+		EntityID:      NewEntityID(),
+		Type:          entryType,
+		Content:       content,
+		ScheduledDate: scheduledDate,
+		CreatedAt:     time.Now(),
+	}
 }
 
 func (e Entry) IsComplete() bool {
 	return e.Type == EntryTypeDone
+}
+
+func (e Entry) HasParent() bool {
+	return e.ParentEntityID != nil && !e.ParentEntityID.IsEmpty()
 }
 
 func (e Entry) IsOverdue(today time.Time) bool {
