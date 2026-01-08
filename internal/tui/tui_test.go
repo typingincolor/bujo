@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -694,4 +695,556 @@ func TestModel_AddRoot_UsesViewDate(t *testing.T) {
 	}
 	// The addMode should use viewDate when creating, not today
 	// This is tested via integration but we verify addMode is entered
+}
+
+// Capture Mode Tests
+
+func TestModel_Update_CaptureMode_EntersOnC(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.active {
+		t.Error("pressing c should enter capture mode")
+	}
+}
+
+func TestModel_Update_CaptureMode_ExitsOnCtrlX(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task to save"}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlX}
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("Ctrl+X should exit capture mode")
+	}
+	if cmd == nil {
+		t.Error("Ctrl+X should return a save command")
+	}
+}
+
+func TestModel_Update_CaptureMode_ExitsOnCtrlX_EmptyContent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ""}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlX}
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("Ctrl+X should exit capture mode even with empty content")
+	}
+	if cmd != nil {
+		t.Error("Ctrl+X with empty content should not return a save command")
+	}
+}
+
+func TestModel_Update_CaptureMode_PromptOnEscWithContent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Some content"}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.active {
+		t.Error("ESC with content should not immediately exit")
+	}
+	if !m.captureMode.confirmCancel {
+		t.Error("ESC with content should show confirmation prompt")
+	}
+}
+
+func TestModel_Update_CaptureMode_ExitsOnEscWithoutContent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ""}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("ESC without content should exit capture mode")
+	}
+}
+
+func TestModel_Update_CaptureMode_ConfirmCancelWithY(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", confirmCancel: true}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("pressing y on confirm should exit capture mode")
+	}
+}
+
+func TestModel_Update_CaptureMode_ConfirmCancelWithN(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", confirmCancel: true}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.active {
+		t.Error("pressing n on confirm should stay in capture mode")
+	}
+	if m.captureMode.confirmCancel {
+		t.Error("pressing n should clear confirmCancel flag")
+	}
+}
+
+func TestModel_Update_CaptureMode_StartsEmpty(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != "" {
+		t.Errorf("capture mode should start empty, got %s", m.captureMode.content)
+	}
+}
+
+func TestModel_Update_CaptureMode_ParsesContentRealtime(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task one\n- Note here"}
+
+	// Trigger a parse by updating
+	model.captureMode.parsedEntries, model.captureMode.parseError = model.parseCapture(model.captureMode.content)
+
+	if len(model.captureMode.parsedEntries) != 2 {
+		t.Errorf("expected 2 parsed entries, got %d", len(model.captureMode.parsedEntries))
+	}
+	if model.captureMode.parseError != nil {
+		t.Errorf("expected no parse error, got %v", model.captureMode.parseError)
+	}
+}
+
+func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task\n    - Skipped indent level"}
+
+	model.captureMode.parsedEntries, model.captureMode.parseError = model.parseCapture(model.captureMode.content)
+
+	if model.captureMode.parseError == nil {
+		t.Error("expected indentation error for skipped level")
+	}
+}
+
+func TestModel_Update_CaptureMode_DetectsMissingSymbol(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: "Missing symbol"}
+
+	model.captureMode.parsedEntries, model.captureMode.parseError = model.parseCapture(model.captureMode.content)
+
+	if model.captureMode.parseError == nil {
+		t.Error("expected error for missing symbol prefix")
+	}
+}
+
+func TestModel_View_CaptureMode_ShowsCaptureHeader(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task one"}
+
+	view := model.View()
+
+	if !strings.Contains(view, "CAPTURE") {
+		t.Error("capture mode view should show CAPTURE header")
+	}
+}
+
+func TestModel_View_CaptureMode_ShowsErrorInStatusBar(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:     true,
+		content:    "Invalid content",
+		parseError: fmt.Errorf("unknown entry type symbol"),
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "unknown entry type") {
+		t.Error("capture mode view should show parse error in status bar")
+	}
+}
+
+func TestModel_View_CaptureMode_ShowsConfirmPrompt(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:        true,
+		content:       ". Task",
+		confirmCancel: true,
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Discard") {
+		t.Error("capture mode view should show discard confirmation")
+	}
+}
+
+func TestModel_CaptureMode_TypesCharacters(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ""}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'.'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != "." {
+		t.Errorf("expected content '.', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_TabInsertsIndent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorLine: 0}
+
+	msg := tea.KeyMsg{Type: tea.KeyTab}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != "  . Task" {
+		t.Errorf("expected content '  . Task', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_ShiftTabRemovesIndent(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: "  . Task", cursorLine: 0}
+
+	msg := tea.KeyMsg{Type: tea.KeyShiftTab}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". Task" {
+		t.Errorf("expected content '. Task', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_EnterAddsNewLine(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 7, cursorLine: 0, cursorCol: 7}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". Task\n" {
+		t.Errorf("expected content '. Task\\n', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_EnterAutoIndents(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: "  . Task", cursorPos: 9, cursorLine: 0, cursorCol: 9}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != "  . Task\n  " {
+		t.Errorf("expected content '  . Task\\n  ', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_BackspaceDeletesChar(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 6, cursorLine: 0, cursorCol: 6}
+
+	msg := tea.KeyMsg{Type: tea.KeyBackspace}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". Tas" {
+		t.Errorf("expected content '. Tas', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_ParsesOnChange(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ""}
+
+	// Type ". Task"
+	for _, r := range ". Task" {
+		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
+		newModel, _ := model.Update(msg)
+		model = newModel.(Model)
+	}
+
+	if len(model.captureMode.parsedEntries) != 1 {
+		t.Fatalf("expected 1 parsed entry, got %d", len(model.captureMode.parsedEntries))
+	}
+	if model.captureMode.parsedEntries[0].Content != "Task" {
+		t.Errorf("expected content 'Task', got '%s'", model.captureMode.parsedEntries[0].Content)
+	}
+}
+
+// Emacs navigation tests
+
+func TestModel_CaptureMode_CtrlA_BeginningOfLine(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 6, cursorCol: 6}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlA}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.cursorCol != 0 {
+		t.Errorf("expected cursorCol 0, got %d", m.captureMode.cursorCol)
+	}
+}
+
+func TestModel_CaptureMode_CtrlE_EndOfLine(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 0, cursorCol: 0}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlE}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.cursorCol != 6 {
+		t.Errorf("expected cursorCol 6, got %d", m.captureMode.cursorCol)
+	}
+}
+
+func TestModel_CaptureMode_CtrlF_ForwardChar(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 0, cursorCol: 0}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlF}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.cursorCol != 1 {
+		t.Errorf("expected cursorCol 1, got %d", m.captureMode.cursorCol)
+	}
+}
+
+func TestModel_CaptureMode_CtrlB_BackwardChar(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 3, cursorCol: 3}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlB}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.cursorCol != 2 {
+		t.Errorf("expected cursorCol 2, got %d", m.captureMode.cursorCol)
+	}
+}
+
+func TestModel_CaptureMode_CtrlK_KillToEndOfLine(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 2, cursorCol: 2}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlK}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". " {
+		t.Errorf("expected content '. ', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_CtrlD_DeleteChar(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", cursorPos: 2, cursorCol: 2}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlD}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". ask" {
+		t.Errorf("expected content '. ask', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_CtrlW_DeleteWordBackward(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task here", cursorPos: 11, cursorCol: 11}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlW}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". Task " {
+		t.Errorf("expected content '. Task ', got '%s'", m.captureMode.content)
+	}
+}
+
+// Search tests
+
+func TestModel_CaptureMode_CtrlS_EntersSearchMode(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task here"}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlS}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.searchMode {
+		t.Error("Ctrl+S should enter search mode")
+	}
+	if !m.captureMode.searchForward {
+		t.Error("Ctrl+S should set searchForward to true")
+	}
+}
+
+func TestModel_CaptureMode_CtrlR_EntersReverseSearchMode(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task here"}
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlR}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.searchMode {
+		t.Error("Ctrl+R should enter search mode")
+	}
+	if m.captureMode.searchForward {
+		t.Error("Ctrl+R should set searchForward to false")
+	}
+}
+
+func TestModel_CaptureMode_Search_EscExitsSearchMode(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, content: ". Task", searchMode: true}
+
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.searchMode {
+		t.Error("ESC should exit search mode")
+	}
+	if !m.captureMode.active {
+		t.Error("ESC in search mode should not exit capture mode")
+	}
+}
+
+func TestModel_CaptureMode_Search_FindsMatch(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:        true,
+		content:       ". Task here\n- Note there",
+		searchMode:    true,
+		searchForward: true,
+		searchQuery:   "here",
+		cursorPos:     0,
+	}
+
+	// Trigger search by pressing Enter
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	// Cursor should move to "here" position (index 7)
+	if m.captureMode.cursorPos != 7 {
+		t.Errorf("expected cursorPos 7, got %d", m.captureMode.cursorPos)
+	}
+}
+
+// Draft tests
+
+func TestModel_CaptureMode_DraftPrompt_ShowsWhenDraftExists(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{active: true, draftExists: true}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Restore") {
+		t.Error("should show restore prompt when draft exists")
+	}
+}
+
+func TestModel_CaptureMode_DraftPrompt_YRestoresDraft(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:       true,
+		draftExists:  true,
+		draftContent: ". Saved task",
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != ". Saved task" {
+		t.Errorf("expected content '. Saved task', got '%s'", m.captureMode.content)
+	}
+	if m.captureMode.draftExists {
+		t.Error("draftExists should be false after restore")
+	}
+}
+
+func TestModel_CaptureMode_DraftPrompt_NStartsFresh(t *testing.T) {
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{}
+	model.captureMode = captureState{
+		active:       true,
+		draftExists:  true,
+		draftContent: ". Saved task",
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.content != "" {
+		t.Errorf("expected empty content, got '%s'", m.captureMode.content)
+	}
+	if m.captureMode.draftExists {
+		t.Error("draftExists should be false after declining")
+	}
 }

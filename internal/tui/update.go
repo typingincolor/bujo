@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -55,6 +56,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.err != nil {
 			m.err = nil
 			return m, nil
+		}
+		if m.captureMode.active {
+			return m.handleCaptureMode(msg)
 		}
 		if m.editMode.active {
 			return m.handleEditMode(msg)
@@ -228,9 +232,570 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Help):
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.Capture):
+		m.captureMode = captureState{active: true}
+		return m, nil
 	}
 
 	return m, nil
+}
+
+func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.captureMode.confirmCancel {
+		switch msg.String() {
+		case "y", "Y":
+			m.captureMode = captureState{}
+			return m, nil
+		case "n", "N":
+			m.captureMode.confirmCancel = false
+			return m, nil
+		}
+		return m, nil
+	}
+
+	if m.captureMode.draftExists {
+		switch msg.String() {
+		case "y", "Y":
+			m.captureMode.content = m.captureMode.draftContent
+			m.captureMode.draftExists = false
+			m.captureMode.draftContent = ""
+			m.captureMode.cursorPos = len(m.captureMode.content)
+			m = m.captureReparse()
+			return m, nil
+		case "n", "N":
+			m.captureMode.draftExists = false
+			m.captureMode.draftContent = ""
+			return m, nil
+		}
+		return m, nil
+	}
+
+	if m.captureMode.searchMode {
+		return m.handleCaptureSearchMode(msg)
+	}
+
+	switch msg.Type {
+	case tea.KeyCtrlX:
+		content := m.captureMode.content
+		m.captureMode = captureState{}
+		if content == "" {
+			return m, nil
+		}
+		return m, m.saveCaptureCmd(content)
+
+	case tea.KeyEsc:
+		if m.captureMode.content == "" {
+			m.captureMode = captureState{}
+			return m, nil
+		}
+		m.captureMode.confirmCancel = true
+		return m, nil
+
+	case tea.KeyEnter:
+		m = m.captureInsertNewline()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyBackspace:
+		m = m.captureBackspace()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyTab:
+		m = m.captureIndentLine()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyShiftTab:
+		m = m.captureOutdentLine()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyUp:
+		m = m.captureMoveUp()
+		return m, nil
+
+	case tea.KeyDown:
+		m = m.captureMoveDown()
+		return m, nil
+
+	case tea.KeyLeft:
+		m = m.captureBackwardChar()
+		return m, nil
+
+	case tea.KeyRight:
+		m = m.captureForwardChar()
+		return m, nil
+
+	case tea.KeySpace:
+		m = m.captureInsertRunes([]rune{' '})
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyRunes:
+		m = m.captureInsertRunes(msg.Runes)
+		m = m.captureReparse()
+		return m, nil
+
+	// Emacs navigation
+	case tea.KeyCtrlA:
+		m = m.captureBeginningOfLine()
+		return m, nil
+
+	case tea.KeyCtrlE:
+		m = m.captureEndOfLine()
+		return m, nil
+
+	case tea.KeyCtrlF:
+		m = m.captureForwardChar()
+		return m, nil
+
+	case tea.KeyCtrlB:
+		m = m.captureBackwardChar()
+		return m, nil
+
+	case tea.KeyCtrlK:
+		m = m.captureKillToEndOfLine()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyCtrlD:
+		m = m.captureDeleteChar()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyCtrlW:
+		m = m.captureDeleteWordBackward()
+		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyCtrlS:
+		m.captureMode.searchMode = true
+		m.captureMode.searchForward = true
+		m.captureMode.searchQuery = ""
+		return m, nil
+
+	case tea.KeyCtrlR:
+		m.captureMode.searchMode = true
+		m.captureMode.searchForward = false
+		m.captureMode.searchQuery = ""
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleCaptureSearchMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.captureMode.searchMode = false
+		m.captureMode.searchQuery = ""
+		return m, nil
+
+	case tea.KeyEnter:
+		m = m.captureSearch()
+		return m, nil
+
+	case tea.KeyCtrlS:
+		m.captureMode.searchForward = true
+		m = m.captureSearch()
+		return m, nil
+
+	case tea.KeyCtrlR:
+		m.captureMode.searchForward = false
+		m = m.captureSearch()
+		return m, nil
+
+	case tea.KeyBackspace:
+		if len(m.captureMode.searchQuery) > 0 {
+			m.captureMode.searchQuery = m.captureMode.searchQuery[:len(m.captureMode.searchQuery)-1]
+		}
+		return m, nil
+
+	case tea.KeyRunes:
+		m.captureMode.searchQuery += string(msg.Runes)
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) captureInsertRunes(runes []rune) Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos > len(content) {
+		pos = len(content)
+	}
+	newContent := content[:pos] + string(runes) + content[pos:]
+	m.captureMode.content = newContent
+	m.captureMode.cursorPos = pos + len(runes)
+	m.captureMode.cursorCol += len(runes)
+	return m
+}
+
+func (m Model) captureBackspace() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos <= 0 || len(content) == 0 {
+		return m
+	}
+	if pos > len(content) {
+		pos = len(content)
+	}
+	newContent := content[:pos-1] + content[pos:]
+	m.captureMode.content = newContent
+	m.captureMode.cursorPos = pos - 1
+	if m.captureMode.cursorCol > 0 {
+		m.captureMode.cursorCol--
+	} else if m.captureMode.cursorLine > 0 {
+		m.captureMode.cursorLine--
+		lines := strings.Split(newContent, "\n")
+		if m.captureMode.cursorLine < len(lines) {
+			m.captureMode.cursorCol = len(lines[m.captureMode.cursorLine])
+		}
+	}
+	return m
+}
+
+func (m Model) captureInsertNewline() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos > len(content) {
+		pos = len(content)
+	}
+
+	// Get current line's indentation
+	lines := strings.Split(content[:pos], "\n")
+	currentLine := ""
+	if len(lines) > 0 {
+		currentLine = lines[len(lines)-1]
+	}
+	indent := ""
+	for _, ch := range currentLine {
+		if ch == ' ' {
+			indent += " "
+		} else {
+			break
+		}
+	}
+
+	newContent := content[:pos] + "\n" + indent + content[pos:]
+	m.captureMode.content = newContent
+	m.captureMode.cursorPos = pos + 1 + len(indent)
+	m.captureMode.cursorLine++
+	m.captureMode.cursorCol = len(indent)
+	return m
+}
+
+func (m Model) captureIndentLine() Model {
+	content := m.captureMode.content
+	lines := strings.Split(content, "\n")
+	lineIdx := m.captureMode.cursorLine
+	if lineIdx >= len(lines) {
+		return m
+	}
+
+	lines[lineIdx] = "  " + lines[lineIdx]
+	m.captureMode.content = strings.Join(lines, "\n")
+	m.captureMode.cursorPos += 2
+	m.captureMode.cursorCol += 2
+	return m
+}
+
+func (m Model) captureOutdentLine() Model {
+	content := m.captureMode.content
+	lines := strings.Split(content, "\n")
+	lineIdx := m.captureMode.cursorLine
+	if lineIdx >= len(lines) {
+		return m
+	}
+
+	line := lines[lineIdx]
+	if strings.HasPrefix(line, "  ") {
+		lines[lineIdx] = line[2:]
+		m.captureMode.content = strings.Join(lines, "\n")
+		m.captureMode.cursorPos -= 2
+		if m.captureMode.cursorCol >= 2 {
+			m.captureMode.cursorCol -= 2
+		} else {
+			m.captureMode.cursorCol = 0
+		}
+	}
+	return m
+}
+
+func (m Model) captureReparse() Model {
+	m.captureMode.parsedEntries, m.captureMode.parseError = m.parseCapture(m.captureMode.content)
+	return m
+}
+
+func (m Model) captureMoveUp() Model {
+	if m.captureMode.cursorLine <= 0 {
+		return m
+	}
+
+	lines := strings.Split(m.captureMode.content, "\n")
+
+	// Move to previous line
+	m.captureMode.cursorLine--
+
+	// Adjust column if new line is shorter
+	if m.captureMode.cursorLine < len(lines) {
+		lineLen := len(lines[m.captureMode.cursorLine])
+		if m.captureMode.cursorCol > lineLen {
+			m.captureMode.cursorCol = lineLen
+		}
+	}
+
+	// Recalculate absolute position
+	pos := 0
+	for i := 0; i < m.captureMode.cursorLine; i++ {
+		pos += len(lines[i]) + 1
+	}
+	pos += m.captureMode.cursorCol
+	m.captureMode.cursorPos = pos
+
+	// Adjust scroll offset
+	if m.captureMode.cursorLine < m.captureMode.scrollOffset {
+		m.captureMode.scrollOffset = m.captureMode.cursorLine
+	}
+
+	return m
+}
+
+func (m Model) captureMoveDown() Model {
+	lines := strings.Split(m.captureMode.content, "\n")
+
+	if m.captureMode.cursorLine >= len(lines)-1 {
+		return m
+	}
+
+	// Move to next line
+	m.captureMode.cursorLine++
+
+	// Adjust column if new line is shorter
+	if m.captureMode.cursorLine < len(lines) {
+		lineLen := len(lines[m.captureMode.cursorLine])
+		if m.captureMode.cursorCol > lineLen {
+			m.captureMode.cursorCol = lineLen
+		}
+	}
+
+	// Recalculate absolute position
+	pos := 0
+	for i := 0; i < m.captureMode.cursorLine; i++ {
+		pos += len(lines[i]) + 1
+	}
+	pos += m.captureMode.cursorCol
+	m.captureMode.cursorPos = pos
+
+	// Scroll is adjusted in view rendering based on cursor position
+	return m
+}
+
+func (m Model) captureBeginningOfLine() Model {
+	lines := strings.Split(m.captureMode.content, "\n")
+	lineIdx := m.captureMode.cursorLine
+	if lineIdx >= len(lines) {
+		return m
+	}
+
+	// Calculate position at beginning of current line
+	pos := 0
+	for i := 0; i < lineIdx; i++ {
+		pos += len(lines[i]) + 1 // +1 for newline
+	}
+
+	m.captureMode.cursorPos = pos
+	m.captureMode.cursorCol = 0
+	return m
+}
+
+func (m Model) captureEndOfLine() Model {
+	lines := strings.Split(m.captureMode.content, "\n")
+	lineIdx := m.captureMode.cursorLine
+	if lineIdx >= len(lines) {
+		return m
+	}
+
+	// Calculate position at end of current line
+	pos := 0
+	for i := 0; i < lineIdx; i++ {
+		pos += len(lines[i]) + 1
+	}
+	pos += len(lines[lineIdx])
+
+	m.captureMode.cursorPos = pos
+	m.captureMode.cursorCol = len(lines[lineIdx])
+	return m
+}
+
+func (m Model) captureForwardChar() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos >= len(content) {
+		return m
+	}
+
+	m.captureMode.cursorPos++
+	if content[pos] == '\n' {
+		m.captureMode.cursorLine++
+		m.captureMode.cursorCol = 0
+	} else {
+		m.captureMode.cursorCol++
+	}
+	return m
+}
+
+func (m Model) captureBackwardChar() Model {
+	pos := m.captureMode.cursorPos
+	if pos <= 0 {
+		return m
+	}
+
+	content := m.captureMode.content
+	m.captureMode.cursorPos--
+	if pos > 0 && content[pos-1] == '\n' {
+		m.captureMode.cursorLine--
+		lines := strings.Split(content, "\n")
+		if m.captureMode.cursorLine < len(lines) {
+			m.captureMode.cursorCol = len(lines[m.captureMode.cursorLine])
+		}
+	} else {
+		m.captureMode.cursorCol--
+	}
+	return m
+}
+
+func (m Model) captureKillToEndOfLine() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos > len(content) {
+		pos = len(content)
+	}
+
+	// Find end of current line
+	endPos := pos
+	for endPos < len(content) && content[endPos] != '\n' {
+		endPos++
+	}
+
+	m.captureMode.content = content[:pos] + content[endPos:]
+	return m
+}
+
+func (m Model) captureDeleteChar() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos >= len(content) {
+		return m
+	}
+
+	m.captureMode.content = content[:pos] + content[pos+1:]
+	return m
+}
+
+func (m Model) captureSearch() Model {
+	content := m.captureMode.content
+	query := m.captureMode.searchQuery
+	if query == "" {
+		return m
+	}
+
+	pos := m.captureMode.cursorPos
+	var foundPos int = -1
+
+	if m.captureMode.searchForward {
+		// Search forward from current position
+		searchStart := pos
+		if searchStart >= len(content) {
+			searchStart = 0
+		}
+		idx := strings.Index(content[searchStart:], query)
+		if idx >= 0 {
+			foundPos = searchStart + idx
+		} else if searchStart > 0 {
+			// Wrap around
+			idx = strings.Index(content[:searchStart], query)
+			if idx >= 0 {
+				foundPos = idx
+			}
+		}
+	} else {
+		// Search backward from current position
+		searchEnd := pos
+		if searchEnd > len(content) {
+			searchEnd = len(content)
+		}
+		idx := strings.LastIndex(content[:searchEnd], query)
+		if idx >= 0 {
+			foundPos = idx
+		} else if searchEnd < len(content) {
+			// Wrap around
+			idx = strings.LastIndex(content[searchEnd:], query)
+			if idx >= 0 {
+				foundPos = searchEnd + idx
+			}
+		}
+	}
+
+	if foundPos >= 0 {
+		m.captureMode.cursorPos = foundPos
+		// Update cursor line and column
+		lines := strings.Split(content[:foundPos], "\n")
+		m.captureMode.cursorLine = len(lines) - 1
+		if len(lines) > 0 {
+			m.captureMode.cursorCol = len(lines[len(lines)-1])
+		} else {
+			m.captureMode.cursorCol = 0
+		}
+	}
+
+	return m
+}
+
+func (m Model) captureDeleteWordBackward() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos <= 0 {
+		return m
+	}
+	if pos > len(content) {
+		pos = len(content)
+	}
+
+	// Skip any trailing spaces
+	startPos := pos
+	for startPos > 0 && content[startPos-1] == ' ' {
+		startPos--
+	}
+
+	// Skip word characters
+	for startPos > 0 && content[startPos-1] != ' ' && content[startPos-1] != '\n' {
+		startPos--
+	}
+
+	m.captureMode.content = content[:startPos] + content[pos:]
+	m.captureMode.cursorPos = startPos
+	m.captureMode.cursorCol -= (pos - startPos)
+	if m.captureMode.cursorCol < 0 {
+		m.captureMode.cursorCol = 0
+	}
+	return m
+}
+
+func (m Model) saveCaptureCmd(content string) tea.Cmd {
+	viewDate := m.viewDate
+	return func() tea.Msg {
+		ctx := context.Background()
+		opts := service.LogEntriesOptions{Date: viewDate}
+		_, err := m.bujoService.LogEntries(ctx, content, opts)
+		if err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{0}
+	}
 }
 
 func (m Model) handleConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

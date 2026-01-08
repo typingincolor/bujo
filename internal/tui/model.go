@@ -25,6 +25,7 @@ type Model struct {
 	addMode      addState
 	migrateMode  migrateState
 	gotoMode     gotoState
+	captureMode  captureState
 	help         help.Model
 	keyMap       KeyMap
 	width        int
@@ -61,6 +62,23 @@ type migrateState struct {
 type gotoState struct {
 	active bool
 	input  textinput.Model
+}
+
+type captureState struct {
+	active        bool
+	content       string
+	cursorPos     int
+	cursorLine    int
+	cursorCol     int
+	scrollOffset  int
+	parsedEntries []domain.Entry
+	parseError    error
+	confirmCancel bool
+	searchMode    bool
+	searchForward bool
+	searchQuery   string
+	draftExists   bool
+	draftContent  string
 }
 
 type ViewMode int
@@ -216,6 +234,11 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	}
 
 	return items
+}
+
+func (m Model) parseCapture(content string) ([]domain.Entry, error) {
+	parser := domain.NewTreeParser()
+	return parser.Parse(content)
 }
 
 func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdue bool, today time.Time) []EntryItem {
