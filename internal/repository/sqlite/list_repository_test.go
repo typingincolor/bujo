@@ -204,3 +204,31 @@ func TestListRepository_GetDoneCount(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
 }
+
+func TestListRepository_GetByEntityID(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	created, err := repo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	found, err := repo.GetByEntityID(ctx, created.EntityID)
+
+	require.NoError(t, err)
+	require.NotNil(t, found)
+	assert.Equal(t, created.ID, found.ID)
+	assert.Equal(t, created.EntityID, found.EntityID)
+	assert.Equal(t, "Shopping", found.Name)
+}
+
+func TestListRepository_GetByEntityID_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	found, err := repo.GetByEntityID(ctx, domain.NewEntityID())
+
+	require.NoError(t, err)
+	assert.Nil(t, found)
+}

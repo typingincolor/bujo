@@ -22,8 +22,8 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 	}
 
 	result, err := r.db.ExecContext(ctx,
-		"INSERT INTO lists (name, created_at) VALUES (?, ?)",
-		list.Name, list.CreatedAt,
+		"INSERT INTO lists (name, entity_id, created_at) VALUES (?, ?, ?)",
+		list.Name, list.EntityID.String(), list.CreatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -40,26 +40,31 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 
 func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, error) {
 	var list domain.List
+	var entityID sql.NullString
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, name, created_at FROM lists WHERE id = ?",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE id = ?",
 		id,
-	).Scan(&list.ID, &list.Name, &list.CreatedAt)
+	).Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
+	}
+	if entityID.Valid {
+		list.EntityID = domain.EntityID(entityID.String)
 	}
 	return &list, nil
 }
 
 func (r *ListRepository) GetByName(ctx context.Context, name string) (*domain.List, error) {
 	var list domain.List
+	var entityID sql.NullString
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, name, created_at FROM lists WHERE name = ?",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE name = ?",
 		name,
-	).Scan(&list.ID, &list.Name, &list.CreatedAt)
+	).Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -67,12 +72,35 @@ func (r *ListRepository) GetByName(ctx context.Context, name string) (*domain.Li
 	if err != nil {
 		return nil, err
 	}
+	if entityID.Valid {
+		list.EntityID = domain.EntityID(entityID.String)
+	}
+	return &list, nil
+}
+
+func (r *ListRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.List, error) {
+	var list domain.List
+	var eid sql.NullString
+	err := r.db.QueryRowContext(ctx,
+		"SELECT id, entity_id, name, created_at FROM lists WHERE entity_id = ?",
+		entityID.String(),
+	).Scan(&list.ID, &eid, &list.Name, &list.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if eid.Valid {
+		list.EntityID = domain.EntityID(eid.String)
+	}
 	return &list, nil
 }
 
 func (r *ListRepository) GetAll(ctx context.Context) ([]domain.List, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT id, name, created_at FROM lists ORDER BY name",
+		"SELECT id, entity_id, name, created_at FROM lists ORDER BY name",
 	)
 	if err != nil {
 		return nil, err
@@ -82,8 +110,12 @@ func (r *ListRepository) GetAll(ctx context.Context) ([]domain.List, error) {
 	var lists []domain.List
 	for rows.Next() {
 		var list domain.List
-		if err := rows.Scan(&list.ID, &list.Name, &list.CreatedAt); err != nil {
+		var entityID sql.NullString
+		if err := rows.Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt); err != nil {
 			return nil, err
+		}
+		if entityID.Valid {
+			list.EntityID = domain.EntityID(entityID.String)
 		}
 		lists = append(lists, list)
 	}
