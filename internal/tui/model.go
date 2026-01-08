@@ -192,10 +192,14 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 		return nil
 	}
 
+	// Calculate today for per-entry overdue checks
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
 	var items []EntryItem
 
 	if len(agenda.Overdue) > 0 {
-		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true)...)
+		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true, today)...)
 	}
 
 	for _, day := range agenda.Days {
@@ -208,13 +212,13 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 			dayHeader = fmt.Sprintf("%s | 📍 %s", dayHeader, *day.Location)
 		}
 
-		items = append(items, m.flattenEntries(day.Entries, dayHeader, false)...)
+		items = append(items, m.flattenEntries(day.Entries, dayHeader, false, today)...)
 	}
 
 	return items
 }
 
-func (m Model) flattenEntries(entries []domain.Entry, header string, isOverdue bool) []EntryItem {
+func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdue bool, today time.Time) []EntryItem {
 	var items []EntryItem
 
 	parentMap := make(map[int64][]domain.Entry)
@@ -230,9 +234,11 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, isOverdue b
 
 	var flatten func(entry domain.Entry, depth int, showHeader bool)
 	flatten = func(entry domain.Entry, depth int, showHeader bool) {
+		// Check if entry is overdue: either forced (in OVERDUE section) or per-entry check
+		entryIsOverdue := forceOverdue || entry.IsOverdue(today)
 		item := EntryItem{
 			Entry:     entry,
-			IsOverdue: isOverdue,
+			IsOverdue: entryIsOverdue,
 			Indent:    depth,
 		}
 		if showHeader {

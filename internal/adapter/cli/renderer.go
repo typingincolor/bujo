@@ -37,14 +37,14 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true)
+		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, agenda.Date)
 		sb.WriteString("\n")
 	}
 
 	// Today section
 	if len(agenda.Today) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
-		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false)
+		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false, agenda.Date)
 	} else if len(agenda.Overdue) == 0 {
 		sb.WriteString(Dimmed("No entries for today\n"))
 	}
@@ -54,13 +54,13 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	return sb.String()
 }
 
-func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
+func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) string {
 	var sb strings.Builder
 
 	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true)
+		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, today)
 		sb.WriteString("\n")
 	}
 
@@ -74,7 +74,8 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
 		}
 
 		if len(day.Entries) > 0 {
-			renderEntryTreeWithOverdue(&sb, day.Entries, 0, false)
+			// For day sections, check per-entry overdue status
+			renderEntryTreeWithOverdue(&sb, day.Entries, 0, false, today)
 		} else {
 			sb.WriteString(Dimmed("  No entries\n"))
 		}
@@ -85,10 +86,10 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda) string {
 }
 
 func renderEntryTree(sb *strings.Builder, entries []domain.Entry, depth int) {
-	renderEntryTreeWithOverdue(sb, entries, depth, false)
+	renderEntryTreeWithOverdue(sb, entries, depth, false, time.Time{})
 }
 
-func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, depth int, overdue bool) {
+func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, depth int, forceOverdue bool, today time.Time) {
 	// Build parent-child map
 	children := make(map[int64][]domain.Entry)
 	var roots []domain.Entry
@@ -102,19 +103,19 @@ func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, dep
 	}
 
 	for _, root := range roots {
-		renderEntryWithChildren(sb, root, children, depth, overdue)
+		renderEntryWithChildren(sb, root, children, depth, forceOverdue, today)
 	}
 }
 
-func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children map[int64][]domain.Entry, depth int, overdue bool) {
-	sb.WriteString(renderEntry(entry, depth, overdue))
+func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children map[int64][]domain.Entry, depth int, forceOverdue bool, today time.Time) {
+	sb.WriteString(renderEntry(entry, depth, forceOverdue, today))
 
 	for _, child := range children[entry.ID] {
-		renderEntryWithChildren(sb, child, children, depth+1, overdue)
+		renderEntryWithChildren(sb, child, children, depth+1, forceOverdue, today)
 	}
 }
 
-func renderEntry(entry domain.Entry, depth int, overdue bool) string {
+func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Time) string {
 	indent := strings.Repeat("  ", depth)
 	treePrefix := ""
 	if depth > 0 {
@@ -137,7 +138,9 @@ func renderEntry(entry domain.Entry, depth int, overdue bool) string {
 		idStr = Dimmed(idStr)
 	}
 
-	if overdue {
+	// Check if entry is overdue: either forced (in OVERDUE section) or per-entry check
+	isOverdue := forceOverdue || (!today.IsZero() && entry.IsOverdue(today))
+	if isOverdue {
 		content = Red(content)
 		idStr = Red(idStr)
 	}
