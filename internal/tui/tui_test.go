@@ -914,14 +914,55 @@ func TestModel_View_CaptureMode_ShowsConfirmPrompt(t *testing.T) {
 func TestModel_CaptureMode_TypesCharacters(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
-	model.captureMode = captureState{active: true, content: ""}
+	model.captureMode = captureState{active: true, content: "a", cursorPos: 1, cursorCol: 1}
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'.'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
-	if m.captureMode.content != "." {
-		t.Errorf("expected content '.', got '%s'", m.captureMode.content)
+	if m.captureMode.content != "ab" {
+		t.Errorf("expected content 'ab', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_AutoSpaceAfterEntrySymbol(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		pos      int
+		col      int
+		symbol   rune
+		expected string
+	}{
+		{"dot at start", "", 0, 0, '.', ". "},
+		{"dash at start", "", 0, 0, '-', "- "},
+		{"o at start", "", 0, 0, 'o', "o "},
+		{"x at start", "", 0, 0, 'x', "x "},
+		{"dot after indent", "  ", 2, 2, '.', "  . "},
+		{"dot mid-word no space", ". Tas", 5, 5, '.', ". Tas."},
+		{"dot after newline", ". Task\n", 7, 0, '.', ". Task\n. "},
+		{"dot after newline with indent", ". Task\n  ", 9, 2, '.', ". Task\n  . "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			model := New(nil)
+			model.agenda = &service.MultiDayAgenda{}
+			model.captureMode = captureState{
+				active:    true,
+				content:   tt.content,
+				cursorPos: tt.pos,
+				cursorCol: tt.col,
+			}
+
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{tt.symbol}}
+			newModel, _ := model.Update(msg)
+			m := newModel.(Model)
+
+			if m.captureMode.content != tt.expected {
+				t.Errorf("expected content %q, got %q", tt.expected, m.captureMode.content)
+			}
+		})
 	}
 }
 

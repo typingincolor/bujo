@@ -431,11 +431,42 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 	if pos > len(content) {
 		pos = len(content)
 	}
-	newContent := content[:pos] + string(runes) + content[pos:]
+
+	toInsert := string(runes)
+
+	// Auto-space after entry symbols at line start
+	if len(runes) == 1 && isEntrySymbol(runes[0]) && m.isAtLineStart() {
+		toInsert = string(runes) + " "
+	}
+
+	newContent := content[:pos] + toInsert + content[pos:]
 	m.captureMode.content = newContent
-	m.captureMode.cursorPos = pos + len(runes)
-	m.captureMode.cursorCol += len(runes)
+	m.captureMode.cursorPos = pos + len(toInsert)
+	m.captureMode.cursorCol += len(toInsert)
 	return m
+}
+
+func isEntrySymbol(r rune) bool {
+	return r == '.' || r == '-' || r == 'o' || r == 'x'
+}
+
+func (m Model) isAtLineStart() bool {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+
+	// Find start of current line
+	lineStart := pos
+	for lineStart > 0 && content[lineStart-1] != '\n' {
+		lineStart--
+	}
+
+	// Check if only whitespace between line start and cursor
+	for i := lineStart; i < pos; i++ {
+		if content[i] != ' ' && content[i] != '\t' {
+			return false
+		}
+	}
+	return true
 }
 
 func (m Model) captureBackspace() Model {
