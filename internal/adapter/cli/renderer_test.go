@@ -145,14 +145,9 @@ func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
 	// The overdue task in yesterday's section should be red
 	// We check that Red() was applied to "Overdue task" by looking for ANSI codes
 	// Red color code is \x1b[31m
-	assert.Contains(t, result, "Meeting")       // Event not red (events don't go overdue)
-	assert.Contains(t, result, "Overdue task")  // Task present
-	assert.Contains(t, result, "Today task")    // Today's task present
-
-	// Check the overdue task has red styling (ANSI escape code for red)
-	// The Red() function wraps text with color codes
-	overdueTaskIdx := strings.Index(result, "Overdue task")
-	todayTaskIdx := strings.Index(result, "Today task")
+	assert.Contains(t, result, "Meeting")      // Event not red (events don't go overdue)
+	assert.Contains(t, result, "Overdue task") // Task present
+	assert.Contains(t, result, "Today task")   // Today's task present
 
 	// Find the line containing "Overdue task" and check it has red ANSI code
 	lines := strings.Split(result, "\n")
@@ -171,8 +166,4 @@ func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
 		"Overdue task should be styled red, got: %q", overdueTaskLine)
 	assert.False(t, strings.Contains(todayTaskLine, "\x1b[31m"),
 		"Today's task should NOT be red, got: %q", todayTaskLine)
-
-	// Silence unused variable warnings
-	_ = overdueTaskIdx
-	_ = todayTaskIdx
 }
