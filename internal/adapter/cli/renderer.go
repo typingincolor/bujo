@@ -85,10 +85,6 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) strin
 	return sb.String()
 }
 
-func renderEntryTree(sb *strings.Builder, entries []domain.Entry, depth int) {
-	renderEntryTreeWithOverdue(sb, entries, depth, false, time.Time{})
-}
-
 func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, depth int, forceOverdue bool, today time.Time) {
 	// Build parent-child map
 	children := make(map[int64][]domain.Entry)
