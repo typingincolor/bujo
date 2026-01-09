@@ -1,0 +1,1 @@
+-- No reverse migration needed - entity_ids remain populated

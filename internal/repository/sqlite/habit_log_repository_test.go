@@ -145,3 +145,100 @@ func TestHabitLogRepository_Delete(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 0)
 }
+
+func TestHabitLogRepository_Delete_SoftDeletes(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	habitID := createTestHabit(t, habitRepo, "SoftDeleteLogTest")
+
+	log := domain.HabitLog{
+		HabitID:  habitID,
+		Count:    1,
+		LoggedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, log)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// Verify log is soft deleted (not visible via GetByHabitID)
+	results, err := repo.GetByHabitID(ctx, habitID)
+	require.NoError(t, err)
+	assert.Len(t, results, 0)
+
+	// But data should still exist in database
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM habit_logs WHERE habit_id = ?`, habitID).Scan(&count)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, count, 1, "Soft deleted log should still exist in DB")
+}
+
+func TestHabitLogRepository_GetDeleted_ReturnsDeletedLogs(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	habitID := createTestHabit(t, habitRepo, "DeletedLogTest")
+
+	log := domain.HabitLog{
+		HabitID:  habitID,
+		Count:    5,
+		LoggedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, log)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// Get deleted logs
+	deleted, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	require.Len(t, deleted, 1)
+	assert.Equal(t, 5, deleted[0].Count)
+}
+
+func TestHabitLogRepository_Restore_BringsBackDeletedLog(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	habitID := createTestHabit(t, habitRepo, "RestoreLogTest")
+
+	log := domain.HabitLog{
+		HabitID:  habitID,
+		Count:    3,
+		LoggedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, log)
+	require.NoError(t, err)
+
+	l, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	entityID := l.EntityID
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// Verify it's gone
+	results, err := repo.GetByHabitID(ctx, habitID)
+	require.NoError(t, err)
+	assert.Len(t, results, 0)
+
+	// Restore it
+	newID, err := repo.Restore(ctx, entityID)
+	require.NoError(t, err)
+	assert.NotZero(t, newID)
+
+	// Verify it's back
+	restored, err := repo.GetByID(ctx, newID)
+	require.NoError(t, err)
+	require.NotNil(t, restored)
+	assert.Equal(t, 3, restored.Count)
+}
