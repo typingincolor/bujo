@@ -143,11 +143,11 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
 		m.currentView = ViewTypeHabits
-		return m, nil
+		return m, m.loadHabitsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewLists):
 		m.currentView = ViewTypeLists
-		return m, nil
+		return m, m.loadListsCmd()
 
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
@@ -1454,11 +1454,11 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
 		m.currentView = ViewTypeHabits
-		return m, nil
+		return m, m.loadHabitsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewLists):
 		m.currentView = ViewTypeLists
-		return m, nil
+		return m, m.loadListsCmd()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
@@ -1503,11 +1503,11 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
 		m.currentView = ViewTypeHabits
-		return m, nil
+		return m, m.loadHabitsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewLists):
 		m.currentView = ViewTypeLists
-		return m, nil
+		return m, m.loadListsCmd()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
@@ -1552,11 +1552,11 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
 		m.currentView = ViewTypeHabits
-		return m, nil
+		return m, m.loadHabitsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewLists):
 		m.currentView = ViewTypeLists
-		return m, nil
+		return m, m.loadListsCmd()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedItemIdx < len(m.listState.items)-1 {
