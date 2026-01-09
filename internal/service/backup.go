@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type BackupService struct {
@@ -89,7 +89,7 @@ func (s *BackupService) VerifyBackup(ctx context.Context, backupPath string) err
 		return fmt.Errorf("backup file does not exist: %s", backupPath)
 	}
 
-	db, err := sql.Open("sqlite3", backupPath)
+	db, err := sql.Open("sqlite", backupPath)
 	if err != nil {
 		return fmt.Errorf("failed to open backup: %w", err)
 	}
