@@ -8,6 +8,7 @@ type KeyMap struct {
 	Top            key.Binding
 	Bottom         key.Binding
 	Done           key.Binding
+	CancelEntry    key.Binding
 	Delete         key.Binding
 	Edit           key.Binding
 	Add            key.Binding
@@ -55,6 +56,10 @@ func DefaultKeyMap() KeyMap {
 		Done: key.NewBinding(
 			key.WithKeys(" "),
 			key.WithHelp("space", "done"),
+		),
+		CancelEntry: key.NewBinding(
+			key.WithKeys("x"),
+			key.WithHelp("x", "cancel"),
 		),
 		Delete: key.NewBinding(
 			key.WithKeys("d"),
@@ -156,13 +161,13 @@ func DefaultKeyMap() KeyMap {
 }
 
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Done, k.Edit, k.Add, k.Capture, k.Delete, k.Quit, k.Help}
+	return []key.Binding{k.Up, k.Down, k.Done, k.CancelEntry, k.Edit, k.Add, k.Capture, k.Delete, k.Quit, k.Help}
 }
 
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.Done, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Capture, k.Delete},
+		{k.Done, k.CancelEntry, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Capture, k.Delete},
 		{k.ToggleView, k.GotoDate, k.Quit, k.Help},
 	}
 }

@@ -176,6 +176,22 @@ Mark a completed task as incomplete.
 bujo undo 42
 ```
 
+#### `bujo cancel <id>`
+
+Cancel a task (mark as not doing). Shows with strikethrough styling.
+
+```bash
+bujo cancel 42
+```
+
+#### `bujo uncancel <id>`
+
+Restore a cancelled task back to active.
+
+```bash
+bujo uncancel 42
+```
+
 ### Editing Entries
 
 #### `bujo edit <id> <new-content>`
@@ -527,7 +543,7 @@ Tuesday, Jan 7 | Home Office
   • Finish report (3)
     – Remember Q4 data (4)
 
-j/k: move  space: done  d: delete  q: quit  ?: help
+j/k: move  space: done  x: cancel  d: delete  q: quit  ?: help
 ```
 
 **Keyboard shortcuts:**
@@ -539,6 +555,7 @@ j/k: move  space: done  d: delete  q: quit  ?: help
 | `g` | Jump to top |
 | `G` | Jump to bottom |
 | `Space` | Toggle done/undone |
+| `x` | Cancel/uncancel task |
 | `e` | Edit entry content |
 | `a` | Add new entry (sibling) |
 | `A` | Add child entry (under selected) |
