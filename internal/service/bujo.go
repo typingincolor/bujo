@@ -19,6 +19,8 @@ type EntryRepository interface {
 	Update(ctx context.Context, entry domain.Entry) error
 	Delete(ctx context.Context, id int64) error
 	DeleteWithChildren(ctx context.Context, id int64) error
+	GetDeleted(ctx context.Context) ([]domain.Entry, error)
+	Restore(ctx context.Context, entityID domain.EntityID) (int64, error)
 }
 
 type DayContextRepository interface {
@@ -586,4 +588,12 @@ func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLev
 
 	// Get the root and all its children
 	return s.entryRepo.GetWithChildren(ctx, rootID)
+}
+
+func (s *BujoService) GetDeletedEntries(ctx context.Context) ([]domain.Entry, error) {
+	return s.entryRepo.GetDeleted(ctx)
+}
+
+func (s *BujoService) RestoreEntry(ctx context.Context, entityID domain.EntityID) (int64, error) {
+	return s.entryRepo.Restore(ctx, entityID)
 }
