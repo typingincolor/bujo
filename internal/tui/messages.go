@@ -41,7 +41,8 @@ type habitLoggedMsg struct {
 }
 
 type listsLoadedMsg struct {
-	lists []domain.List
+	lists     []domain.List
+	summaries map[int64]*service.ListSummary
 }
 
 type listItemsLoadedMsg struct {

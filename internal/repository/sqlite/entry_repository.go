@@ -82,7 +82,7 @@ func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time
 
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
-		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ? AND (valid_to IS NULL OR valid_to = '')
+		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY scheduled_date, created_at
 	`, fromStr, toStr)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 		overdue_tasks AS (
 			SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
 			FROM entries
-			WHERE scheduled_date < ? AND type = 'task' AND (valid_to IS NULL OR valid_to = '')
+			WHERE scheduled_date < ? AND type = 'task' AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		),
 		parent_chain AS (
 			SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
@@ -110,7 +110,7 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 			SELECT e.id, e.type, e.content, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
 			FROM entries e
 			INNER JOIN parent_chain pc ON e.id = pc.parent_id
-			WHERE (e.valid_to IS NULL OR e.valid_to = '')
+			WHERE (e.valid_to IS NULL OR e.valid_to = '') AND e.op_type != 'DELETE'
 		)
 		SELECT DISTINCT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM parent_chain

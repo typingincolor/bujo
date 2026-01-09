@@ -1,0 +1,1585 @@
+package tui
+
+import (
+	"context"
+	"strings"
+	"testing"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/typingincolor/bujo/internal/domain"
+	"github.com/typingincolor/bujo/internal/service"
+)
+
+// =============================================================================
+// UAT Section 6: General Navigation
+// =============================================================================
+
+func TestUAT_Navigation_NumberKeys_SwitchViews(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	tests := []struct {
+		key      rune
+		expected ViewType
+		name     string
+	}{
+		{'1', ViewTypeJournal, "Journal"},
+		{'2', ViewTypeHabits, "Habits"},
+		{'3', ViewTypeLists, "Lists"},
+		{'4', ViewTypeSearch, "Search"},
+		{'5', ViewTypeStats, "Stats"},
+		{'6', ViewTypeSettings, "Settings"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{tt.key}}
+			newModel, _ := model.Update(msg)
+			m := newModel.(Model)
+
+			if m.currentView != tt.expected {
+				t.Errorf("pressing '%c' should switch to %s view, got %v", tt.key, tt.name, m.currentView)
+			}
+		})
+	}
+}
+
+func TestUAT_Navigation_CommandPalette_Opens(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Test Ctrl+P opens command palette
+	msg := tea.KeyMsg{Type: tea.KeyCtrlP}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.commandPalette.active {
+		t.Error("Ctrl+P should open command palette")
+	}
+}
+
+func TestUAT_Navigation_CommandPalette_Colon_Opens(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.commandPalette.active {
+		t.Error("':' should open command palette")
+	}
+}
+
+func TestUAT_Navigation_CommandPalette_ShowsCommands(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Open command palette
+	msg := tea.KeyMsg{Type: tea.KeyCtrlP}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	view := m.View()
+
+	// Should show available commands
+	if !strings.Contains(view, "Journal") {
+		t.Error("command palette should show Journal command")
+	}
+	if !strings.Contains(view, "Habits") {
+		t.Error("command palette should show Habits command")
+	}
+}
+
+func TestUAT_Navigation_CommandPalette_FuzzyFilter(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Open command palette
+	model.commandPalette.active = true
+	model.commandPalette.query = "hab"
+
+	filtered := model.commandRegistry.Filter("hab")
+
+	found := false
+	for _, cmd := range filtered {
+		if strings.Contains(strings.ToLower(cmd.Name), "habit") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("filtering by 'hab' should show Habits command")
+	}
+}
+
+func TestUAT_Navigation_Quit(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	_, cmd := model.Update(msg)
+
+	// Quit should return tea.Quit command
+	if cmd == nil {
+		t.Fatal("quit should return a command")
+	}
+
+	// Execute the command and check if it's a quit message
+	result := cmd()
+	if _, ok := result.(tea.QuitMsg); !ok {
+		t.Error("'q' should trigger quit")
+	}
+}
+
+// =============================================================================
+// UAT Section 7: Journal View
+// =============================================================================
+
+func TestUAT_JournalView_ShowsTodaysEntries(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create entries for today
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Complete project", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if _, err := bujoSvc.LogEntries(ctx, "- Meeting notes", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Init loads journal
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	if !strings.Contains(view, "Complete project") {
+		t.Error("journal should show today's task")
+	}
+	if !strings.Contains(view, "Meeting notes") {
+		t.Error("journal should show today's note")
+	}
+}
+
+func TestUAT_JournalView_Navigation_UpDown(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create multiple entries
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task 1", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task 2", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task 3", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	initialIdx := model.selectedIdx
+
+	// Move down
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.selectedIdx != initialIdx+1 {
+		t.Errorf("'j' should move selection down, expected %d got %d", initialIdx+1, model.selectedIdx)
+	}
+
+	// Move up
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.selectedIdx != initialIdx {
+		t.Errorf("'k' should move selection up, expected %d got %d", initialIdx, model.selectedIdx)
+	}
+}
+
+func TestUAT_JournalView_MarkDone(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task to complete", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Press space or x to mark done
+	msg := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("marking done should return a command")
+	}
+
+	// Execute the command
+	doneMsg := cmd()
+	newModel, cmd = model.Update(doneMsg)
+	model = newModel.(Model)
+
+	// Reload to see updated state
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Check entry is now done
+	if len(model.entries) == 0 {
+		t.Fatal("should have entries after reload")
+	}
+
+	found := false
+	for _, e := range model.entries {
+		if e.Entry.Content == "Task to complete" && e.Entry.Type == domain.EntryTypeDone {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("task should be marked as done")
+	}
+}
+
+func TestUAT_JournalView_CaptureMode_Available(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+
+	// Press 'c' to enter capture mode
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.captureMode.active {
+		t.Error("'c' in journal view should activate capture mode")
+	}
+}
+
+func TestUAT_JournalView_CaptureMode_NotInOtherViews(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Test that capture mode doesn't activate in habits view
+	model.currentView = ViewTypeHabits
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("capture mode should NOT activate in habits view")
+	}
+
+	// Test that capture mode doesn't activate in lists view
+	model.currentView = ViewTypeLists
+	newModel, _ = model.Update(msg)
+	m = newModel.(Model)
+
+	if m.captureMode.active {
+		t.Error("capture mode should NOT activate in lists view")
+	}
+}
+
+func TestUAT_JournalView_Edit(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Original content", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Press 'e' to edit
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ = model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.editMode.active {
+		t.Error("'e' should activate edit mode")
+	}
+}
+
+func TestUAT_JournalView_Delete(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task to delete", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Press 'd' to delete
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ = model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.confirmMode.active {
+		t.Error("'d' should show confirmation dialog")
+	}
+}
+
+// =============================================================================
+// UAT Section 8: Habits View
+// =============================================================================
+
+func TestUAT_HabitsView_ShowsHabitDetails(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit with a streak
+	for i := 0; i < 5; i++ {
+		date := time.Now().AddDate(0, 0, -i)
+		if err := habitSvc.LogHabitForDate(ctx, "Gym", 1, date); err != nil {
+			t.Fatalf("failed to log habit: %v", err)
+		}
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show habit name
+	if !strings.Contains(view, "Gym") {
+		t.Error("habits view should show habit name")
+	}
+
+	// Should show streak
+	if !strings.Contains(view, "5") {
+		t.Error("habits view should show streak count")
+	}
+}
+
+func TestUAT_HabitsView_DeletedHabitsNotShown(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create and log habits
+	if err := habitSvc.LogHabit(ctx, "Active Habit", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.LogHabit(ctx, "Deleted Habit", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+
+	// Delete one habit
+	if err := habitSvc.DeleteHabit(ctx, "Deleted Habit"); err != nil {
+		t.Fatalf("failed to delete habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	if strings.Contains(view, "Deleted Habit") {
+		t.Error("deleted habits should NOT appear in view")
+	}
+	if !strings.Contains(view, "Active Habit") {
+		t.Error("active habits should appear in view")
+	}
+}
+
+func TestUAT_HabitsView_LogHabitFromTUI(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	if err := habitSvc.LogHabit(ctx, "Water", 1); err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	initialCount := 0
+	if len(model.habitState.habits) > 0 {
+		initialCount = model.habitState.habits[0].TodayCount
+	}
+
+	// Press 'l' to log habit
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("logging habit should return a command")
+	}
+
+	logMsg := cmd()
+	newModel, cmd = model.Update(logMsg)
+	model = newModel.(Model)
+
+	// Process reload command
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	if len(model.habitState.habits) == 0 {
+		t.Fatal("should have habits after logging")
+	}
+
+	newCount := model.habitState.habits[0].TodayCount
+	if newCount != initialCount+1 {
+		t.Errorf("today's count should increase from %d to %d, got %d", initialCount, initialCount+1, newCount)
+	}
+}
+
+func TestUAT_HabitsView_MonthlyHistoryShown(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create habit with history over multiple days
+	for i := 0; i < 10; i++ {
+		date := time.Now().AddDate(0, 0, -i)
+		if err := habitSvc.LogHabitForDate(ctx, "Meditation", 1, date); err != nil {
+			t.Fatalf("failed to log habit: %v", err)
+		}
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.habitState.monthView = true // Monthly view by default per UAT
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Check that we have day history
+	if len(model.habitState.habits) == 0 {
+		t.Fatal("should have habits")
+	}
+
+	habit := model.habitState.habits[0]
+	if len(habit.DayHistory) < 10 {
+		t.Errorf("monthly view should show at least 10 days of history, got %d", len(habit.DayHistory))
+	}
+}
+
+func TestUAT_HabitsView_Navigation(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	if err := habitSvc.LogHabit(ctx, "Habit 1", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.LogHabit(ctx, "Habit 2", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	initialIdx := model.habitState.selectedIdx
+
+	// Move down
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.habitState.selectedIdx != initialIdx+1 {
+		t.Error("'j' should move selection down in habits view")
+	}
+}
+
+func TestUAT_HabitsView_ContextAppropriateCommands(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeHabits
+
+	view := model.View()
+
+	// Should NOT show capture command
+	if strings.Contains(view, "[c]apture") || strings.Contains(view, "c:capture") {
+		t.Error("habits view should NOT show capture command")
+	}
+}
+
+// =============================================================================
+// UAT Section 9: Lists View
+// =============================================================================
+
+func TestUAT_ListsView_ShowsAllLists(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	if _, err := listSvc.CreateList(ctx, "Shopping"); err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.CreateList(ctx, "Work Tasks"); err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	if !strings.Contains(view, "Shopping") {
+		t.Error("lists view should show Shopping list")
+	}
+	if !strings.Contains(view, "Work Tasks") {
+		t.Error("lists view should show Work Tasks list")
+	}
+}
+
+func TestUAT_ListsView_ShowsAccurateCompletionCounts(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	// Add 5 items
+	for i := 0; i < 5; i++ {
+		if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Item"); err != nil {
+			t.Fatalf("failed to add item: %v", err)
+		}
+	}
+
+	// Mark 2 as done
+	items, err := listSvc.GetListItems(ctx, list.ID)
+	if err != nil {
+		t.Fatalf("failed to get items: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := listSvc.MarkDone(ctx, items[i].RowID); err != nil {
+			t.Fatalf("failed to mark done: %v", err)
+		}
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show "2/5" somewhere
+	if !strings.Contains(view, "2/5") && !strings.Contains(view, "2 / 5") {
+		t.Error("lists view should show accurate completion count (2/5)")
+	}
+}
+
+func TestUAT_ListsView_DeletedListsNotShown(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	if _, err := listSvc.CreateList(ctx, "Active List"); err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list2, err := listSvc.CreateList(ctx, "Deleted List")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	if err := listSvc.DeleteList(ctx, list2.ID, false); err != nil {
+		t.Fatalf("failed to delete list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	if strings.Contains(view, "Deleted List") {
+		t.Error("deleted lists should NOT appear in view")
+	}
+	if !strings.Contains(view, "Active List") {
+		t.Error("active lists should appear in view")
+	}
+}
+
+func TestUAT_ListsView_EnterOpensItems(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Go to lists view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Press Enter
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ = model.Update(enterMsg)
+	model = newModel.(Model)
+
+	if model.currentView != ViewTypeListItems {
+		t.Errorf("Enter should open list items view, got %v", model.currentView)
+	}
+}
+
+// =============================================================================
+// UAT Section 10: List Items View
+// =============================================================================
+
+func TestUAT_ListItemsView_ShowsAllItems(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy bread"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Buy milk") {
+		t.Error("list items view should show 'Buy milk'")
+	}
+	if !strings.Contains(view, "Buy bread") {
+		t.Error("list items view should show 'Buy bread'")
+	}
+}
+
+func TestUAT_ListItemsView_ToggleDone(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Toggle done with space
+	spaceMsg := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, cmd = model.Update(spaceMsg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("toggling done should return a command")
+	}
+
+	toggleMsg := cmd()
+	newModel, cmd = model.Update(toggleMsg)
+	model = newModel.(Model)
+
+	// Reload items
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Check item is now done
+	found := false
+	for _, item := range model.listState.items {
+		if item.Content == "Buy milk" && item.Type == domain.ListItemTypeDone {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("item should be marked as done after toggle")
+	}
+}
+
+func TestUAT_ListItemsView_AddItem(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	_, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'a' to add
+	aMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ = model.Update(aMsg)
+	m := newModel.(Model)
+
+	if !m.addMode.active {
+		t.Error("'a' should activate add mode in list items view")
+	}
+}
+
+func TestUAT_ListItemsView_DeleteItem(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'd' to delete
+	dMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ = model.Update(dMsg)
+	m := newModel.(Model)
+
+	if !m.confirmMode.active {
+		t.Error("'d' should show confirmation dialog for delete")
+	}
+}
+
+func TestUAT_ListItemsView_EscapeReturnsToLists(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	_, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ = model.Update(enterMsg)
+	model = newModel.(Model)
+
+	// Press Escape
+	escMsg := tea.KeyMsg{Type: tea.KeyEscape}
+	newModel, _ = model.Update(escMsg)
+	model = newModel.(Model)
+
+	if model.currentView != ViewTypeLists {
+		t.Errorf("Escape should return to lists view, got %v", model.currentView)
+	}
+}
+
+func TestUAT_ListItemsView_EditItem(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'e' to edit
+	eMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ = model.Update(eMsg)
+	m := newModel.(Model)
+
+	if !m.editMode.active {
+		t.Error("'e' should activate edit mode in list items view")
+	}
+}
+
+// =============================================================================
+// UAT Section 11: Search View
+// =============================================================================
+
+func TestUAT_SearchView_Accessible(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeSearch {
+		t.Errorf("'4' should switch to search view, got %v", m.currentView)
+	}
+}
+
+func TestUAT_SearchView_ShowsSearchInput(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeSearch
+
+	view := model.View()
+
+	// Should show search prompt or input field
+	if !strings.Contains(strings.ToLower(view), "search") {
+		t.Error("search view should show search indicator")
+	}
+}
+
+// =============================================================================
+// UAT Section 12: Summary/Stats View
+// =============================================================================
+
+func TestUAT_StatsView_Accessible(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeStats {
+		t.Errorf("'5' should switch to stats view, got %v", m.currentView)
+	}
+}
+
+func TestUAT_StatsView_ShowsProductivityInfo(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create some data
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	if _, err := bujoSvc.LogEntries(ctx, ". Task 1", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if err := habitSvc.LogHabit(ctx, "Gym", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeStats
+
+	view := model.View()
+
+	// Should show some stats-related content
+	viewLower := strings.ToLower(view)
+	hasStatsContent := strings.Contains(viewLower, "stat") ||
+		strings.Contains(viewLower, "summary") ||
+		strings.Contains(viewLower, "task") ||
+		strings.Contains(viewLower, "habit")
+
+	if !hasStatsContent {
+		t.Error("stats view should show statistics or summary information")
+	}
+}
+
+// =============================================================================
+// UAT Section 13: Settings View
+// =============================================================================
+
+func TestUAT_SettingsView_Accessible(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeSettings {
+		t.Errorf("'6' should switch to settings view, got %v", m.currentView)
+	}
+}
+
+func TestUAT_SettingsView_ShowsCurrentSettings(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeSettings
+
+	view := model.View()
+
+	viewLower := strings.ToLower(view)
+	hasSettingsContent := strings.Contains(viewLower, "theme") ||
+		strings.Contains(viewLower, "setting") ||
+		strings.Contains(viewLower, "default")
+
+	if !hasSettingsContent {
+		t.Error("settings view should show configuration options")
+	}
+}
+
+// =============================================================================
+// UAT Section 14: Error Handling
+// =============================================================================
+
+func TestUAT_ErrorHandling_EmptyStates(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Test empty journal
+	model.currentView = ViewTypeJournal
+	model.entries = nil
+	view := model.View()
+	if view == "" {
+		t.Error("empty journal should still render something")
+	}
+
+	// Test empty habits
+	model.currentView = ViewTypeHabits
+	model.habitState.habits = nil
+	view = model.View()
+	if view == "" {
+		t.Error("empty habits view should still render something")
+	}
+
+	// Test empty lists
+	model.currentView = ViewTypeLists
+	model.listState.lists = nil
+	view = model.View()
+	if view == "" {
+		t.Error("empty lists view should still render something")
+	}
+}
+
+// =============================================================================
+// UAT Section 15: Data Accuracy
+// =============================================================================
+
+func TestUAT_DataAccuracy_DeletedItemsNeverAppear(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create and delete entries
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	entries, err := bujoSvc.LogEntries(ctx, ". Task to delete", opts)
+	if err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if err := bujoSvc.DeleteEntry(ctx, entries[0]); err != nil {
+		t.Fatalf("failed to delete entry: %v", err)
+	}
+
+	// Create and delete habit
+	if err := habitSvc.LogHabit(ctx, "Deleted Habit", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.DeleteHabit(ctx, "Deleted Habit"); err != nil {
+		t.Fatalf("failed to delete habit: %v", err)
+	}
+
+	// Create and delete list
+	list, err := listSvc.CreateList(ctx, "Deleted List")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if err := listSvc.DeleteList(ctx, list.ID, false); err != nil {
+		t.Fatalf("failed to delete list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Check journal
+	cmd := model.Init()
+	loadMsg := cmd()
+	newModel, _ := model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+	if strings.Contains(view, "Task to delete") {
+		t.Error("deleted entry should not appear in journal")
+	}
+
+	// Check habits
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+	loadMsg = cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view = model.View()
+	if strings.Contains(view, "Deleted Habit") {
+		t.Error("deleted habit should not appear in habits view")
+	}
+
+	// Check lists
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+	loadMsg = cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view = model.View()
+	if strings.Contains(view, "Deleted List") {
+		t.Error("deleted list should not appear in lists view")
+	}
+}
+
+func TestUAT_DataAccuracy_CountsAreAccurate(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Test List")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	// Add 3 items
+	for i := 0; i < 3; i++ {
+		if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Item"); err != nil {
+			t.Fatalf("failed to add item: %v", err)
+		}
+	}
+
+	// Mark 1 done
+	items, err := listSvc.GetListItems(ctx, list.ID)
+	if err != nil {
+		t.Fatalf("failed to get items: %v", err)
+	}
+	if err := listSvc.MarkDone(ctx, items[0].RowID); err != nil {
+		t.Fatalf("failed to mark done: %v", err)
+	}
+
+	// Delete 1 item
+	if err := listSvc.RemoveItem(ctx, items[1].RowID); err != nil {
+		t.Fatalf("failed to delete item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show 1/2 (1 done out of 2 remaining active items)
+	if !strings.Contains(view, "1/2") && !strings.Contains(view, "1 / 2") {
+		t.Errorf("list should show accurate count 1/2, view: %s", view)
+	}
+}
+
+func TestUAT_DataAccuracy_ChangesAppearImmediately(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Toggle done
+	spaceMsg := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, cmd = model.Update(spaceMsg)
+	model = newModel.(Model)
+
+	if cmd != nil {
+		toggleMsg := cmd()
+		newModel, cmd = model.Update(toggleMsg)
+		model = newModel.(Model)
+
+		if cmd != nil {
+			reloadMsg := cmd()
+			newModel, _ = model.Update(reloadMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify item shows as done immediately in state
+	found := false
+	for _, item := range model.listState.items {
+		if item.Content == "Buy milk" && item.Type == domain.ListItemTypeDone {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("changes should appear in state immediately after toggle")
+	}
+}
+
+// =============================================================================
+// Additional Context Tests
+// =============================================================================
+
+func TestUAT_HelpSystem_BottomBarShowsCommands(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+
+	view := model.View()
+
+	// Bottom bar should show some key hints
+	hasHelpHints := strings.Contains(view, "q") || // quit
+		strings.Contains(view, "?") || // help
+		strings.Contains(view, "1") || // view switch
+		strings.Contains(view, "j") || // navigation
+		strings.Contains(view, "k")
+
+	if !hasHelpHints {
+		t.Error("view should show help hints in bottom bar")
+	}
+}

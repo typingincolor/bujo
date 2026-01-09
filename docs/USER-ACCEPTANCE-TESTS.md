@@ -1,6 +1,8 @@
 # User Acceptance Tests
 
-Comprehensive acceptance tests for bujo in Given/When/Then format covering both CLI and TUI interfaces.
+User acceptance tests for bujo defining expected behavior from a user's perspective.
+
+These tests describe **what should happen**, not implementation details. They should fail when bugs exist.
 
 ---
 
@@ -8,1216 +10,767 @@ Comprehensive acceptance tests for bujo in Given/When/Then format covering both 
 
 ### 1. Entry Management
 
-#### 1.1 Adding Entries
+#### Adding Entries
 
 ```gherkin
-Scenario: Add a single task
-  Given the user has bujo installed
-  When the user runs `bujo add ". Buy groceries"`
-  Then the entry ID is printed to stdout
-  And the message "Added 1 entry(s)" is printed to stderr
-  And a task with content "Buy groceries" exists for today
+Scenario: Add a task to today's journal
+  Given I want to record a task
+  When I add ". Buy groceries"
+  Then a task "Buy groceries" appears in today's journal
 
 Scenario: Add multiple entries at once
-  Given the user has bujo installed
-  When the user runs `bujo add ". Task one" "- Note one" "o Event one"`
-  Then three entry IDs are printed to stdout
-  And the message "Added 3 entry(s)" is printed to stderr
-  And a task, note, and event are created for today
+  Given I have several things to log
+  When I add ". Task one" "- Note one" "o Event one"
+  Then all three entries appear in today's journal
+  And each has the correct type (task, note, event)
 
 Scenario: Add entries from a file
-  Given the user has a file "tasks.txt" containing:
-    """
-    . Task from file
-    - Note from file
-    """
-  When the user runs `bujo add --file tasks.txt`
-  Then two entries are created
-  And the message "Added 2 entry(s)" is printed to stderr
+  Given I have a file with entries to import
+  When I add entries from that file
+  Then all entries from the file appear in my journal
 
-Scenario: Add entries with location context
-  Given the user has bujo installed
-  When the user runs `bujo add --at "Home Office" ". Work on project"`
-  Then a task is created with location "Home Office"
+Scenario: Add entries with a location
+  Given I want to record where I'm working
+  When I add an entry with location "Home Office"
+  Then the entry is associated with that location
 
-Scenario: Add entries for a past date
-  Given the user has bujo installed
-  When the user runs `bujo add --date yesterday ". Forgot to log"`
-  Then a task is created for yesterday's date
-
-Scenario: Add entries via stdin pipe
-  Given the user has bujo installed
-  When the user runs `echo ". Piped task" | bujo add`
-  Then a task with content "Piped task" is created
+Scenario: Backfill entries for a past date
+  Given I forgot to log something yesterday
+  When I add an entry for yesterday
+  Then the entry appears under yesterday's date
 
 Scenario: Add hierarchical entries
-  Given the user has bujo installed
-  When the user runs:
-    """
-    bujo add ". Parent task
-      - Child note
-      - Another child"
-    """
-  Then three entries are created
-  And the child entries have the parent task as their parent
+  Given I have a task with sub-items
+  When I add a parent entry with indented children
+  Then the entries maintain their parent-child relationship
+  And children appear nested under their parent
 ```
 
-#### 1.2 Viewing Entries
+#### Viewing Entries
 
 ```gherkin
-Scenario: View today's entries
-  Given the user has entries for today
-  When the user runs `bujo today`
-  Then today's entries are displayed
-  And overdue tasks are shown in the overdue section
-  And the current location is shown if set
+Scenario: See today's journal
+  Given I have entries for today
+  When I view today's journal
+  Then I see all of today's entries
+  And I see any overdue tasks from previous days
+  And I see my current location if set
 
-Scenario: List entries for last 7 days
-  Given the user has entries for the past week
-  When the user runs `bujo ls`
-  Then entries for the last 7 days are displayed
-  And each day's entries are grouped under a date header
+Scenario: See recent entries
+  Given I have entries from the past week
+  When I list recent entries
+  Then I see entries grouped by date
+  And I can see which tasks are done and which are pending
 
-Scenario: List entries for custom date range
-  Given the user has entries from January 1 to January 15
-  When the user runs `bujo ls --from 2026-01-01 --to 2026-01-07`
-  Then only entries from January 1 to January 7 are displayed
+Scenario: See entries for a date range
+  Given I want to review a specific period
+  When I list entries from January 1 to January 7
+  Then I see only entries from that date range
 
-Scenario: View entry with context
-  Given an entry with ID 42 has a parent and children
-  When the user runs `bujo view 42`
-  Then the entry is displayed with its parent and siblings
-  And the requested entry is highlighted
-
-Scenario: View entry with ancestor context
-  Given an entry with ID 42 has a grandparent
-  When the user runs `bujo view 42 --up 1`
-  Then the grandparent context is also displayed
+Scenario: See an entry with its context
+  Given an entry has a parent and children
+  When I view that entry
+  Then I see it with its parent and siblings for context
 ```
 
-#### 1.3 Modifying Entries
+#### Modifying Entries
 
 ```gherkin
-Scenario: Mark entry as done
-  Given a task with ID 42 exists
-  When the user runs `bujo done 42`
-  Then the entry type changes to "done"
-  And the message "Marked entry 42 as done" is displayed
+Scenario: Mark a task as done
+  Given I have completed a task
+  When I mark it as done
+  Then it shows as completed with a checkmark
+  And it remains in my journal for that day
 
-Scenario: Undo completion
-  Given a completed entry with ID 42 exists
-  When the user runs `bujo undo 42`
-  Then the entry type changes back to "task"
-  And the message "Marked entry 42 as incomplete" is displayed
+Scenario: Undo marking a task as done
+  Given I accidentally marked a task done
+  When I undo it
+  Then it returns to an incomplete task
 
-Scenario: Edit entry content
-  Given an entry with ID 42 and content "Old content"
-  When the user runs `bujo edit 42 "New content"`
-  Then the entry content is updated to "New content"
-  And the message "Updated entry #42" is displayed
+Scenario: Edit an entry's content
+  Given I made a typo in an entry
+  When I edit the entry with corrected text
+  Then the entry shows the updated content
 
-Scenario: Migrate task to future date
-  Given a task with ID 42 scheduled for today
-  When the user runs `bujo migrate 42 --to tomorrow`
-  Then the original entry is marked as migrated
-  And a new task is created for tomorrow
-  And the message shows the new entry ID
+Scenario: Migrate a task to a future date
+  Given I can't complete a task today
+  When I migrate it to tomorrow
+  Then the original shows as migrated
+  And a new task appears on the future date
+
+Scenario: Strikethrough/cancel an entry
+  Given I no longer need to do a task
+  When I cancel it
+  Then it shows as cancelled (strikethrough)
+  And it remains visible but clearly not active
+
+Scenario: Change an entry's type
+  Given I created a task that should be a note
+  When I change its type to note
+  Then it displays as a note instead of a task
 ```
 
-#### 1.4 Deleting Entries
+#### Deleting Entries
 
 ```gherkin
-Scenario: Delete entry without children
-  Given an entry with ID 42 has no children
-  When the user runs `bujo delete 42`
-  Then the entry is soft-deleted
-  And the message "Deleted entry #42" is displayed
+Scenario: Delete an entry
+  Given I want to remove an entry
+  When I delete it
+  Then it no longer appears in my journal
 
-Scenario: Delete entry with children - cascade
-  Given an entry with ID 42 has child entries
-  When the user runs `bujo delete 42`
-  And the user selects option 1 "Delete entry and all children"
-  Then the entry and all children are soft-deleted
+Scenario: Delete an entry with children
+  Given an entry has child entries
+  When I delete the parent
+  Then I'm asked what to do with children
+  And I can choose to delete all or keep children
 
-Scenario: Delete entry with children - reparent
-  Given an entry with ID 42 has child entries and a parent
-  When the user runs `bujo delete 42`
-  And the user selects option 2 "Delete entry and reparent children"
-  Then the entry is soft-deleted
-  And children are moved to the grandparent
+Scenario: Recover a deleted entry
+  Given I accidentally deleted an entry
+  When I view deleted entries and restore it
+  Then it reappears in my journal
 
-Scenario: Force delete without prompt
-  Given an entry with ID 42 has children
-  When the user runs `bujo delete 42 --force`
-  Then the entry and children are deleted without prompting
-
-Scenario: View deleted entries
-  Given entries have been soft-deleted
-  When the user runs `bujo deleted`
-  Then a list of deleted entries is displayed
-  And each entry shows its entity ID for restoration
-
-Scenario: Restore deleted entry
-  Given an entry with entity ID "abc123" was deleted
-  When the user runs `bujo restore abc123`
-  Then the entry is restored with a new internal ID
-  And the message "Restored entry #<new-id>" is displayed
+Scenario: See deleted entries
+  Given I have deleted some entries
+  When I view deleted entries
+  Then I see a list of recoverable entries
 ```
 
 ---
 
 ### 2. Habit Tracking
 
-#### 2.1 Viewing Habits
+#### Viewing Habits
 
 ```gherkin
-Scenario: View habit tracker
-  Given habits exist with logged completions
-  When the user runs `bujo habit`
-  Then a 7-day sparkline view is displayed
-  And each habit shows name, streak, and completion rate
+Scenario: See my habit tracker
+  Given I have habits I'm tracking
+  When I view my habits
+  Then I see each habit with its name
+  And I see my current streak for each
+  And I see my progress toward the goal
+  And I see today's completion count
+  And I see a monthly history
 
-Scenario: View habit tracker monthly
-  Given habits exist with logged completions
-  When the user runs `bujo habit --month`
-  Then a 30-day calendar view is displayed
-
-Scenario: Inspect habit details
-  Given a habit "Gym" exists with logs
-  When the user runs `bujo habit inspect Gym`
-  Then detailed habit information is displayed
-  And individual log entries are shown
-
-Scenario: Inspect habit by ID
-  Given a habit with ID 1 exists
-  When the user runs `bujo habit inspect #1`
-  Then the habit details are displayed
-
-Scenario: Inspect habit with date range
-  Given a habit "Gym" exists
-  When the user runs `bujo habit inspect Gym --from "last month" --to today`
-  Then only logs within the date range are shown
+Scenario: See detailed habit history
+  Given I want to review a specific habit
+  When I inspect that habit
+  Then I see its complete log history
+  And I see streak and completion statistics
 ```
 
-#### 2.2 Logging Habits
+#### Logging Habits
 
 ```gherkin
-Scenario: Log existing habit
-  Given a habit "Gym" exists
-  When the user runs `bujo habit log Gym`
-  Then a log entry is created for today with count 1
-  And the message "Logged: Gym" is displayed
+Scenario: Log a habit completion
+  Given I completed a habit
+  When I log it
+  Then today's count increases
+  And my streak updates if applicable
 
-Scenario: Log habit with count
-  Given a habit "Water" exists
-  When the user runs `bujo habit log Water 8`
-  Then a log entry is created with count 8
-  And the message "Logged: Water (x8)" is displayed
+Scenario: Log multiple completions
+  Given I drank 3 glasses of water
+  When I log Water with count 3
+  Then today's count shows 3
 
-Scenario: Log new habit with confirmation
-  Given no habit "Meditation" exists
-  When the user runs `bujo habit log Meditation`
-  And the user confirms "y" to create the habit
-  Then the habit is created
-  And a log entry is created
+Scenario: Log a habit for a past date
+  Given I forgot to log yesterday's workout
+  When I log Gym for yesterday
+  Then it appears in yesterday's history
 
-Scenario: Log new habit auto-create
-  Given no habit "Running" exists
-  When the user runs `bujo habit log Running --yes`
-  Then the habit is created without prompting
-  And a log entry is created
-
-Scenario: Log habit for past date
-  Given a habit "Gym" exists
-  When the user runs `bujo habit log Gym --date yesterday`
-  Then a log entry is created for yesterday
-  And the message includes "for yesterday"
-
-Scenario: Log habit by ID
-  Given a habit with ID 1 exists
-  When the user runs `bujo habit log #1`
-  Then a log entry is created for habit ID 1
+Scenario: Create a new habit by logging it
+  Given I want to track a new habit
+  When I log a habit that doesn't exist
+  Then I'm asked if I want to create it
+  And it's created when I confirm
 ```
 
-#### 2.3 Managing Habits
+#### Managing Habits
 
 ```gherkin
-Scenario: Rename habit
-  Given a habit "Excercise" exists (misspelled)
-  When the user runs `bujo habit rename Excercise Exercise`
-  Then the habit name is updated to "Exercise"
+Scenario: Rename a habit
+  Given I misspelled a habit name
+  When I rename it
+  Then the new name appears everywhere
+  And my history is preserved
 
-Scenario: Set habit goal
-  Given a habit "Water" exists with goal 1
-  When the user runs `bujo habit set-goal Water 8`
-  Then the habit goal is updated to 8 per day
+Scenario: Set a daily goal for a habit
+  Given I want to drink 8 glasses of water daily
+  When I set Water's goal to 8
+  Then my progress shows against that goal
 
-Scenario: Delete habit
-  Given a habit "OldHabit" exists
-  When the user runs `bujo habit delete OldHabit`
-  And the user confirms deletion
-  Then the habit is deleted
+Scenario: Delete a habit
+  Given I no longer want to track a habit
+  When I delete it
+  Then it no longer appears in my tracker
 
-Scenario: Undo last habit log
-  Given a habit "Gym" has a log for today
-  When the user runs `bujo habit undo Gym`
-  Then the most recent log is deleted
-  And the message confirms the undo
-
-Scenario: Delete specific habit log
-  Given a habit log with ID 42 exists
-  When the user runs `bujo habit delete-log 42`
-  Then the specific log entry is deleted
+Scenario: Undo a habit log
+  Given I accidentally logged a habit
+  When I undo the last log
+  Then today's count decreases
 ```
 
 ---
 
 ### 3. List Management
 
-#### 3.1 Viewing Lists
+#### Viewing Lists
 
 ```gherkin
-Scenario: View all lists
-  Given lists "Shopping" and "Work Tasks" exist
-  When the user runs `bujo list`
-  Then both lists are displayed
-  And each list shows completion progress (e.g., "3/5 done")
+Scenario: See all my lists
+  Given I have multiple lists
+  When I view my lists
+  Then I see each list's name
+  And I see completion progress (e.g., "3/5 done")
 
-Scenario: Show list items
-  Given a list "Shopping" exists with items
-  When the user runs `bujo list show Shopping`
-  Then all items in the list are displayed
-  And completed items are marked appropriately
+Scenario: See items in a list
+  Given I have a shopping list
+  When I view that list
+  Then I see all items in the list
+  And I can see which are done and which are pending
 ```
 
-#### 3.2 Creating and Managing Lists
+#### Managing Lists
 
 ```gherkin
-Scenario: Create new list
-  Given no list "Groceries" exists
-  When the user runs `bujo list create Groceries`
-  Then a new list is created
-  And the message "Created list #<id>: Groceries" is displayed
+Scenario: Create a new list
+  Given I want a new shopping list
+  When I create a list named "Shopping"
+  Then it appears in my lists
 
-Scenario: Create list with spaces in name
-  Given no list "Shopping List" exists
-  When the user runs `bujo list create "Shopping List"`
-  Then a list named "Shopping List" is created
+Scenario: Rename a list
+  Given I want to rename a list
+  When I rename "Shopping" to "Groceries"
+  Then it shows the new name
 
-Scenario: Rename list
-  Given a list "Shopping" exists
-  When the user runs `bujo list rename Shopping Groceries`
-  Then the list name is updated to "Groceries"
-
-Scenario: Delete list
-  Given a list "OldList" exists
-  When the user runs `bujo list delete OldList`
-  And the user confirms deletion
-  Then the list and all its items are deleted
+Scenario: Delete a list
+  Given I no longer need a list
+  When I delete it
+  Then it no longer appears
+  And all its items are removed
 ```
 
-#### 3.3 Managing List Items
+#### Managing List Items
 
 ```gherkin
-Scenario: Add item to list
-  Given a list "Shopping" exists
-  When the user runs `bujo list add Shopping "Buy milk"`
-  Then a task item is added to the list
-  And the item ID is printed
+Scenario: Add an item to a list
+  Given I need to buy milk
+  When I add "Milk" to my Shopping list
+  Then it appears in that list
 
-Scenario: Add item with type prefix
-  Given a list "Notes" exists
-  When the user runs `bujo list add Notes "- Important info"`
-  Then a note item is added to the list
+Scenario: Mark a list item as done
+  Given I bought the milk
+  When I mark it done
+  Then it shows as completed
 
-Scenario: Add item by list ID
-  Given a list with ID 1 exists
-  When the user runs `bujo list add #1 "Item content"`
-  Then an item is added to list ID 1
+Scenario: Unmark a completed item
+  Given I marked something done by mistake
+  When I toggle it back
+  Then it shows as incomplete again
 
-Scenario: Mark list item done
-  Given a list item with ID 42 exists
-  When the user runs `bujo list done 42`
-  Then the item is marked as complete
+Scenario: Remove an item from a list
+  Given I no longer need an item
+  When I remove it
+  Then it no longer appears in the list
 
-Scenario: Undo list item completion
-  Given a completed list item with ID 42 exists
-  When the user runs `bujo list undo 42`
-  Then the item is marked as incomplete
-
-Scenario: Remove item from list
-  Given a list item with ID 42 exists
-  When the user runs `bujo list remove 42`
-  Then the item is removed from the list
-
-Scenario: Move item between lists
-  Given list item ID 42 is in list "Shopping"
-  And list "Groceries" exists
-  When the user runs `bujo list move 42 Groceries`
-  Then the item is moved to "Groceries"
+Scenario: Move an item to another list
+  Given an item is in the wrong list
+  When I move it to the correct list
+  Then it appears in the new list
+  And is removed from the old list
 ```
 
 ---
 
 ### 4. Day Context
 
-#### 4.1 Work Location
-
 ```gherkin
-Scenario: Set work location
-  Given today has no location set
-  When the user runs `bujo work set "Home Office"`
-  Then today's location is set to "Home Office"
+Scenario: Set my work location
+  Given I want to track where I'm working
+  When I set today's location to "Home Office"
+  Then it appears in today's journal view
 
-Scenario: Set location for past date
-  Given yesterday has no location set
-  When the user runs `bujo work set "Client Site" --date yesterday`
-  Then yesterday's location is set to "Client Site"
+Scenario: Record my mood
+  Given I want to track how I'm feeling
+  When I set today's mood
+  Then it's recorded for that day
 
-Scenario: View work location
-  Given today's location is "Home Office"
-  When the user runs `bujo work inspect`
-  Then "Home Office" is displayed
-
-Scenario: Clear work location
-  Given today has a location set
-  When the user runs `bujo work clear`
-  Then today's location is cleared
-```
-
-#### 4.2 Mood Tracking
-
-```gherkin
-Scenario: Set mood
-  Given today has no mood set
-  When the user runs `bujo mood set "Feeling great"`
-  Then today's mood is recorded
-
-Scenario: View mood
-  Given today's mood is "Feeling great"
-  When the user runs `bujo mood inspect`
-  Then "Feeling great" is displayed
-
-Scenario: Clear mood
-  Given today has a mood set
-  When the user runs `bujo mood clear`
-  Then today's mood is cleared
-```
-
-#### 4.3 Weather
-
-```gherkin
-Scenario: Set weather
-  Given today has no weather set
-  When the user runs `bujo weather set "Sunny, 22C"`
-  Then today's weather is recorded
-
-Scenario: View weather
-  Given today's weather is "Sunny, 22C"
-  When the user runs `bujo weather inspect`
-  Then "Sunny, 22C" is displayed
+Scenario: Record the weather
+  Given I want to note the weather
+  When I set today's weather to "Sunny, 22C"
+  Then it's recorded for that day
 ```
 
 ---
 
-### 5. Backup Management
+### 5. Backup
 
 ```gherkin
-Scenario: List backups
-  Given backups exist in ~/.bujo/backups/
-  When the user runs `bujo backup`
-  Then all backups are listed with filename, date, and size
+Scenario: See my backups
+  Given backups have been created
+  When I list backups
+  Then I see each backup with its date and size
 
-Scenario: Create manual backup
-  Given the database has data
-  When the user runs `bujo backup create`
+Scenario: Create a backup manually
+  Given I want to ensure my data is safe
+  When I create a backup
   Then a new backup file is created
-  And the backup path is displayed
 
-Scenario: Automatic backup on startup
-  Given no backup exists within 7 days
-  When the user runs any bujo command
-  Then a backup is automatically created
-  And "Creating backup..." is shown on stderr
-
-Scenario: Verify backup integrity
-  Given a backup file exists
-  When the user runs `bujo backup verify <backup-file>`
-  Then the backup is validated
-  And integrity status is reported
-```
-
----
-
-### 6. Utility Commands
-
-```gherkin
-Scenario: View tomorrow's entries
-  Given entries are scheduled for tomorrow
-  When the user runs `bujo tomorrow`
-  Then tomorrow's entries are displayed
-
-Scenario: View next 7 days
-  Given entries exist for the coming week
-  When the user runs `bujo next`
-  Then entries for the next 7 days are displayed
-
-Scenario: View open tasks
-  Given open tasks exist across multiple dates
-  When the user runs `bujo tasks`
-  Then all incomplete tasks are listed
-
-Scenario: View history
-  Given entries exist from past dates
-  When the user runs `bujo history`
-  Then historical entries are displayed
-
-Scenario: View archived entries
-  Given archived entries exist
-  When the user runs `bujo archive`
-  Then archived entries are displayed
-
-Scenario: Check version
-  Given bujo is installed
-  When the user runs `bujo version`
-  Then the version, commit, and build date are displayed
+Scenario: Automatic backup
+  Given I haven't backed up recently
+  When I use bujo
+  Then a backup is created automatically
 ```
 
 ---
 
 ## TUI Tests
 
-### 7. Application Startup
+### 6. General Navigation
 
 ```gherkin
-Scenario: Launch TUI
-  Given the user has bujo installed
-  When the user runs `bujo tui`
-  Then the TUI application starts
-  And the journal view is displayed by default
-  And today's entries are loaded
+Scenario: Navigate between views using number keys
+  Given I'm in the Journal view
+  When I press the key for Habits
+  Then I see the Habits view
 
-Scenario: Launch TUI with theme
-  Given a config file with theme "dark" exists
-  When the user runs `bujo tui`
-  Then the TUI uses the dark theme colors
+Scenario: Navigate between views using the menu
+  Given I want to switch views
+  When I open the menu and select Lists
+  Then I see the Lists view
 
-Scenario: Launch TUI with default view
-  Given a config file with default_view "habits" exists
-  When the user runs `bujo tui`
-  Then the habits view is displayed by default
+Scenario: Open the command palette
+  Given I want to find a command
+  When I open the command palette
+  Then I see a searchable list of all commands
+  And I can type to filter commands
+
+Scenario: Execute a command from the palette
+  Given the command palette is open
+  When I select a command
+  Then that command is executed
+
+Scenario: See available keyboard shortcuts
+  Given I want to know what I can do
+  Then I see major commands in the bottom bar
+  When I toggle full help
+  Then I see all available shortcuts
+
+Scenario: Quit the application
+  Given I'm done using bujo
+  When I quit
+  Then the application closes cleanly
 ```
 
 ---
 
-### 8. Journal View
+### 7. Journal View
 
-#### 8.1 Navigation
+#### Viewing Entries
 
 ```gherkin
-Scenario: Navigate down through entries
-  Given the journal view is active with multiple entries
-  When the user presses 'j' or Down arrow
-  Then the selection moves to the next entry
-  And the cursor indicator moves down
+Scenario: See today's entries when opening TUI
+  Given I have entries for today
+  When I open the TUI
+  Then I see today's entries in the Journal view
+  And I see any overdue tasks
 
-Scenario: Navigate up through entries
-  Given the selection is on the second entry
-  When the user presses 'k' or Up arrow
-  Then the selection moves to the previous entry
+Scenario: Navigate through entries
+  Given there are multiple entries
+  When I move up and down
+  Then I can select different entries
+  And the selected entry is highlighted
 
-Scenario: Jump to top
-  Given the selection is in the middle of the list
-  When the user presses 'g'
-  Then the selection jumps to the first entry
-
-Scenario: Jump to bottom
-  Given the selection is in the middle of the list
-  When the user presses 'G'
-  Then the selection jumps to the last entry
-
-Scenario: Scroll maintains visibility
+Scenario: Scroll through many entries
   Given there are more entries than fit on screen
-  When the user navigates past the visible area
-  Then the view scrolls to keep the selection visible
+  When I navigate past the visible area
+  Then the view scrolls to keep my selection visible
 ```
 
-#### 8.2 View Modes
+#### Adding Entries
 
 ```gherkin
-Scenario: Toggle between day and week view
-  Given the journal is in day view
-  When the user presses 'w'
-  Then the view switches to week view
-  And entries for 7 days are displayed
+Scenario: Add a quick inline entry
+  Given I want to add a single entry
+  When I add an entry inline
+  Then I can type the entry content
+  And it's added to today's journal when I confirm
 
-Scenario: Toggle back to day view
-  Given the journal is in week view
-  When the user presses 'w'
-  Then the view switches to day view
-  And only today's entries are displayed
+Scenario: Add multiple entries via capture mode
+  Given I have several things to log
+  When I enter capture mode
+  Then I see a multi-line editor
+  When I type multiple entries with hierarchy
+  Then I see a preview of parsed entries
+  When I save
+  Then all entries are added to my journal
 
-Scenario: Go to specific date
-  Given the journal view is active
-  When the user presses '/'
-  And enters "2026-01-15"
-  Then the view navigates to January 15, 2026
-  And entries for that date are displayed
+Scenario: Capture mode shows syntax errors
+  Given I'm in capture mode
+  When I type invalid syntax
+  Then I see an error indicator
+  And I see what's wrong
+
+Scenario: Resume a draft in capture mode
+  Given I started capture mode but didn't save
+  When I return to capture mode
+  Then my previous draft is restored
 ```
 
-#### 8.3 Entry Actions
+#### Modifying Entries
 
 ```gherkin
-Scenario: Mark entry as done
-  Given a task entry is selected
-  When the user presses Space
-  Then the entry is marked as done
-  And the entry symbol changes to checkmark
-  And the entry appears green
+Scenario: Mark selected entry as done
+  Given I have a task selected
+  When I mark it done
+  Then it shows as completed immediately
 
-Scenario: Delete entry with confirmation
-  Given an entry is selected
-  When the user presses 'd'
-  Then a confirmation prompt appears
-  When the user presses 'y'
-  Then the entry is deleted
-  And the entry list is refreshed
+Scenario: Edit selected entry
+  Given I have an entry selected
+  When I edit it
+  Then I can modify the content
+  And the change is saved when I confirm
 
-Scenario: Cancel delete
-  Given the delete confirmation is shown
-  When the user presses 'n' or Esc
-  Then the deletion is cancelled
-  And the entry remains
+Scenario: Delete selected entry
+  Given I have an entry selected
+  When I delete it
+  Then I'm asked to confirm
+  When I confirm
+  Then it's removed from the view
 
-Scenario: Edit entry inline
-  Given an entry is selected
-  When the user presses 'e'
-  Then edit mode activates
-  And the entry content is editable
-  When the user modifies content and presses Enter
-  Then the entry is updated
+Scenario: Migrate selected task
+  Given I have a task selected
+  When I migrate it
+  Then I can enter a target date
+  And the task shows as migrated
+  And a new task appears on the target date
 
-Scenario: Add sibling entry
-  Given an entry is selected
-  When the user presses 'a'
-  Then add mode activates
-  When the user types ". New task" and presses Enter
-  Then a new task is created at the same level
+Scenario: Cancel/strikethrough selected entry
+  Given I have an entry selected
+  When I cancel it
+  Then it shows as struck through
 
-Scenario: Add child entry
-  Given an entry is selected
-  When the user presses 'A'
-  Then add mode activates for child entry
-  When the user types "- Child note" and presses Enter
-  Then a child note is created under the selected entry
+Scenario: Change entry type
+  Given I have an entry selected
+  When I change its type
+  Then I can select the new type
+  And the entry's symbol changes accordingly
+```
 
-Scenario: Add root entry
-  Given the journal view is active
-  When the user presses 'r'
-  Then add mode activates for root entry
-  When the user types content and presses Enter
-  Then a root-level entry is created for the current date
+#### View Context
 
-Scenario: Migrate entry
-  Given a task is selected
-  When the user presses 'm'
-  Then migrate mode activates
-  When the user enters "tomorrow"
-  Then the task is migrated to tomorrow
-  And the original shows migration symbol
+```gherkin
+Scenario: Capture mode is only available in Journal
+  Given I'm in the Journal view
+  Then capture mode is available
+  When I switch to Habits or Lists view
+  Then capture mode is not available
 ```
 
 ---
 
-### 9. Capture Mode
+### 8. Habits View
+
+#### Viewing Habits
 
 ```gherkin
-Scenario: Enter capture mode
-  Given the journal view is active
-  When the user presses 'c'
-  Then capture mode activates
-  And a multi-line editor appears
+Scenario: See all my habits
+  Given I have habits being tracked
+  When I view the Habits view
+  Then I see each habit with:
+    | name           |
+    | current streak |
+    | today's count  |
+    | progress       |
+    | monthly history|
 
-Scenario: Type entries in capture mode
-  Given capture mode is active
-  When the user types:
-    """
-    . Task one
-    - Note here
-      - Sub-note
-    """
-  Then a real-time preview shows parsed entries
-  And indentation creates hierarchy
+Scenario: Only active habits are shown
+  Given I deleted a habit
+  When I view the Habits view
+  Then the deleted habit does not appear
 
-Scenario: Save capture content
-  Given capture mode has content
-  When the user presses Ctrl+S
-  Then all entries are saved
-  And capture mode closes
-  And the journal view refreshes
+Scenario: Habit data is accurate
+  Given I logged "Gym" for the last 5 consecutive days
+  When I view the Habits view
+  Then Gym shows a streak of 5
+  And the monthly history shows those 5 days as completed
+```
 
-Scenario: Cancel capture with confirmation
-  Given capture mode has content
-  When the user presses Escape
-  Then a confirmation prompt appears "Discard changes?"
-  When the user presses 'y'
-  Then capture mode closes without saving
+#### Logging Habits
 
-Scenario: Resume capture draft
-  Given capture mode was exited with unsaved content
-  When the user presses 'c' to enter capture mode
-  Then the previous draft content is restored
+```gherkin
+Scenario: Log a habit from the TUI
+  Given I have a habit selected
+  When I log it
+  Then today's count increases by 1
+  And the display updates immediately
 
-Scenario: Show capture mode help
-  Given capture mode is active
-  When the user presses F1
-  Then the help overlay is displayed
-  And available keybindings are shown
+Scenario: Cannot log deleted habits
+  Given a habit was deleted
+  Then it does not appear in the view
+  And I cannot log it
+```
 
-Scenario: Detect syntax errors
-  Given capture mode is active
-  When the user types "Missing symbol"
-  Then an error indicator appears
-  And the error message explains the issue
+#### Navigation
 
-Scenario: Emacs navigation in capture mode
-  Given capture mode is active with text
-  When the user presses Ctrl+A
-  Then the cursor moves to beginning of line
-  When the user presses Ctrl+E
-  Then the cursor moves to end of line
-  When the user presses Ctrl+U
-  Then text from cursor to line start is deleted
+```gherkin
+Scenario: Navigate between habits
+  Given there are multiple habits
+  When I move up and down
+  Then I can select different habits
+```
+
+#### Context-Appropriate Options
+
+```gherkin
+Scenario: Only habit-relevant commands are shown
+  Given I'm in the Habits view
+  When I view available commands
+  Then I see habit commands (log, view details)
+  And I do not see journal commands (capture, migrate)
+
+Scenario: Help shows habit-relevant shortcuts
+  Given I'm in the Habits view
+  When I view help
+  Then shortcuts are relevant to habits
+  And capture mode shortcut is not shown
 ```
 
 ---
 
-### 10. Habits View
+### 9. Lists View
 
-#### 10.1 Display Accuracy
+#### Viewing Lists
 
 ```gherkin
-Scenario: Switch to habits view
-  Given the journal view is active
-  When the user presses '2'
-  Then the habits view is displayed
-  And all active habits are loaded and shown
+Scenario: See all my lists
+  Given I have multiple lists
+  When I view the Lists view
+  Then I see each list's name
+  And I see accurate completion counts (e.g., "2/5 done")
 
-Scenario: Only active habits are displayed
-  Given habit "Gym" exists and is active
-  And habit "OldHabit" was deleted
-  When the user switches to habits view
-  Then "Gym" is displayed
-  And "OldHabit" is NOT displayed
+Scenario: Completion count is accurate
+  Given a list has 5 items with 2 marked done
+  When I view the Lists view
+  Then that list shows "2/5 done"
 
-Scenario: Habit displays accurate streak count
-  Given habit "Gym" exists
-  And "Gym" was logged on each of the last 5 consecutive days
-  When the user views the habits view
-  Then "Gym" shows streak of 5
-  And the streak count matches the actual consecutive days
+Scenario: Only active lists are shown
+  Given I deleted a list
+  When I view the Lists view
+  Then the deleted list does not appear
 
-Scenario: Habit displays accurate completion percentage
-  Given habit "Meditation" exists with goal 1 per day
-  And "Meditation" was logged on 7 of the last 10 days
-  When the user views the habits view
-  Then "Meditation" shows 70% completion
-  And the percentage accurately reflects logs vs days
-
-Scenario: Habit displays today's log count accurately
-  Given habit "Water" exists with goal 8 per day
-  And "Water" was logged 3 times today (counts: 2, 3, 1)
-  When the user views the habits view
-  Then "Water" shows today's count as 6
-  And the count is the sum of all today's logs
-
-Scenario: Habit log history displays accurately
-  Given habit "Gym" exists
-  And "Gym" was logged on Monday, Wednesday, Friday last week
-  When the user views the habits view
-  Then the 7-day sparkline shows activity on correct days
-  And days without logs show as empty
-  And days with logs show as filled
-
-Scenario: View empty habits state
-  Given no habits exist
-  When the user switches to habits view
-  Then a message "No habits yet" is displayed
-  And instructions for creating habits are shown
+Scenario: Open a list to see its items
+  Given I have a list selected
+  When I open it
+  Then I see all items in that list
 ```
 
-#### 10.2 Navigation and Actions
+#### Context-Appropriate Options
 
 ```gherkin
-Scenario: Navigate habits
-  Given habits "Gym", "Meditation", "Water" are displayed
-  When the user presses 'j'
-  Then the selection moves to the next habit
-  When the user presses 'k'
-  Then the selection moves to the previous habit
-
-Scenario: Log habit completion via keyboard
-  Given habit "Gym" is selected with 0 logs today
-  When the user presses Space
-  Then a log entry is created for today with count 1
-  And the habit's today count updates to 1
-  And the streak updates if this extends it
-
-Scenario: Log habit updates display immediately
-  Given habit "Gym" shows streak of 3 and 0 logs today
-  When the user presses Space to log
-  Then the today count changes from 0 to 1
-  And the streak changes from 3 to 4 (if yesterday was logged)
-  And no page refresh is required
-```
-
-#### 10.3 View Modes
-
-```gherkin
-Scenario: Toggle to monthly view
-  Given the habits view is in weekly (7-day) mode
-  When the user presses 'm' or activates monthly view
-  Then a 30-day calendar view is displayed
-  And each day shows completion status accurately
-
-Scenario: Monthly view shows accurate data
-  Given habit "Gym" was logged on Jan 1, 5, 10, 15, 20
-  When the user views habits in monthly mode for January
-  Then only those 5 days show as completed
-  And other days show as incomplete
-```
-
-#### 10.4 Context-Appropriate Commands
-
-```gherkin
-Scenario: Habits view shows only relevant commands
-  Given the habits view is active
-  When the user opens the command palette
-  Then habit-relevant commands are shown (log, inspect, etc.)
-  And "Capture" command is NOT shown
-  And journal-specific commands are NOT shown
-
-Scenario: Habits view help shows relevant keybindings
-  Given the habits view is active
-  When the user presses '?'
-  Then help shows Space for "log habit"
-  And help does NOT show 'c' for capture
-  And help does NOT show entry-specific commands (edit, migrate)
+Scenario: Only list-relevant commands are shown
+  Given I'm in the Lists view
+  When I view available commands
+  Then I see list commands
+  And I do not see capture mode
+  And I do not see journal-specific commands
 ```
 
 ---
 
-### 11. Lists View
+### 10. List Items View
 
-#### 11.1 Display Accuracy
+#### Viewing Items
 
 ```gherkin
-Scenario: Switch to lists view
-  Given the journal view is active
-  When the user presses '3'
-  Then the lists view is displayed
-  And all active lists are loaded and shown
+Scenario: See all items in a list
+  Given a list has items
+  When I view that list
+  Then I see all items
+  And done items show as completed
+  And incomplete items show as pending
 
-Scenario: Only active lists are displayed
-  Given list "Shopping" exists and is active
-  And list "OldList" was deleted
-  When the user switches to lists view
-  Then "Shopping" is displayed
-  And "OldList" is NOT displayed
+Scenario: Only active items are shown
+  Given I deleted an item from a list
+  When I view that list
+  Then the deleted item does not appear
 
-Scenario: List item counts are accurate
-  Given list "Shopping" has 5 items total
-  And 2 items are marked as done
-  And 3 items are incomplete
-  When the user views the lists view
-  Then "Shopping" shows "2/5 done"
-  And the count matches the actual item states
-
-Scenario: List with all items done shows correct count
-  Given list "Completed" has 3 items all marked done
-  When the user views the lists view
-  Then "Completed" shows "3/3 done"
-
-Scenario: Empty list shows zero count
-  Given list "Empty" exists with no items
-  When the user views the lists view
-  Then "Empty" shows no progress indicator or "0 items"
-
-Scenario: Item count updates after changes
-  Given list "Shopping" shows "1/3 done"
-  When an item is marked done via CLI
-  And the user refreshes or re-enters lists view
-  Then "Shopping" shows "2/3 done"
+Scenario: Empty list shows helpful message
+  Given a list has no items
+  When I view that list
+  Then I see a message that it's empty
+  And I see how to add items
 ```
 
-#### 11.2 Navigation
+#### Managing Items
 
 ```gherkin
-Scenario: Navigate lists
-  Given lists "Shopping", "Work", "Personal" are displayed
-  When the user presses 'j'
-  Then the selection moves to the next list
-  When the user presses 'k'
-  Then the selection moves to the previous list
+Scenario: Add an item to the list
+  Given I'm viewing a list
+  When I add a new item
+  Then I can type the item content
+  And it appears in the list when I confirm
 
-Scenario: Enter list items view
-  Given list "Shopping" is selected
-  When the user presses Enter
-  Then the list items view is displayed
-  And all items in "Shopping" are shown
+Scenario: Mark an item as done
+  Given I have an item selected
+  When I toggle its done status
+  Then it shows as completed
+  And the list's completion count updates
 
-Scenario: Return to lists from items
-  Given the list items view is active
-  When the user presses Escape
-  Then the view returns to lists overview
-  And the previously selected list remains selected
+Scenario: Unmark a done item
+  Given I have a completed item selected
+  When I toggle its done status
+  Then it shows as incomplete again
+
+Scenario: Edit an item
+  Given I have an item selected
+  When I edit it
+  Then I can modify its content
+  And the change is saved when I confirm
+
+Scenario: Delete an item
+  Given I have an item selected
+  When I delete it
+  Then it's removed from the list
+  And the list's total count updates
+
+Scenario: Navigate between items
+  Given there are multiple items
+  When I move up and down
+  Then I can select different items
+
+Scenario: Return to lists view
+  Given I'm viewing a list's items
+  When I go back
+  Then I return to the Lists view
 ```
 
-#### 11.3 Context-Appropriate Commands
+#### Context-Appropriate Options
 
 ```gherkin
-Scenario: Lists view shows only relevant commands
-  Given the lists view is active
-  When the user opens the command palette
-  Then list-relevant commands are shown
-  And "Capture" command is NOT shown
-  And journal entry commands are NOT shown
-
-Scenario: Lists view help shows relevant keybindings
-  Given the lists view is active
-  When the user presses '?'
-  Then help shows Enter for "view items"
-  And help does NOT show 'c' for capture
-  And help does NOT show entry-specific commands
+Scenario: Only item-relevant commands are shown
+  Given I'm viewing list items
+  When I view available commands
+  Then I see item commands (add, edit, done, delete)
+  And I do not see capture mode
+  And I do not see migrate (lists don't have dates)
 ```
 
 ---
 
-### 12. List Items View (Detail)
-
-#### 12.1 Display Accuracy
+### 11. Search View
 
 ```gherkin
-Scenario: All list items are displayed
-  Given list "Shopping" has items "Milk", "Bread", "Eggs"
-  When the user enters the list items view
-  Then all three items are displayed
-  And items appear in creation order
+Scenario: Search for entries
+  Given I want to find entries containing "project"
+  When I search for "project"
+  Then I see matching entries from all dates
 
-Scenario: Item completion status is accurate
-  Given list "Shopping" has item "Milk" marked done
-  And item "Bread" is incomplete
-  When the user views list items
-  Then "Milk" shows checkmark/done indicator
-  And "Bread" shows task indicator
-
-Scenario: Only active items are displayed
-  Given list "Shopping" has active item "Milk"
-  And deleted item "OldItem"
-  When the user views list items
-  Then "Milk" is displayed
-  And "OldItem" is NOT displayed
-
-Scenario: View empty list
-  Given list "Empty" has no items
-  When the user enters list items view
-  Then a message "No items" is displayed
-  And instructions for adding items are shown
-```
-
-#### 12.2 Item Actions
-
-```gherkin
-Scenario: Toggle list item done
-  Given item "Milk" is selected and incomplete
-  When the user presses Space
-  Then "Milk" is marked as done
-  And the display updates to show done indicator
-  And the parent list's count updates
-
-Scenario: Toggle done item back to incomplete
-  Given item "Milk" is selected and done
-  When the user presses Space
-  Then "Milk" is marked as incomplete
-  And the display updates to show task indicator
-
-Scenario: Add new item to list
-  Given the list items view is active for "Shopping"
-  When the user presses 'a'
-  Then add mode activates
-  When the user types "Butter" and presses Enter
-  Then "Butter" is added to the list
-  And the new item appears in the list
-  And the parent list's total count increases
-
-Scenario: Add item with type prefix
-  Given the list items view is active
-  When the user presses 'a'
-  And types "- Important note" and presses Enter
-  Then a note item is added (not a task)
-
-Scenario: Edit list item
-  Given item "Milk" is selected
-  When the user presses 'e'
-  Then edit mode activates with "Milk" content
-  When the user changes to "Whole Milk" and presses Enter
-  Then the item content updates to "Whole Milk"
-  And the change persists
-
-Scenario: Delete list item
-  Given item "Milk" is selected
-  When the user presses 'd'
-  Then a confirmation prompt appears
-  When the user confirms
-  Then "Milk" is removed from the list
-  And the parent list's total count decreases
-
-Scenario: Navigate list items
-  Given items "Milk", "Bread", "Eggs" are displayed
-  When the user presses 'j'
-  Then the selection moves to the next item
-  When the user presses 'k'
-  Then the selection moves to the previous item
-```
-
-#### 12.3 Context-Appropriate Commands
-
-```gherkin
-Scenario: List items view shows only relevant commands
-  Given the list items view is active
-  When the user opens the command palette
-  Then item-relevant commands are shown (add, edit, done, delete)
-  And "Capture" command is NOT shown
-  And "Migrate" command is NOT shown (lists don't have dates)
-
-Scenario: List items view help shows relevant keybindings
-  Given the list items view is active
-  When the user presses '?'
-  Then help shows 'a' for "add item"
-  And help shows 'e' for "edit"
-  And help shows Space for "toggle done"
-  And help does NOT show 'c' for capture
-  And help does NOT show 'm' for migrate
+Scenario: Search results show context
+  Given search results are displayed
+  Then each result shows its date
+  And each result shows its type
+  And I can select a result to view it
 ```
 
 ---
 
-### 13. Command Palette
+### 12. Summary/Stats View
 
 ```gherkin
-Scenario: Open command palette
-  Given any view is active
-  When the user presses Ctrl+P or ':'
-  Then the command palette overlay appears
-  And a text input is focused
+Scenario: See productivity overview
+  Given I have entries and habits logged
+  When I view the Summary
+  Then I see statistics about my productivity
+  And I see habit completion trends
 
-Scenario: Search commands
-  Given the command palette is open
-  When the user types "hab"
-  Then only commands matching "hab" are shown
-  And "Switch to Habits" appears in results
-
-Scenario: Fuzzy search commands
-  Given the command palette is open
-  When the user types "swh"
-  Then "Switch to Habits" matches via fuzzy search
-
-Scenario: Navigate command results
-  Given command results are displayed
-  When the user presses 'j' or Down arrow
-  Then the selection moves to next command
-
-Scenario: Execute command
-  Given a command is selected
-  When the user presses Enter
-  Then the command is executed
-  And the palette closes
-
-Scenario: Close command palette
-  Given the command palette is open
-  When the user presses Escape
-  Then the palette closes
-  And the previous view is restored
-
-Scenario: View command keybindings
-  Given the command palette shows results
-  Then each command displays its keybinding
-  And the user can learn shortcuts
+Scenario: See AI reflections
+  Given AI summaries are enabled
+  When I view the Summary
+  Then I see AI-generated reflections on my journal
 ```
 
 ---
 
-### 14. Help System
+### 13. Settings View
 
 ```gherkin
-Scenario: Toggle help display
-  Given any view is active
-  When the user presses '?'
-  Then the help panel toggles visibility
-  And available keybindings are shown
+Scenario: View current settings
+  Given I want to see my configuration
+  When I open Settings
+  Then I see current theme, default view, etc.
 
-Scenario: View short help
-  Given the help panel is collapsed
-  Then the bottom bar shows essential keybindings
-  And "?" shows how to get more help
-
-Scenario: View full help
-  Given the user presses '?'
-  Then full keybinding reference is displayed
-  And keybindings are grouped by function
+Scenario: Change a setting
+  Given I want to change my theme
+  When I select a different theme in Settings
+  Then the change is applied immediately
 ```
 
 ---
 
-### 15. General TUI Behavior
+### 14. Error Handling
 
 ```gherkin
-Scenario: Quit application
-  Given the TUI is running
-  When the user presses 'q' or Ctrl+C
-  Then the application exits cleanly
-  And the terminal is restored
+Scenario: Handle errors gracefully
+  Given something goes wrong (e.g., database issue)
+  When an error occurs
+  Then I see a clear error message
+  And the app doesn't crash
+  And I can continue using other features
 
-Scenario: Handle window resize
-  Given the TUI is running
-  When the terminal window is resized
-  Then the UI adapts to new dimensions
-  And content remains properly laid out
-
-Scenario: Show loading state
-  Given data is being loaded
-  Then a loading indicator is displayed
-  And the UI remains responsive
-
-Scenario: Show error state
-  Given an error occurs during data load
-  Then an error message is displayed
-  And the user can retry or continue
-
-Scenario: Maintain state between views
-  Given entries exist in journal view
-  When the user switches to habits and back
-  Then the journal data is reloaded
-  And selection state is maintained
+Scenario: Handle empty states
+  Given I have no entries/habits/lists yet
+  When I view that section
+  Then I see a helpful message
+  And I see how to add my first item
 ```
 
 ---
 
-### 16. Theming
+### 15. Data Accuracy
 
 ```gherkin
-Scenario: Use default theme
-  Given no theme is configured
-  When the TUI starts
-  Then the default color scheme is applied
+Scenario: Deleted items never appear
+  Given I deleted an entry, habit, or list item
+  When I view any part of the application
+  Then deleted items are never shown
 
-Scenario: Use dark theme
-  Given theme "dark" is configured
-  When the TUI starts
-  Then dark theme colors are applied
+Scenario: Counts are always accurate
+  Given items have been added, completed, or deleted
+  When I view counts (list items, habit logs, etc.)
+  Then the counts reflect the actual current state
 
-Scenario: Use light theme
-  Given theme "light" is configured
-  When the TUI starts
-  Then light theme colors are applied
+Scenario: Changes persist
+  Given I made changes (add, edit, delete, done)
+  When I close and reopen the application
+  Then all my changes are still there
 
-Scenario: Use solarized theme
-  Given theme "solarized" is configured
-  When the TUI starts
-  Then solarized colors are applied
-```
-
----
-
-## Cross-Cutting Tests
-
-### 17. Data Persistence
-
-```gherkin
-Scenario: Data persists between sessions
-  Given entries were created in a previous session
-  When the user starts bujo again
-  Then the previous entries are still available
-
-Scenario: Changes reflect immediately
-  Given the TUI is open
-  When an entry is created via CLI in another terminal
-  And the user refreshes the TUI view
-  Then the new entry appears
-
-Scenario: Database migrations run automatically
-  Given a database from an older version exists
-  When the user runs bujo
-  Then migrations are applied automatically
-  And data is preserved
-```
-
-### 18. Date Handling
-
-```gherkin
-Scenario: Natural language dates
-  Given the user wants to add an entry for "last monday"
-  When the user runs `bujo add -d "last monday" ". Task"`
-  Then the task is created for the previous Monday
-
-Scenario: Relative dates
-  Given the user wants to add an entry for yesterday
-  When the user runs `bujo add -d yesterday ". Task"`
-  Then the task is created for yesterday's date
-
-Scenario: ISO date format
-  Given the user wants a specific date
-  When the user runs `bujo add -d 2026-01-15 ". Task"`
-  Then the task is created for January 15, 2026
-
-Scenario: Invalid date handling
-  Given the user enters an invalid date
-  When the user runs `bujo add -d "not a date" ". Task"`
-  Then an error message explains the issue
-  And no entry is created
-```
-
-### 19. Error Handling
-
-```gherkin
-Scenario: Handle missing database
-  Given the database file does not exist
-  When the user runs bujo
-  Then the database is created automatically
-  And the command succeeds
-
-Scenario: Handle invalid entry ID
-  Given no entry with ID 99999 exists
-  When the user runs `bujo done 99999`
-  Then an error message indicates entry not found
-
-Scenario: Handle permission errors
-  Given the database directory is not writable
-  When the user runs bujo
-  Then a clear error message is displayed
+Scenario: Changes appear immediately
+  Given I make a change
+  Then the display updates immediately
+  And I don't need to manually refresh
 ```
 
 ---
 
 ## Summary
 
-| Category | Test Count |
-|----------|------------|
-| Entry Management | 18 |
-| Habit Tracking (CLI) | 16 |
-| List Management (CLI) | 14 |
-| Day Context | 8 |
-| Backup Management | 4 |
-| Utility Commands | 6 |
-| TUI Startup | 3 |
-| Journal View | 17 |
-| Capture Mode | 9 |
-| Habits View (TUI) | 14 |
-| Lists View (TUI) | 11 |
-| List Items View (TUI) | 13 |
-| Command Palette | 7 |
-| Help System | 3 |
-| General TUI | 5 |
-| Theming | 4 |
-| Cross-Cutting | 11 |
-| **Total** | **163** |
+| Category | Scenarios |
+|----------|-----------|
+| **CLI** | |
+| Entry Management | 16 |
+| Habit Tracking | 12 |
+| List Management | 13 |
+| Day Context | 3 |
+| Backup | 3 |
+| **TUI** | |
+| General Navigation | 6 |
+| Journal View | 14 |
+| Habits View | 8 |
+| Lists View | 5 |
+| List Items View | 10 |
+| Search View | 2 |
+| Summary/Stats View | 2 |
+| Settings View | 2 |
+| Error Handling | 2 |
+| Data Accuracy | 4 |
+| **Total** | **102** |

@@ -147,6 +147,9 @@ const (
 	ViewTypeHabits
 	ViewTypeLists
 	ViewTypeListItems
+	ViewTypeSearch
+	ViewTypeStats
+	ViewTypeSettings
 )
 
 type EntryItem struct {
@@ -163,6 +166,19 @@ func New(bujoSvc *service.BujoService) Model {
 func NewWithConfig(cfg Config) Model {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	editInput := textinput.New()
+	editInput.Placeholder = "Edit content..."
+
+	addInput := textinput.New()
+	addInput.Placeholder = "New entry..."
+
+	migrateInput := textinput.New()
+	migrateInput.Placeholder = "Enter date..."
+
+	gotoInput := textinput.New()
+	gotoInput.Placeholder = "Enter date..."
+
 	return Model{
 		bujoService:     cfg.BujoService,
 		habitService:    cfg.HabitService,
@@ -174,6 +190,10 @@ func NewWithConfig(cfg Config) Model {
 		help:            help.New(),
 		keyMap:          DefaultKeyMap(),
 		draftPath:       DraftPath(),
+		editMode:        editState{input: editInput},
+		addMode:         addState{input: addInput},
+		migrateMode:     migrateState{input: migrateInput},
+		gotoMode:        gotoState{input: gotoInput},
 	}
 }
 
@@ -363,7 +383,16 @@ func (m Model) loadListsCmd() tea.Cmd {
 		if err != nil {
 			return errMsg{err}
 		}
-		return listsLoadedMsg{lists}
+
+		summaries := make(map[int64]*service.ListSummary)
+		for _, list := range lists {
+			summary, err := m.listService.GetListSummary(ctx, list.ID)
+			if err == nil {
+				summaries[list.ID] = summary
+			}
+		}
+
+		return listsLoadedMsg{lists: lists, summaries: summaries}
 	}
 }
 
