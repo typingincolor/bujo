@@ -239,3 +239,90 @@ func TestEntry_HasParent_WhenParentEntityIDNil_ReturnsFalse(t *testing.T) {
 
 	assert.False(t, entry.HasParent())
 }
+
+func TestPriority_IsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		priority Priority
+		expected bool
+	}{
+		{"none is valid", PriorityNone, true},
+		{"low is valid", PriorityLow, true},
+		{"medium is valid", PriorityMedium, true},
+		{"high is valid", PriorityHigh, true},
+		{"empty string is invalid", Priority(""), false},
+		{"unknown priority is invalid", Priority("urgent"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.priority.IsValid())
+		})
+	}
+}
+
+func TestPriority_Symbol(t *testing.T) {
+	tests := []struct {
+		name     string
+		priority Priority
+		expected string
+	}{
+		{"none has no symbol", PriorityNone, ""},
+		{"low has single exclamation", PriorityLow, "!"},
+		{"medium has double exclamation", PriorityMedium, "!!"},
+		{"high has triple exclamation", PriorityHigh, "!!!"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.priority.Symbol())
+		})
+	}
+}
+
+func TestParsePriority(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected Priority
+		wantErr  bool
+	}{
+		{"none", "none", PriorityNone, false},
+		{"low", "low", PriorityLow, false},
+		{"medium", "medium", PriorityMedium, false},
+		{"high", "high", PriorityHigh, false},
+		{"empty string defaults to none", "", PriorityNone, false},
+		{"invalid returns error", "urgent", PriorityNone, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ParsePriority(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestPriority_Cycle(t *testing.T) {
+	tests := []struct {
+		name     string
+		priority Priority
+		expected Priority
+	}{
+		{"none cycles to low", PriorityNone, PriorityLow},
+		{"low cycles to medium", PriorityLow, PriorityMedium},
+		{"medium cycles to high", PriorityMedium, PriorityHigh},
+		{"high cycles to none", PriorityHigh, PriorityNone},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.priority.Cycle())
+		})
+	}
+}

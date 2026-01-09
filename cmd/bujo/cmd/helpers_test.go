@@ -107,6 +107,7 @@ func TestParseAddArgs(t *testing.T) {
 		wantDate     string
 		wantFile     string
 		wantHelp     bool
+		wantYes      bool
 	}{
 		{
 			name:        "simple task entry",
@@ -201,14 +202,30 @@ func TestParseAddArgs(t *testing.T) {
 			args:     []string{"-f=file.txt"},
 			wantFile: "file.txt",
 		},
+		{
+			name:        "with yes flag",
+			args:        []string{"-y", "-d", "yesterday", ". Task"},
+			wantEntries: []string{". Task"},
+			wantDate:    "yesterday",
+			wantYes:     true,
+		},
+		{
+			name:        "with long yes flag",
+			args:        []string{"--yes", ". Task"},
+			wantEntries: []string{". Task"},
+			wantYes:     true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, location, date, file, help := parseAddArgs(tt.args)
+			entries, location, date, file, help, yes := parseAddArgs(tt.args)
 
 			if help != tt.wantHelp {
 				t.Errorf("parseAddArgs() help = %v, want %v", help, tt.wantHelp)
+			}
+			if yes != tt.wantYes {
+				t.Errorf("parseAddArgs() yes = %v, want %v", yes, tt.wantYes)
 			}
 			if location != tt.wantLocation {
 				t.Errorf("parseAddArgs() location = %q, want %q", location, tt.wantLocation)
@@ -227,6 +244,69 @@ func TestParseAddArgs(t *testing.T) {
 				if e != tt.wantEntries[i] {
 					t.Errorf("parseAddArgs() entries[%d] = %q, want %q", i, e, tt.wantEntries[i])
 				}
+			}
+		})
+	}
+}
+
+func TestIsNaturalLanguageDate(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"2026-01-05", false},         // ISO format
+		{"20260105", false},           // Compact format
+		{"yesterday", true},           // Natural language
+		{"last week", true},           // Natural language
+		{"next monday", true},         // Natural language
+		{"tomorrow", true},            // Natural language
+		{"2 days ago", true},          // Natural language
+		{"", false},                   // Empty string
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := isNaturalLanguageDate(tt.input)
+			if result != tt.expected {
+				t.Errorf("isNaturalLanguageDate(%q) = %v, want %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestConfirmDate_SkipsPrompt(t *testing.T) {
+	testDate := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name        string
+		dateStr     string
+		skipConfirm bool
+	}{
+		{
+			name:        "skip when ISO format",
+			dateStr:     "2026-01-05",
+			skipConfirm: false,
+		},
+		{
+			name:        "skip when compact format",
+			dateStr:     "20260105",
+			skipConfirm: false,
+		},
+		{
+			name:        "skip when --yes flag",
+			dateStr:     "yesterday",
+			skipConfirm: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := confirmDate(tt.dateStr, testDate, tt.skipConfirm)
+			if err != nil {
+				t.Errorf("confirmDate() unexpected error: %v", err)
+			}
+			if result != testDate {
+				t.Errorf("confirmDate() = %v, want %v", result, testDate)
 			}
 		})
 	}

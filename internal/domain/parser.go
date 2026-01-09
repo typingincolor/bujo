@@ -52,6 +52,47 @@ func ParseContent(line string) string {
 	return strings.TrimSpace(string(runes[1:]))
 }
 
+func ParsePriorityAndContent(text string) (content string, priority Priority) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", PriorityNone
+	}
+
+	if !strings.HasPrefix(text, "!") {
+		return text, PriorityNone
+	}
+
+	exclamationCount := 0
+	for _, ch := range text {
+		if ch == '!' {
+			exclamationCount++
+		} else {
+			break
+		}
+	}
+
+	if exclamationCount == 0 {
+		return text, PriorityNone
+	}
+
+	remaining := strings.TrimSpace(text[exclamationCount:])
+	if remaining == "" {
+		return text, PriorityNone
+	}
+
+	switch {
+	case exclamationCount >= 3:
+		if exclamationCount > 3 {
+			remaining = strings.Repeat("!", exclamationCount-3) + " " + remaining
+		}
+		return strings.TrimSpace(remaining), PriorityHigh
+	case exclamationCount == 2:
+		return remaining, PriorityMedium
+	default:
+		return remaining, PriorityLow
+	}
+}
+
 type TreeParser struct{}
 
 func NewTreeParser() *TreeParser {
@@ -79,12 +120,14 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 			return nil, errors.New("unknown entry type symbol")
 		}
 
-		content := ParseContent(rest)
+		rawContent := ParseContent(rest)
+		content, priority := ParsePriorityAndContent(rawContent)
 
 		entry := Entry{
-			Type:    entryType,
-			Content: content,
-			Depth:   depth,
+			Type:     entryType,
+			Content:  content,
+			Priority: priority,
+			Depth:    depth,
 		}
 
 		if depth == 0 {

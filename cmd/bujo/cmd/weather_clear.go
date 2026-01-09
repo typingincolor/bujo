@@ -8,6 +8,7 @@ import (
 )
 
 var weatherClearDate string
+var weatherClearYes bool
 
 var weatherClearCmd = &cobra.Command{
 	Use:   "clear",
@@ -26,6 +27,13 @@ Examples:
 			return err
 		}
 
+		if weatherClearDate != "" {
+			targetDate, err = confirmDate(weatherClearDate, targetDate, weatherClearYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.ClearWeather(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear weather: %w", err)
@@ -42,5 +50,6 @@ Examples:
 
 func init() {
 	weatherClearCmd.Flags().StringVarP(&weatherClearDate, "date", "d", "", "Date to clear weather for (e.g., 'yesterday', '2026-01-05')")
+	weatherClearCmd.Flags().BoolVarP(&weatherClearYes, "yes", "y", false, "Skip date confirmation prompt")
 	weatherCmd.AddCommand(weatherClearCmd)
 }

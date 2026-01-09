@@ -401,6 +401,22 @@ func TestBujoService_EditEntry_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_EditEntryPriority(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.EditEntryPriority(ctx, ids[0], domain.PriorityHigh)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityHigh, entry.Priority)
+}
+
 func TestBujoService_DeleteEntry(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

@@ -1,0 +1,3 @@
+-- SQLite doesn't support DROP COLUMN directly before 3.35
+-- This will recreate the table without the priority column if needed
+-- For now, we leave the column as it's safe to ignore
