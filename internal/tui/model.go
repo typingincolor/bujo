@@ -87,6 +87,7 @@ type captureState struct {
 	searchQuery   string
 	draftExists   bool
 	draftContent  string
+	showHelp      bool
 }
 
 type ViewMode int
