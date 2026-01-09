@@ -116,10 +116,7 @@ type listState struct {
 	summaries       map[int64]*service.ListSummary
 	selectedListIdx int
 	selectedItemIdx int
-	viewingItems    bool
 	currentListID   int64
-	addItemMode     bool
-	addItemInput    string
 }
 
 type commandPaletteState struct {
@@ -370,14 +367,14 @@ func (m Model) toggleListItemCmd(item domain.ListItem) tea.Cmd {
 		ctx := context.Background()
 		var err error
 		if item.Type == domain.ListItemTypeDone {
-			err = m.listService.MarkUndone(ctx, item.VersionInfo.RowID)
+			err = m.listService.MarkUndone(ctx, item.RowID)
 		} else {
-			err = m.listService.MarkDone(ctx, item.VersionInfo.RowID)
+			err = m.listService.MarkDone(ctx, item.RowID)
 		}
 		if err != nil {
 			return errMsg{err}
 		}
-		return listItemToggledMsg{item.VersionInfo.RowID}
+		return listItemToggledMsg{item.RowID}
 	}
 }
 
