@@ -432,8 +432,62 @@ func (m Model) renderCaptureMode() string {
 	if m.captureMode.searchMode {
 		sb.WriteString(HelpStyle.Render("Enter/Ctrl+S: next | Ctrl+R: prev | ESC: exit search"))
 	} else {
-		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | Ctrl+S: search"))
+		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | ?: help"))
 	}
+
+	// Help overlay
+	if m.captureMode.showHelp {
+		return m.renderCaptureHelp()
+	}
+
+	return sb.String()
+}
+
+func (m Model) renderCaptureHelp() string {
+	var sb strings.Builder
+
+	sb.WriteString(ToolbarStyle.Render("CAPTURE MODE - Keyboard Shortcuts"))
+	sb.WriteString("\n\n")
+
+	helpItems := []struct {
+		key  string
+		desc string
+	}{
+		{"Ctrl+X", "Save entries and exit"},
+		{"Esc", "Cancel (prompts if content)"},
+		{"?", "Toggle this help"},
+		{"", ""},
+		{"Tab", "Indent line"},
+		{"Shift+Tab", "Unindent line"},
+		{"", ""},
+		{"Ctrl+S", "Search forward"},
+		{"Ctrl+R", "Search reverse"},
+		{"", ""},
+		{"Ctrl+A / Home", "Go to line start"},
+		{"Ctrl+E / End", "Go to line end"},
+		{"Ctrl+Home", "Go to document start"},
+		{"Ctrl+End", "Go to document end"},
+		{"", ""},
+		{"Ctrl+K", "Delete to end of line"},
+		{"Ctrl+U", "Delete to start of line"},
+		{"Ctrl+W", "Delete word backward"},
+		{"Ctrl+D", "Delete character"},
+		{"", ""},
+		{"Ctrl+F / →", "Move forward"},
+		{"Ctrl+B / ←", "Move backward"},
+		{"↑ / ↓", "Move up/down"},
+	}
+
+	for _, item := range helpItems {
+		if item.key == "" {
+			sb.WriteString("\n")
+		} else {
+			sb.WriteString(fmt.Sprintf("  %-16s %s\n", item.key, item.desc))
+		}
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render("Press ? or Esc to close"))
 
 	return sb.String()
 }

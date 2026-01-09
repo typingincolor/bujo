@@ -3404,3 +3404,194 @@ func TestModel_HighlightSearchTerm_PartialWord(t *testing.T) {
 		t.Error("partial word match should be highlighted")
 	}
 }
+
+func TestModel_CaptureMode_Help_QuestionMarkTogglesHelp(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{active: true, content: "test"}
+
+	// Press ? to show help
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	m := newModel.(Model)
+
+	if !m.captureMode.showHelp {
+		t.Error("? should toggle help on")
+	}
+
+	// Press ? again to hide help
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	m = newModel.(Model)
+
+	if m.captureMode.showHelp {
+		t.Error("? should toggle help off")
+	}
+}
+
+func TestModel_CaptureMode_Help_EscClosesHelp(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{active: true, content: "test", showHelp: true}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEscape})
+	m := newModel.(Model)
+
+	if m.captureMode.showHelp {
+		t.Error("Esc should close help")
+	}
+	// Should still be in capture mode
+	if !m.captureMode.active {
+		t.Error("should still be in capture mode after closing help")
+	}
+}
+
+func TestModel_CaptureMode_Help_ViewShowsHelp(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.captureMode = captureState{active: true, content: "test", showHelp: true}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Ctrl+X") {
+		t.Error("help should show Ctrl+X")
+	}
+	if !strings.Contains(view, "Save") {
+		t.Error("help should show Save action")
+	}
+}
+
+func TestModel_CaptureMode_CtrlU_KillsToBeginningOfLine(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Hello World",
+		cursorPos: 6, // After "Hello "
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlU})
+	m := newModel.(Model)
+
+	if m.captureMode.content != "World" {
+		t.Errorf("expected 'World', got '%s'", m.captureMode.content)
+	}
+	if m.captureMode.cursorPos != 0 {
+		t.Errorf("cursor should be at 0, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_CtrlU_MultiLine(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Line one\nHello World",
+		cursorPos: 15, // After "Hello " on second line
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlU})
+	m := newModel.(Model)
+
+	if m.captureMode.content != "Line one\nWorld" {
+		t.Errorf("expected 'Line one\\nWorld', got '%s'", m.captureMode.content)
+	}
+}
+
+func TestModel_CaptureMode_Home_GoesToLineStart(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Hello World",
+		cursorPos: 6,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyHome})
+	m := newModel.(Model)
+
+	if m.captureMode.cursorPos != 0 {
+		t.Errorf("cursor should be at 0, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_Home_MultiLine(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:     true,
+		content:    "Line one\nHello World",
+		cursorPos:  15, // Middle of second line
+		cursorLine: 1,
+		cursorCol:  6,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyHome})
+	m := newModel.(Model)
+
+	// Should go to start of current line (position 9, after newline)
+	if m.captureMode.cursorPos != 9 {
+		t.Errorf("cursor should be at 9, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_End_GoesToLineEnd(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Hello World",
+		cursorPos: 0,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m := newModel.(Model)
+
+	if m.captureMode.cursorPos != 11 {
+		t.Errorf("cursor should be at 11, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_End_MultiLine(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:     true,
+		content:    "Line one\nHello World",
+		cursorPos:  9, // Start of second line
+		cursorLine: 1,
+		cursorCol:  0,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyEnd})
+	m := newModel.(Model)
+
+	// Should go to end of current line (position 20)
+	if m.captureMode.cursorPos != 20 {
+		t.Errorf("cursor should be at 20, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_CtrlHome_GoesToDocumentStart(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Line one\nLine two\nLine three",
+		cursorPos: 25,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlHome})
+	m := newModel.(Model)
+
+	if m.captureMode.cursorPos != 0 {
+		t.Errorf("cursor should be at 0, got %d", m.captureMode.cursorPos)
+	}
+}
+
+func TestModel_CaptureMode_CtrlEnd_GoesToDocumentEnd(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{
+		active:    true,
+		content:   "Line one\nLine two\nLine three",
+		cursorPos: 0,
+	}
+
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlEnd})
+	m := newModel.(Model)
+
+	expectedPos := len(model.captureMode.content)
+	if m.captureMode.cursorPos != expectedPos {
+		t.Errorf("cursor should be at %d, got %d", expectedPos, m.captureMode.cursorPos)
+	}
+}
