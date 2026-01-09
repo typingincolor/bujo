@@ -44,6 +44,16 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to open database: %w", err)
 		}
 
+		// Ensure recent backup exists (create if none or older than 7 days)
+		backupDir := getDefaultBackupDir()
+		backupSvc := service.NewBackupService(db, backupDir)
+		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), 7)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to ensure backup: %v\n", err)
+		} else if created {
+			fmt.Fprintf(os.Stderr, "Creating backup... %s\n", path)
+		}
+
 		// Initialize repositories
 		entryRepo := sqlite.NewEntryRepository(db)
 		dayCtxRepo := sqlite.NewDayContextRepository(db)

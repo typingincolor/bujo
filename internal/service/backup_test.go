@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -122,4 +123,66 @@ func TestBackupService_VerifyBackup_MissingFile_Fails(t *testing.T) {
 	err = svc.VerifyBackup(ctx, "/nonexistent/path.db")
 
 	require.Error(t, err)
+}
+
+func TestBackupService_EnsureRecentBackup_NoBackups_CreatesOne(t *testing.T) {
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	tempDir := t.TempDir()
+	svc := NewBackupService(db, tempDir)
+	ctx := context.Background()
+
+	created, path, err := svc.EnsureRecentBackup(ctx, 7)
+
+	require.NoError(t, err)
+	assert.True(t, created, "should create backup when none exists")
+	assert.NotEmpty(t, path)
+	assert.FileExists(t, path)
+}
+
+func TestBackupService_EnsureRecentBackup_RecentBackup_DoesNothing(t *testing.T) {
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	tempDir := t.TempDir()
+	svc := NewBackupService(db, tempDir)
+	ctx := context.Background()
+
+	// Create a backup first
+	_, err = svc.CreateBackup(ctx)
+	require.NoError(t, err)
+
+	created, path, err := svc.EnsureRecentBackup(ctx, 7)
+
+	require.NoError(t, err)
+	assert.False(t, created, "should not create backup when recent one exists")
+	assert.Empty(t, path)
+}
+
+func TestBackupService_EnsureRecentBackup_OldBackup_CreatesNew(t *testing.T) {
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	tempDir := t.TempDir()
+	svc := NewBackupService(db, tempDir)
+	ctx := context.Background()
+
+	// Create a backup and make it old by changing its modification time
+	backupPath, err := svc.CreateBackup(ctx)
+	require.NoError(t, err)
+
+	oldTime := time.Now().Add(-8 * 24 * time.Hour) // 8 days ago
+	err = os.Chtimes(backupPath, oldTime, oldTime)
+	require.NoError(t, err)
+
+	created, path, err := svc.EnsureRecentBackup(ctx, 7)
+
+	require.NoError(t, err)
+	assert.True(t, created, "should create backup when existing is too old")
+	assert.NotEmpty(t, path)
+	assert.NotEqual(t, backupPath, path, "should create a new backup file")
 }

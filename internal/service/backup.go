@@ -84,6 +84,30 @@ func (s *BackupService) ListBackups(ctx context.Context) ([]BackupInfo, error) {
 	return backups, nil
 }
 
+func (s *BackupService) EnsureRecentBackup(ctx context.Context, maxAgeDays int) (bool, string, error) {
+	backups, err := s.ListBackups(ctx)
+	if err != nil {
+		return false, "", err
+	}
+
+	if len(backups) > 0 {
+		mostRecent := backups[0]
+		age := time.Since(mostRecent.CreatedAt)
+		maxAge := time.Duration(maxAgeDays) * 24 * time.Hour
+
+		if age < maxAge {
+			return false, "", nil
+		}
+	}
+
+	path, err := s.CreateBackup(ctx)
+	if err != nil {
+		return false, "", err
+	}
+
+	return true, path, nil
+}
+
 func (s *BackupService) VerifyBackup(ctx context.Context, backupPath string) error {
 	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
 		return fmt.Errorf("backup file does not exist: %s", backupPath)
