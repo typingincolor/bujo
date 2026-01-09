@@ -27,33 +27,33 @@ type Config struct {
 }
 
 type Model struct {
-	bujoService  *service.BujoService
-	habitService *service.HabitService
-	listService  *service.ListService
-	agenda       *service.MultiDayAgenda
-	entries      []EntryItem
-	selectedIdx  int
-	scrollOffset int
-	viewMode     ViewMode
-	viewDate     time.Time
-	currentView  ViewType
-	confirmMode  confirmState
-	editMode     editState
-	addMode      addState
-	migrateMode  migrateState
-	gotoMode     gotoState
-	captureMode  captureState
-	searchMode   searchState
+	bujoService     *service.BujoService
+	habitService    *service.HabitService
+	listService     *service.ListService
+	agenda          *service.MultiDayAgenda
+	entries         []EntryItem
+	selectedIdx     int
+	scrollOffset    int
+	viewMode        ViewMode
+	viewDate        time.Time
+	currentView     ViewType
+	confirmMode     confirmState
+	editMode        editState
+	addMode         addState
+	migrateMode     migrateState
+	gotoMode        gotoState
+	captureMode     captureState
+	searchMode      searchState
 	habitState      habitState
 	listState       listState
 	commandPalette  commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
-	keyMap       KeyMap
-	width        int
-	height       int
-	err          error
-	draftPath    string
+	keyMap          KeyMap
+	width           int
+	height          int
+	err             error
+	draftPath       string
 }
 
 type searchState struct {

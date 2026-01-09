@@ -3,21 +3,21 @@ package tui
 import "github.com/charmbracelet/lipgloss"
 
 type Theme struct {
-	Name            string
-	Primary         lipgloss.Color
-	Secondary       lipgloss.Color
-	Background      lipgloss.Color
-	Foreground      lipgloss.Color
-	Muted           lipgloss.Color
-	Accent          lipgloss.Color
-	Success         lipgloss.Color
-	Warning         lipgloss.Color
-	Error           lipgloss.Color
-	Done            lipgloss.Color
-	Migrated        lipgloss.Color
-	Cancelled       lipgloss.Color
-	Selection       lipgloss.Color
-	SelectionFg     lipgloss.Color
+	Name        string
+	Primary     lipgloss.Color
+	Secondary   lipgloss.Color
+	Background  lipgloss.Color
+	Foreground  lipgloss.Color
+	Muted       lipgloss.Color
+	Accent      lipgloss.Color
+	Success     lipgloss.Color
+	Warning     lipgloss.Color
+	Error       lipgloss.Color
+	Done        lipgloss.Color
+	Migrated    lipgloss.Color
+	Cancelled   lipgloss.Color
+	Selection   lipgloss.Color
+	SelectionFg lipgloss.Color
 }
 
 var DefaultTheme = Theme{
