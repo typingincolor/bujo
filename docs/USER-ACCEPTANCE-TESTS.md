@@ -694,29 +694,50 @@ Scenario: Emacs navigation in capture mode
 
 ### 10. Habits View
 
+#### 10.1 Display Accuracy
+
 ```gherkin
 Scenario: Switch to habits view
   Given the journal view is active
   When the user presses '2'
   Then the habits view is displayed
-  And all habits are loaded and shown
+  And all active habits are loaded and shown
 
-Scenario: View habit list
-  Given the habits view is active
-  And habits "Gym" and "Meditation" exist
-  Then both habits are displayed
-  And each shows name, streak, and completion indicator
+Scenario: Only active habits are displayed
+  Given habit "Gym" exists and is active
+  And habit "OldHabit" was deleted
+  When the user switches to habits view
+  Then "Gym" is displayed
+  And "OldHabit" is NOT displayed
 
-Scenario: Navigate habits
-  Given multiple habits are displayed
-  When the user presses 'j' or 'k'
-  Then the selection moves between habits
+Scenario: Habit displays accurate streak count
+  Given habit "Gym" exists
+  And "Gym" was logged on each of the last 5 consecutive days
+  When the user views the habits view
+  Then "Gym" shows streak of 5
+  And the streak count matches the actual consecutive days
 
-Scenario: Log habit completion
-  Given a habit is selected
-  When the user presses Space
-  Then a log entry is created for today
-  And the habit display updates immediately
+Scenario: Habit displays accurate completion percentage
+  Given habit "Meditation" exists with goal 1 per day
+  And "Meditation" was logged on 7 of the last 10 days
+  When the user views the habits view
+  Then "Meditation" shows 70% completion
+  And the percentage accurately reflects logs vs days
+
+Scenario: Habit displays today's log count accurately
+  Given habit "Water" exists with goal 8 per day
+  And "Water" was logged 3 times today (counts: 2, 3, 1)
+  When the user views the habits view
+  Then "Water" shows today's count as 6
+  And the count is the sum of all today's logs
+
+Scenario: Habit log history displays accurately
+  Given habit "Gym" exists
+  And "Gym" was logged on Monday, Wednesday, Friday last week
+  When the user views the habits view
+  Then the 7-day sparkline shows activity on correct days
+  And days without logs show as empty
+  And days with logs show as filled
 
 Scenario: View empty habits state
   Given no habits exist
@@ -725,59 +746,263 @@ Scenario: View empty habits state
   And instructions for creating habits are shown
 ```
 
+#### 10.2 Navigation and Actions
+
+```gherkin
+Scenario: Navigate habits
+  Given habits "Gym", "Meditation", "Water" are displayed
+  When the user presses 'j'
+  Then the selection moves to the next habit
+  When the user presses 'k'
+  Then the selection moves to the previous habit
+
+Scenario: Log habit completion via keyboard
+  Given habit "Gym" is selected with 0 logs today
+  When the user presses Space
+  Then a log entry is created for today with count 1
+  And the habit's today count updates to 1
+  And the streak updates if this extends it
+
+Scenario: Log habit updates display immediately
+  Given habit "Gym" shows streak of 3 and 0 logs today
+  When the user presses Space to log
+  Then the today count changes from 0 to 1
+  And the streak changes from 3 to 4 (if yesterday was logged)
+  And no page refresh is required
+```
+
+#### 10.3 View Modes
+
+```gherkin
+Scenario: Toggle to monthly view
+  Given the habits view is in weekly (7-day) mode
+  When the user presses 'm' or activates monthly view
+  Then a 30-day calendar view is displayed
+  And each day shows completion status accurately
+
+Scenario: Monthly view shows accurate data
+  Given habit "Gym" was logged on Jan 1, 5, 10, 15, 20
+  When the user views habits in monthly mode for January
+  Then only those 5 days show as completed
+  And other days show as incomplete
+```
+
+#### 10.4 Context-Appropriate Commands
+
+```gherkin
+Scenario: Habits view shows only relevant commands
+  Given the habits view is active
+  When the user opens the command palette
+  Then habit-relevant commands are shown (log, inspect, etc.)
+  And "Capture" command is NOT shown
+  And journal-specific commands are NOT shown
+
+Scenario: Habits view help shows relevant keybindings
+  Given the habits view is active
+  When the user presses '?'
+  Then help shows Space for "log habit"
+  And help does NOT show 'c' for capture
+  And help does NOT show entry-specific commands (edit, migrate)
+```
+
 ---
 
 ### 11. Lists View
+
+#### 11.1 Display Accuracy
 
 ```gherkin
 Scenario: Switch to lists view
   Given the journal view is active
   When the user presses '3'
   Then the lists view is displayed
-  And all lists are loaded and shown
+  And all active lists are loaded and shown
 
-Scenario: View list overview
-  Given lists "Shopping" and "Work" exist
-  When the lists view is displayed
-  Then both lists show name and completion progress
-  And progress shows "X/Y done" format
+Scenario: Only active lists are displayed
+  Given list "Shopping" exists and is active
+  And list "OldList" was deleted
+  When the user switches to lists view
+  Then "Shopping" is displayed
+  And "OldList" is NOT displayed
 
+Scenario: List item counts are accurate
+  Given list "Shopping" has 5 items total
+  And 2 items are marked as done
+  And 3 items are incomplete
+  When the user views the lists view
+  Then "Shopping" shows "2/5 done"
+  And the count matches the actual item states
+
+Scenario: List with all items done shows correct count
+  Given list "Completed" has 3 items all marked done
+  When the user views the lists view
+  Then "Completed" shows "3/3 done"
+
+Scenario: Empty list shows zero count
+  Given list "Empty" exists with no items
+  When the user views the lists view
+  Then "Empty" shows no progress indicator or "0 items"
+
+Scenario: Item count updates after changes
+  Given list "Shopping" shows "1/3 done"
+  When an item is marked done via CLI
+  And the user refreshes or re-enters lists view
+  Then "Shopping" shows "2/3 done"
+```
+
+#### 11.2 Navigation
+
+```gherkin
 Scenario: Navigate lists
-  Given multiple lists are displayed
-  When the user presses 'j' or 'k'
-  Then the selection moves between lists
+  Given lists "Shopping", "Work", "Personal" are displayed
+  When the user presses 'j'
+  Then the selection moves to the next list
+  When the user presses 'k'
+  Then the selection moves to the previous list
 
 Scenario: Enter list items view
-  Given a list is selected
+  Given list "Shopping" is selected
   When the user presses Enter
   Then the list items view is displayed
-  And all items in the list are shown
-
-Scenario: Navigate list items
-  Given the list items view is active
-  When the user presses 'j' or 'k'
-  Then the selection moves between items
-
-Scenario: Toggle list item done
-  Given a list item is selected
-  When the user presses Space
-  Then the item done status toggles
-  And the display updates immediately
+  And all items in "Shopping" are shown
 
 Scenario: Return to lists from items
   Given the list items view is active
   When the user presses Escape
   Then the view returns to lists overview
+  And the previously selected list remains selected
+```
 
-Scenario: View empty list
-  Given a list with no items is selected
-  When the user presses Enter
-  Then a message "No items" is displayed
+#### 11.3 Context-Appropriate Commands
+
+```gherkin
+Scenario: Lists view shows only relevant commands
+  Given the lists view is active
+  When the user opens the command palette
+  Then list-relevant commands are shown
+  And "Capture" command is NOT shown
+  And journal entry commands are NOT shown
+
+Scenario: Lists view help shows relevant keybindings
+  Given the lists view is active
+  When the user presses '?'
+  Then help shows Enter for "view items"
+  And help does NOT show 'c' for capture
+  And help does NOT show entry-specific commands
 ```
 
 ---
 
-### 12. Command Palette
+### 12. List Items View (Detail)
+
+#### 12.1 Display Accuracy
+
+```gherkin
+Scenario: All list items are displayed
+  Given list "Shopping" has items "Milk", "Bread", "Eggs"
+  When the user enters the list items view
+  Then all three items are displayed
+  And items appear in creation order
+
+Scenario: Item completion status is accurate
+  Given list "Shopping" has item "Milk" marked done
+  And item "Bread" is incomplete
+  When the user views list items
+  Then "Milk" shows checkmark/done indicator
+  And "Bread" shows task indicator
+
+Scenario: Only active items are displayed
+  Given list "Shopping" has active item "Milk"
+  And deleted item "OldItem"
+  When the user views list items
+  Then "Milk" is displayed
+  And "OldItem" is NOT displayed
+
+Scenario: View empty list
+  Given list "Empty" has no items
+  When the user enters list items view
+  Then a message "No items" is displayed
+  And instructions for adding items are shown
+```
+
+#### 12.2 Item Actions
+
+```gherkin
+Scenario: Toggle list item done
+  Given item "Milk" is selected and incomplete
+  When the user presses Space
+  Then "Milk" is marked as done
+  And the display updates to show done indicator
+  And the parent list's count updates
+
+Scenario: Toggle done item back to incomplete
+  Given item "Milk" is selected and done
+  When the user presses Space
+  Then "Milk" is marked as incomplete
+  And the display updates to show task indicator
+
+Scenario: Add new item to list
+  Given the list items view is active for "Shopping"
+  When the user presses 'a'
+  Then add mode activates
+  When the user types "Butter" and presses Enter
+  Then "Butter" is added to the list
+  And the new item appears in the list
+  And the parent list's total count increases
+
+Scenario: Add item with type prefix
+  Given the list items view is active
+  When the user presses 'a'
+  And types "- Important note" and presses Enter
+  Then a note item is added (not a task)
+
+Scenario: Edit list item
+  Given item "Milk" is selected
+  When the user presses 'e'
+  Then edit mode activates with "Milk" content
+  When the user changes to "Whole Milk" and presses Enter
+  Then the item content updates to "Whole Milk"
+  And the change persists
+
+Scenario: Delete list item
+  Given item "Milk" is selected
+  When the user presses 'd'
+  Then a confirmation prompt appears
+  When the user confirms
+  Then "Milk" is removed from the list
+  And the parent list's total count decreases
+
+Scenario: Navigate list items
+  Given items "Milk", "Bread", "Eggs" are displayed
+  When the user presses 'j'
+  Then the selection moves to the next item
+  When the user presses 'k'
+  Then the selection moves to the previous item
+```
+
+#### 12.3 Context-Appropriate Commands
+
+```gherkin
+Scenario: List items view shows only relevant commands
+  Given the list items view is active
+  When the user opens the command palette
+  Then item-relevant commands are shown (add, edit, done, delete)
+  And "Capture" command is NOT shown
+  And "Migrate" command is NOT shown (lists don't have dates)
+
+Scenario: List items view help shows relevant keybindings
+  Given the list items view is active
+  When the user presses '?'
+  Then help shows 'a' for "add item"
+  And help shows 'e' for "edit"
+  And help shows Space for "toggle done"
+  And help does NOT show 'c' for capture
+  And help does NOT show 'm' for migrate
+```
+
+---
+
+### 13. Command Palette
 
 ```gherkin
 Scenario: Open command palette
@@ -822,7 +1047,7 @@ Scenario: View command keybindings
 
 ---
 
-### 13. Help System
+### 14. Help System
 
 ```gherkin
 Scenario: Toggle help display
@@ -844,7 +1069,7 @@ Scenario: View full help
 
 ---
 
-### 14. General TUI Behavior
+### 15. General TUI Behavior
 
 ```gherkin
 Scenario: Quit application
@@ -878,7 +1103,7 @@ Scenario: Maintain state between views
 
 ---
 
-### 15. Theming
+### 16. Theming
 
 ```gherkin
 Scenario: Use default theme
@@ -906,7 +1131,7 @@ Scenario: Use solarized theme
 
 ## Cross-Cutting Tests
 
-### 16. Data Persistence
+### 17. Data Persistence
 
 ```gherkin
 Scenario: Data persists between sessions
@@ -927,7 +1152,7 @@ Scenario: Database migrations run automatically
   And data is preserved
 ```
 
-### 17. Date Handling
+### 18. Date Handling
 
 ```gherkin
 Scenario: Natural language dates
@@ -952,7 +1177,7 @@ Scenario: Invalid date handling
   And no entry is created
 ```
 
-### 18. Error Handling
+### 19. Error Handling
 
 ```gherkin
 Scenario: Handle missing database
@@ -979,19 +1204,20 @@ Scenario: Handle permission errors
 | Category | Test Count |
 |----------|------------|
 | Entry Management | 18 |
-| Habit Tracking | 16 |
-| List Management | 14 |
+| Habit Tracking (CLI) | 16 |
+| List Management (CLI) | 14 |
 | Day Context | 8 |
 | Backup Management | 4 |
 | Utility Commands | 6 |
 | TUI Startup | 3 |
 | Journal View | 17 |
 | Capture Mode | 9 |
-| Habits View | 5 |
-| Lists View | 8 |
+| Habits View (TUI) | 14 |
+| Lists View (TUI) | 11 |
+| List Items View (TUI) | 13 |
 | Command Palette | 7 |
 | Help System | 3 |
 | General TUI | 5 |
 | Theming | 4 |
-| Cross-Cutting | 8 |
-| **Total** | **125** |
+| Cross-Cutting | 11 |
+| **Total** | **163** |
