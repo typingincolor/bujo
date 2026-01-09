@@ -10,38 +10,38 @@ import (
 )
 
 var (
-	moodInspectFrom string
-	moodInspectTo   string
+	moodShowFrom string
+	moodShowTo   string
 )
 
-var moodInspectCmd = &cobra.Command{
-	Use:   "inspect",
+var moodShowCmd = &cobra.Command{
+	Use:   "show",
 	Short: "Show mood history",
 	Long: `Show mood history for a date range.
 
 By default shows the last 30 days. Use --from and --to to specify a date range.
 
 Examples:
-  bujo mood inspect
-  bujo mood inspect --from 2025-12-01
-  bujo mood inspect --from "last month"
-  bujo mood inspect --from 2025-12-01 --to 2025-12-31`,
+  bujo mood show
+  bujo mood show --from 2025-12-01
+  bujo mood show --from "last month"
+  bujo mood show --from 2025-12-01 --to 2025-12-31`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
 
 		from := today.AddDate(0, 0, -30)
 		to := today
 
-		if moodInspectFrom != "" {
-			parsed, err := parsePastDate(moodInspectFrom)
+		if moodShowFrom != "" {
+			parsed, err := parsePastDate(moodShowFrom)
 			if err != nil {
 				return err
 			}
 			from = parsed
 		}
 
-		if moodInspectTo != "" {
-			parsed, err := parsePastDate(moodInspectTo)
+		if moodShowTo != "" {
+			parsed, err := parsePastDate(moodShowTo)
 			if err != nil {
 				return err
 			}
@@ -81,7 +81,7 @@ Examples:
 }
 
 func init() {
-	moodInspectCmd.Flags().StringVar(&moodInspectFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
-	moodInspectCmd.Flags().StringVar(&moodInspectTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
-	moodCmd.AddCommand(moodInspectCmd)
+	moodShowCmd.Flags().StringVar(&moodShowFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
+	moodShowCmd.Flags().StringVar(&moodShowTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
+	moodCmd.AddCommand(moodShowCmd)
 }

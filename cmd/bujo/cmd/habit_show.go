@@ -14,23 +14,23 @@ import (
 )
 
 var (
-	inspectFrom string
-	inspectTo   string
+	habitShowFrom string
+	habitShowTo   string
 )
 
-var habitInspectCmd = &cobra.Command{
-	Use:   "inspect <habit-name|#id>",
+var habitShowCmd = &cobra.Command{
+	Use:   "show <habit-name|#id>",
 	Short: "Show habit details and log history",
 	Long: `Show detailed information about a habit including individual log entries.
 
 By default shows the last 30 days. Use --from and --to to specify a date range.
 
 Examples:
-  bujo habit inspect Gym
-  bujo habit inspect #1
-  bujo habit inspect Gym --from 2025-12-01
-  bujo habit inspect Gym --from "last month"
-  bujo habit inspect Gym --from 2025-12-01 --to 2025-12-31`,
+  bujo habit show Gym
+  bujo habit show #1
+  bujo habit show Gym --from 2025-12-01
+  bujo habit show Gym --from "last month"
+  bujo habit show Gym --from 2025-12-01 --to 2025-12-31`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name, id, isID, err := parseHabitNameOrID(args[0])
@@ -56,16 +56,16 @@ Examples:
 		from := today.AddDate(0, 0, -30)
 		to := today
 
-		if inspectFrom != "" {
-			parsed, err := parsePastDate(inspectFrom)
+		if habitShowFrom != "" {
+			parsed, err := parsePastDate(habitShowFrom)
 			if err != nil {
 				return err
 			}
 			from = parsed
 		}
 
-		if inspectTo != "" {
-			parsed, err := parsePastDate(inspectTo)
+		if habitShowTo != "" {
+			parsed, err := parsePastDate(habitShowTo)
 			if err != nil {
 				return err
 			}
@@ -85,7 +85,7 @@ Examples:
 		}
 
 		if err != nil {
-			return fmt.Errorf("failed to inspect habit: %w", err)
+			return fmt.Errorf("failed to show habit: %w", err)
 		}
 
 		fmt.Print(cli.RenderHabitInspect(details))
@@ -94,7 +94,7 @@ Examples:
 }
 
 func init() {
-	habitInspectCmd.Flags().StringVar(&inspectFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
-	habitInspectCmd.Flags().StringVar(&inspectTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
-	habitCmd.AddCommand(habitInspectCmd)
+	habitShowCmd.Flags().StringVar(&habitShowFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
+	habitShowCmd.Flags().StringVar(&habitShowTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
+	habitCmd.AddCommand(habitShowCmd)
 }

@@ -8,16 +8,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var habitDeleteLogCmd = &cobra.Command{
-	Use:   "delete-log <log-id>",
+var habitLogDeleteCmd = &cobra.Command{
+	Use:   "delete <log-id>",
 	Short: "Delete a specific habit log entry",
 	Long: `Delete a specific habit log entry by its ID.
 
-Use 'bujo habit inspect <habit>' to see log IDs.
+Use 'bujo habit show <habit>' to see log IDs.
 
 Examples:
-  bujo habit inspect Gym    # See log IDs
-  bujo habit delete-log 42  # Delete log #42`,
+  bujo habit show Gym       # See log IDs
+  bujo habit log delete 42  # Delete log #42`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		logID, err := strconv.ParseInt(args[0], 10, 64)
@@ -36,5 +36,5 @@ Examples:
 }
 
 func init() {
-	habitCmd.AddCommand(habitDeleteLogCmd)
+	habitLogCmd.AddCommand(habitLogDeleteCmd)
 }

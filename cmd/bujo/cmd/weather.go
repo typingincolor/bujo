@@ -18,7 +18,7 @@ Examples:
   bujo weather                         # Show today's weather
   bujo weather set sunny               # Set today's weather
   bujo weather set "Rainy, 15°C" -d yesterday  # Set weather for a past date
-  bujo weather inspect --from "last week"  # View weather history
+  bujo weather show --from "last week"     # View weather history
   bujo weather clear -d yesterday      # Clear a day's weather`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
