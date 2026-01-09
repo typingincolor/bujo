@@ -20,6 +20,9 @@ type KeyMap struct {
 	Capture        key.Binding
 	Confirm        key.Binding
 	Cancel         key.Binding
+	CancelEntry    key.Binding
+	UncancelEntry  key.Binding
+	Retype         key.Binding
 	Quit           key.Binding
 	Help           key.Binding
 	ViewJournal    key.Binding
@@ -101,6 +104,18 @@ func DefaultKeyMap() KeyMap {
 		Cancel: key.NewBinding(
 			key.WithKeys("n", "N", "esc"),
 			key.WithHelp("n/esc", "cancel"),
+		),
+		CancelEntry: key.NewBinding(
+			key.WithKeys("x"),
+			key.WithHelp("x", "cancel entry"),
+		),
+		UncancelEntry: key.NewBinding(
+			key.WithKeys("X"),
+			key.WithHelp("X", "uncancel"),
+		),
+		Retype: key.NewBinding(
+			key.WithKeys("t"),
+			key.WithHelp("t", "change type"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q", "ctrl+c"),

@@ -10,38 +10,38 @@ import (
 )
 
 var (
-	weatherInspectFrom string
-	weatherInspectTo   string
+	weatherShowFrom string
+	weatherShowTo   string
 )
 
-var weatherInspectCmd = &cobra.Command{
-	Use:   "inspect",
+var weatherShowCmd = &cobra.Command{
+	Use:   "show",
 	Short: "Show weather history",
 	Long: `Show weather history for a date range.
 
 By default shows the last 30 days. Use --from and --to to specify a date range.
 
 Examples:
-  bujo weather inspect
-  bujo weather inspect --from 2025-12-01
-  bujo weather inspect --from "last month"
-  bujo weather inspect --from 2025-12-01 --to 2025-12-31`,
+  bujo weather show
+  bujo weather show --from 2025-12-01
+  bujo weather show --from "last month"
+  bujo weather show --from 2025-12-01 --to 2025-12-31`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
 
 		from := today.AddDate(0, 0, -30)
 		to := today
 
-		if weatherInspectFrom != "" {
-			parsed, err := parsePastDate(weatherInspectFrom)
+		if weatherShowFrom != "" {
+			parsed, err := parsePastDate(weatherShowFrom)
 			if err != nil {
 				return err
 			}
 			from = parsed
 		}
 
-		if weatherInspectTo != "" {
-			parsed, err := parsePastDate(weatherInspectTo)
+		if weatherShowTo != "" {
+			parsed, err := parsePastDate(weatherShowTo)
 			if err != nil {
 				return err
 			}
@@ -81,7 +81,7 @@ Examples:
 }
 
 func init() {
-	weatherInspectCmd.Flags().StringVar(&weatherInspectFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
-	weatherInspectCmd.Flags().StringVar(&weatherInspectTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
-	weatherCmd.AddCommand(weatherInspectCmd)
+	weatherShowCmd.Flags().StringVar(&weatherShowFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
+	weatherShowCmd.Flags().StringVar(&weatherShowTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
+	weatherCmd.AddCommand(weatherShowCmd)
 }

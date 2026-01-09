@@ -18,7 +18,7 @@ Examples:
   bujo work                         # Show today's location
   bujo work set "Home Office"       # Set today's location
   bujo work set "Office" -d monday  # Set location for a past date
-  bujo work inspect --from "last week"  # View location history
+  bujo work show --from "last week"     # View location history
   bujo work clear -d yesterday      # Clear a day's location`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()

@@ -44,6 +44,7 @@ type Model struct {
 	gotoMode        gotoState
 	captureMode     captureState
 	searchMode      searchState
+	retypeMode      retypeState
 	habitState      habitState
 	listState       listState
 	commandPalette  commandPaletteState
@@ -91,6 +92,12 @@ type migrateState struct {
 type gotoState struct {
 	active bool
 	input  textinput.Model
+}
+
+type retypeState struct {
+	active      bool
+	entryID     int64
+	selectedIdx int
 }
 
 type captureState struct {

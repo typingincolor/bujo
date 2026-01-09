@@ -103,6 +103,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.gotoMode.active {
 			return m.handleGotoMode(msg)
 		}
+		if m.retypeMode.active {
+			return m.handleRetypeMode(msg)
+		}
 		if m.searchMode.active {
 			return m.handleSearchMode(msg)
 		}
@@ -134,33 +137,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
-
-	case key.Matches(msg, m.keyMap.ViewJournal):
-		m.currentView = ViewTypeJournal
-		return m, m.loadAgendaCmd()
-
-	case key.Matches(msg, m.keyMap.ViewHabits):
-		m.currentView = ViewTypeHabits
-		return m, m.loadHabitsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewLists):
-		m.currentView = ViewTypeLists
-		return m, m.loadListsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewSearch):
-		m.currentView = ViewTypeSearch
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewStats):
-		m.currentView = ViewTypeStats
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewSettings):
-		m.currentView = ViewTypeSettings
-		return m, nil
 
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
@@ -189,6 +172,29 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()
+
+	case key.Matches(msg, m.keyMap.CancelEntry):
+		if len(m.entries) > 0 {
+			return m, m.cancelEntryCmd()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.UncancelEntry):
+		if len(m.entries) > 0 {
+			return m, m.uncancelEntryCmd()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Retype):
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			m.retypeMode = retypeState{
+				active:      true,
+				entryID:     entry.ID,
+				selectedIdx: 0,
+			}
+		}
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.Delete):
 		if len(m.entries) > 0 {
@@ -1375,6 +1381,46 @@ func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
 	}
 }
 
+func (m Model) handleRetypeMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	types := []domain.EntryType{domain.EntryTypeTask, domain.EntryTypeNote, domain.EntryTypeEvent}
+
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.retypeMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		m.retypeMode.active = false
+		newType := types[m.retypeMode.selectedIdx]
+		return m, m.retypeEntryCmd(newType)
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Up):
+		if m.retypeMode.selectedIdx > 0 {
+			m.retypeMode.selectedIdx--
+		}
+	case key.Matches(msg, m.keyMap.Down):
+		if m.retypeMode.selectedIdx < len(types)-1 {
+			m.retypeMode.selectedIdx++
+		}
+	case msg.Type == tea.KeyRunes:
+		switch string(msg.Runes) {
+		case ".", "1":
+			m.retypeMode.active = false
+			return m, m.retypeEntryCmd(domain.EntryTypeTask)
+		case "-", "2":
+			m.retypeMode.active = false
+			return m, m.retypeEntryCmd(domain.EntryTypeNote)
+		case "o", "O", "3":
+			m.retypeMode.active = false
+			return m, m.retypeEntryCmd(domain.EntryTypeEvent)
+		}
+	}
+
+	return m, nil
+}
+
 func (m Model) migrateEntryCmd(id int64, dateStr string, fromDate time.Time) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -1429,6 +1475,51 @@ func (m Model) cyclePriorityCmd(entryID int64, newPriority domain.Priority) tea.
 	}
 }
 
+func (m Model) cancelEntryCmd() tea.Cmd {
+	if len(m.entries) == 0 {
+		return nil
+	}
+	entry := m.entries[m.selectedIdx].Entry
+
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.CancelEntry(ctx, entry.ID); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{entry.ID}
+	}
+}
+
+func (m Model) uncancelEntryCmd() tea.Cmd {
+	if len(m.entries) == 0 {
+		return nil
+	}
+	entry := m.entries[m.selectedIdx].Entry
+
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.UncancelEntry(ctx, entry.ID); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{entry.ID}
+	}
+}
+
+func (m Model) retypeEntryCmd(newType domain.EntryType) tea.Cmd {
+	if len(m.entries) == 0 {
+		return nil
+	}
+	entry := m.entries[m.selectedIdx].Entry
+
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.RetypeEntry(ctx, entry.ID, newType); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{entry.ID}
+	}
+}
+
 func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -1457,33 +1548,13 @@ func parseDateFrom(s string, reference time.Time) (time.Time, error) {
 }
 
 func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
-
-	case key.Matches(msg, m.keyMap.ViewJournal):
-		m.currentView = ViewTypeJournal
-		return m, m.loadAgendaCmd()
-
-	case key.Matches(msg, m.keyMap.ViewHabits):
-		m.currentView = ViewTypeHabits
-		return m, m.loadHabitsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewLists):
-		m.currentView = ViewTypeLists
-		return m, m.loadListsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewSearch):
-		m.currentView = ViewTypeSearch
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewStats):
-		m.currentView = ViewTypeStats
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewSettings):
-		m.currentView = ViewTypeSettings
-		return m, nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
@@ -1517,34 +1588,14 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleListItemsMode(msg)
 	}
 
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
 	// ViewTypeLists handling
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
-
-	case key.Matches(msg, m.keyMap.ViewJournal):
-		m.currentView = ViewTypeJournal
-		return m, m.loadAgendaCmd()
-
-	case key.Matches(msg, m.keyMap.ViewHabits):
-		m.currentView = ViewTypeHabits
-		return m, m.loadHabitsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewLists):
-		m.currentView = ViewTypeLists
-		return m, m.loadListsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewSearch):
-		m.currentView = ViewTypeSearch
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewStats):
-		m.currentView = ViewTypeStats
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewSettings):
-		m.currentView = ViewTypeSettings
-		return m, nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
@@ -1573,6 +1624,10 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
@@ -1581,30 +1636,6 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewTypeLists
 		m.listState.items = nil
 		m.listState.selectedItemIdx = 0
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewJournal):
-		m.currentView = ViewTypeJournal
-		return m, m.loadAgendaCmd()
-
-	case key.Matches(msg, m.keyMap.ViewHabits):
-		m.currentView = ViewTypeHabits
-		return m, m.loadHabitsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewLists):
-		m.currentView = ViewTypeLists
-		return m, m.loadListsCmd()
-
-	case key.Matches(msg, m.keyMap.ViewSearch):
-		m.currentView = ViewTypeSearch
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewStats):
-		m.currentView = ViewTypeStats
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.ViewSettings):
-		m.currentView = ViewTypeSettings
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Down):
@@ -1697,4 +1728,34 @@ func (m Model) handleCommandPaletteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return true, m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return true, m, m.loadHabitsCmd()
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return true, m, m.loadListsCmd()
+
+	case key.Matches(msg, m.keyMap.ViewSearch):
+		m.currentView = ViewTypeSearch
+		return true, m, nil
+
+	case key.Matches(msg, m.keyMap.ViewStats):
+		m.currentView = ViewTypeStats
+		return true, m, nil
+
+	case key.Matches(msg, m.keyMap.ViewSettings):
+		m.currentView = ViewTypeSettings
+		return true, m, nil
+	}
+
+	return false, m, nil
 }

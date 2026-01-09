@@ -1583,3 +1583,403 @@ func TestUAT_HelpSystem_BottomBarShowsCommands(t *testing.T) {
 		t.Error("view should show help hints in bottom bar")
 	}
 }
+
+// =============================================================================
+// UAT: Cancel/Strikethrough Entries (#77)
+// =============================================================================
+
+func TestUAT_JournalView_CancelEntry(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	_, err := bujoSvc.LogEntries(ctx, ". Task to cancel", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+	model.selectedIdx = 0
+
+	// Press 'x' to cancel the entry
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}}
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
+
+	// Should return a command to cancel the entry
+	if cmd == nil {
+		t.Error("pressing 'x' should return a cancel command")
+	}
+	_ = m
+}
+
+func TestUAT_JournalView_CancelledEntryShowsStrikethrough(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	ids, err := bujoSvc.LogEntries(ctx, ". Task to cancel", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Cancel the entry via service
+	err = bujoSvc.CancelEntry(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to cancel entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+
+	view := model.View()
+
+	// Cancelled entries should show the cancelled symbol (✗)
+	if !strings.Contains(view, "✗") {
+		t.Error("cancelled entry should show ✗ symbol")
+	}
+}
+
+func TestUAT_JournalView_UncancelEntry(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	ids, err := bujoSvc.LogEntries(ctx, ". Task to cancel", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Cancel the entry first
+	err = bujoSvc.CancelEntry(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to cancel entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+	model.selectedIdx = 0
+
+	// Press 'X' (shift+x) to uncancel the entry
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'X'}}
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
+
+	// Should return a command to uncancel the entry
+	if cmd == nil {
+		t.Error("pressing 'X' should return an uncancel command")
+	}
+	_ = m
+}
+
+// =============================================================================
+// UAT: Change Entry Type (#78)
+// =============================================================================
+
+func TestUAT_JournalView_RetypeEntry_OpensTypePicker(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	_, err := bujoSvc.LogEntries(ctx, ". Task to retype", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+	model.selectedIdx = 0
+
+	// Press 't' to open type picker
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'t'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	// Should activate retype mode
+	if !m.retypeMode.active {
+		t.Error("pressing 't' should activate retype mode")
+	}
+}
+
+func TestUAT_JournalView_RetypeEntry_ChangesType(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	ids, err := bujoSvc.LogEntries(ctx, ". Task to retype", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Retype via service
+	err = bujoSvc.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+	if err != nil {
+		t.Fatalf("failed to retype entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+
+	// Entry should now show as note (–)
+	if len(model.entries) == 0 {
+		t.Fatal("expected entries")
+	}
+
+	if model.entries[0].Entry.Type != domain.EntryTypeNote {
+		t.Errorf("entry type should be note, got %v", model.entries[0].Entry.Type)
+	}
+}
+
+func TestUAT_JournalView_RetypeEntry_PreservesContent(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	ids, err := bujoSvc.LogEntries(ctx, ". Original content here", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Retype via service
+	err = bujoSvc.RetypeEntry(ctx, ids[0], domain.EntryTypeEvent)
+	if err != nil {
+		t.Fatalf("failed to retype entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+
+	if len(model.entries) == 0 {
+		t.Fatal("expected entries")
+	}
+
+	if model.entries[0].Entry.Content != "Original content here" {
+		t.Errorf("content should be preserved, got %q", model.entries[0].Entry.Content)
+	}
+}
+
+// =============================================================================
+// UAT: View and Restore Deleted Entries (#79)
+// =============================================================================
+
+func TestUAT_DeletedEntries_CanBeViewed(t *testing.T) {
+	bujoSvc, _, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	// Create and delete an entry
+	ids, err := bujoSvc.LogEntries(ctx, ". Entry to delete", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	err = bujoSvc.DeleteEntry(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to delete entry: %v", err)
+	}
+
+	// Deleted entries should be viewable
+	deleted, err := bujoSvc.GetDeletedEntries(ctx)
+	if err != nil {
+		t.Fatalf("failed to get deleted entries: %v", err)
+	}
+
+	if len(deleted) == 0 {
+		t.Error("deleted entry should be viewable via GetDeletedEntries")
+	}
+
+	found := false
+	for _, e := range deleted {
+		if e.Content == "Entry to delete" {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("deleted entry should appear in deleted entries list")
+	}
+}
+
+func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
+	bujoSvc, _, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	// Create and delete an entry
+	ids, err := bujoSvc.LogEntries(ctx, ". Entry to restore", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Get the entity ID before deleting
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	var entityID domain.EntityID
+	for _, day := range agenda.Days {
+		for _, e := range day.Entries {
+			if e.ID == ids[0] {
+				entityID = e.EntityID
+				break
+			}
+		}
+	}
+
+	err = bujoSvc.DeleteEntry(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to delete entry: %v", err)
+	}
+
+	// Entry should not appear in agenda
+	agenda, _ = bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	for _, day := range agenda.Days {
+		for _, e := range day.Entries {
+			if e.Content == "Entry to restore" {
+				t.Error("deleted entry should not appear in agenda")
+			}
+		}
+	}
+
+	// Restore the entry
+	newID, err := bujoSvc.RestoreEntry(ctx, entityID)
+	if err != nil {
+		t.Fatalf("failed to restore entry: %v", err)
+	}
+
+	if newID == 0 {
+		t.Error("restore should return new entry ID")
+	}
+
+	// Entry should reappear in agenda
+	agenda, _ = bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	found := false
+	for _, day := range agenda.Days {
+		for _, e := range day.Entries {
+			if e.Content == "Entry to restore" {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		t.Error("restored entry should appear in agenda")
+	}
+}
+
+func TestUAT_DeletedEntries_NotShownInJournal(t *testing.T) {
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	todayDate := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.Local)
+
+	// Create two entries
+	_, err := bujoSvc.LogEntries(ctx, ". Keep this entry", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	ids, err := bujoSvc.LogEntries(ctx, ". Delete this entry", service.LogEntriesOptions{Date: todayDate})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+
+	// Delete one entry
+	err = bujoSvc.DeleteEntry(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to delete entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	model.agenda = agenda
+	model.entries = model.flattenAgenda(agenda)
+
+	view := model.View()
+
+	if strings.Contains(view, "Delete this entry") {
+		t.Error("deleted entry should not appear in journal view")
+	}
+
+	if !strings.Contains(view, "Keep this entry") {
+		t.Error("non-deleted entry should appear in journal view")
+	}
+}

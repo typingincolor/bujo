@@ -18,7 +18,7 @@ Examples:
   bujo mood                         # Show today's mood
   bujo mood set happy               # Set today's mood
   bujo mood set tired -d yesterday  # Set mood for a past date
-  bujo mood inspect --from "last week"  # View mood history
+  bujo mood show --from "last week"     # View mood history
   bujo mood clear -d yesterday      # Clear a day's mood`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
