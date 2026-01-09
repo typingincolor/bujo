@@ -281,11 +281,18 @@ func TestIntegration_SwitchBetweenViews_MaintainsData(t *testing.T) {
 		t.Fatalf("failed to log habit: %v", err)
 	}
 
-	list, _ := listSvc.CreateList(ctx, "Shopping")
-	listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk")
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
 
 	opts := service.LogEntriesOptions{Date: time.Now()}
-	bujoSvc.LogEntries(ctx, ". Do stuff", opts)
+	if _, err := bujoSvc.LogEntries(ctx, ". Do stuff", opts); err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
 
 	// Create model
 	model := NewWithConfig(Config{
