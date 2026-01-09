@@ -11,13 +11,14 @@ import (
 )
 
 var (
-	Cyan      = color.New(color.FgCyan).SprintFunc()
-	Green     = color.New(color.FgGreen).SprintFunc()
-	Red       = color.New(color.FgRed).SprintFunc()
-	Yellow    = color.New(color.FgYellow).SprintFunc()
-	Bold      = color.New(color.Bold).SprintFunc()
-	Dimmed    = color.New(color.Faint).SprintFunc()
-	Highlight = color.New(color.FgYellow, color.Bold).SprintFunc()
+	Cyan          = color.New(color.FgCyan).SprintFunc()
+	Green         = color.New(color.FgGreen).SprintFunc()
+	Red           = color.New(color.FgRed).SprintFunc()
+	Yellow        = color.New(color.FgYellow).SprintFunc()
+	Bold          = color.New(color.Bold).SprintFunc()
+	Dimmed        = color.New(color.Faint).SprintFunc()
+	Highlight     = color.New(color.FgYellow, color.Bold).SprintFunc()
+	Strikethrough = color.New(color.CrossedOut).SprintFunc()
 )
 
 const separator = "---------------------------------------------------------"
@@ -113,10 +114,6 @@ func renderEntryWithChildren(sb *strings.Builder, entry domain.Entry, children m
 
 func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Time) string {
 	indent := strings.Repeat("  ", depth)
-	treePrefix := ""
-	if depth > 0 {
-		treePrefix = "└── "
-	}
 
 	symbol := entry.Type.Symbol()
 	content := entry.Content
@@ -132,6 +129,10 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 		content = Dimmed(content)
 		symbol = Dimmed(symbol)
 		idStr = Dimmed(idStr)
+	case domain.EntryTypeCancelled:
+		content = Strikethrough(Dimmed(content))
+		symbol = Dimmed(symbol)
+		idStr = Dimmed(idStr)
 	}
 
 	// Check if entry is overdue: either forced (in OVERDUE section) or per-entry check
@@ -141,7 +142,7 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 		idStr = Red(idStr)
 	}
 
-	return fmt.Sprintf("%s%s%s %s %s\n", indent, treePrefix, symbol, content, idStr)
+	return fmt.Sprintf("%s%s %s %s\n", indent, symbol, content, idStr)
 }
 
 func RenderHabitTracker(status *service.TrackerStatus) string {

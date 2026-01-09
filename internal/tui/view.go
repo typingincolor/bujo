@@ -298,6 +298,8 @@ func (m Model) renderEntry(item EntryItem) string {
 		return DoneStyle.Render(base)
 	case domain.EntryTypeMigrated:
 		return MigratedStyle.Render(base)
+	case domain.EntryTypeCancelled:
+		return CancelledStyle.Render(base)
 	default:
 		if item.IsOverdue {
 			return OverdueStyle.Render(base)

@@ -18,6 +18,7 @@ func TestEntryType_IsValid(t *testing.T) {
 		{"event is valid", EntryTypeEvent, true},
 		{"done is valid", EntryTypeDone, true},
 		{"migrated is valid", EntryTypeMigrated, true},
+		{"cancelled is valid", EntryTypeCancelled, true},
 		{"empty is invalid", EntryType(""), false},
 		{"unknown is invalid", EntryType("?"), false},
 	}
@@ -40,6 +41,7 @@ func TestEntryType_Symbol(t *testing.T) {
 		{"event symbol", EntryTypeEvent, "○"},
 		{"done symbol", EntryTypeDone, "✓"},
 		{"migrated symbol", EntryTypeMigrated, "→"},
+		{"cancelled symbol", EntryTypeCancelled, "✗"},
 	}
 
 	for _, tt := range tests {
@@ -79,6 +81,11 @@ func TestEntry_IsComplete(t *testing.T) {
 			name:     "migrated entry is not complete",
 			entry:    Entry{Type: EntryTypeMigrated},
 			expected: false,
+		},
+		{
+			name:     "cancelled entry is complete",
+			entry:    Entry{Type: EntryTypeCancelled},
+			expected: true,
 		},
 	}
 
@@ -132,6 +139,11 @@ func TestEntry_IsOverdue(t *testing.T) {
 		{
 			name:     "event is never overdue",
 			entry:    Entry{Type: EntryTypeEvent, ScheduledDate: &yesterday},
+			expected: false,
+		},
+		{
+			name:     "cancelled entry is never overdue",
+			entry:    Entry{Type: EntryTypeCancelled, ScheduledDate: &yesterday},
 			expected: false,
 		},
 	}

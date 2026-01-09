@@ -15,6 +15,7 @@ type Theme struct {
 	Error           lipgloss.Color
 	Done            lipgloss.Color
 	Migrated        lipgloss.Color
+	Cancelled       lipgloss.Color
 	Selection       lipgloss.Color
 	SelectionFg     lipgloss.Color
 }
@@ -32,6 +33,7 @@ var DefaultTheme = Theme{
 	Error:       lipgloss.Color("196"),
 	Done:        lipgloss.Color("242"),
 	Migrated:    lipgloss.Color("105"),
+	Cancelled:   lipgloss.Color("240"),
 	Selection:   lipgloss.Color("62"),
 	SelectionFg: lipgloss.Color("255"),
 }
@@ -49,6 +51,7 @@ var DarkTheme = Theme{
 	Error:       lipgloss.Color("203"),
 	Done:        lipgloss.Color("245"),
 	Migrated:    lipgloss.Color("147"),
+	Cancelled:   lipgloss.Color("245"),
 	Selection:   lipgloss.Color("24"),
 	SelectionFg: lipgloss.Color("255"),
 }
@@ -66,6 +69,7 @@ var LightTheme = Theme{
 	Error:       lipgloss.Color("160"),
 	Done:        lipgloss.Color("247"),
 	Migrated:    lipgloss.Color("61"),
+	Cancelled:   lipgloss.Color("247"),
 	Selection:   lipgloss.Color("153"),
 	SelectionFg: lipgloss.Color("232"),
 }
@@ -83,6 +87,7 @@ var SolarizedTheme = Theme{
 	Error:       lipgloss.Color("160"),
 	Done:        lipgloss.Color("240"),
 	Migrated:    lipgloss.Color("33"),
+	Cancelled:   lipgloss.Color("244"),
 	Selection:   lipgloss.Color("240"),
 	SelectionFg: lipgloss.Color("187"),
 }
@@ -115,21 +120,23 @@ func (t Theme) HasAllColors() bool {
 		t.Error != "" &&
 		t.Done != "" &&
 		t.Migrated != "" &&
+		t.Cancelled != "" &&
 		t.Selection != "" &&
 		t.SelectionFg != ""
 }
 
 type ThemeStyles struct {
-	Toolbar   lipgloss.Style
-	Header    lipgloss.Style
-	Entry     lipgloss.Style
-	Done      lipgloss.Style
-	Migrated  lipgloss.Style
-	Overdue   lipgloss.Style
-	Selected  lipgloss.Style
-	Help      lipgloss.Style
-	Confirm   lipgloss.Style
-	Error     lipgloss.Style
+	Toolbar    lipgloss.Style
+	Header     lipgloss.Style
+	Entry      lipgloss.Style
+	Done       lipgloss.Style
+	Migrated   lipgloss.Style
+	Cancelled  lipgloss.Style
+	Overdue    lipgloss.Style
+	Selected   lipgloss.Style
+	Help       lipgloss.Style
+	Confirm    lipgloss.Style
+	Error      lipgloss.Style
 	ErrorTitle lipgloss.Style
 }
 
@@ -148,6 +155,9 @@ func NewThemeStyles(theme Theme) ThemeStyles {
 			Strikethrough(true),
 		Migrated: lipgloss.NewStyle().
 			Foreground(theme.Migrated),
+		Cancelled: lipgloss.NewStyle().
+			Foreground(theme.Cancelled).
+			Strikethrough(true),
 		Overdue: lipgloss.NewStyle().
 			Foreground(theme.Warning),
 		Selected: lipgloss.NewStyle().
