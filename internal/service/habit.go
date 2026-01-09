@@ -14,6 +14,7 @@ type HabitRepository interface {
 	GetByName(ctx context.Context, name string) (*domain.Habit, error)
 	GetAll(ctx context.Context) ([]domain.Habit, error)
 	Update(ctx context.Context, habit domain.Habit) error
+	Delete(ctx context.Context, id int64) error
 }
 
 type HabitLogRepository interface {
@@ -56,6 +57,14 @@ func (s *HabitService) getHabitByName(ctx context.Context, name string) (*domain
 		return nil, fmt.Errorf("habit not found: %s", name)
 	}
 	return habit, nil
+}
+
+func (s *HabitService) HabitExists(ctx context.Context, name string) (bool, error) {
+	habit, err := s.habitRepo.GetByName(ctx, name)
+	if err != nil {
+		return false, err
+	}
+	return habit != nil, nil
 }
 
 func (s *HabitService) LogHabit(ctx context.Context, name string, count int) error {
@@ -136,6 +145,24 @@ func (s *HabitService) DeleteLog(ctx context.Context, logID int64) error {
 	}
 
 	return s.logRepo.Delete(ctx, logID)
+}
+
+func (s *HabitService) DeleteHabit(ctx context.Context, name string) error {
+	habit, err := s.getHabitByName(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	return s.habitRepo.Delete(ctx, habit.ID)
+}
+
+func (s *HabitService) DeleteHabitByID(ctx context.Context, habitID int64) error {
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
+		return err
+	}
+
+	return s.habitRepo.Delete(ctx, habit.ID)
 }
 
 func (s *HabitService) RenameHabit(ctx context.Context, oldName, newName string) error {

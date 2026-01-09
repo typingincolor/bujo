@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -32,6 +36,18 @@ Examples:
 		name, id, isID, err := parseHabitNameOrID(args[0])
 		if err != nil {
 			return err
+		}
+
+		if !isID && isPureNumber(args[0]) {
+			fmt.Printf("'%s' looks like an ID. Did you mean to use #%s? [y/N]: ", args[0], args[0])
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			confirm := strings.TrimSpace(strings.ToLower(input))
+
+			if confirm == "y" || confirm == "yes" {
+				id, _ = strconv.ParseInt(args[0], 10, 64)
+				isID = true
+			}
 		}
 
 		today := time.Now()

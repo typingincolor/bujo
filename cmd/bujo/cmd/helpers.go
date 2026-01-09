@@ -29,6 +29,14 @@ func parseHabitNameOrID(s string) (name string, id int64, isID bool, err error) 
 	return s, 0, false, nil
 }
 
+func isPureNumber(s string) bool {
+	if s == "" {
+		return false
+	}
+	_, err := strconv.ParseInt(s, 10, 64)
+	return err == nil
+}
+
 func parseListNameOrID(s string) (name string, id int64, isID bool, err error) {
 	if strings.HasPrefix(s, "#") {
 		id, err = strconv.ParseInt(s[1:], 10, 64)
