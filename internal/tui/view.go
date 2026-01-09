@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/typingincolor/bujo/internal/domain"
+	"github.com/typingincolor/bujo/internal/service"
 )
 
 func (m Model) View() string {
@@ -16,10 +17,6 @@ func (m Model) View() string {
 		return m.renderCaptureMode()
 	}
 
-	if m.agenda == nil {
-		return "Loading..."
-	}
-
 	var sb strings.Builder
 
 	// Toolbar
@@ -28,6 +25,60 @@ func (m Model) View() string {
 	sb.WriteString("\n")
 	sb.WriteString(strings.Repeat("─", min(m.width, 60)))
 	sb.WriteString("\n")
+
+	// View-specific content
+	switch m.currentView {
+	case ViewTypeHabits:
+		sb.WriteString(m.renderHabitsContent())
+	case ViewTypeLists, ViewTypeListItems:
+		sb.WriteString(m.renderListsContent())
+	default:
+		sb.WriteString(m.renderJournalContent())
+	}
+
+	// Modal overlays (shared across all views)
+	if m.editMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderEditInput())
+		sb.WriteString("\n")
+	} else if m.addMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAddInput())
+		sb.WriteString("\n")
+	} else if m.migrateMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMigrateInput())
+		sb.WriteString("\n")
+	} else if m.confirmMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderConfirmDialog())
+		sb.WriteString("\n")
+	} else if m.gotoMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderGotoInput())
+		sb.WriteString("\n")
+	} else if m.searchMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSearchInput())
+		sb.WriteString("\n")
+	} else if m.commandPalette.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderCommandPalette())
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render(m.help.View(m.keyMap)))
+
+	return sb.String()
+}
+
+func (m Model) renderJournalContent() string {
+	if m.agenda == nil {
+		return "Loading..."
+	}
+
+	var sb strings.Builder
 
 	if len(m.entries) == 0 {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
@@ -107,35 +158,129 @@ func (m Model) View() string {
 		}
 	}
 
-	if m.editMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderEditInput())
-		sb.WriteString("\n")
-	} else if m.addMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderAddInput())
-		sb.WriteString("\n")
-	} else if m.migrateMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderMigrateInput())
-		sb.WriteString("\n")
-	} else if m.confirmMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderConfirmDialog())
-		sb.WriteString("\n")
-	} else if m.gotoMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderGotoInput())
-		sb.WriteString("\n")
-	} else if m.searchMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderSearchInput())
+	return sb.String()
+}
+
+func (m Model) renderHabitsContent() string {
+	var sb strings.Builder
+
+	if len(m.habitState.habits) == 0 {
+		sb.WriteString(HelpStyle.Render("No habits yet. Use 'bujo habit log <name>' to create one."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for i, habit := range m.habitState.habits {
+		// Build sparkline from day history
+		sparkline := m.renderSparkline(habit.DayHistory)
+
+		// Format: Name | Sparkline | Streak | Completion%
+		line := fmt.Sprintf("%-20s %s  %d day streak  %.0f%%",
+			habit.Name,
+			sparkline,
+			habit.CurrentStreak,
+			habit.CompletionPercent,
+		)
+
+		if i == m.habitState.selectedIdx {
+			line = SelectedStyle.Render(line)
+		}
+
+		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(HelpStyle.Render(m.help.View(m.keyMap)))
+	return sb.String()
+}
 
+func (m Model) renderSparkline(history []service.DayStatus) string {
+	var sb strings.Builder
+	for _, day := range history {
+		if day.Completed {
+			sb.WriteString("▓")
+		} else {
+			sb.WriteString("░")
+		}
+	}
+	return sb.String()
+}
+
+func (m Model) renderListsContent() string {
+	if m.currentView == ViewTypeListItems {
+		return m.renderListItemsContent()
+	}
+	return m.renderListsOverview()
+}
+
+func (m Model) renderListsOverview() string {
+	var sb strings.Builder
+
+	if len(m.listState.lists) == 0 {
+		sb.WriteString(HelpStyle.Render("No lists yet. Use 'bujo list create <name>' to create one."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for i, list := range m.listState.lists {
+		summary := m.listState.summaries[list.ID]
+		var progress string
+		if summary != nil {
+			progress = fmt.Sprintf("%d/%d", summary.DoneItems, summary.TotalItems)
+		} else {
+			progress = "0/0"
+		}
+
+		line := fmt.Sprintf("📋 %-20s  %s", list.Name, progress)
+
+		if i == m.listState.selectedListIdx {
+			line = SelectedStyle.Render(line)
+		}
+
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func (m Model) renderListItemsContent() string {
+	var sb strings.Builder
+
+	var listName string
+	for _, list := range m.listState.lists {
+		if list.ID == m.listState.currentListID {
+			listName = list.Name
+			break
+		}
+	}
+	sb.WriteString(fmt.Sprintf("📋 %s\n", listName))
+	sb.WriteString("────────────────────────────────────────\n")
+
+	if len(m.listState.items) == 0 {
+		sb.WriteString(HelpStyle.Render("No items yet. List is empty. Press 'a' to add an item."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for i, item := range m.listState.items {
+		symbol := item.Type.Symbol()
+		line := fmt.Sprintf("%s %s", symbol, item.Content)
+
+		if item.Type == domain.ListItemTypeDone {
+			line = DoneStyle.Render(line)
+		}
+
+		if i == m.listState.selectedItemIdx {
+			line = SelectedStyle.Render(line)
+		}
+
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
 	return sb.String()
 }
 
@@ -153,6 +298,8 @@ func (m Model) renderEntry(item EntryItem) string {
 		return DoneStyle.Render(base)
 	case domain.EntryTypeMigrated:
 		return MigratedStyle.Render(base)
+	case domain.EntryTypeCancelled:
+		return CancelledStyle.Render(base)
 	default:
 		if item.IsOverdue {
 			return OverdueStyle.Render(base)
@@ -247,6 +394,20 @@ func (m Model) highlightSearchTerm(line string) string {
 }
 
 func (m Model) renderToolbar() string {
+	var viewTypeStr string
+	switch m.currentView {
+	case ViewTypeJournal:
+		viewTypeStr = "Journal"
+	case ViewTypeHabits:
+		viewTypeStr = "Habits"
+	case ViewTypeLists:
+		viewTypeStr = "Lists"
+	case ViewTypeListItems:
+		viewTypeStr = "List Items"
+	default:
+		viewTypeStr = "Journal"
+	}
+
 	viewModeStr := "Day"
 	if m.viewMode == ViewModeWeek {
 		viewModeStr = "Week"
@@ -254,7 +415,7 @@ func (m Model) renderToolbar() string {
 
 	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
 
-	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s", viewModeStr, dateStr))
+	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s | %s", viewTypeStr, viewModeStr, dateStr))
 }
 
 func (m Model) renderCaptureMode() string {
@@ -518,4 +679,31 @@ func (m Model) renderErrorPopup() string {
 	sb.WriteString(footer)
 
 	return ErrorStyle.Render(sb.String())
+}
+
+func (m Model) renderCommandPalette() string {
+	var sb strings.Builder
+
+	sb.WriteString("Command Palette\n")
+	sb.WriteString("────────────────────────────────────────\n")
+	sb.WriteString(fmt.Sprintf("> %s█\n\n", m.commandPalette.query))
+
+	for i, cmd := range m.commandPalette.filtered {
+		prefix := "  "
+		if i == m.commandPalette.selectedIdx {
+			prefix = "> "
+		}
+
+		line := fmt.Sprintf("%s%-25s  [%s]  %s", prefix, cmd.Name, cmd.Keybinding, cmd.Description)
+
+		if i == m.commandPalette.selectedIdx {
+			line = SelectedStyle.Render(line)
+		}
+
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n↑/↓ navigate • Enter select • Esc cancel")
+	return ConfirmStyle.Render(sb.String())
 }

@@ -3,24 +3,28 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type KeyMap struct {
-	Up         key.Binding
-	Down       key.Binding
-	Top        key.Binding
-	Bottom     key.Binding
-	Done       key.Binding
-	Delete     key.Binding
-	Edit       key.Binding
-	Add        key.Binding
-	AddChild   key.Binding
-	AddRoot    key.Binding
-	Migrate    key.Binding
-	ToggleView key.Binding
-	GotoDate   key.Binding
-	Capture    key.Binding
-	Confirm    key.Binding
-	Cancel     key.Binding
-	Quit       key.Binding
-	Help       key.Binding
+	Up             key.Binding
+	Down           key.Binding
+	Top            key.Binding
+	Bottom         key.Binding
+	Done           key.Binding
+	Delete         key.Binding
+	Edit           key.Binding
+	Add            key.Binding
+	AddChild       key.Binding
+	AddRoot        key.Binding
+	Migrate        key.Binding
+	ToggleView     key.Binding
+	GotoDate       key.Binding
+	Capture        key.Binding
+	Confirm        key.Binding
+	Cancel         key.Binding
+	Quit           key.Binding
+	Help           key.Binding
+	ViewJournal    key.Binding
+	ViewHabits     key.Binding
+	ViewLists      key.Binding
+	CommandPalette key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -96,6 +100,22 @@ func DefaultKeyMap() KeyMap {
 		Help: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
+		),
+		ViewJournal: key.NewBinding(
+			key.WithKeys("1"),
+			key.WithHelp("1", "journal"),
+		),
+		ViewHabits: key.NewBinding(
+			key.WithKeys("2"),
+			key.WithHelp("2", "habits"),
+		),
+		ViewLists: key.NewBinding(
+			key.WithKeys("3"),
+			key.WithHelp("3", "lists"),
+		),
+		CommandPalette: key.NewBinding(
+			key.WithKeys("ctrl+p", ":"),
+			key.WithHelp("ctrl+p/:", "commands"),
 		),
 	}
 }

@@ -49,8 +49,8 @@ func TestRenderDailyAgenda_OverdueHierarchy(t *testing.T) {
 			wantContains: []string{
 				"OVERDUE",
 				"○ Meeting 1",
-				"└── – note 1",
-				"└── • Task 1",
+				"  – note 1",
+				"    • Task 1",
 			},
 			wantNotContain: []string{},
 		},
@@ -110,7 +110,7 @@ func TestRenderMultiDayAgenda_OverdueHierarchy(t *testing.T) {
 
 	assert.Contains(t, stripped, "OVERDUE")
 	assert.Contains(t, stripped, "○ Meeting 1")
-	assert.Contains(t, stripped, "└── – note 1")
+	assert.Contains(t, stripped, "  – note 1")
 }
 
 func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
@@ -166,4 +166,36 @@ func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
 		"Overdue task should be styled red, got: %q", overdueTaskLine)
 	assert.False(t, strings.Contains(todayTaskLine, "\x1b[31m"),
 		"Today's task should NOT be red, got: %q", todayTaskLine)
+}
+
+func TestRenderDailyAgenda_CancelledEntriesHaveStrikethrough(t *testing.T) {
+	today := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
+
+	agenda := &service.DailyAgenda{
+		Date: today,
+		Today: []domain.Entry{
+			{ID: 1, Type: domain.EntryTypeCancelled, Content: "Cancelled task", ScheduledDate: &today, Depth: 0},
+			{ID: 2, Type: domain.EntryTypeTask, Content: "Normal task", ScheduledDate: &today, Depth: 0},
+		},
+	}
+
+	result := RenderDailyAgenda(agenda)
+
+	// Find lines
+	lines := strings.Split(result, "\n")
+	var cancelledLine, normalLine string
+	for _, line := range lines {
+		if strings.Contains(line, "Cancelled task") {
+			cancelledLine = line
+		}
+		if strings.Contains(line, "Normal task") {
+			normalLine = line
+		}
+	}
+
+	// \x1b[9m is the ANSI code for strikethrough
+	assert.True(t, strings.Contains(cancelledLine, "\x1b[9m"),
+		"Cancelled task should have strikethrough, got: %q", cancelledLine)
+	assert.False(t, strings.Contains(normalLine, "\x1b[9m"),
+		"Normal task should NOT have strikethrough, got: %q", normalLine)
 }

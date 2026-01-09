@@ -8,19 +8,21 @@ import (
 type EntryType string
 
 const (
-	EntryTypeTask     EntryType = "task"
-	EntryTypeNote     EntryType = "note"
-	EntryTypeEvent    EntryType = "event"
-	EntryTypeDone     EntryType = "done"
-	EntryTypeMigrated EntryType = "migrated"
+	EntryTypeTask      EntryType = "task"
+	EntryTypeNote      EntryType = "note"
+	EntryTypeEvent     EntryType = "event"
+	EntryTypeDone      EntryType = "done"
+	EntryTypeMigrated  EntryType = "migrated"
+	EntryTypeCancelled EntryType = "cancelled"
 )
 
 var validEntryTypes = map[EntryType]string{
-	EntryTypeTask:     "•",
-	EntryTypeNote:     "–",
-	EntryTypeEvent:    "○",
-	EntryTypeDone:     "✓",
-	EntryTypeMigrated: "→",
+	EntryTypeTask:      "•",
+	EntryTypeNote:      "–",
+	EntryTypeEvent:     "○",
+	EntryTypeDone:      "✓",
+	EntryTypeMigrated:  "→",
+	EntryTypeCancelled: "✗",
 }
 
 func (et EntryType) IsValid() bool {
@@ -56,7 +58,7 @@ func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Ent
 }
 
 func (e Entry) IsComplete() bool {
-	return e.Type == EntryTypeDone
+	return e.Type == EntryTypeDone || e.Type == EntryTypeCancelled
 }
 
 func (e Entry) HasParent() bool {

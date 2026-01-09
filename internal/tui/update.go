@@ -52,6 +52,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case habitsLoadedMsg:
+		m.habitState.habits = msg.habits
+		if m.habitState.selectedIdx >= len(m.habitState.habits) {
+			m.habitState.selectedIdx = 0
+		}
+		return m, nil
+
+	case habitLoggedMsg:
+		return m, m.loadHabitsCmd()
+
+	case listsLoadedMsg:
+		m.listState.lists = msg.lists
+		if m.listState.selectedListIdx >= len(m.listState.lists) {
+			m.listState.selectedListIdx = 0
+		}
+		return m, nil
+
+	case listItemsLoadedMsg:
+		m.listState.items = msg.items
+		if m.listState.selectedItemIdx >= len(m.listState.items) {
+			m.listState.selectedItemIdx = 0
+		}
+		return m, nil
+
+	case listItemToggledMsg:
+		return m, m.loadListItemsCmd(m.listState.currentListID)
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -78,7 +105,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.searchMode.active {
 			return m.handleSearchMode(msg)
 		}
-		return m.handleNormalMode(msg)
+		if m.commandPalette.active {
+			return m.handleCommandPaletteMode(msg)
+		}
+
+		// Check for command palette activation
+		if key.Matches(msg, m.keyMap.CommandPalette) {
+			m.commandPalette.active = true
+			m.commandPalette.query = ""
+			m.commandPalette.selectedIdx = 0
+			m.commandPalette.filtered = m.commandRegistry.All()
+			return m, nil
+		}
+
+		// View-specific handling
+		switch m.currentView {
+		case ViewTypeHabits:
+			return m.handleHabitsMode(msg)
+		case ViewTypeLists, ViewTypeListItems:
+			return m.handleListsMode(msg)
+		default:
+			return m.handleNormalMode(msg)
+		}
 	}
 
 	return m, nil
@@ -88,6 +136,18 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
+
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
@@ -1381,4 +1441,190 @@ func parseDateFrom(s string, reference time.Time) (time.Time, error) {
 	}
 
 	return parsed, nil
+}
+
+func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
+			m.habitState.selectedIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.habitState.selectedIdx > 0 {
+			m.habitState.selectedIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Done):
+		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
+			return m, m.logHabitCmd(m.habitState.habits[m.habitState.selectedIdx].ID)
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ToggleView):
+		m.habitState.monthView = !m.habitState.monthView
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Handle ViewTypeListItems separately
+	if m.currentView == ViewTypeListItems {
+		return m.handleListItemsMode(msg)
+	}
+
+	// ViewTypeLists handling
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
+			m.listState.selectedListIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.listState.selectedListIdx > 0 {
+			m.listState.selectedListIdx--
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyEnter:
+		if len(m.listState.lists) > 0 && m.listState.selectedListIdx < len(m.listState.lists) {
+			selectedList := m.listState.lists[m.listState.selectedListIdx]
+			m.listState.currentListID = selectedList.ID
+			m.listState.selectedItemIdx = 0
+			m.currentView = ViewTypeListItems
+			return m, m.loadListItemsCmd(selectedList.ID)
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case msg.Type == tea.KeyEscape:
+		m.currentView = ViewTypeLists
+		m.listState.items = nil
+		m.listState.selectedItemIdx = 0
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.listState.selectedItemIdx < len(m.listState.items)-1 {
+			m.listState.selectedItemIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.listState.selectedItemIdx > 0 {
+			m.listState.selectedItemIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Done):
+		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
+			item := m.listState.items[m.listState.selectedItemIdx]
+			return m, m.toggleListItemCmd(item)
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleCommandPaletteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case msg.Type == tea.KeyEscape:
+		m.commandPalette.active = false
+		m.commandPalette.query = ""
+		m.commandPalette.selectedIdx = 0
+		return m, nil
+
+	case msg.Type == tea.KeyEnter:
+		if len(m.commandPalette.filtered) > 0 && m.commandPalette.selectedIdx < len(m.commandPalette.filtered) {
+			cmd := m.commandPalette.filtered[m.commandPalette.selectedIdx]
+			m.commandPalette.active = false
+			m.commandPalette.query = ""
+			m.commandPalette.selectedIdx = 0
+			return cmd.Action(m)
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Down) || msg.String() == "down":
+		if m.commandPalette.selectedIdx < len(m.commandPalette.filtered)-1 {
+			m.commandPalette.selectedIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up) || msg.String() == "up":
+		if m.commandPalette.selectedIdx > 0 {
+			m.commandPalette.selectedIdx--
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyBackspace:
+		if len(m.commandPalette.query) > 0 {
+			m.commandPalette.query = m.commandPalette.query[:len(m.commandPalette.query)-1]
+			m.commandPalette.filtered = m.commandRegistry.Filter(m.commandPalette.query)
+			m.commandPalette.selectedIdx = 0
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyRunes:
+		m.commandPalette.query += string(msg.Runes)
+		m.commandPalette.filtered = m.commandRegistry.Filter(m.commandPalette.query)
+		m.commandPalette.selectedIdx = 0
+		return m, nil
+	}
+
+	return m, nil
 }

@@ -34,6 +34,10 @@ var (
 	MigratedStyle = lipgloss.NewStyle().
 			Foreground(DimColor)
 
+	CancelledStyle = lipgloss.NewStyle().
+			Foreground(DimColor).
+			Strikethrough(true)
+
 	IDStyle = lipgloss.NewStyle().
 		Foreground(DimColor)
 

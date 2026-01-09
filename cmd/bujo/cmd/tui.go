@@ -13,7 +13,11 @@ var tuiCmd = &cobra.Command{
 	Short: "Launch interactive terminal UI",
 	Long:  `Launch an interactive terminal UI for viewing and managing journal entries.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		model := tui.New(bujoService)
+		model := tui.NewWithConfig(tui.Config{
+			BujoService:  bujoService,
+			HabitService: habitService,
+			ListService:  listService,
+		})
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
 		if _, err := p.Run(); err != nil {

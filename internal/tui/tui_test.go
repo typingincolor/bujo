@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -265,8 +266,8 @@ func TestModel_View_Loading(t *testing.T) {
 	model := New(nil)
 	view := model.View()
 
-	if view != "Loading..." {
-		t.Errorf("expected Loading..., got %s", view)
+	if !strings.Contains(view, "Loading...") {
+		t.Errorf("expected view to contain Loading..., got %s", view)
 	}
 }
 
@@ -3402,6 +3403,956 @@ func TestModel_HighlightSearchTerm_PartialWord(t *testing.T) {
 	// Should highlight "ask" within "Task"
 	if result == line {
 		t.Error("partial word match should be highlighted")
+	}
+}
+
+// ============================================================================
+// Phase 4: Multi-View Architecture Tests
+// ============================================================================
+
+func TestModel_ViewSwitch_Key1_SwitchesToJournal(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits // Start in habits view
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeJournal {
+		t.Errorf("expected ViewTypeJournal, got %v", m.currentView)
+	}
+}
+
+func TestModel_ViewSwitch_Key2_SwitchesToHabits(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected ViewTypeHabits, got %v", m.currentView)
+	}
+}
+
+func TestModel_ViewSwitch_Key3_SwitchesToLists(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeLists {
+		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
+	}
+}
+
+func TestModel_New_DefaultsToJournalView(t *testing.T) {
+	model := New(nil)
+
+	if model.currentView != ViewTypeJournal {
+		t.Errorf("expected default view to be Journal, got %v", model.currentView)
+	}
+}
+
+func TestModel_View_StatusBar_ShowsCurrentView(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Test Journal view
+	model.currentView = ViewTypeJournal
+	view := model.View()
+	if !strings.Contains(view, "Journal") {
+		t.Error("status bar should show 'Journal' for journal view")
+	}
+
+	// Test Habits view
+	model.currentView = ViewTypeHabits
+	view = model.View()
+	if !strings.Contains(view, "Habits") {
+		t.Error("status bar should show 'Habits' for habits view")
+	}
+
+	// Test Lists view
+	model.currentView = ViewTypeLists
+	view = model.View()
+	if !strings.Contains(view, "Lists") {
+		t.Error("status bar should show 'Lists' for lists view")
+	}
+}
+
+// ============================================================================
+// Phase 4: Habits View Tests
+// ============================================================================
+
+func TestModel_HabitsView_RendersHabitList(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Meditation", CurrentStreak: 5, CompletionPercent: 71.4},
+			{ID: 2, Name: "Exercise", CurrentStreak: 3, CompletionPercent: 50.0},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Meditation") {
+		t.Error("view should contain habit name 'Meditation'")
+	}
+	if !strings.Contains(view, "Exercise") {
+		t.Error("view should contain habit name 'Exercise'")
+	}
+}
+
+func TestModel_HabitsView_ShowsStreak(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Meditation", CurrentStreak: 5},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "5") {
+		t.Error("view should contain streak count")
+	}
+}
+
+func TestModel_HabitsView_Navigation_J_MovesDown(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Meditation"},
+			{ID: 2, Name: "Exercise"},
+			{ID: 3, Name: "Reading"},
+		},
+		selectedIdx: 0,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.habitState.selectedIdx)
+	}
+}
+
+func TestModel_HabitsView_Navigation_K_MovesUp(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Meditation"},
+			{ID: 2, Name: "Exercise"},
+		},
+		selectedIdx: 1,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx 0, got %d", m.habitState.selectedIdx)
+	}
+}
+
+func TestModel_HabitsView_Navigation_BoundsCheck(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Meditation"},
+			{ID: 2, Name: "Exercise"},
+		},
+		selectedIdx: 0,
+	}
+
+	// Try to go up from first item - should stay at 0
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx 0 (bounds check), got %d", m.habitState.selectedIdx)
+	}
+
+	// Go to last item and try to go down - should stay at last
+	m.habitState.selectedIdx = 1
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+
+	if m.habitState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1 (bounds check), got %d", m.habitState.selectedIdx)
+	}
+}
+
+func TestModel_HabitsView_EmptyState(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "No habits") {
+		t.Error("view should show 'No habits' message when empty")
+	}
+}
+
+func TestModel_HabitsView_ShowsCompletionRate(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{Name: "Exercise", CompletionPercent: 85.5},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "85%") && !strings.Contains(view, "86%") {
+		t.Errorf("view should show completion rate, got: %s", view)
+	}
+}
+
+func TestModel_HabitsView_LogHabit_Space_LogsSelectedHabit(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits: []service.HabitStatus{
+			{ID: 1, Name: "Exercise"},
+			{ID: 2, Name: "Reading"},
+		},
+		selectedIdx: 1,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}}
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
+
+	// Should return a command to log the habit
+	if cmd == nil {
+		t.Error("expected a command to log the habit")
+	}
+
+	// Selected index should remain the same
+	if m.habitState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx to remain 1, got %d", m.habitState.selectedIdx)
+	}
+}
+
+func TestModel_HabitsView_ToggleMonthView_W(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState = habitState{
+		habits:    []service.HabitStatus{{Name: "Exercise"}},
+		monthView: false, // Start with week view (7 days)
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.habitState.monthView {
+		t.Error("expected monthView to be true after pressing 'w'")
+	}
+
+	// Press again to toggle back
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+
+	if m.habitState.monthView {
+		t.Error("expected monthView to be false after pressing 'w' again")
+	}
+}
+
+// Lists View Tests
+
+func TestModel_ListsView_RendersAllLists(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+			{ID: 2, Name: "Projects"},
+		},
+		summaries: map[int64]*service.ListSummary{
+			1: {ID: 1, Name: "Shopping", TotalItems: 5, DoneItems: 2},
+			2: {ID: 2, Name: "Projects", TotalItems: 3, DoneItems: 0},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Shopping") {
+		t.Error("view should show 'Shopping' list")
+	}
+	if !strings.Contains(view, "Projects") {
+		t.Error("view should show 'Projects' list")
+	}
+}
+
+func TestModel_ListsView_ShowsItemCount(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+		},
+		summaries: map[int64]*service.ListSummary{
+			1: {ID: 1, Name: "Shopping", TotalItems: 5, DoneItems: 2},
+		},
+	}
+
+	view := model.View()
+
+	// Should show item count like "5 items" or "2/5"
+	if !strings.Contains(view, "5") {
+		t.Errorf("view should show total items count, got: %s", view)
+	}
+}
+
+func TestModel_ListsView_ShowsCompletionProgress(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+		},
+		summaries: map[int64]*service.ListSummary{
+			1: {ID: 1, Name: "Shopping", TotalItems: 5, DoneItems: 2},
+		},
+	}
+
+	view := model.View()
+
+	// Should show progress like "2/5" or "40%"
+	if !strings.Contains(view, "2/5") && !strings.Contains(view, "40%") {
+		t.Errorf("view should show completion progress (2/5 or 40%%), got: %s", view)
+	}
+}
+
+func TestModel_ListsView_Navigation_J_MovesDown(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+			{ID: 2, Name: "Projects"},
+		},
+		selectedListIdx: 0,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.listState.selectedListIdx != 1 {
+		t.Errorf("expected selectedListIdx 1, got %d", m.listState.selectedListIdx)
+	}
+}
+
+func TestModel_ListsView_Navigation_K_MovesUp(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+			{ID: 2, Name: "Projects"},
+		},
+		selectedListIdx: 1,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.listState.selectedListIdx != 0 {
+		t.Errorf("expected selectedListIdx 0, got %d", m.listState.selectedListIdx)
+	}
+}
+
+func TestModel_ListsView_Enter_ViewsListItems(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{
+			{ID: 1, Name: "Shopping"},
+			{ID: 2, Name: "Projects"},
+		},
+		selectedListIdx: 0,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeListItems {
+		t.Errorf("expected ViewTypeListItems, got %v", m.currentView)
+	}
+	if m.listState.currentListID != 1 {
+		t.Errorf("expected currentListID 1, got %d", m.listState.currentListID)
+	}
+}
+
+func TestModel_ListsView_EmptyState(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeLists
+	model.listState = listState{
+		lists: []domain.List{},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "No lists") {
+		t.Error("view should show 'No lists' message when empty")
+	}
+}
+
+func TestModel_ListItemsView_RendersItems(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		lists:         []domain.List{{ID: 1, Name: "Shopping"}},
+		currentListID: 1,
+		items: []domain.ListItem{
+			{VersionInfo: domain.VersionInfo{EntityID: domain.EntityID("item1")}, Content: "Milk", Type: domain.ListItemTypeTask},
+			{VersionInfo: domain.VersionInfo{EntityID: domain.EntityID("item2")}, Content: "Bread", Type: domain.ListItemTypeDone},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Milk") {
+		t.Error("view should show 'Milk' item")
+	}
+	if !strings.Contains(view, "Bread") {
+		t.Error("view should show 'Bread' item")
+	}
+}
+
+func TestModel_ListItemsView_Navigation_J_MovesDown(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		items: []domain.ListItem{
+			{Content: "Milk"},
+			{Content: "Bread"},
+		},
+		selectedItemIdx: 0,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.listState.selectedItemIdx != 1 {
+		t.Errorf("expected selectedItemIdx 1, got %d", m.listState.selectedItemIdx)
+	}
+}
+
+func TestModel_ListItemsView_Navigation_K_MovesUp(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		items: []domain.ListItem{
+			{Content: "Milk"},
+			{Content: "Bread"},
+		},
+		selectedItemIdx: 1,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.listState.selectedItemIdx != 0 {
+		t.Errorf("expected selectedItemIdx 0, got %d", m.listState.selectedItemIdx)
+	}
+}
+
+func TestModel_ListItemsView_Escape_ReturnsToLists(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		lists:         []domain.List{{ID: 1, Name: "Shopping"}},
+		currentListID: 1,
+		items:         []domain.ListItem{{Content: "Milk"}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEscape}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeLists {
+		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
+	}
+}
+
+func TestModel_ListItemsView_ToggleDone_Space(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		lists:         []domain.List{{ID: 1, Name: "Shopping"}},
+		currentListID: 1,
+		items: []domain.ListItem{
+			{VersionInfo: domain.VersionInfo{EntityID: domain.EntityID("item1")}, Content: "Milk", Type: domain.ListItemTypeTask},
+		},
+		selectedItemIdx: 0,
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{' '}}
+	_, cmd := model.Update(msg)
+
+	// Should return a command to toggle the item
+	if cmd == nil {
+		t.Error("expected a command to toggle the item")
+	}
+}
+
+func TestModel_ListItemsView_EmptyState(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeListItems
+	model.listState = listState{
+		lists:         []domain.List{{ID: 1, Name: "Shopping"}},
+		currentListID: 1,
+		items:         []domain.ListItem{},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "No items") || !strings.Contains(view, "empty") {
+		t.Error("view should show empty state message")
+	}
+}
+
+// Command Palette Tests
+
+func TestModel_CommandPalette_CtrlP_Opens(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyCtrlP}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.commandPalette.active {
+		t.Error("expected command palette to be active after Ctrl+P")
+	}
+}
+
+func TestModel_CommandPalette_Colon_Opens(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{':'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.commandPalette.active {
+		t.Error("expected command palette to be active after ':'")
+	}
+}
+
+func TestModel_CommandPalette_Escape_Closes(t *testing.T) {
+	model := New(nil)
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+
+	msg := tea.KeyMsg{Type: tea.KeyEscape}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.commandPalette.active {
+		t.Error("expected command palette to be closed after Escape")
+	}
+}
+
+func TestModel_CommandPalette_RendersOverlay(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+
+	view := model.View()
+
+	if !strings.Contains(view, "Command Palette") && !strings.Contains(view, ">") {
+		t.Errorf("view should show command palette, got: %s", view)
+	}
+}
+
+func TestModel_CommandPalette_ShowsAllCommands(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+
+	view := model.View()
+
+	if !strings.Contains(view, "Journal") {
+		t.Error("view should show 'Switch to Journal' command")
+	}
+	if !strings.Contains(view, "Habits") {
+		t.Error("view should show 'Switch to Habits' command")
+	}
+}
+
+func TestModel_CommandPalette_ShowsKeybindings(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+
+	view := model.View()
+
+	// Should show keybindings like "1", "2", "3"
+	if !strings.Contains(view, "1") || !strings.Contains(view, "2") {
+		t.Errorf("view should show keybindings, got: %s", view)
+	}
+}
+
+func TestModel_CommandPalette_FiltersByQuery(t *testing.T) {
+	model := New(nil)
+	model.commandPalette.active = true
+	model.commandPalette.query = "journal"
+	model.commandPalette.filtered = model.commandRegistry.Filter("journal")
+
+	if len(model.commandPalette.filtered) == 0 {
+		t.Error("expected filtered commands to contain journal-related commands")
+	}
+
+	for _, cmd := range model.commandPalette.filtered {
+		if !strings.Contains(strings.ToLower(cmd.Name), "journal") &&
+			!strings.Contains(strings.ToLower(cmd.Description), "journal") {
+			t.Errorf("filtered command '%s' should match 'journal'", cmd.Name)
+		}
+	}
+}
+
+func TestModel_CommandPalette_FuzzyMatch(t *testing.T) {
+	model := New(nil)
+
+	// "swj" should fuzzy match "Switch to Journal"
+	filtered := model.commandRegistry.Filter("swj")
+
+	found := false
+	for _, cmd := range filtered {
+		if strings.Contains(cmd.Name, "Journal") {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Error("fuzzy search 'swj' should match 'Switch to Journal'")
+	}
+}
+
+func TestModel_CommandPalette_Navigation_J_MovesDown(t *testing.T) {
+	model := New(nil)
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+	model.commandPalette.selectedIdx = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.commandPalette.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.commandPalette.selectedIdx)
+	}
+}
+
+func TestModel_CommandPalette_Navigation_K_MovesUp(t *testing.T) {
+	model := New(nil)
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+	model.commandPalette.selectedIdx = 1
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.commandPalette.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx 0, got %d", m.commandPalette.selectedIdx)
+	}
+}
+
+func TestModel_CommandPalette_Enter_ExecutesCommand(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.commandPalette.active = true
+	model.commandPalette.filtered = model.commandRegistry.All()
+
+	// Find the "Switch to Habits" command
+	for i, cmd := range model.commandPalette.filtered {
+		if strings.Contains(cmd.Name, "Habits") {
+			model.commandPalette.selectedIdx = i
+			break
+		}
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.commandPalette.active {
+		t.Error("expected command palette to close after executing command")
+	}
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected view to be Habits after executing command, got %v", m.currentView)
+	}
+}
+
+// Theme Tests
+
+func TestTheme_Default_HasAllColors(t *testing.T) {
+	theme := DefaultTheme
+	if !theme.HasAllColors() {
+		t.Error("default theme should have all colors defined")
+	}
+}
+
+func TestTheme_Dark_HasAllColors(t *testing.T) {
+	theme := DarkTheme
+	if !theme.HasAllColors() {
+		t.Error("dark theme should have all colors defined")
+	}
+}
+
+func TestTheme_Light_HasAllColors(t *testing.T) {
+	theme := LightTheme
+	if !theme.HasAllColors() {
+		t.Error("light theme should have all colors defined")
+	}
+}
+
+func TestTheme_Solarized_HasAllColors(t *testing.T) {
+	theme := SolarizedTheme
+	if !theme.HasAllColors() {
+		t.Error("solarized theme should have all colors defined")
+	}
+}
+
+func TestTheme_GetTheme_ReturnsCorrectTheme(t *testing.T) {
+	tests := []struct {
+		name     string
+		expected string
+	}{
+		{"default", "default"},
+		{"dark", "dark"},
+		{"light", "light"},
+		{"solarized", "solarized"},
+	}
+
+	for _, tt := range tests {
+		theme := GetTheme(tt.name)
+		if theme.Name != tt.expected {
+			t.Errorf("GetTheme(%s) returned theme with name %s, expected %s", tt.name, theme.Name, tt.expected)
+		}
+	}
+}
+
+func TestTheme_GetTheme_InvalidTheme_ReturnsDefault(t *testing.T) {
+	theme := GetTheme("nonexistent")
+	if theme.Name != "default" {
+		t.Errorf("GetTheme with invalid name should return default theme, got %s", theme.Name)
+	}
+}
+
+func TestTheme_AvailableThemes_ReturnsList(t *testing.T) {
+	themes := AvailableThemes()
+	if len(themes) != 4 {
+		t.Errorf("expected 4 themes, got %d", len(themes))
+	}
+
+	expected := map[string]bool{"default": true, "dark": true, "light": true, "solarized": true}
+	for _, theme := range themes {
+		if !expected[theme] {
+			t.Errorf("unexpected theme %s", theme)
+		}
+	}
+}
+
+func TestTheme_NewThemeStyles_CreatesStyles(t *testing.T) {
+	theme := DefaultTheme
+	styles := NewThemeStyles(theme)
+
+	// Check that styles are not empty (have some rendering capability)
+	// We can verify by checking that Render produces non-empty output
+	testStr := "test"
+	if styles.Toolbar.Render(testStr) == "" {
+		t.Error("Toolbar style should render text")
+	}
+	if styles.Header.Render(testStr) == "" {
+		t.Error("Header style should render text")
+	}
+	if styles.Done.Render(testStr) == "" {
+		t.Error("Done style should render text")
+	}
+	if styles.Selected.Render(testStr) == "" {
+		t.Error("Selected style should render text")
+	}
+}
+
+// Config Tests
+
+func TestConfig_DefaultTUIConfig_ReturnsDefaults(t *testing.T) {
+	config := DefaultTUIConfig()
+
+	if config.DefaultView != "journal" {
+		t.Errorf("expected default view 'journal', got '%s'", config.DefaultView)
+	}
+	if config.Theme != "default" {
+		t.Errorf("expected default theme 'default', got '%s'", config.Theme)
+	}
+	if config.DateFormat != "Mon, Jan 2 2006" {
+		t.Errorf("expected default date format, got '%s'", config.DateFormat)
+	}
+	if !config.ShowHelp {
+		t.Error("expected ShowHelp to be true by default")
+	}
+}
+
+func TestConfig_LoadTUIConfigFromPath_LoadsValidYAML(t *testing.T) {
+	// Create a temporary config file
+	tmpDir := t.TempDir()
+	configPath := tmpDir + "/config.yaml"
+	content := []byte("default_view: habits\ntheme: dark\n")
+	if err := os.WriteFile(configPath, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := LoadTUIConfigFromPath(configPath)
+
+	if config.DefaultView != "habits" {
+		t.Errorf("expected 'habits', got '%s'", config.DefaultView)
+	}
+	if config.Theme != "dark" {
+		t.Errorf("expected 'dark', got '%s'", config.Theme)
+	}
+}
+
+func TestConfig_LoadTUIConfigFromPath_PartialFile_UsesDefaults(t *testing.T) {
+	// Create a temporary config file with only theme
+	tmpDir := t.TempDir()
+	configPath := tmpDir + "/config.yaml"
+	content := []byte("theme: solarized\n")
+	if err := os.WriteFile(configPath, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := LoadTUIConfigFromPath(configPath)
+
+	if config.Theme != "solarized" {
+		t.Errorf("expected 'solarized', got '%s'", config.Theme)
+	}
+	// Default view should use default
+	if config.DefaultView != "journal" {
+		t.Errorf("expected default view 'journal', got '%s'", config.DefaultView)
+	}
+}
+
+func TestConfig_LoadTUIConfigFromPath_NoFile_UsesDefaults(t *testing.T) {
+	config := LoadTUIConfigFromPath("/nonexistent/path/config.yaml")
+
+	if config.DefaultView != "journal" {
+		t.Errorf("expected default view 'journal', got '%s'", config.DefaultView)
+	}
+	if config.Theme != "default" {
+		t.Errorf("expected default theme 'default', got '%s'", config.Theme)
+	}
+}
+
+func TestConfig_LoadTUIConfigFromPath_InvalidYAML_UsesDefaults(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := tmpDir + "/config.yaml"
+	content := []byte("invalid: yaml: content: [")
+	if err := os.WriteFile(configPath, content, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	config := LoadTUIConfigFromPath(configPath)
+
+	if config.DefaultView != "journal" {
+		t.Errorf("expected default view 'journal', got '%s'", config.DefaultView)
+	}
+}
+
+func TestConfig_GetViewType_ReturnsCorrectType(t *testing.T) {
+	tests := []struct {
+		defaultView string
+		expected    ViewType
+	}{
+		{"journal", ViewTypeJournal},
+		{"habits", ViewTypeHabits},
+		{"lists", ViewTypeLists},
+		{"unknown", ViewTypeJournal},
+	}
+
+	for _, tt := range tests {
+		config := TUIConfig{DefaultView: tt.defaultView}
+		if config.GetViewType() != tt.expected {
+			t.Errorf("GetViewType() for '%s' expected %v, got %v", tt.defaultView, tt.expected, config.GetViewType())
+		}
+	}
+}
+
+func TestConfig_ConfigPaths_ReturnsMultiplePaths(t *testing.T) {
+	paths := ConfigPaths()
+	if len(paths) < 1 {
+		t.Error("ConfigPaths should return at least one path")
+	}
+
+	// Check that paths end with expected suffixes
+	foundConfigDir := false
+	foundBujoDir := false
+	for _, p := range paths {
+		if strings.Contains(p, "bujo/config.yaml") || strings.Contains(p, "bujo\\config.yaml") {
+			foundConfigDir = true
+		}
+		if strings.Contains(p, ".bujo/config.yaml") || strings.Contains(p, ".bujo\\config.yaml") {
+			foundBujoDir = true
+		}
+	}
+
+	if !foundConfigDir && !foundBujoDir {
+		t.Errorf("ConfigPaths should include standard config paths, got: %v", paths)
 	}
 }
 
