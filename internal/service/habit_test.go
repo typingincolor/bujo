@@ -480,3 +480,89 @@ func TestHabitService_SetHabitGoal_InvalidGoal(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "goal must be at least 1")
 }
+
+func TestHabitService_DeleteHabit(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create a habit with logs
+	err := service.LogHabit(ctx, "Gym", 1)
+	require.NoError(t, err)
+	err = service.LogHabit(ctx, "Gym", 1)
+	require.NoError(t, err)
+
+	// Delete the habit
+	err = service.DeleteHabit(ctx, "Gym")
+	require.NoError(t, err)
+
+	// Verify habit no longer exists
+	today := time.Now()
+	from := today.AddDate(0, 0, -30)
+	_, err = service.InspectHabit(ctx, "Gym", from, today, today)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestHabitService_DeleteHabitByID(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create a habit
+	err := service.LogHabit(ctx, "Gym", 1)
+	require.NoError(t, err)
+
+	// Get the habit ID
+	status, err := service.GetTrackerStatus(ctx, time.Now(), 7)
+	require.NoError(t, err)
+	habitID := status.Habits[0].ID
+
+	// Delete by ID
+	err = service.DeleteHabitByID(ctx, habitID)
+	require.NoError(t, err)
+
+	// Verify habit no longer exists
+	today := time.Now()
+	from := today.AddDate(0, 0, -30)
+	_, err = service.InspectHabitByID(ctx, habitID, from, today, today)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestHabitService_DeleteHabit_NotFound(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	err := service.DeleteHabit(ctx, "NonExistent")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestHabitService_DeleteHabitByID_NotFound(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	err := service.DeleteHabitByID(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestHabitService_HabitExists(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Non-existent habit
+	exists, err := service.HabitExists(ctx, "Gym")
+	require.NoError(t, err)
+	assert.False(t, exists)
+
+	// Create habit
+	err = service.LogHabit(ctx, "Gym", 1)
+	require.NoError(t, err)
+
+	// Now it exists
+	exists, err = service.HabitExists(ctx, "Gym")
+	require.NoError(t, err)
+	assert.True(t, exists)
+}

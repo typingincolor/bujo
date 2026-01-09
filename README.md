@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/typingincolor/bujo/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/ci.yml)
 [![Release](https://github.com/typingincolor/bujo/actions/workflows/release.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/release.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/typingincolor/bujo)](https://goreportcard.com/report/github.com/typingincolor/bujo)
+[![Go Report Card](https://goreportcard.com/badge/github.com/typingincolor/bujo?v=1)](https://goreportcard.com/report/github.com/typingincolor/bujo)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/v/release/typingincolor/bujo)](https://github.com/typingincolor/bujo/releases/latest)
 
@@ -336,15 +336,18 @@ Gym (3 day streak)
   1/1 today | 43% completion
 ```
 
-#### `bujo habit log <name> [count]`
+#### `bujo habit log <name|#id> [count]`
 
-Log a habit completion. Creates the habit if it doesn't exist.
+Log a habit completion. If the habit doesn't exist, you'll be prompted to create it.
+
+**Important:** To reference a habit by ID, use `#` prefix (e.g., `#1`). Without `#`, the argument is treated as a habit name.
 
 ```bash
 bujo habit log Gym
 bujo habit log Water 8
 bujo habit log Gym --date yesterday
-bujo habit log #1 5              # By ID with count
+bujo habit log "#1" 5            # By ID with count (quote the #)
+bujo habit log NewHabit --yes    # Create without prompting
 ```
 
 #### `bujo habit set-goal <name|#id> <goal>`
@@ -390,6 +393,16 @@ Delete a specific log entry by ID (use `habit inspect` to see IDs).
 
 ```bash
 bujo habit delete-log 42
+```
+
+#### `bujo habit delete <name|#id>`
+
+Delete a habit and all its logs. Requires confirmation unless `--force` is used.
+
+```bash
+bujo habit delete Gym
+bujo habit delete "#1"
+bujo habit delete OldHabit --force    # Skip confirmation
 ```
 
 ### List Management

@@ -489,6 +489,10 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.saveCaptureCmd(content)
 
 	case tea.KeyEsc:
+		if m.captureMode.showHelp {
+			m.captureMode.showHelp = false
+			return m, nil
+		}
 		if m.captureMode.content == "" {
 			_ = DeleteDraft(m.draftPath)
 			m.captureMode = captureState{}
@@ -540,6 +544,10 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.captureReparse()
 		return m, nil
 
+	case tea.KeyF1:
+		m.captureMode.showHelp = !m.captureMode.showHelp
+		return m, nil
+
 	case tea.KeyRunes:
 		m = m.captureInsertRunes(msg.Runes)
 		m = m.captureReparse()
@@ -567,6 +575,11 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.captureReparse()
 		return m, nil
 
+	case tea.KeyCtrlU:
+		m = m.captureKillToBeginningOfLine()
+		m = m.captureReparse()
+		return m, nil
+
 	case tea.KeyCtrlD:
 		m = m.captureDeleteChar()
 		m = m.captureReparse()
@@ -575,6 +588,26 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlW:
 		m = m.captureDeleteWordBackward()
 		m = m.captureReparse()
+		return m, nil
+
+	case tea.KeyHome:
+		m = m.captureBeginningOfLine()
+		return m, nil
+
+	case tea.KeyEnd:
+		m = m.captureEndOfLine()
+		return m, nil
+
+	case tea.KeyCtrlHome:
+		m.captureMode.cursorPos = 0
+		m = m.captureUpdateCursorLineCol()
+		m = m.captureEnsureCursorVisible()
+		return m, nil
+
+	case tea.KeyCtrlEnd:
+		m.captureMode.cursorPos = len(m.captureMode.content)
+		m = m.captureUpdateCursorLineCol()
+		m = m.captureEnsureCursorVisible()
 		return m, nil
 
 	case tea.KeyCtrlS:
@@ -936,6 +969,32 @@ func (m Model) captureEndOfLine() Model {
 	return m
 }
 
+func (m Model) captureUpdateCursorLineCol() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(content) {
+		pos = len(content)
+	}
+
+	line := 0
+	col := 0
+	for i := 0; i < pos; i++ {
+		if content[i] == '\n' {
+			line++
+			col = 0
+		} else {
+			col++
+		}
+	}
+
+	m.captureMode.cursorLine = line
+	m.captureMode.cursorCol = col
+	return m
+}
+
 func (m Model) captureForwardChar() Model {
 	content := m.captureMode.content
 	pos := m.captureMode.cursorPos
@@ -987,6 +1046,25 @@ func (m Model) captureKillToEndOfLine() Model {
 	}
 
 	m.captureMode.content = content[:pos] + content[endPos:]
+	return m
+}
+
+func (m Model) captureKillToBeginningOfLine() Model {
+	content := m.captureMode.content
+	pos := m.captureMode.cursorPos
+	if pos <= 0 {
+		return m
+	}
+
+	// Find start of current line
+	startPos := pos
+	for startPos > 0 && content[startPos-1] != '\n' {
+		startPos--
+	}
+
+	m.captureMode.content = content[:startPos] + content[pos:]
+	m.captureMode.cursorPos = startPos
+	m = m.captureUpdateCursorLineCol()
 	return m
 }
 
