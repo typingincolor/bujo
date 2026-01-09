@@ -597,3 +597,7 @@ func (s *BujoService) GetDeletedEntries(ctx context.Context) ([]domain.Entry, er
 func (s *BujoService) RestoreEntry(ctx context.Context, entityID domain.EntityID) (int64, error) {
 	return s.entryRepo.Restore(ctx, entityID)
 }
+
+func (s *BujoService) ParseEntries(content string) ([]domain.Entry, error) {
+	return s.parser.Parse(content)
+}

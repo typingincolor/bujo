@@ -12,6 +12,13 @@ import (
 	"github.com/typingincolor/bujo/internal/service"
 )
 
+const (
+	toolbarHeight     = 2
+	helpBarHeight     = 2
+	verticalPadding   = 2
+	minAvailableLines = 5
+)
+
 type Config struct {
 	BujoService  *service.BujoService
 	HabitService *service.HabitService
@@ -175,12 +182,12 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) availableLines() int {
-	// Reserve: 2 for toolbar, 2 for help, 2 for padding
-	h := m.height - 6
-	if h < 5 {
-		h = 5
+	reservedHeight := toolbarHeight + helpBarHeight + verticalPadding
+	available := m.height - reservedHeight
+	if available < minAvailableLines {
+		return minAvailableLines
 	}
-	return h
+	return available
 }
 
 func (m Model) linesForEntry(idx int) int {
@@ -188,14 +195,29 @@ func (m Model) linesForEntry(idx int) int {
 		return 0
 	}
 	item := m.entries[idx]
-	lines := 1 // entry itself
+	entryLine := 1
+	headerLine := m.headerLineCount(item)
+	blankBeforeHeader := m.blankLineBeforeHeader(idx)
+	return entryLine + headerLine + blankBeforeHeader
+}
+
+func (m Model) headerLineCount(item EntryItem) int {
 	if item.DayHeader != "" {
-		lines++ // header line
-		if idx > 0 && m.entries[idx-1].DayHeader == "" {
-			lines++ // blank line before header (unless first visible)
-		}
+		return 1
 	}
-	return lines
+	return 0
+}
+
+func (m Model) blankLineBeforeHeader(idx int) int {
+	if idx <= 0 {
+		return 0
+	}
+	currentHasHeader := m.entries[idx].DayHeader != ""
+	previousHasNoHeader := m.entries[idx-1].DayHeader == ""
+	if currentHasHeader && previousHasNoHeader {
+		return 1
+	}
+	return 0
 }
 
 func (m Model) ensuredVisible() Model {
@@ -410,8 +432,10 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 }
 
 func (m Model) parseCapture(content string) ([]domain.Entry, error) {
-	parser := domain.NewTreeParser()
-	return parser.Parse(content)
+	if m.bujoService == nil {
+		return nil, fmt.Errorf("bujo service not configured")
+	}
+	return m.bujoService.ParseEntries(content)
 }
 
 func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdue bool, today time.Time) []EntryItem {

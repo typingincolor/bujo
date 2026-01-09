@@ -1129,3 +1129,53 @@ func TestBujoService_RestoreEntry_NotDeleted(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, newID)
 }
+
+func TestBujoService_ParseEntries_SingleTask(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+
+	entries, err := service.ParseEntries(". Buy groceries")
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, domain.EntryTypeTask, entries[0].Type)
+	assert.Equal(t, "Buy groceries", entries[0].Content)
+}
+
+func TestBujoService_ParseEntries_MultipleTypes(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+
+	input := `. Task one
+- Note one
+o Event one`
+
+	entries, err := service.ParseEntries(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	assert.Equal(t, domain.EntryTypeTask, entries[0].Type)
+	assert.Equal(t, domain.EntryTypeNote, entries[1].Type)
+	assert.Equal(t, domain.EntryTypeEvent, entries[2].Type)
+}
+
+func TestBujoService_ParseEntries_WithHierarchy(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+
+	input := `. Parent task
+  - Child note`
+
+	entries, err := service.ParseEntries(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Equal(t, 1, entries[1].Depth)
+}
+
+func TestBujoService_ParseEntries_EmptyInput(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+
+	entries, err := service.ParseEntries("")
+
+	require.NoError(t, err)
+	assert.Empty(t, entries)
+}

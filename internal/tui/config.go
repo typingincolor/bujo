@@ -26,25 +26,31 @@ func DefaultTUIConfig() TUIConfig {
 func LoadTUIConfig() TUIConfig {
 	config := DefaultTUIConfig()
 
-	// Try loading from ~/.config/bujo/config.yaml first
-	configDir, err := os.UserConfigDir()
-	if err == nil {
-		configPath := filepath.Join(configDir, "bujo", "config.yaml")
-		if loadedConfig, ok := loadConfigFile(configPath); ok {
-			return mergeConfig(config, loadedConfig)
-		}
+	if loaded, ok := loadFromXDGConfigDir(); ok {
+		return mergeConfig(config, loaded)
 	}
 
-	// Fall back to ~/.bujo/config.yaml
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		configPath := filepath.Join(homeDir, ".bujo", "config.yaml")
-		if loadedConfig, ok := loadConfigFile(configPath); ok {
-			return mergeConfig(config, loadedConfig)
-		}
+	if loaded, ok := loadFromHomeDir(); ok {
+		return mergeConfig(config, loaded)
 	}
 
 	return config
+}
+
+func loadFromXDGConfigDir() (TUIConfig, bool) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return TUIConfig{}, false
+	}
+	return loadConfigFile(filepath.Join(configDir, "bujo", "config.yaml"))
+}
+
+func loadFromHomeDir() (TUIConfig, bool) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return TUIConfig{}, false
+	}
+	return loadConfigFile(filepath.Join(homeDir, ".bujo", "config.yaml"))
 }
 
 func LoadTUIConfigFromPath(path string) TUIConfig {
@@ -79,11 +85,7 @@ func mergeConfig(base, override TUIConfig) TUIConfig {
 	if override.DateFormat != "" {
 		base.DateFormat = override.DateFormat
 	}
-	// ShowHelp is a boolean, so we always take the override value
-	// if it was explicitly set in the config file
-	// For now, we simply use the override if the file was loaded
 	base.ShowHelp = override.ShowHelp
-
 	return base
 }
 

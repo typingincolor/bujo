@@ -840,11 +840,15 @@ func TestModel_Update_CaptureMode_StartsEmpty(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_ParsesContentRealtime(t *testing.T) {
-	model := New(nil)
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
 	model.agenda = &service.MultiDayAgenda{}
 	model.captureMode = captureState{active: true, content: ". Task one\n- Note here"}
 
-	// Trigger a parse by updating
 	model.captureMode.parsedEntries, model.captureMode.parseError = model.parseCapture(model.captureMode.content)
 
 	if len(model.captureMode.parsedEntries) != 2 {
@@ -856,7 +860,12 @@ func TestModel_Update_CaptureMode_ParsesContentRealtime(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
-	model := New(nil)
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
 	model.agenda = &service.MultiDayAgenda{}
 	model.captureMode = captureState{active: true, content: ". Task\n    - Skipped indent level"}
 
@@ -868,7 +877,12 @@ func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_DetectsMissingSymbol(t *testing.T) {
-	model := New(nil)
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
 	model.agenda = &service.MultiDayAgenda{}
 	model.captureMode = captureState{active: true, content: "Missing symbol"}
 
@@ -1055,11 +1069,15 @@ func TestModel_CaptureMode_BackspaceDeletesChar(t *testing.T) {
 }
 
 func TestModel_CaptureMode_ParsesOnChange(t *testing.T) {
-	model := New(nil)
+	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
 	model.agenda = &service.MultiDayAgenda{}
 	model.captureMode = captureState{active: true, content: ""}
 
-	// Type ". Task"
 	for _, r := range ". Task" {
 		msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
 		newModel, _ := model.Update(msg)
