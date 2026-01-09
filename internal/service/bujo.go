@@ -322,6 +322,44 @@ func (s *BujoService) Undo(ctx context.Context, id int64) error {
 	return s.entryRepo.Update(ctx, *entry)
 }
 
+func (s *BujoService) CancelEntry(ctx context.Context, id int64) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Type = domain.EntryTypeCancelled
+	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) UncancelEntry(ctx context.Context, id int64) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Type = domain.EntryTypeTask
+	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) RetypeEntry(ctx context.Context, id int64, newType domain.EntryType) error {
+	if !newType.IsValid() {
+		return fmt.Errorf("invalid entry type: %s", newType)
+	}
+
+	if newType == domain.EntryTypeDone || newType == domain.EntryTypeMigrated || newType == domain.EntryTypeCancelled {
+		return fmt.Errorf("cannot retype to %s, use the appropriate command instead", newType)
+	}
+
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Type = newType
+	return s.entryRepo.Update(ctx, *entry)
+}
+
 func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string) error {
 	entry, err := s.getEntry(ctx, id)
 	if err != nil {
