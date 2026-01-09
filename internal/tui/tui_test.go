@@ -3428,11 +3428,16 @@ func TestModel_ViewSwitch_Key2_SwitchesToHabits(t *testing.T) {
 	model.currentView = ViewTypeJournal
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
-	newModel, _ := model.Update(msg)
+	newModel, cmd := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeHabits {
 		t.Errorf("expected ViewTypeHabits, got %v", m.currentView)
+	}
+
+	// Verify that a command was returned to load habits
+	if cmd == nil {
+		t.Error("expected a command to load habits, got nil")
 	}
 }
 
@@ -3441,11 +3446,16 @@ func TestModel_ViewSwitch_Key3_SwitchesToLists(t *testing.T) {
 	model.currentView = ViewTypeJournal
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
-	newModel, _ := model.Update(msg)
+	newModel, cmd := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeLists {
 		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
+	}
+
+	// Verify that a command was returned to load lists
+	if cmd == nil {
+		t.Error("expected a command to load lists, got nil")
 	}
 }
 
