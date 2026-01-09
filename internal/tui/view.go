@@ -432,7 +432,7 @@ func (m Model) renderCaptureMode() string {
 	if m.captureMode.searchMode {
 		sb.WriteString(HelpStyle.Render("Enter/Ctrl+S: next | Ctrl+R: prev | ESC: exit search"))
 	} else {
-		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | ?: help"))
+		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | F1: help"))
 	}
 
 	// Help overlay
@@ -455,7 +455,7 @@ func (m Model) renderCaptureHelp() string {
 	}{
 		{"Ctrl+X", "Save entries and exit"},
 		{"Esc", "Cancel (prompts if content)"},
-		{"?", "Toggle this help"},
+		{"F1", "Toggle this help"},
 		{"", ""},
 		{"Tab", "Indent line"},
 		{"Shift+Tab", "Unindent line"},
@@ -487,7 +487,7 @@ func (m Model) renderCaptureHelp() string {
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(HelpStyle.Render("Press ? or Esc to close"))
+	sb.WriteString(HelpStyle.Render("Press F1 or Esc to close"))
 
 	return sb.String()
 }

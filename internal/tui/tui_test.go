@@ -3405,24 +3405,37 @@ func TestModel_HighlightSearchTerm_PartialWord(t *testing.T) {
 	}
 }
 
-func TestModel_CaptureMode_Help_QuestionMarkTogglesHelp(t *testing.T) {
+func TestModel_CaptureMode_Help_F1TogglesHelp(t *testing.T) {
 	model := New(nil)
 	model.captureMode = captureState{active: true, content: "test"}
 
-	// Press ? to show help
-	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	// Press F1 to show help
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyF1})
 	m := newModel.(Model)
 
 	if !m.captureMode.showHelp {
-		t.Error("? should toggle help on")
+		t.Error("F1 should toggle help on")
 	}
 
-	// Press ? again to hide help
-	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	// Press F1 again to hide help
+	newModel, _ = m.Update(tea.KeyMsg{Type: tea.KeyF1})
 	m = newModel.(Model)
 
 	if m.captureMode.showHelp {
-		t.Error("? should toggle help off")
+		t.Error("F1 should toggle help off")
+	}
+}
+
+func TestModel_CaptureMode_QuestionMarkInsertsCharacter(t *testing.T) {
+	model := New(nil)
+	model.captureMode = captureState{active: true, content: "test", cursorPos: 4}
+
+	// Press ? to insert character
+	newModel, _ := model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'?'}})
+	m := newModel.(Model)
+
+	if m.captureMode.content != "test?" {
+		t.Errorf("? should insert character, got %q", m.captureMode.content)
 	}
 }
 

@@ -484,11 +484,11 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.captureReparse()
 		return m, nil
 
+	case tea.KeyF1:
+		m.captureMode.showHelp = !m.captureMode.showHelp
+		return m, nil
+
 	case tea.KeyRunes:
-		if len(msg.Runes) == 1 && msg.Runes[0] == '?' {
-			m.captureMode.showHelp = !m.captureMode.showHelp
-			return m, nil
-		}
 		m = m.captureInsertRunes(msg.Runes)
 		m = m.captureReparse()
 		return m, nil
