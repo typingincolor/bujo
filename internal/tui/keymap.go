@@ -24,7 +24,11 @@ type KeyMap struct {
 	ViewJournal    key.Binding
 	ViewHabits     key.Binding
 	ViewLists      key.Binding
+	ViewSearch     key.Binding
+	ViewStats      key.Binding
+	ViewSettings   key.Binding
 	CommandPalette key.Binding
+	LogHabit       key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -113,9 +117,25 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("3"),
 			key.WithHelp("3", "lists"),
 		),
+		ViewSearch: key.NewBinding(
+			key.WithKeys("4"),
+			key.WithHelp("4", "search"),
+		),
+		ViewStats: key.NewBinding(
+			key.WithKeys("5"),
+			key.WithHelp("5", "stats"),
+		),
+		ViewSettings: key.NewBinding(
+			key.WithKeys("6"),
+			key.WithHelp("6", "settings"),
+		),
 		CommandPalette: key.NewBinding(
 			key.WithKeys("ctrl+p", ":"),
 			key.WithHelp("ctrl+p/:", "commands"),
+		),
+		LogHabit: key.NewBinding(
+			key.WithKeys("l"),
+			key.WithHelp("l", "log"),
 		),
 	}
 }

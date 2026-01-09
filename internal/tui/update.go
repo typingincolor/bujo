@@ -64,6 +64,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case listsLoadedMsg:
 		m.listState.lists = msg.lists
+		m.listState.summaries = msg.summaries
 		if m.listState.selectedListIdx >= len(m.listState.lists) {
 			m.listState.selectedListIdx = 0
 		}
@@ -149,6 +150,18 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewTypeLists
 		return m, m.loadListsCmd()
 
+	case key.Matches(msg, m.keyMap.ViewSearch):
+		m.currentView = ViewTypeSearch
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewStats):
+		m.currentView = ViewTypeStats
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewSettings):
+		m.currentView = ViewTypeSettings
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
@@ -178,7 +191,12 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.toggleDoneCmd()
 
 	case key.Matches(msg, m.keyMap.Delete):
-		return m, m.initiateDeleteCmd()
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			m.confirmMode.active = true
+			m.confirmMode.entryID = entry.ID
+		}
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.Edit):
 		if len(m.entries) == 0 {
@@ -1392,30 +1410,6 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 }
 
-func (m Model) initiateDeleteCmd() tea.Cmd {
-	if len(m.entries) == 0 {
-		return nil
-	}
-	entry := m.entries[m.selectedIdx].Entry
-
-	return func() tea.Msg {
-		ctx := context.Background()
-		hasChildren, err := m.bujoService.HasChildren(ctx, entry.ID)
-		if err != nil {
-			return errMsg{err}
-		}
-
-		if hasChildren {
-			return confirmDeleteMsg{entryID: entry.ID, hasChildren: true}
-		}
-
-		if err := m.bujoService.DeleteEntry(ctx, entry.ID); err != nil {
-			return errMsg{err}
-		}
-		return entryDeletedMsg{entry.ID}
-	}
-}
-
 func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -1460,6 +1454,18 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewTypeLists
 		return m, m.loadListsCmd()
 
+	case key.Matches(msg, m.keyMap.ViewSearch):
+		m.currentView = ViewTypeSearch
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewStats):
+		m.currentView = ViewTypeStats
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewSettings):
+		m.currentView = ViewTypeSettings
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Down):
 		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
 			m.habitState.selectedIdx++
@@ -1472,7 +1478,7 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, m.keyMap.Done):
+	case key.Matches(msg, m.keyMap.Done), key.Matches(msg, m.keyMap.LogHabit):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
 			return m, m.logHabitCmd(m.habitState.habits[m.habitState.selectedIdx].ID)
 		}
@@ -1508,6 +1514,18 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.ViewLists):
 		m.currentView = ViewTypeLists
 		return m, m.loadListsCmd()
+
+	case key.Matches(msg, m.keyMap.ViewSearch):
+		m.currentView = ViewTypeSearch
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewStats):
+		m.currentView = ViewTypeStats
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewSettings):
+		m.currentView = ViewTypeSettings
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
@@ -1558,6 +1576,18 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.currentView = ViewTypeLists
 		return m, m.loadListsCmd()
 
+	case key.Matches(msg, m.keyMap.ViewSearch):
+		m.currentView = ViewTypeSearch
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewStats):
+		m.currentView = ViewTypeStats
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewSettings):
+		m.currentView = ViewTypeSettings
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedItemIdx < len(m.listState.items)-1 {
 			m.listState.selectedItemIdx++
@@ -1574,6 +1604,27 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
 			item := m.listState.items[m.listState.selectedItemIdx]
 			return m, m.toggleListItemCmd(item)
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Add):
+		m.addMode.active = true
+		m.addMode.input.Reset()
+		m.addMode.input.Focus()
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Edit):
+		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
+			item := m.listState.items[m.listState.selectedItemIdx]
+			m.editMode.active = true
+			m.editMode.input.SetValue(item.Content)
+			m.editMode.input.Focus()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Delete):
+		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
+			m.confirmMode.active = true
 		}
 		return m, nil
 	}

@@ -32,6 +32,12 @@ func (m Model) View() string {
 		sb.WriteString(m.renderHabitsContent())
 	case ViewTypeLists, ViewTypeListItems:
 		sb.WriteString(m.renderListsContent())
+	case ViewTypeSearch:
+		sb.WriteString(m.renderSearchContent())
+	case ViewTypeStats:
+		sb.WriteString(m.renderStatsContent())
+	case ViewTypeSettings:
+		sb.WriteString(m.renderSettingsContent())
 	default:
 		sb.WriteString(m.renderJournalContent())
 	}
@@ -706,4 +712,51 @@ func (m Model) renderCommandPalette() string {
 
 	sb.WriteString("\n↑/↓ navigate • Enter select • Esc cancel")
 	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderSearchContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("🔍 Search\n\n")
+	sb.WriteString("Type to search entries...\n\n")
+	sb.WriteString(HelpStyle.Render("Search functionality coming soon"))
+	sb.WriteString("\n\n")
+
+	return sb.String()
+}
+
+func (m Model) renderStatsContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("📊 Statistics\n\n")
+
+	sb.WriteString("Summary of your productivity:\n\n")
+
+	// Basic stats placeholder
+	sb.WriteString(fmt.Sprintf("  Tasks tracked:    %d\n", len(m.entries)))
+	sb.WriteString(fmt.Sprintf("  Habits tracked:   %d\n", len(m.habitState.habits)))
+	sb.WriteString(fmt.Sprintf("  Lists:            %d\n", len(m.listState.lists)))
+	sb.WriteString("\n")
+
+	sb.WriteString(HelpStyle.Render("Detailed statistics coming soon"))
+	sb.WriteString("\n\n")
+
+	return sb.String()
+}
+
+func (m Model) renderSettingsContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("⚙️  Settings\n\n")
+
+	sb.WriteString("Current configuration:\n\n")
+	sb.WriteString(fmt.Sprintf("  Theme:         %s\n", "default"))
+	sb.WriteString(fmt.Sprintf("  Default view:  %s\n", "journal"))
+	sb.WriteString(fmt.Sprintf("  Date format:   %s\n", "Mon, Jan 2 2006"))
+	sb.WriteString("\n")
+
+	sb.WriteString(HelpStyle.Render("Edit ~/.config/bujo/config.yaml to change settings"))
+	sb.WriteString("\n\n")
+
+	return sb.String()
 }

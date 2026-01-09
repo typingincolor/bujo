@@ -2499,14 +2499,16 @@ func TestModel_Delete_TriggersConfirmMode(t *testing.T) {
 	model.selectedIdx = 0
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
-	newModel, cmd := model.Update(msg)
+	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
-	// Should trigger a command to check for children
-	if cmd == nil {
-		t.Error("expected a command to be returned")
+	// Should activate confirm mode synchronously
+	if !m.confirmMode.active {
+		t.Error("expected confirmMode to be active")
 	}
-	_ = m
+	if m.confirmMode.entryID != 1 {
+		t.Errorf("expected entryID 1, got %d", m.confirmMode.entryID)
+	}
 }
 
 func TestModel_Delete_NoOpOnEmptyList(t *testing.T) {
