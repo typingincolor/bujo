@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
 )
@@ -21,9 +22,11 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 		return nil, err
 	}
 
+	now := time.Now().Format(time.RFC3339)
+
 	result, err := r.db.ExecContext(ctx,
-		"INSERT INTO lists (name, entity_id, created_at) VALUES (?, ?, ?)",
-		list.Name, list.EntityID.String(), list.CreatedAt,
+		"INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type) VALUES (?, ?, ?, ?, ?, ?)",
+		list.Name, list.EntityID.String(), list.CreatedAt, 1, now, domain.OpTypeInsert.String(),
 	)
 	if err != nil {
 		return nil, err
@@ -41,10 +44,11 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, error) {
 	var list domain.List
 	var entityID sql.NullString
+	var createdAt string
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, entity_id, name, created_at FROM lists WHERE id = ?",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'",
 		id,
-	).Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt)
+	).Scan(&list.ID, &entityID, &list.Name, &createdAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -52,6 +56,7 @@ func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, e
 	if err != nil {
 		return nil, err
 	}
+	list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	if entityID.Valid {
 		list.EntityID = domain.EntityID(entityID.String)
 	}
@@ -61,10 +66,11 @@ func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, e
 func (r *ListRepository) GetByName(ctx context.Context, name string) (*domain.List, error) {
 	var list domain.List
 	var entityID sql.NullString
+	var createdAt string
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, entity_id, name, created_at FROM lists WHERE name = ?",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE name = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'",
 		name,
-	).Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt)
+	).Scan(&list.ID, &entityID, &list.Name, &createdAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -72,6 +78,7 @@ func (r *ListRepository) GetByName(ctx context.Context, name string) (*domain.Li
 	if err != nil {
 		return nil, err
 	}
+	list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	if entityID.Valid {
 		list.EntityID = domain.EntityID(entityID.String)
 	}
@@ -81,10 +88,11 @@ func (r *ListRepository) GetByName(ctx context.Context, name string) (*domain.Li
 func (r *ListRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.List, error) {
 	var list domain.List
 	var eid sql.NullString
+	var createdAt string
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, entity_id, name, created_at FROM lists WHERE entity_id = ?",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'",
 		entityID.String(),
-	).Scan(&list.ID, &eid, &list.Name, &list.CreatedAt)
+	).Scan(&list.ID, &eid, &list.Name, &createdAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -92,6 +100,7 @@ func (r *ListRepository) GetByEntityID(ctx context.Context, entityID domain.Enti
 	if err != nil {
 		return nil, err
 	}
+	list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 	if eid.Valid {
 		list.EntityID = domain.EntityID(eid.String)
 	}
@@ -100,7 +109,7 @@ func (r *ListRepository) GetByEntityID(ctx context.Context, entityID domain.Enti
 
 func (r *ListRepository) GetAll(ctx context.Context) ([]domain.List, error) {
 	rows, err := r.db.QueryContext(ctx,
-		"SELECT id, entity_id, name, created_at FROM lists ORDER BY name",
+		"SELECT id, entity_id, name, created_at FROM lists WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE' ORDER BY name",
 	)
 	if err != nil {
 		return nil, err
@@ -111,9 +120,11 @@ func (r *ListRepository) GetAll(ctx context.Context) ([]domain.List, error) {
 	for rows.Next() {
 		var list domain.List
 		var entityID sql.NullString
-		if err := rows.Scan(&list.ID, &entityID, &list.Name, &list.CreatedAt); err != nil {
+		var createdAt string
+		if err := rows.Scan(&list.ID, &entityID, &list.Name, &createdAt); err != nil {
 			return nil, err
 		}
+		list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		if entityID.Valid {
 			list.EntityID = domain.EntityID(entityID.String)
 		}
@@ -136,11 +147,137 @@ func (r *ListRepository) Rename(ctx context.Context, id int64, newName string) e
 }
 
 func (r *ListRepository) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx,
-		"DELETE FROM lists WHERE id = ?",
-		id,
-	)
-	return err
+	list, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if list == nil {
+		return nil // Already deleted or doesn't exist
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Close current version
+	_, err = tx.ExecContext(ctx, `
+		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, list.EntityID.String())
+	if err != nil {
+		return err
+	}
+
+	// Get next version number
+	var maxVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(version), 0) FROM lists WHERE entity_id = ?
+	`, list.EntityID.String()).Scan(&maxVersion)
+	if err != nil {
+		return err
+	}
+
+	// Insert delete marker
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, list.Name, list.EntityID.String(), list.CreatedAt.Format(time.RFC3339),
+		maxVersion+1, now, domain.OpTypeDelete.String())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (r *ListRepository) GetDeleted(ctx context.Context) ([]domain.List, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, entity_id, name, created_at
+		FROM lists
+		WHERE op_type = 'DELETE'
+		AND valid_to IS NULL
+		ORDER BY valid_from DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var lists []domain.List
+	for rows.Next() {
+		var list domain.List
+		var entityID sql.NullString
+		var createdAt string
+		if err := rows.Scan(&list.ID, &entityID, &list.Name, &createdAt); err != nil {
+			return nil, err
+		}
+		list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		if entityID.Valid {
+			list.EntityID = domain.EntityID(entityID.String)
+		}
+		lists = append(lists, list)
+	}
+
+	return lists, rows.Err()
+}
+
+func (r *ListRepository) Restore(ctx context.Context, entityID domain.EntityID) (int64, error) {
+	now := time.Now().Format(time.RFC3339)
+
+	// Get the most recent version (which should be a DELETE marker)
+	var lastList struct {
+		Name      string
+		CreatedAt string
+		Version   int
+		OpType    string
+	}
+
+	err := r.db.QueryRowContext(ctx, `
+		SELECT name, created_at, version, op_type
+		FROM lists WHERE entity_id = ?
+		ORDER BY version DESC LIMIT 1
+	`, entityID.String()).Scan(
+		&lastList.Name, &lastList.CreatedAt, &lastList.Version, &lastList.OpType)
+	if err != nil {
+		return 0, err
+	}
+
+	if lastList.OpType != domain.OpTypeDelete.String() {
+		return 0, nil // Not deleted, nothing to restore
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Close the DELETE marker
+	_, err = tx.ExecContext(ctx, `
+		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, entityID.String())
+	if err != nil {
+		return 0, err
+	}
+
+	// Insert a new version with INSERT op_type to restore
+	result, err := tx.ExecContext(ctx, `
+		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, lastList.Name, entityID.String(), lastList.CreatedAt,
+		lastList.Version+1, now, domain.OpTypeInsert.String())
+	if err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
 }
 
 func (r *ListRepository) GetItemCount(ctx context.Context, listID int64) (int, error) {
