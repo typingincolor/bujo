@@ -10,38 +10,38 @@ import (
 )
 
 var (
-	workInspectFrom string
-	workInspectTo   string
+	workShowFrom string
+	workShowTo   string
 )
 
-var workInspectCmd = &cobra.Command{
-	Use:   "inspect",
+var workShowCmd = &cobra.Command{
+	Use:   "show",
 	Short: "Show location history",
 	Long: `Show location history for a date range.
 
 By default shows the last 30 days. Use --from and --to to specify a date range.
 
 Examples:
-  bujo work inspect
-  bujo work inspect --from 2025-12-01
-  bujo work inspect --from "last month"
-  bujo work inspect --from 2025-12-01 --to 2025-12-31`,
+  bujo work show
+  bujo work show --from 2025-12-01
+  bujo work show --from "last month"
+  bujo work show --from 2025-12-01 --to 2025-12-31`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
 
 		from := today.AddDate(0, 0, -30)
 		to := today
 
-		if workInspectFrom != "" {
-			parsed, err := parsePastDate(workInspectFrom)
+		if workShowFrom != "" {
+			parsed, err := parsePastDate(workShowFrom)
 			if err != nil {
 				return err
 			}
 			from = parsed
 		}
 
-		if workInspectTo != "" {
-			parsed, err := parsePastDate(workInspectTo)
+		if workShowTo != "" {
+			parsed, err := parsePastDate(workShowTo)
 			if err != nil {
 				return err
 			}
@@ -81,7 +81,7 @@ Examples:
 }
 
 func init() {
-	workInspectCmd.Flags().StringVar(&workInspectFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
-	workInspectCmd.Flags().StringVar(&workInspectTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
-	workCmd.AddCommand(workInspectCmd)
+	workShowCmd.Flags().StringVar(&workShowFrom, "from", "", "Start date (e.g., '2025-12-01', 'last month')")
+	workShowCmd.Flags().StringVar(&workShowTo, "to", "", "End date (e.g., '2025-12-31', 'yesterday')")
+	workCmd.AddCommand(workShowCmd)
 }

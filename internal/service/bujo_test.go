@@ -1179,3 +1179,199 @@ func TestBujoService_ParseEntries_EmptyInput(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, entries)
 }
+
+// Cancel Entry Tests
+
+func TestBujoService_CancelEntry_TaskBecomesCancelled(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeCancelled, entry.Type)
+}
+
+func TestBujoService_CancelEntry_NotFoundReturnsError(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.CancelEntry(ctx, 9999)
+
+	assert.Error(t, err)
+}
+
+func TestBujoService_CancelEntry_AlreadyCancelledNoOp(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeCancelled, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_CancelledBecomesTask(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_NotCancelledNoOp(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+// Retype Entry Tests
+
+func TestBujoService_RetypeEntry_TaskToNote(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeNote, entry.Type)
+}
+
+func TestBujoService_RetypeEntry_TaskToEvent(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeEvent)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeEvent, entry.Type)
+}
+
+func TestBujoService_RetypeEntry_NoteToTask(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "- Some note", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeTask)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_RetypeEntry_InvalidTypeReturnsError(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryType("invalid"))
+
+	assert.Error(t, err)
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeToDone(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeDone)
+
+	assert.Error(t, err)
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeToMigrated(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeMigrated)
+
+	assert.Error(t, err)
+}
+
+func TestBujoService_RetypeEntry_NotFoundReturnsError(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.RetypeEntry(ctx, 9999, domain.EntryTypeNote)
+
+	assert.Error(t, err)
+}
+
+func TestBujoService_RetypeEntry_PreservesContent(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, "Buy groceries", entry.Content)
+}
