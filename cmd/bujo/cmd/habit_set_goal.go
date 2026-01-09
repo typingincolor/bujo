@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -31,6 +33,21 @@ Examples:
 			return err
 		}
 
+		displayName := args[0]
+
+		if !isID && isPureNumber(args[0]) {
+			fmt.Printf("'%s' looks like an ID. Did you mean to use #%s? [y/N]: ", args[0], args[0])
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			confirm := strings.TrimSpace(strings.ToLower(input))
+
+			if confirm == "y" || confirm == "yes" {
+				id, _ = strconv.ParseInt(args[0], 10, 64)
+				isID = true
+				displayName = "#" + args[0]
+			}
+		}
+
 		if isID {
 			err = habitService.SetHabitGoalByID(cmd.Context(), id, goal)
 		} else {
@@ -41,7 +58,7 @@ Examples:
 			return fmt.Errorf("failed to set goal: %w", err)
 		}
 
-		fmt.Fprintf(os.Stderr, "✓ Set goal for %s to %d/day\n", args[0], goal)
+		fmt.Fprintf(os.Stderr, "✓ Set goal for %s to %d/day\n", displayName, goal)
 		return nil
 	},
 }
