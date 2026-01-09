@@ -37,7 +37,11 @@ type Model struct {
 	gotoMode     gotoState
 	captureMode  captureState
 	searchMode   searchState
-	help         help.Model
+	habitState      habitState
+	listState       listState
+	commandPalette  commandPaletteState
+	commandRegistry *CommandRegistry
+	help            help.Model
 	keyMap       KeyMap
 	width        int
 	height       int
@@ -99,6 +103,31 @@ type captureState struct {
 	draftContent  string
 }
 
+type habitState struct {
+	habits      []service.HabitStatus
+	selectedIdx int
+	monthView   bool
+}
+
+type listState struct {
+	lists           []domain.List
+	items           []domain.ListItem
+	summaries       map[int64]*service.ListSummary
+	selectedListIdx int
+	selectedItemIdx int
+	viewingItems    bool
+	currentListID   int64
+	addItemMode     bool
+	addItemInput    string
+}
+
+type commandPaletteState struct {
+	active      bool
+	query       string
+	selectedIdx int
+	filtered    []Command
+}
+
 type ViewMode int
 
 const (
@@ -130,15 +159,16 @@ func NewWithConfig(cfg Config) Model {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return Model{
-		bujoService:  cfg.BujoService,
-		habitService: cfg.HabitService,
-		listService:  cfg.ListService,
-		viewMode:     ViewModeDay,
-		viewDate:     today,
-		currentView:  ViewTypeJournal,
-		help:         help.New(),
-		keyMap:       DefaultKeyMap(),
-		draftPath:    DraftPath(),
+		bujoService:     cfg.BujoService,
+		habitService:    cfg.HabitService,
+		listService:     cfg.ListService,
+		viewMode:        ViewModeDay,
+		viewDate:        today,
+		currentView:     ViewTypeJournal,
+		commandRegistry: DefaultCommands(),
+		help:            help.New(),
+		keyMap:          DefaultKeyMap(),
+		draftPath:       DraftPath(),
 	}
 }
 
@@ -268,6 +298,85 @@ func (m Model) loadAgendaCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return agendaLoadedMsg{agenda}
+	}
+}
+
+func (m Model) logHabitCmd(habitID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.LogHabitByID(ctx, habitID, 1)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitLoggedMsg{habitID}
+	}
+}
+
+func (m Model) loadHabitsCmd() tea.Cmd {
+	days := 7
+	if m.habitState.monthView {
+		days = 30
+	}
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		status, err := m.habitService.GetTrackerStatus(ctx, time.Now(), days)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitsLoadedMsg{status.Habits}
+	}
+}
+
+func (m Model) loadListsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		lists, err := m.listService.GetAllLists(ctx)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listsLoadedMsg{lists}
+	}
+}
+
+func (m Model) loadListItemsCmd(listID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		items, err := m.listService.GetListItems(ctx, listID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemsLoadedMsg{listID, items}
+	}
+}
+
+func (m Model) toggleListItemCmd(item domain.ListItem) tea.Cmd {
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		var err error
+		if item.Type == domain.ListItemTypeDone {
+			err = m.listService.MarkUndone(ctx, item.VersionInfo.RowID)
+		} else {
+			err = m.listService.MarkDone(ctx, item.VersionInfo.RowID)
+		}
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemToggledMsg{item.VersionInfo.RowID}
 	}
 }
 
