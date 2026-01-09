@@ -230,13 +230,13 @@ bujo work set "Home Office"
 bujo work set "Manchester" --date yesterday
 ```
 
-#### `bujo work inspect`
+#### `bujo work show`
 
 Show location history.
 
 ```bash
-bujo work inspect
-bujo work inspect --from "last week"
+bujo work show
+bujo work show --from "last week"
 ```
 
 #### `bujo work clear`
@@ -264,13 +264,13 @@ bujo mood set "tired but productive"
 bujo mood set energetic --date yesterday
 ```
 
-#### `bujo mood inspect`
+#### `bujo mood show`
 
 Show mood history.
 
 ```bash
-bujo mood inspect
-bujo mood inspect --from "last week"
+bujo mood show
+bujo mood show --from "last week"
 ```
 
 #### `bujo mood clear`
@@ -298,13 +298,13 @@ bujo weather set "Rainy, 15°C"
 bujo weather set cloudy --date yesterday
 ```
 
-#### `bujo weather inspect`
+#### `bujo weather show`
 
 Show weather history.
 
 ```bash
-bujo weather inspect
-bujo weather inspect --from "last week"
+bujo weather show
+bujo weather show --from "last week"
 ```
 
 #### `bujo weather clear`
@@ -359,14 +359,14 @@ bujo habit set-goal Water 8
 bujo habit set-goal #1 10
 ```
 
-#### `bujo habit inspect <name|#id>`
+#### `bujo habit show <name|#id>`
 
 Show habit details and log history.
 
 ```bash
-bujo habit inspect Gym
-bujo habit inspect #1
-bujo habit inspect Gym --from "last month"
+bujo habit show Gym
+bujo habit show #1
+bujo habit show Gym --from "last month"
 ```
 
 #### `bujo habit undo <name|#id>`
@@ -387,12 +387,12 @@ bujo habit rename Gym Workout
 bujo habit rename #1 "Morning Workout"
 ```
 
-#### `bujo habit delete-log <log-id>`
+#### `bujo habit log delete <log-id>`
 
-Delete a specific log entry by ID (use `habit inspect` to see IDs).
+Delete a specific log entry by ID (use `habit show` to see IDs).
 
 ```bash
-bujo habit delete-log 42
+bujo habit log delete 42
 ```
 
 #### `bujo habit delete <name|#id>`
