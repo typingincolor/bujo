@@ -20,6 +20,7 @@ type Model struct {
 	scrollOffset int
 	viewMode     ViewMode
 	viewDate     time.Time
+	currentView  ViewType
 	confirmMode  confirmState
 	editMode     editState
 	addMode      addState
@@ -96,6 +97,15 @@ const (
 	ViewModeWeek
 )
 
+type ViewType int
+
+const (
+	ViewTypeJournal ViewType = iota
+	ViewTypeHabits
+	ViewTypeLists
+	ViewTypeListItems
+)
+
 type EntryItem struct {
 	Entry     domain.Entry
 	DayHeader string
@@ -110,6 +120,7 @@ func New(bujoSvc *service.BujoService) Model {
 		bujoService: bujoSvc,
 		viewMode:    ViewModeDay,
 		viewDate:    today,
+		currentView: ViewTypeJournal,
 		help:        help.New(),
 		keyMap:      DefaultKeyMap(),
 		draftPath:   DraftPath(),

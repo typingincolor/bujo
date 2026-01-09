@@ -16,10 +16,6 @@ func (m Model) View() string {
 		return m.renderCaptureMode()
 	}
 
-	if m.agenda == nil {
-		return "Loading..."
-	}
-
 	var sb strings.Builder
 
 	// Toolbar
@@ -28,6 +24,56 @@ func (m Model) View() string {
 	sb.WriteString("\n")
 	sb.WriteString(strings.Repeat("─", min(m.width, 60)))
 	sb.WriteString("\n")
+
+	// View-specific content
+	switch m.currentView {
+	case ViewTypeHabits:
+		sb.WriteString(m.renderHabitsContent())
+	case ViewTypeLists, ViewTypeListItems:
+		sb.WriteString(m.renderListsContent())
+	default:
+		sb.WriteString(m.renderJournalContent())
+	}
+
+	// Modal overlays (shared across all views)
+	if m.editMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderEditInput())
+		sb.WriteString("\n")
+	} else if m.addMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAddInput())
+		sb.WriteString("\n")
+	} else if m.migrateMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMigrateInput())
+		sb.WriteString("\n")
+	} else if m.confirmMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderConfirmDialog())
+		sb.WriteString("\n")
+	} else if m.gotoMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderGotoInput())
+		sb.WriteString("\n")
+	} else if m.searchMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSearchInput())
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render(m.help.View(m.keyMap)))
+
+	return sb.String()
+}
+
+func (m Model) renderJournalContent() string {
+	if m.agenda == nil {
+		return "Loading..."
+	}
+
+	var sb strings.Builder
 
 	if len(m.entries) == 0 {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
@@ -107,36 +153,15 @@ func (m Model) View() string {
 		}
 	}
 
-	if m.editMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderEditInput())
-		sb.WriteString("\n")
-	} else if m.addMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderAddInput())
-		sb.WriteString("\n")
-	} else if m.migrateMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderMigrateInput())
-		sb.WriteString("\n")
-	} else if m.confirmMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderConfirmDialog())
-		sb.WriteString("\n")
-	} else if m.gotoMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderGotoInput())
-		sb.WriteString("\n")
-	} else if m.searchMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderSearchInput())
-		sb.WriteString("\n")
-	}
-
-	sb.WriteString("\n")
-	sb.WriteString(HelpStyle.Render(m.help.View(m.keyMap)))
-
 	return sb.String()
+}
+
+func (m Model) renderHabitsContent() string {
+	return HelpStyle.Render("Habits view - Press 1 to return to Journal") + "\n\n"
+}
+
+func (m Model) renderListsContent() string {
+	return HelpStyle.Render("Lists view - Press 1 to return to Journal") + "\n\n"
 }
 
 func (m Model) renderEntry(item EntryItem) string {
@@ -247,6 +272,20 @@ func (m Model) highlightSearchTerm(line string) string {
 }
 
 func (m Model) renderToolbar() string {
+	var viewTypeStr string
+	switch m.currentView {
+	case ViewTypeJournal:
+		viewTypeStr = "Journal"
+	case ViewTypeHabits:
+		viewTypeStr = "Habits"
+	case ViewTypeLists:
+		viewTypeStr = "Lists"
+	case ViewTypeListItems:
+		viewTypeStr = "List Items"
+	default:
+		viewTypeStr = "Journal"
+	}
+
 	viewModeStr := "Day"
 	if m.viewMode == ViewModeWeek {
 		viewModeStr = "Week"
@@ -254,7 +293,7 @@ func (m Model) renderToolbar() string {
 
 	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
 
-	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s", viewModeStr, dateStr))
+	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s | %s", viewTypeStr, viewModeStr, dateStr))
 }
 
 func (m Model) renderCaptureMode() string {

@@ -89,6 +89,18 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
 
+	case key.Matches(msg, m.keyMap.ViewJournal):
+		m.currentView = ViewTypeJournal
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.ViewHabits):
+		m.currentView = ViewTypeHabits
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.ViewLists):
+		m.currentView = ViewTypeLists
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--

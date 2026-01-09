@@ -265,8 +265,8 @@ func TestModel_View_Loading(t *testing.T) {
 	model := New(nil)
 	view := model.View()
 
-	if view != "Loading..." {
-		t.Errorf("expected Loading..., got %s", view)
+	if !strings.Contains(view, "Loading...") {
+		t.Errorf("expected view to contain Loading..., got %s", view)
 	}
 }
 
@@ -3402,5 +3402,84 @@ func TestModel_HighlightSearchTerm_PartialWord(t *testing.T) {
 	// Should highlight "ask" within "Task"
 	if result == line {
 		t.Error("partial word match should be highlighted")
+	}
+}
+
+// ============================================================================
+// Phase 4: Multi-View Architecture Tests
+// ============================================================================
+
+func TestModel_ViewSwitch_Key1_SwitchesToJournal(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits // Start in habits view
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeJournal {
+		t.Errorf("expected ViewTypeJournal, got %v", m.currentView)
+	}
+}
+
+func TestModel_ViewSwitch_Key2_SwitchesToHabits(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected ViewTypeHabits, got %v", m.currentView)
+	}
+}
+
+func TestModel_ViewSwitch_Key3_SwitchesToLists(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeLists {
+		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
+	}
+}
+
+func TestModel_New_DefaultsToJournalView(t *testing.T) {
+	model := New(nil)
+
+	if model.currentView != ViewTypeJournal {
+		t.Errorf("expected default view to be Journal, got %v", model.currentView)
+	}
+}
+
+func TestModel_View_StatusBar_ShowsCurrentView(t *testing.T) {
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Test Journal view
+	model.currentView = ViewTypeJournal
+	view := model.View()
+	if !strings.Contains(view, "Journal") {
+		t.Error("status bar should show 'Journal' for journal view")
+	}
+
+	// Test Habits view
+	model.currentView = ViewTypeHabits
+	view = model.View()
+	if !strings.Contains(view, "Habits") {
+		t.Error("status bar should show 'Habits' for habits view")
+	}
+
+	// Test Lists view
+	model.currentView = ViewTypeLists
+	view = model.View()
+	if !strings.Contains(view, "Lists") {
+		t.Error("status bar should show 'Lists' for lists view")
 	}
 }
