@@ -294,7 +294,7 @@ func TestEntryRepository_Update(t *testing.T) {
 	assert.Equal(t, "Updated content", result.Content)
 }
 
-func TestEntryRepository_Delete(t *testing.T) {
+func TestEntryRepository_Delete_SoftDeletes(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)
 	ctx := context.Background()
@@ -307,12 +307,193 @@ func TestEntryRepository_Delete(t *testing.T) {
 	id, err := repo.Insert(ctx, entry)
 	require.NoError(t, err)
 
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
 	err = repo.Delete(ctx, id)
 	require.NoError(t, err)
 
+	// Should not be returned by GetByID
 	result, err := repo.GetByID(ctx, id)
 	require.NoError(t, err)
+	assert.Nil(t, result, "Deleted entry should not be returned by GetByID")
+
+	// Should not be returned by GetByEntityID
+	result, err = repo.GetByEntityID(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	assert.Nil(t, result, "Deleted entry should not be returned by GetByEntityID")
+}
+
+func TestEntryRepository_Delete_PreservesHistory(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "To be deleted",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// History should still contain the entry
+	history, err := repo.GetHistory(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, len(history), 1, "History should be preserved after soft delete")
+}
+
+func TestEntryRepository_Delete_CreatesDeleteMarker(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "To be deleted",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// Check that a DELETE op_type record exists
+	var opType string
+	err = db.QueryRowContext(ctx, `
+		SELECT op_type FROM entries
+		WHERE entity_id = ?
+		ORDER BY version DESC LIMIT 1
+	`, inserted.EntityID.String()).Scan(&opType)
+	require.NoError(t, err)
+	assert.Equal(t, "DELETE", opType, "Latest version should have DELETE op_type")
+}
+
+func TestEntryRepository_Restore_BringsBackDeletedEntry(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "To be restored",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	inserted, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id)
+	require.NoError(t, err)
+
+	// Verify it's deleted
+	result, err := repo.GetByEntityID(ctx, inserted.EntityID)
+	require.NoError(t, err)
 	assert.Nil(t, result)
+
+	// Restore it
+	restoredID, err := repo.Restore(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	assert.Greater(t, restoredID, int64(0))
+
+	// Should be accessible again
+	result, err = repo.GetByEntityID(ctx, inserted.EntityID)
+	require.NoError(t, err)
+	require.NotNil(t, result, "Restored entry should be returned by GetByEntityID")
+	assert.Equal(t, "To be restored", result.Content)
+}
+
+func TestEntryRepository_GetDeleted_ReturnsDeletedEntries(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry1 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Active entry",
+		CreatedAt: time.Now(),
+	}
+	_, err := repo.Insert(ctx, entry1)
+	require.NoError(t, err)
+
+	entry2 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Deleted entry",
+		CreatedAt: time.Now(),
+	}
+	id2, err := repo.Insert(ctx, entry2)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id2)
+	require.NoError(t, err)
+
+	deleted, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	assert.Len(t, deleted, 1, "Should return only deleted entries")
+	assert.Equal(t, "Deleted entry", deleted[0].Content)
+}
+
+func TestEntryRepository_DeleteWithChildren_SoftDeletesAll(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	parent := domain.Entry{
+		Type:      domain.EntryTypeEvent,
+		Content:   "Parent event",
+		CreatedAt: time.Now(),
+	}
+	parentID, err := repo.Insert(ctx, parent)
+	require.NoError(t, err)
+
+	child := domain.Entry{
+		Type:      domain.EntryTypeNote,
+		Content:   "Child note",
+		ParentID:  &parentID,
+		Depth:     1,
+		CreatedAt: time.Now(),
+	}
+	childID, err := repo.Insert(ctx, child)
+	require.NoError(t, err)
+
+	grandchild := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Grandchild task",
+		ParentID:  &childID,
+		Depth:     2,
+		CreatedAt: time.Now(),
+	}
+	_, err = repo.Insert(ctx, grandchild)
+	require.NoError(t, err)
+
+	err = repo.DeleteWithChildren(ctx, parentID)
+	require.NoError(t, err)
+
+	// All should be soft deleted
+	parentResult, _ := repo.GetByID(ctx, parentID)
+	assert.Nil(t, parentResult, "Parent should be soft deleted")
+
+	childResult, _ := repo.GetByID(ctx, childID)
+	assert.Nil(t, childResult, "Child should be soft deleted")
+
+	// But history should exist
+	parentEntry, _ := repo.GetByID(ctx, parentID)
+	if parentEntry != nil {
+		history, _ := repo.GetHistory(ctx, parentEntry.EntityID)
+		assert.GreaterOrEqual(t, len(history), 1, "History should be preserved")
+	}
 }
 
 func TestEntryRepository_Insert_SetsEntityID(t *testing.T) {

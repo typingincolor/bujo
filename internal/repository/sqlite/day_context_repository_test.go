@@ -103,3 +103,109 @@ func TestDayContextRepository_GetRange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 3)
 }
+
+func TestDayContextRepository_Delete_SoftDeletes(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewDayContextRepository(db)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	dayCtx := domain.DayContext{
+		Date:     date,
+		Location: stringPtr("Home"),
+	}
+	err := repo.Upsert(ctx, dayCtx)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, date)
+	require.NoError(t, err)
+
+	// Should not be found via GetByDate
+	result, err := repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+
+	// But data should still exist in database
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM day_context WHERE date = '2026-01-06'`).Scan(&count)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, count, 1, "Soft deleted context should still exist in DB")
+}
+
+func TestDayContextRepository_GetDeleted_ReturnsDeletedContexts(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewDayContextRepository(db)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	dayCtx := domain.DayContext{
+		Date:     date,
+		Location: stringPtr("DeletedLocation"),
+	}
+	err := repo.Upsert(ctx, dayCtx)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, date)
+	require.NoError(t, err)
+
+	deleted, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	require.Len(t, deleted, 1)
+	assert.Equal(t, "DeletedLocation", *deleted[0].Location)
+}
+
+func TestDayContextRepository_Restore_BringsBackDeletedContext(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewDayContextRepository(db)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	dayCtx := domain.DayContext{
+		Date:     date,
+		Location: stringPtr("RestoreTest"),
+	}
+	err := repo.Upsert(ctx, dayCtx)
+	require.NoError(t, err)
+
+	// Get entity ID before delete
+	result, err := repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	entityID := result.EntityID
+
+	err = repo.Delete(ctx, date)
+	require.NoError(t, err)
+
+	// Verify it's gone
+	result, err = repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+
+	// Restore it
+	err = repo.Restore(ctx, entityID)
+	require.NoError(t, err)
+
+	// Verify it's back
+	restored, err := repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.NotNil(t, restored)
+	assert.Equal(t, "RestoreTest", *restored.Location)
+}
+
+func TestDayContextRepository_Upsert_SetsEntityID(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewDayContextRepository(db)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	dayCtx := domain.DayContext{
+		Date:     date,
+		Location: stringPtr("EntityIDTest"),
+	}
+	err := repo.Upsert(ctx, dayCtx)
+	require.NoError(t, err)
+
+	result, err := repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.EntityID.IsEmpty(), "EntityID should be set after insert")
+}

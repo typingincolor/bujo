@@ -1060,3 +1060,72 @@ func TestBujoService_GetOutstandingTasks_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, tasks)
 }
+
+func TestBujoService_GetDeletedEntries(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Add and delete an entry
+	ids, err := service.LogEntries(ctx, ". Task to delete", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.DeleteEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Get deleted entries
+	deleted, err := service.GetDeletedEntries(ctx)
+	require.NoError(t, err)
+	assert.Len(t, deleted, 1)
+	assert.Equal(t, "Task to delete", deleted[0].Content)
+}
+
+func TestBujoService_RestoreEntry(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Add and delete an entry
+	ids, err := service.LogEntries(ctx, ". Task to restore", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Get the entity ID before deleting
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	entityID := entry.EntityID
+
+	err = service.DeleteEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Restore the entry
+	newID, err := service.RestoreEntry(ctx, entityID)
+	require.NoError(t, err)
+	assert.NotZero(t, newID)
+
+	// Verify it's restored
+	restored, err := entryRepo.GetByID(ctx, newID)
+	require.NoError(t, err)
+	require.NotNil(t, restored)
+	assert.Equal(t, "Task to restore", restored.Content)
+}
+
+func TestBujoService_RestoreEntry_NotDeleted(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Add an entry but don't delete it
+	ids, err := service.LogEntries(ctx, ". Not deleted", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+
+	// Try to restore non-deleted entry - should return 0 (nothing to restore)
+	newID, err := service.RestoreEntry(ctx, entry.EntityID)
+	require.NoError(t, err)
+	assert.Zero(t, newID)
+}

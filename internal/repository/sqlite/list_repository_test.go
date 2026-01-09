@@ -33,16 +33,20 @@ func TestListRepository_Create_WithSpaces(t *testing.T) {
 	assert.Equal(t, "Shopping List", list.Name)
 }
 
-func TestListRepository_Create_DuplicateName(t *testing.T) {
+func TestListRepository_Create_DuplicateName_AllowedWithEventSourcing(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewListRepository(db)
 	ctx := context.Background()
 
-	_, err := repo.Create(ctx, "Shopping")
+	list1, err := repo.Create(ctx, "Shopping")
 	require.NoError(t, err)
 
-	_, err = repo.Create(ctx, "Shopping")
-	require.Error(t, err)
+	list2, err := repo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	// With event sourcing, duplicate names are allowed (different entity IDs)
+	assert.NotEqual(t, list1.EntityID, list2.EntityID)
+	assert.Equal(t, list1.Name, list2.Name)
 }
 
 func TestListRepository_GetByID(t *testing.T) {
@@ -231,4 +235,73 @@ func TestListRepository_GetByEntityID_NotFound(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Nil(t, found)
+}
+
+func TestListRepository_Delete_SoftDeletes(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	list, err := repo.Create(ctx, "SoftDeleteTest")
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, list.ID)
+	require.NoError(t, err)
+
+	// Verify list is soft deleted (not visible via GetByID)
+	found, err := repo.GetByID(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Nil(t, found)
+
+	// But data should still exist in database
+	var count int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM lists WHERE name = 'SoftDeleteTest'`).Scan(&count)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, count, 1, "Soft deleted list should still exist in DB")
+}
+
+func TestListRepository_GetDeleted_ReturnsDeletedLists(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	list, err := repo.Create(ctx, "DeletedList")
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, list.ID)
+	require.NoError(t, err)
+
+	deleted, err := repo.GetDeleted(ctx)
+	require.NoError(t, err)
+	require.Len(t, deleted, 1)
+	assert.Equal(t, "DeletedList", deleted[0].Name)
+}
+
+func TestListRepository_Restore_BringsBackDeletedList(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewListRepository(db)
+	ctx := context.Background()
+
+	list, err := repo.Create(ctx, "RestoreListTest")
+	require.NoError(t, err)
+	entityID := list.EntityID
+
+	err = repo.Delete(ctx, list.ID)
+	require.NoError(t, err)
+
+	// Verify it's gone
+	found, err := repo.GetByID(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Nil(t, found)
+
+	// Restore it
+	newID, err := repo.Restore(ctx, entityID)
+	require.NoError(t, err)
+	assert.NotZero(t, newID)
+
+	// Verify it's back
+	restored, err := repo.GetByID(ctx, newID)
+	require.NoError(t, err)
+	require.NotNil(t, restored)
+	assert.Equal(t, "RestoreListTest", restored.Name)
 }
