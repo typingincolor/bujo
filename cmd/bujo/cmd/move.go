@@ -12,6 +12,7 @@ var (
 	moveParent string
 	moveLogged string
 	moveRoot   bool
+	moveYes    bool
 )
 
 var moveCmd = &cobra.Command{
@@ -29,7 +30,8 @@ Examples:
   bujo move 42 --parent 10       # Make entry 42 a child of entry 10
   bujo move 42 --root            # Make entry 42 a root entry (no parent)
   bujo move 42 --logged yesterday  # Change logged date to yesterday
-  bujo move 42 --parent 10 --logged "last monday"`,
+  bujo move 42 --parent 10 --logged "last monday"
+  bujo move 42 --logged "last week" -y  # Skip date confirmation`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id, err := parseEntryID(args[0])
@@ -62,6 +64,10 @@ Examples:
 			if err != nil {
 				return err
 			}
+			loggedDate, err = confirmDate(moveLogged, loggedDate, moveYes)
+			if err != nil {
+				return err
+			}
 			opts.NewLoggedDate = &loggedDate
 		}
 
@@ -78,5 +84,6 @@ func init() {
 	moveCmd.Flags().StringVar(&moveParent, "parent", "", "New parent entry ID")
 	moveCmd.Flags().BoolVar(&moveRoot, "root", false, "Move entry to root (no parent)")
 	moveCmd.Flags().StringVar(&moveLogged, "logged", "", "New logged date (e.g., 'yesterday', '2026-01-05')")
+	moveCmd.Flags().BoolVarP(&moveYes, "yes", "y", false, "Skip date confirmation prompt")
 	rootCmd.AddCommand(moveCmd)
 }

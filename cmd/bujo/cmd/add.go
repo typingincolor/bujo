@@ -31,11 +31,12 @@ Examples:
   bujo add --at "Home Office" ". Work on project"
   bujo add --date yesterday ". Forgot to log this"
   bujo add -d "last monday" ". Backfill task"
+  bujo add -d "next friday" -y ". Skip confirmation"
 
 `,
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		entries, addLocation, addDate, addFile, showHelp := parseAddArgs(args)
+		entries, addLocation, addDate, addFile, showHelp, skipConfirm := parseAddArgs(args)
 		if showHelp {
 			return cmd.Help()
 		}
@@ -74,6 +75,13 @@ Examples:
 			return err
 		}
 
+		if addDate != "" {
+			date, err = confirmDate(addDate, date, skipConfirm)
+			if err != nil {
+				return err
+			}
+		}
+
 		opts := service.LogEntriesOptions{
 			Date: date,
 		}
@@ -102,5 +110,6 @@ func init() {
 	addCmd.Flags().StringP("at", "a", "", "Set location for entries")
 	addCmd.Flags().StringP("date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	addCmd.Flags().StringP("file", "f", "", "Read entries from file")
+	addCmd.Flags().BoolP("yes", "y", false, "Skip date confirmation prompt")
 	rootCmd.AddCommand(addCmd)
 }

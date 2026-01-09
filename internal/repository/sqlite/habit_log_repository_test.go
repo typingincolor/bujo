@@ -242,3 +242,77 @@ func TestHabitLogRepository_Restore_BringsBackDeletedLog(t *testing.T) {
 	require.NotNil(t, restored)
 	assert.Equal(t, 3, restored.Count)
 }
+
+func TestHabitLogRepository_GetRangeByEntityID(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	habitID := createTestHabit(t, habitRepo, "EntityIDTest")
+
+	habit, err := habitRepo.GetByID(ctx, habitID)
+	require.NoError(t, err)
+	habitEntityID := habit.EntityID
+
+	now := time.Now()
+	logs := []domain.HabitLog{
+		{HabitID: habitID, HabitEntityID: habitEntityID, Count: 1, LoggedAt: now.AddDate(0, 0, -5)},
+		{HabitID: habitID, HabitEntityID: habitEntityID, Count: 2, LoggedAt: now.AddDate(0, 0, -3)},
+		{HabitID: habitID, HabitEntityID: habitEntityID, Count: 3, LoggedAt: now.AddDate(0, 0, -1)},
+		{HabitID: habitID, HabitEntityID: habitEntityID, Count: 4, LoggedAt: now},
+	}
+	for _, log := range logs {
+		_, err := repo.Insert(ctx, log)
+		require.NoError(t, err)
+	}
+
+	start := now.AddDate(0, 0, -4)
+	end := now
+
+	results, err := repo.GetRangeByEntityID(ctx, habitEntityID, start, end)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 3) // -3, -1, and today
+}
+
+func TestHabitLogRepository_GetRangeByEntityID_AfterHabitRename(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	originalID := createTestHabit(t, habitRepo, "OriginalName")
+
+	habit, err := habitRepo.GetByID(ctx, originalID)
+	require.NoError(t, err)
+	habitEntityID := habit.EntityID
+
+	now := time.Now()
+	log := domain.HabitLog{
+		HabitID:       originalID,
+		HabitEntityID: habitEntityID,
+		Count:         5,
+		LoggedAt:      now,
+	}
+	_, err = repo.Insert(ctx, log)
+	require.NoError(t, err)
+
+	habit.Name = "RenamedHabit"
+	err = habitRepo.Update(ctx, *habit)
+	require.NoError(t, err)
+
+	renamedHabit, err := habitRepo.GetByID(ctx, originalID)
+	require.NoError(t, err)
+	assert.Equal(t, "RenamedHabit", renamedHabit.Name)
+	assert.NotEqual(t, originalID, renamedHabit.ID, "ID should change after rename")
+	assert.Equal(t, habitEntityID, renamedHabit.EntityID, "EntityID should remain stable")
+
+	start := now.AddDate(0, 0, -1)
+	end := now.AddDate(0, 0, 1)
+
+	results, err := repo.GetRangeByEntityID(ctx, habitEntityID, start, end)
+	require.NoError(t, err)
+	assert.Len(t, results, 1, "Logs should be retrievable via entity_id after habit rename")
+	assert.Equal(t, 5, results[0].Count)
+}

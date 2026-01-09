@@ -52,6 +52,13 @@ Examples:
 			return err
 		}
 
+		if habitLogDate != "" {
+			logDate, err = confirmDate(habitLogDate, logDate, habitLogYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		displayName := args[0]
 
 		if !isID && isPureNumber(args[0]) && !habitLogYes {

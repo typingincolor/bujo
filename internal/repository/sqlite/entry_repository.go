@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -29,10 +30,15 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 	}
 	now := time.Now().Format(time.RFC3339)
 
+	priority := entry.Priority
+	if priority == "" {
+		priority = domain.PriorityNone
+	}
+
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO entries (type, content, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Type, entry.Content, entry.ParentID, entry.Depth, entry.Location, scheduledDate, entry.CreatedAt.Format(time.RFC3339),
+		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate, entry.CreatedAt.Format(time.RFC3339),
 		entityID.String(), 1, now, domain.OpTypeInsert.String())
 
 	if err != nil {
@@ -43,17 +49,30 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 }
 
 func (r *EntryRepository) GetByID(ctx context.Context, id int64) (*domain.Entry, error) {
+	// First, get the entity_id for this ID (may be from a closed version)
+	var entityID string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT entity_id FROM entries WHERE id = ?
+	`, id).Scan(&entityID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Then get the current version for that entity
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
-		FROM entries WHERE id = ? AND (valid_to IS NULL OR valid_to = '')
-	`, id)
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
+		FROM entries WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID)
 
 	return r.scanEntry(row)
 }
 
 func (r *EntryRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Entry, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 	`, entityID.String())
 
@@ -64,7 +83,7 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 	dateStr := date.Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE scheduled_date = ? AND (valid_to IS NULL OR valid_to = '')
 		ORDER BY created_at
 	`, dateStr)
@@ -81,7 +100,7 @@ func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time
 	toStr := to.Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY scheduled_date, created_at
 	`, fromStr, toStr)
@@ -99,20 +118,20 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE
 		overdue_tasks AS (
-			SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 			FROM entries
 			WHERE scheduled_date < ? AND type = 'task' AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		),
 		parent_chain AS (
-			SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 			FROM overdue_tasks
 			UNION
-			SELECT e.id, e.type, e.content, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
+			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
 			FROM entries e
 			INNER JOIN parent_chain pc ON e.id = pc.parent_id
 			WHERE (e.valid_to IS NULL OR e.valid_to = '') AND e.op_type != 'DELETE'
 		)
-		SELECT DISTINCT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT DISTINCT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM parent_chain
 		ORDER BY scheduled_date, depth, created_at
 	`, dateStr)
@@ -127,10 +146,10 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 func (r *EntryRepository) GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE tree AS (
-			SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 			FROM entries WHERE id = ? AND (valid_to IS NULL OR valid_to = '')
 			UNION ALL
-			SELECT e.id, e.type, e.content, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
+			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
 			FROM entries e
 			JOIN tree t ON e.parent_id = t.id
 			WHERE (e.valid_to IS NULL OR e.valid_to = '')
@@ -146,19 +165,62 @@ func (r *EntryRepository) GetWithChildren(ctx context.Context, id int64) ([]doma
 }
 
 func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error {
+	current, err := r.GetByID(ctx, entry.ID)
+	if err != nil {
+		return err
+	}
+	if current == nil {
+		return fmt.Errorf("entry not found: %d", entry.ID)
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Close current version
+	_, err = tx.ExecContext(ctx, `
+		UPDATE entries SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, current.EntityID.String())
+	if err != nil {
+		return err
+	}
+
+	// Get next version number
+	var maxVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(version), 0) FROM entries WHERE entity_id = ?
+	`, current.EntityID.String()).Scan(&maxVersion)
+	if err != nil {
+		return err
+	}
+
+	// Prepare values
 	var scheduledDate *string
 	if entry.ScheduledDate != nil {
 		s := entry.ScheduledDate.Format("2006-01-02")
 		scheduledDate = &s
 	}
 
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE entries
-		SET type = ?, content = ?, parent_id = ?, depth = ?, location = ?, scheduled_date = ?
-		WHERE id = ?
-	`, entry.Type, entry.Content, entry.ParentID, entry.Depth, entry.Location, scheduledDate, entry.ID)
+	priority := entry.Priority
+	if priority == "" {
+		priority = domain.PriorityNone
+	}
 
-	return err
+	// Insert new version with UPDATE op_type
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
+		current.CreatedAt.Format(time.RFC3339), current.EntityID.String(), maxVersion+1, now, domain.OpTypeUpdate.String())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
@@ -202,10 +264,15 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 		scheduledDate = &s
 	}
 
+	priority := entry.Priority
+	if priority == "" {
+		priority = domain.PriorityNone
+	}
+
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO entries (type, content, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Type, entry.Content, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
+		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
 		entry.CreatedAt.Format(time.RFC3339), entry.EntityID.String(), maxVersion+1, now, domain.OpTypeDelete.String())
 	if err != nil {
 		return err
@@ -216,7 +283,7 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *EntryRepository) GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE parent_id = ? AND (valid_to IS NULL OR valid_to = '')
 		ORDER BY id
 	`, parentID)
@@ -250,7 +317,7 @@ func (r *EntryRepository) DeleteWithChildren(ctx context.Context, id int64) erro
 
 func (r *EntryRepository) GetDeleted(ctx context.Context) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT e.id, e.type, e.content, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
+		SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id
 		FROM entries e
 		WHERE e.op_type = 'DELETE'
 		AND e.valid_to IS NULL
@@ -271,6 +338,7 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	var lastEntry struct {
 		Type          string
 		Content       string
+		Priority      string
 		ParentID      sql.NullInt64
 		Depth         int
 		Location      sql.NullString
@@ -281,11 +349,11 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	}
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT type, content, parent_id, depth, location, scheduled_date, created_at, version, op_type
+		SELECT type, content, priority, parent_id, depth, location, scheduled_date, created_at, version, op_type
 		FROM entries WHERE entity_id = ?
 		ORDER BY version DESC LIMIT 1
 	`, entityID.String()).Scan(
-		&lastEntry.Type, &lastEntry.Content, &lastEntry.ParentID, &lastEntry.Depth,
+		&lastEntry.Type, &lastEntry.Content, &lastEntry.Priority, &lastEntry.ParentID, &lastEntry.Depth,
 		&lastEntry.Location, &lastEntry.ScheduledDate, &lastEntry.CreatedAt, &lastEntry.Version, &lastEntry.OpType)
 	if err != nil {
 		return 0, err
@@ -322,11 +390,15 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	if lastEntry.ScheduledDate.Valid {
 		scheduledDate = &lastEntry.ScheduledDate.String
 	}
+	priority := lastEntry.Priority
+	if priority == "" {
+		priority = string(domain.PriorityNone)
+	}
 
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO entries (type, content, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, lastEntry.Type, lastEntry.Content, parentID, lastEntry.Depth, location, scheduledDate,
+		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, lastEntry.Type, lastEntry.Content, priority, parentID, lastEntry.Depth, location, scheduledDate,
 		lastEntry.CreatedAt, entityID.String(), lastEntry.Version+1, now, domain.OpTypeInsert.String())
 	if err != nil {
 		return 0, err
@@ -341,11 +413,11 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 
 func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 	var entry domain.Entry
-	var typeStr string
+	var typeStr, priorityStr string
 	var scheduledDate, location, createdAt, entityID sql.NullString
 	var parentID sql.NullInt64
 
-	err := row.Scan(&entry.ID, &typeStr, &entry.Content, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID)
+	err := row.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -354,6 +426,7 @@ func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 	}
 
 	entry.Type = domain.EntryType(typeStr)
+	entry.Priority = domain.Priority(priorityStr)
 
 	if parentID.Valid {
 		entry.ParentID = &parentID.Int64
@@ -380,16 +453,17 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 
 	for rows.Next() {
 		var entry domain.Entry
-		var typeStr string
+		var typeStr, priorityStr string
 		var scheduledDate, location, createdAt, entityID sql.NullString
 		var parentID sql.NullInt64
 
-		err := rows.Scan(&entry.ID, &typeStr, &entry.Content, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID)
+		err := rows.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID)
 		if err != nil {
 			return nil, err
 		}
 
 		entry.Type = domain.EntryType(typeStr)
+		entry.Priority = domain.Priority(priorityStr)
 
 		if parentID.Valid {
 			entry.ParentID = &parentID.Int64
@@ -416,7 +490,7 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 
 func (r *EntryRepository) GetHistory(ctx context.Context, entityID domain.EntityID) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE entity_id = ?
 		ORDER BY version
 	`, entityID.String())
@@ -431,7 +505,7 @@ func (r *EntryRepository) GetHistory(ctx context.Context, entityID domain.Entity
 func (r *EntryRepository) GetAsOf(ctx context.Context, entityID domain.EntityID, asOf time.Time) (*domain.Entry, error) {
 	asOfStr := asOf.Format(time.RFC3339)
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, type, content, parent_id, depth, location, scheduled_date, created_at, entity_id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries
 		WHERE entity_id = ?
 		AND valid_from <= ?

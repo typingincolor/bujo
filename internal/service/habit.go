@@ -21,6 +21,7 @@ type HabitLogRepository interface {
 	Insert(ctx context.Context, log domain.HabitLog) (int64, error)
 	GetByID(ctx context.Context, id int64) (*domain.HabitLog, error)
 	GetRange(ctx context.Context, habitID int64, start, end time.Time) ([]domain.HabitLog, error)
+	GetRangeByEntityID(ctx context.Context, habitEntityID domain.EntityID, start, end time.Time) ([]domain.HabitLog, error)
 	GetLastByHabitID(ctx context.Context, habitID int64) (*domain.HabitLog, error)
 	Delete(ctx context.Context, id int64) error
 }
@@ -78,9 +79,10 @@ func (s *HabitService) LogHabitForDate(ctx context.Context, name string, count i
 	}
 
 	log := domain.HabitLog{
-		HabitID:  habit.ID,
-		Count:    count,
-		LoggedAt: date,
+		HabitID:       habit.ID,
+		HabitEntityID: habit.EntityID,
+		Count:         count,
+		LoggedAt:      date,
 	}
 
 	_, err = s.logRepo.Insert(ctx, log)
@@ -92,17 +94,19 @@ func (s *HabitService) LogHabitByID(ctx context.Context, habitID int64, count in
 }
 
 func (s *HabitService) LogHabitByIDForDate(ctx context.Context, habitID int64, count int, date time.Time) error {
-	if _, err := s.getHabitByID(ctx, habitID); err != nil {
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
 		return err
 	}
 
 	log := domain.HabitLog{
-		HabitID:  habitID,
-		Count:    count,
-		LoggedAt: date,
+		HabitID:       habit.ID,
+		HabitEntityID: habit.EntityID,
+		Count:         count,
+		LoggedAt:      date,
 	}
 
-	_, err := s.logRepo.Insert(ctx, log)
+	_, err = s.logRepo.Insert(ctx, log)
 	return err
 }
 
@@ -241,15 +245,15 @@ func (s *HabitService) InspectHabitByID(ctx context.Context, habitID int64, from
 }
 
 func (s *HabitService) inspectHabitByHabit(ctx context.Context, habit *domain.Habit, from, to, today time.Time) (*HabitDetails, error) {
-	// Get logs for the date range
-	logs, err := s.logRepo.GetRange(ctx, habit.ID, from, to.Add(24*time.Hour))
+	// Get logs for the date range using entity_id (stable across versions)
+	logs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, from, to.Add(24*time.Hour))
 	if err != nil {
 		return nil, err
 	}
 
 	// Calculate streak using all recent logs (not just the range)
 	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	streakLogs, err := s.logRepo.GetRange(ctx, habit.ID, todayStart.AddDate(0, 0, -365), todayStart.Add(24*time.Hour))
+	streakLogs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, todayStart.AddDate(0, 0, -365), todayStart.Add(24*time.Hour))
 	if err != nil {
 		return nil, err
 	}
@@ -300,7 +304,7 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 	endDate := todayStart.Add(24 * time.Hour)
 
 	for _, habit := range habits {
-		logs, err := s.logRepo.GetRange(ctx, habit.ID, startDate, endDate)
+		logs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, startDate, endDate)
 		if err != nil {
 			return nil, err
 		}

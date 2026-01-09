@@ -16,6 +16,55 @@ const (
 	EntryTypeCancelled EntryType = "cancelled"
 )
 
+type Priority string
+
+const (
+	PriorityNone   Priority = "none"
+	PriorityLow    Priority = "low"
+	PriorityMedium Priority = "medium"
+	PriorityHigh   Priority = "high"
+)
+
+var validPriorities = map[Priority]string{
+	PriorityNone:   "",
+	PriorityLow:    "!",
+	PriorityMedium: "!!",
+	PriorityHigh:   "!!!",
+}
+
+func (p Priority) IsValid() bool {
+	_, ok := validPriorities[p]
+	return ok
+}
+
+func (p Priority) Symbol() string {
+	return validPriorities[p]
+}
+
+func (p Priority) Cycle() Priority {
+	switch p {
+	case PriorityNone:
+		return PriorityLow
+	case PriorityLow:
+		return PriorityMedium
+	case PriorityMedium:
+		return PriorityHigh
+	default:
+		return PriorityNone
+	}
+}
+
+func ParsePriority(s string) (Priority, error) {
+	if s == "" {
+		return PriorityNone, nil
+	}
+	p := Priority(s)
+	if !p.IsValid() {
+		return PriorityNone, errors.New("invalid priority: must be none, low, medium, or high")
+	}
+	return p, nil
+}
+
 var validEntryTypes = map[EntryType]string{
 	EntryTypeTask:      "•",
 	EntryTypeNote:      "–",
@@ -39,6 +88,7 @@ type Entry struct {
 	EntityID       EntityID
 	Type           EntryType
 	Content        string
+	Priority       Priority
 	ParentID       *int64
 	ParentEntityID *EntityID
 	Depth          int

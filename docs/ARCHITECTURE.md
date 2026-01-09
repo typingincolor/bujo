@@ -184,7 +184,9 @@ Gemini API integration for AI-powered summaries and reflections.
 
 ## Data Model
 
-### Event Sourcing
+### Event Sourcing (MANDATORY)
+
+**All repository mutations MUST create new versioned rows. No in-place updates.**
 
 All tables use event sourcing with these columns:
 
@@ -197,11 +199,44 @@ valid_to TEXT,                  -- NULL = current, set when superseded
 op_type TEXT NOT NULL           -- INSERT, UPDATE, or DELETE
 ```
 
-This enables:
+#### Repository Mutation Pattern
+
+Every `Update` method must:
+1. Get current version by ID
+2. Begin transaction
+3. Close current version (`SET valid_to = now`)
+4. Get next version number (`MAX(version) + 1`)
+5. Insert new row with `op_type = 'UPDATE'`
+6. Commit transaction
+
+```go
+// CORRECT: Event sourcing pattern
+func (r *Repo) Update(ctx, entity) error {
+    current := r.GetByID(ctx, entity.ID)
+    tx.Exec("UPDATE table SET valid_to = ? WHERE entity_id = ?", now, current.EntityID)
+    tx.Exec("INSERT INTO table (..., op_type) VALUES (..., 'UPDATE')")
+}
+
+// WRONG: In-place update destroys history
+func (r *Repo) Update(ctx, entity) error {
+    r.db.Exec("UPDATE table SET col = ? WHERE id = ?", val, id)  // NEVER DO THIS
+}
+```
+
+#### GetByID Semantics
+
+`GetByID(id)` follows the entity through versions:
+1. Look up `entity_id` for the given row `id`
+2. Return current version (`valid_to IS NULL AND op_type != 'DELETE'`)
+
+This ensures IDs remain stable references even after updates.
+
+#### Benefits
+
 - Complete audit trails
-- Point-in-time queries
-- Safe version restoration
-- Soft deletes
+- Point-in-time queries (`GetAsOf`)
+- Safe undo/restore of deleted items
+- No data loss from updates
 
 ### Tables
 

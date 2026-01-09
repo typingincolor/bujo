@@ -11,18 +11,20 @@ import (
 var nextCmd = &cobra.Command{
 	Use:   "next",
 	Short: "Show entries for the next 7 days",
-	Long: `Show entries for today and the next 6 days.
+	Long: `Show entries for the upcoming 7 days (starting from tomorrow).
 
 This is a shortcut for viewing your upcoming week.
+Use 'bujo today' to see today's entries.
 
 Examples:
   bujo next`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		today := time.Now()
-		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-		endDate := today.AddDate(0, 0, 6)
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		tomorrow := today.AddDate(0, 0, 1)
+		endDate := tomorrow.AddDate(0, 0, 6)
 
-		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), today, endDate)
+		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), tomorrow, endDate)
 		if err != nil {
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}

@@ -298,6 +298,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.Priority):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		newPriority := entry.Priority.Cycle()
+		return m, m.cyclePriorityCmd(entry.ID, newPriority)
+
 	case key.Matches(msg, m.keyMap.ToggleView):
 		if m.viewMode == ViewModeDay {
 			m.viewMode = ViewModeWeek
@@ -1453,6 +1461,17 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return entryUpdatedMsg{entry.ID}
+	}
+}
+
+func (m Model) cyclePriorityCmd(entryID int64, newPriority domain.Priority) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		err := m.bujoService.EditEntryPriority(ctx, entryID, newPriority)
+		if err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{entryID}
 	}
 }
 

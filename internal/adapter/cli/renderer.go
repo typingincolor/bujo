@@ -116,6 +116,7 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 	indent := strings.Repeat("  ", depth)
 
 	symbol := entry.Type.Symbol()
+	prioritySymbol := entry.Priority.Symbol()
 	content := entry.Content
 	idStr := fmt.Sprintf("(%d)", entry.ID)
 
@@ -142,6 +143,10 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 		idStr = Red(idStr)
 	}
 
+	// Format priority symbol if present
+	if prioritySymbol != "" {
+		return fmt.Sprintf("%s%s %s %s %s\n", indent, symbol, prioritySymbol, content, idStr)
+	}
 	return fmt.Sprintf("%s%s %s %s\n", indent, symbol, content, idStr)
 }
 
