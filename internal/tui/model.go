@@ -12,8 +12,17 @@ import (
 	"github.com/typingincolor/bujo/internal/service"
 )
 
+type Config struct {
+	BujoService  *service.BujoService
+	HabitService *service.HabitService
+	ListService  *service.ListService
+	Theme        string
+}
+
 type Model struct {
 	bujoService  *service.BujoService
+	habitService *service.HabitService
+	listService  *service.ListService
 	agenda       *service.MultiDayAgenda
 	entries      []EntryItem
 	selectedIdx  int
@@ -114,16 +123,22 @@ type EntryItem struct {
 }
 
 func New(bujoSvc *service.BujoService) Model {
+	return NewWithConfig(Config{BujoService: bujoSvc})
+}
+
+func NewWithConfig(cfg Config) Model {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	return Model{
-		bujoService: bujoSvc,
-		viewMode:    ViewModeDay,
-		viewDate:    today,
-		currentView: ViewTypeJournal,
-		help:        help.New(),
-		keyMap:      DefaultKeyMap(),
-		draftPath:   DraftPath(),
+		bujoService:  cfg.BujoService,
+		habitService: cfg.HabitService,
+		listService:  cfg.ListService,
+		viewMode:     ViewModeDay,
+		viewDate:     today,
+		currentView:  ViewTypeJournal,
+		help:         help.New(),
+		keyMap:       DefaultKeyMap(),
+		draftPath:    DraftPath(),
 	}
 }
 
