@@ -928,17 +928,91 @@ func (m Model) renderSearchResultLine(entry domain.Entry, selected bool) string 
 func (m Model) renderStatsContent() string {
 	var sb strings.Builder
 
-	sb.WriteString("📊 Statistics & AI Summary\n\n")
+	// Header with period
+	if m.statsViewState.stats != nil {
+		sb.WriteString(fmt.Sprintf("📊 Statistics (%s to %s)\n",
+			m.statsViewState.from.Format("Jan 2"),
+			m.statsViewState.to.Format("Jan 2, 2006")))
+	} else {
+		sb.WriteString("📊 Statistics\n")
+	}
+	sb.WriteString(strings.Repeat("─", 50))
+	sb.WriteString("\n\n")
 
-	sb.WriteString("Summary of your productivity:\n\n")
+	if m.statsViewState.loading {
+		sb.WriteString("Loading statistics...\n")
+		return sb.String()
+	}
 
-	// Basic stats placeholder
-	sb.WriteString(fmt.Sprintf("  Tasks tracked:    %d\n", len(m.entries)))
-	sb.WriteString(fmt.Sprintf("  Habits tracked:   %d\n", len(m.habitState.habits)))
-	sb.WriteString(fmt.Sprintf("  Lists:            %d\n", len(m.listState.lists)))
-	sb.WriteString("\n")
+	stats := m.statsViewState.stats
+	if stats == nil {
+		sb.WriteString(HelpStyle.Render("No statistics available"))
+		sb.WriteString("\n\n")
+	} else {
+		// Entry counts
+		sb.WriteString(fmt.Sprintf("Entries: %d total\n", stats.EntryCounts.Total))
+		if stats.EntryCounts.Tasks > 0 {
+			pct := float64(stats.EntryCounts.Tasks) / float64(stats.EntryCounts.Total) * 100
+			sb.WriteString(fmt.Sprintf("  • Tasks:     %d (%.0f%%)\n", stats.EntryCounts.Tasks, pct))
+		}
+		if stats.EntryCounts.Notes > 0 {
+			pct := float64(stats.EntryCounts.Notes) / float64(stats.EntryCounts.Total) * 100
+			sb.WriteString(fmt.Sprintf("  – Notes:     %d (%.0f%%)\n", stats.EntryCounts.Notes, pct))
+		}
+		if stats.EntryCounts.Events > 0 {
+			pct := float64(stats.EntryCounts.Events) / float64(stats.EntryCounts.Total) * 100
+			sb.WriteString(fmt.Sprintf("  ○ Events:    %d (%.0f%%)\n", stats.EntryCounts.Events, pct))
+		}
+		if stats.EntryCounts.Done > 0 {
+			pct := float64(stats.EntryCounts.Done) / float64(stats.EntryCounts.Total) * 100
+			sb.WriteString(fmt.Sprintf("  ✓ Completed: %d (%.0f%%)\n", stats.EntryCounts.Done, pct))
+		}
+		sb.WriteString("\n")
 
-	// Horizon selector
+		// Task completion
+		if stats.TaskCompletion.Total > 0 {
+			sb.WriteString(fmt.Sprintf("Task completion: %.0f%% (%d/%d)\n",
+				stats.TaskCompletion.Rate,
+				stats.TaskCompletion.Completed,
+				stats.TaskCompletion.Total))
+		}
+
+		// Productivity
+		if stats.Productivity.AveragePerDay > 0 {
+			sb.WriteString(fmt.Sprintf("Average entries/day: %.1f\n", stats.Productivity.AveragePerDay))
+		}
+		if stats.Productivity.MostProductive.Average > 0 {
+			sb.WriteString(fmt.Sprintf("\nMost productive: %ss (avg %.1f)\n",
+				stats.Productivity.MostProductive.Day.String(),
+				stats.Productivity.MostProductive.Average))
+		}
+		if stats.Productivity.LeastProductive.Average > 0 {
+			sb.WriteString(fmt.Sprintf("Least productive: %ss (avg %.1f)\n",
+				stats.Productivity.LeastProductive.Day.String(),
+				stats.Productivity.LeastProductive.Average))
+		}
+
+		// Habits
+		if stats.HabitStats.Active > 0 {
+			sb.WriteString(fmt.Sprintf("\nHabits: %d active\n", stats.HabitStats.Active))
+			if stats.HabitStats.BestStreak.Days > 0 {
+				sb.WriteString(fmt.Sprintf("  Best streak: %s (%d days)\n",
+					stats.HabitStats.BestStreak.HabitName,
+					stats.HabitStats.BestStreak.Days))
+			}
+			if stats.HabitStats.MostLogged.Count > 0 {
+				sb.WriteString(fmt.Sprintf("  Most logged: %s (%d logs)\n",
+					stats.HabitStats.MostLogged.HabitName,
+					stats.HabitStats.MostLogged.Count))
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	// AI Summary section
+	sb.WriteString(strings.Repeat("─", 50))
+	sb.WriteString("\n\n")
+
 	horizonLabel := "Daily"
 	switch m.summaryState.horizon {
 	case "weekly":
@@ -948,10 +1022,9 @@ func (m Model) renderStatsContent() string {
 	case "annual":
 		horizonLabel = "Annual"
 	}
-	sb.WriteString(fmt.Sprintf("AI Summary Mode: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
-	sb.WriteString(fmt.Sprintf("Viewing: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
+	sb.WriteString(fmt.Sprintf("AI Summary: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
+	sb.WriteString(fmt.Sprintf("Period: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
 
-	// AI Summary section
 	if m.summaryService == nil {
 		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
 		sb.WriteString("\n\n")
@@ -962,14 +1035,8 @@ func (m Model) renderStatsContent() string {
 		sb.WriteString(HelpStyle.Render("Press 'r' to retry"))
 		sb.WriteString("\n\n")
 	} else if m.summaryState.summary != nil {
-		sb.WriteString("🤖 AI Reflection:\n")
-		sb.WriteString(strings.Repeat("─", 50))
-		sb.WriteString("\n\n")
+		sb.WriteString("🤖 AI Reflection:\n\n")
 		sb.WriteString(m.summaryState.summary.Content)
-		sb.WriteString("\n\n")
-		sb.WriteString(HelpStyle.Render(fmt.Sprintf("Period: %s to %s",
-			m.summaryState.summary.StartDate.Format("Jan 2, 2006"),
-			m.summaryState.summary.EndDate.Format("Jan 2, 2006"))))
 		sb.WriteString("\n\n")
 		sb.WriteString(HelpStyle.Render("Press 'r' to refresh"))
 		sb.WriteString("\n\n")

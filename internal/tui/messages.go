@@ -122,3 +122,7 @@ type searchResultsMsg struct {
 	results []domain.Entry
 	query   string
 }
+
+type statsLoadedMsg struct {
+	stats *domain.Stats
+}

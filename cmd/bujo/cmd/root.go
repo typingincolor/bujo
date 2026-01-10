@@ -29,6 +29,7 @@ var (
 	listService    *service.ListService
 	goalService    *service.GoalService
 	summaryService *service.SummaryService
+	statsService   *service.StatsService
 )
 
 var rootCmd = &cobra.Command{
@@ -73,6 +74,7 @@ var rootCmd = &cobra.Command{
 		habitService = service.NewHabitService(habitRepo, habitLogRepo)
 		listService = service.NewListService(listRepo, listItemRepo)
 		goalService = service.NewGoalService(goalRepo)
+		statsService = service.NewStatsService(entryRepo, habitRepo, habitLogRepo)
 
 		// Initialize summary service if API key is available
 		summaryRepo := sqlite.NewSummaryRepository(db)
