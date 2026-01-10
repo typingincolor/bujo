@@ -20,11 +20,12 @@ const (
 )
 
 type Config struct {
-	BujoService  *service.BujoService
-	HabitService *service.HabitService
-	ListService  *service.ListService
-	GoalService  *service.GoalService
-	Theme        string
+	BujoService    *service.BujoService
+	HabitService   *service.HabitService
+	ListService    *service.ListService
+	GoalService    *service.GoalService
+	SummaryService *service.SummaryService
+	Theme          string
 }
 
 type Model struct {
@@ -32,6 +33,7 @@ type Model struct {
 	habitService    *service.HabitService
 	listService     *service.ListService
 	goalService     *service.GoalService
+	summaryService  *service.SummaryService
 	agenda          *service.MultiDayAgenda
 	journalGoals    []domain.Goal
 	entries         []EntryItem
@@ -60,6 +62,7 @@ type Model struct {
 	confirmGoalDeleteMode  confirmGoalDeleteState
 	moveGoalMode           moveGoalState
 	migrateToGoalMode      migrateToGoalState
+	summaryState           summaryState
 	commandPalette         commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
@@ -199,6 +202,14 @@ type migrateToGoalState struct {
 	input   textinput.Model
 }
 
+type summaryState struct {
+	summary      *domain.Summary
+	loading      bool
+	error        error
+	horizon      domain.SummaryHorizon
+	lastGenerate time.Time
+}
+
 type commandPaletteState struct {
 	active      bool
 	query       string
@@ -264,6 +275,7 @@ func NewWithConfig(cfg Config) Model {
 		habitService:    cfg.HabitService,
 		listService:     cfg.ListService,
 		goalService:     cfg.GoalService,
+		summaryService:  cfg.SummaryService,
 		collapsed:       make(map[domain.EntityID]bool),
 		viewMode:        ViewModeDay,
 		viewDate:        today,
@@ -278,6 +290,7 @@ func NewWithConfig(cfg Config) Model {
 		gotoMode:          gotoState{input: gotoInput},
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
+		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily},
 	}
 }
 
@@ -728,6 +741,21 @@ func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.
 		}
 
 		return entryMigratedToGoalMsg{entryID: entryID, goalID: goalID}
+	}
+}
+
+func (m Model) loadSummaryCmd() tea.Cmd {
+	horizon := m.summaryState.horizon
+	return func() tea.Msg {
+		if m.summaryService == nil {
+			return summaryErrorMsg{fmt.Errorf("AI summaries require GEMINI_API_KEY")}
+		}
+		ctx := context.Background()
+		summary, err := m.summaryService.GetSummary(ctx, horizon, time.Now())
+		if err != nil {
+			return summaryErrorMsg{err}
+		}
+		return summaryLoadedMsg{summary}
 	}
 }
 

@@ -109,3 +109,11 @@ type entryMigratedToGoalMsg struct {
 	entryID int64
 	goalID  int64
 }
+
+type summaryLoadedMsg struct {
+	summary *domain.Summary
+}
+
+type summaryErrorMsg struct {
+	err error
+}

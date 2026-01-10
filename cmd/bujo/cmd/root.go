@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"github.com/typingincolor/bujo/internal/adapter/ai"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/repository/sqlite"
 	"github.com/typingincolor/bujo/internal/service"
@@ -21,11 +23,12 @@ var (
 	dbPath  string
 	verbose bool
 
-	db           *sql.DB
-	bujoService  *service.BujoService
-	habitService *service.HabitService
-	listService  *service.ListService
-	goalService  *service.GoalService
+	db             *sql.DB
+	bujoService    *service.BujoService
+	habitService   *service.HabitService
+	listService    *service.ListService
+	goalService    *service.GoalService
+	summaryService *service.SummaryService
 )
 
 var rootCmd = &cobra.Command{
@@ -71,6 +74,18 @@ var rootCmd = &cobra.Command{
 		listService = service.NewListService(listRepo, listItemRepo)
 		goalService = service.NewGoalService(goalRepo)
 
+		// Initialize summary service if API key is available
+		summaryRepo := sqlite.NewSummaryRepository(db)
+		if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
+			geminiClient, err := ai.NewGeminiClient(cmd.Context(), apiKey)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
+			} else {
+				generator := ai.NewGeminiGenerator(geminiClient)
+				summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
+			}
+		}
+
 		return nil
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
@@ -85,6 +100,13 @@ func Execute() error {
 }
 
 func init() {
+	// Load .env files (errors are ignored - .env is optional)
+	// Priority: current dir .env, then ~/.bujo/.env
+	_ = godotenv.Load() // .env in current directory
+	if home, err := os.UserHomeDir(); err == nil {
+		_ = godotenv.Load(filepath.Join(home, ".bujo", ".env"))
+	}
+
 	defaultDBPath := getDefaultDBPath()
 
 	rootCmd.PersistentFlags().StringVar(&dbPath, "db-path", defaultDBPath, "Path to the database file")

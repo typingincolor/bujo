@@ -134,6 +134,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case entryMigratedToGoalMsg:
 		return m, m.loadAgendaCmd()
 
+	case summaryLoadedMsg:
+		m.summaryState.loading = false
+		m.summaryState.error = nil
+		m.summaryState.summary = msg.summary
+		return m, nil
+
+	case summaryErrorMsg:
+		m.summaryState.loading = false
+		m.summaryState.error = msg.err
+		return m, nil
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -208,6 +219,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleListsMode(msg)
 		case ViewTypeGoals:
 			return m.handleGoalsMode(msg)
+		case ViewTypeStats:
+			return m.handleStatsMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -2215,6 +2228,47 @@ func (m Model) handleCommandPaletteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.commandPalette.query += string(msg.Runes)
 		m.commandPalette.filtered = m.commandRegistry.Filter(m.commandPalette.query)
 		m.commandPalette.selectedIdx = 0
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case msg.String() == "r":
+		if m.summaryService != nil && !m.summaryState.loading {
+			m.summaryState.loading = true
+			m.summaryState.error = nil
+			return m, m.loadSummaryCmd()
+		}
+		return m, nil
+
+	case msg.String() == "1":
+		m.summaryState.horizon = "daily"
+		m.summaryState.summary = nil
+		return m, nil
+
+	case msg.String() == "2":
+		m.summaryState.horizon = "weekly"
+		m.summaryState.summary = nil
+		return m, nil
+
+	case msg.String() == "3":
+		m.summaryState.horizon = "quarterly"
+		m.summaryState.summary = nil
+		return m, nil
+
+	case msg.String() == "4":
+		m.summaryState.horizon = "annual"
+		m.summaryState.summary = nil
 		return m, nil
 	}
 
