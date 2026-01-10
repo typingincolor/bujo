@@ -117,3 +117,8 @@ type summaryLoadedMsg struct {
 type summaryErrorMsg struct {
 	err error
 }
+
+type searchResultsMsg struct {
+	results []domain.Entry
+	query   string
+}

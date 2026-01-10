@@ -854,11 +854,75 @@ func (m Model) renderSearchContent() string {
 	var sb strings.Builder
 
 	sb.WriteString("🔍 Search\n\n")
-	sb.WriteString("Type to search entries...\n\n")
-	sb.WriteString(HelpStyle.Render("Search functionality coming soon"))
+
+	sb.WriteString("  ")
+	sb.WriteString(m.searchView.input.View())
 	sb.WriteString("\n\n")
 
+	if m.searchView.loading {
+		sb.WriteString("  Searching...\n")
+	} else if m.searchView.query == "" {
+		sb.WriteString(HelpStyle.Render("  Type to search entries"))
+		sb.WriteString("\n")
+	} else if len(m.searchView.results) == 0 {
+		sb.WriteString(fmt.Sprintf("  No results found for %q\n", m.searchView.query))
+	} else {
+		sb.WriteString(fmt.Sprintf("  Found %d result(s)\n\n", len(m.searchView.results)))
+		for i, entry := range m.searchView.results {
+			line := m.renderSearchResultLine(entry, i == m.searchView.selectedIdx)
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render("j/k: navigate • enter: view • esc: clear • /: focus search"))
+	sb.WriteString("\n")
+
 	return sb.String()
+}
+
+func (m Model) renderSearchResultLine(entry domain.Entry, selected bool) string {
+	var parts []string
+
+	dateStr := "no date"
+	if entry.ScheduledDate != nil {
+		dateStr = entry.ScheduledDate.Format("2006-01-02")
+	}
+
+	symbol := entry.Type.Symbol()
+	content := entry.Content
+	idStr := fmt.Sprintf("(%d)", entry.ID)
+
+	switch entry.Type {
+	case domain.EntryTypeDone:
+		symbol = DoneStyle.Render(symbol)
+		content = DoneStyle.Render(content)
+		dateStr = DoneStyle.Render(dateStr)
+		idStr = DoneStyle.Render(idStr)
+	case domain.EntryTypeMigrated, domain.EntryTypeCancelled:
+		symbol = MigratedStyle.Render(symbol)
+		content = MigratedStyle.Render(content)
+		dateStr = MigratedStyle.Render(dateStr)
+		idStr = MigratedStyle.Render(idStr)
+	default:
+		dateStr = IDStyle.Render(dateStr)
+		idStr = IDStyle.Render(idStr)
+	}
+
+	prefix := "  "
+	if selected {
+		prefix = TitleStyle.Render("> ")
+		content = SelectedStyle.Render(entry.Content)
+	}
+
+	parts = append(parts, prefix)
+	parts = append(parts, fmt.Sprintf("[%s]", dateStr))
+	parts = append(parts, symbol)
+	parts = append(parts, content)
+	parts = append(parts, idStr)
+
+	return strings.Join(parts, " ")
 }
 
 func (m Model) renderStatsContent() string {

@@ -20,6 +20,7 @@ type EntryRepository interface {
 	DeleteWithChildren(ctx context.Context, id int64) error
 	GetHistory(ctx context.Context, entityID EntityID) ([]Entry, error)
 	GetAsOf(ctx context.Context, entityID EntityID, asOf time.Time) (*Entry, error)
+	Search(ctx context.Context, opts SearchOptions) ([]Entry, error)
 }
 
 type HabitRepository interface {

@@ -145,6 +145,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summaryState.error = msg.err
 		return m, nil
 
+	case searchResultsMsg:
+		m.searchView.loading = false
+		m.searchView.results = msg.results
+		m.searchView.query = msg.query
+		m.searchView.selectedIdx = 0
+		return m, nil
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -221,6 +228,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleGoalsMode(msg)
 		case ViewTypeStats:
 			return m.handleStatsMode(msg)
+		case ViewTypeSearch:
+			return m.handleSearchViewMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -2301,6 +2310,64 @@ func (m Model) navigateSummaryPeriod(direction int) time.Time {
 	}
 }
 
+func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case msg.String() == "enter":
+		if len(m.searchView.results) > 0 && m.searchView.selectedIdx < len(m.searchView.results) {
+			entry := m.searchView.results[m.searchView.selectedIdx]
+			if entry.ScheduledDate != nil {
+				m.viewDate = *entry.ScheduledDate
+			}
+			m.currentView = ViewTypeJournal
+			return m, m.loadAgendaCmd()
+		}
+		return m, nil
+
+	case msg.String() == "esc":
+		m.searchView.input.SetValue("")
+		m.searchView.query = ""
+		m.searchView.results = nil
+		m.searchView.selectedIdx = 0
+		return m, nil
+
+	case msg.String() == "/":
+		m.searchView.input.Focus()
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.searchView.selectedIdx > 0 {
+			m.searchView.selectedIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.searchView.selectedIdx < len(m.searchView.results)-1 {
+			m.searchView.selectedIdx++
+		}
+		return m, nil
+	}
+
+	if m.searchView.input.Focused() {
+		var cmd tea.Cmd
+		m.searchView.input, cmd = m.searchView.input.Update(msg)
+		newQuery := m.searchView.input.Value()
+		if newQuery != m.searchView.query {
+			m.searchView.loading = true
+			return m, tea.Batch(cmd, m.searchEntriesCmd(newQuery))
+		}
+		return m, cmd
+	}
+
+	return m, nil
+}
+
 func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.ViewJournal):
@@ -2317,7 +2384,8 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewSearch):
 		m.currentView = ViewTypeSearch
-		return true, m, nil
+		m.searchView.input.Focus()
+		return true, m, m.searchView.input.Cursor.BlinkCmd()
 
 	case key.Matches(msg, m.keyMap.ViewStats):
 		m.currentView = ViewTypeStats

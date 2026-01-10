@@ -21,6 +21,7 @@ type EntryRepository interface {
 	DeleteWithChildren(ctx context.Context, id int64) error
 	GetDeleted(ctx context.Context) ([]domain.Entry, error)
 	Restore(ctx context.Context, entityID domain.EntityID) (int64, error)
+	Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error)
 }
 
 type DayContextRepository interface {
@@ -648,4 +649,8 @@ func (s *BujoService) RestoreEntry(ctx context.Context, entityID domain.EntityID
 
 func (s *BujoService) ParseEntries(content string) ([]domain.Entry, error) {
 	return s.parser.Parse(content)
+}
+
+func (s *BujoService) SearchEntries(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
+	return s.entryRepo.Search(ctx, opts)
 }

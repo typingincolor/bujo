@@ -516,3 +516,45 @@ func (r *EntryRepository) GetAsOf(ctx context.Context, entityID domain.EntityID,
 
 	return r.scanEntry(row)
 }
+
+func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
+	if opts.Query == "" {
+		return []domain.Entry{}, nil
+	}
+
+	query := `
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
+		FROM entries
+		WHERE content LIKE '%' || ? || '%' COLLATE NOCASE
+		AND (valid_to IS NULL OR valid_to = '')
+		AND op_type != 'DELETE'
+	`
+	args := []any{opts.Query}
+
+	if opts.Type != nil {
+		query += ` AND type = ?`
+		args = append(args, string(*opts.Type))
+	}
+
+	if opts.DateFrom != nil && opts.DateTo != nil {
+		query += ` AND scheduled_date >= ? AND scheduled_date <= ?`
+		args = append(args, opts.DateFrom.Format("2006-01-02"), opts.DateTo.Format("2006-01-02"))
+	}
+
+	query += ` ORDER BY scheduled_date DESC, created_at DESC`
+
+	limit := opts.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	query += ` LIMIT ?`
+	args = append(args, limit)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanEntries(rows)
+}
