@@ -42,6 +42,20 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 	return &list, nil
 }
 
+func (r *ListRepository) InsertWithEntityID(ctx context.Context, list domain.List) (int64, error) {
+	now := time.Now().Format(time.RFC3339)
+
+	result, err := r.db.ExecContext(ctx,
+		"INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type) VALUES (?, ?, ?, ?, ?, ?)",
+		list.Name, list.EntityID.String(), list.CreatedAt.Format(time.RFC3339), 1, now, domain.OpTypeInsert.String(),
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return result.LastInsertId()
+}
+
 func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, error) {
 	// First, get the entity_id for this ID (may be from a closed version)
 	var entityID string
@@ -244,6 +258,11 @@ func (r *ListRepository) Delete(ctx context.Context, id int64) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *ListRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM lists")
+	return err
 }
 
 func (r *ListRepository) GetDeleted(ctx context.Context) ([]domain.List, error) {

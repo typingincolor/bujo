@@ -77,8 +77,45 @@ func (r *SummaryRepository) GetByHorizon(ctx context.Context, horizon domain.Sum
 	return summaries, rows.Err()
 }
 
+func (r *SummaryRepository) GetAll(ctx context.Context) ([]domain.Summary, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, horizon, content, start_date, end_date, created_at
+		FROM summaries
+		ORDER BY start_date DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var summaries []domain.Summary
+	for rows.Next() {
+		var s domain.Summary
+		var horizonStr, startDate, endDate, createdAt string
+
+		err := rows.Scan(&s.ID, &horizonStr, &s.Content, &startDate, &endDate, &createdAt)
+		if err != nil {
+			return nil, err
+		}
+
+		s.Horizon = domain.SummaryHorizon(horizonStr)
+		s.StartDate, _ = time.Parse("2006-01-02", startDate)
+		s.EndDate, _ = time.Parse("2006-01-02", endDate)
+		s.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+
+		summaries = append(summaries, s)
+	}
+
+	return summaries, rows.Err()
+}
+
 func (r *SummaryRepository) Delete(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, "DELETE FROM summaries WHERE id = ?", id)
+	return err
+}
+
+func (r *SummaryRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM summaries")
 	return err
 }
 

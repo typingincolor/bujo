@@ -100,6 +100,21 @@ func (r *ListItemRepository) GetByListID(ctx context.Context, listID int64) ([]d
 	return r.scanItems(rows)
 }
 
+func (r *ListItemRepository) GetAll(ctx context.Context) ([]domain.ListItem, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT row_id, entity_id, version, valid_from, valid_to, op_type, list_entity_id, type, content, created_at
+		FROM list_items
+		WHERE valid_to IS NULL AND op_type != 'DELETE'
+		ORDER BY row_id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanItems(rows)
+}
+
 func (r *ListItemRepository) Update(ctx context.Context, item domain.ListItem) error {
 	now := time.Now().Format(time.RFC3339)
 
@@ -185,6 +200,11 @@ func (r *ListItemRepository) Delete(ctx context.Context, id int64) error {
 	}
 
 	return tx.Commit()
+}
+
+func (r *ListItemRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM list_items")
+	return err
 }
 
 func (r *ListItemRepository) GetHistory(ctx context.Context, entityID domain.EntityID) ([]domain.ListItem, error) {
