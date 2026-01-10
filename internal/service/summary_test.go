@@ -53,16 +53,21 @@ func TestSummaryService_GetSummary(t *testing.T) {
 		assert.Equal(t, "AI generated summary", result.Content)
 	})
 
-	t.Run("returns cached summary if recent", func(t *testing.T) {
-		today := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+	// Smart caching tests:
+	// - Completed periods (end date < today) always use cache
+	// - Ongoing periods (end date >= today) always regenerate
+
+	t.Run("uses cached summary for completed period", func(t *testing.T) {
+		// Yesterday is a completed daily period - should always use cache
+		yesterday := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
 
 		cachedSummary := &domain.Summary{
 			ID:        1,
 			Horizon:   domain.SummaryHorizonDaily,
-			Content:   "Cached summary",
-			StartDate: today,
-			EndDate:   today,
-			CreatedAt: time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC), // same day
+			Content:   "Old cached summary",
+			StartDate: yesterday,
+			EndDate:   yesterday,
+			CreatedAt: time.Date(2026, 1, 9, 10, 0, 0, 0, time.UTC),
 		}
 
 		summaryRepo := &mockSummaryRepo{
@@ -71,32 +76,41 @@ func TestSummaryService_GetSummary(t *testing.T) {
 			},
 		}
 
+		// Should NOT call entry repo or generator since period is complete
+		entryRepo := &mockEntryRepoForSummary{
+			getByDateRangeFunc: func(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+				t.Fatal("should not fetch entries for completed period")
+				return nil, nil
+			},
+		}
+
 		generator := &mockSummaryGenerator{
 			generateFunc: func(ctx context.Context, e []domain.Entry, h domain.SummaryHorizon) (string, error) {
-				t.Fatal("should not call generator when cache is valid")
+				t.Fatal("should not generate for completed period")
 				return "", nil
 			},
 		}
 
-		svc := NewSummaryService(nil, summaryRepo, generator)
+		svc := NewSummaryService(entryRepo, summaryRepo, generator)
 
-		result, err := svc.GetSummary(context.Background(), domain.SummaryHorizonDaily, today)
+		result, err := svc.GetSummary(context.Background(), domain.SummaryHorizonDaily, yesterday)
 
 		require.NoError(t, err)
-		assert.Equal(t, "Cached summary", result.Content)
+		assert.Equal(t, "Old cached summary", result.Content)
 	})
 
-	t.Run("regenerates if cached summary is stale", func(t *testing.T) {
+	t.Run("regenerates for ongoing period even with cache", func(t *testing.T) {
+		// Today is an ongoing period - should always regenerate
 		today := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
 		entries := []domain.Entry{{ID: 1, Type: domain.EntryTypeTask, Content: "Task"}}
 
-		staleSummary := &domain.Summary{
+		cachedSummary := &domain.Summary{
 			ID:        1,
 			Horizon:   domain.SummaryHorizonDaily,
-			Content:   "Stale summary",
+			Content:   "Morning summary",
 			StartDate: today,
 			EndDate:   today,
-			CreatedAt: time.Date(2026, 1, 9, 10, 0, 0, 0, time.UTC), // yesterday
+			CreatedAt: time.Date(2026, 1, 10, 8, 0, 0, 0, time.UTC),
 		}
 
 		entryRepo := &mockEntryRepoForSummary{
@@ -107,7 +121,7 @@ func TestSummaryService_GetSummary(t *testing.T) {
 
 		summaryRepo := &mockSummaryRepo{
 			getFunc: func(ctx context.Context, horizon domain.SummaryHorizon, start, end time.Time) (*domain.Summary, error) {
-				return staleSummary, nil
+				return cachedSummary, nil
 			},
 			insertFunc: func(ctx context.Context, summary domain.Summary) (int64, error) {
 				return 2, nil
@@ -116,7 +130,7 @@ func TestSummaryService_GetSummary(t *testing.T) {
 
 		generator := &mockSummaryGenerator{
 			generateFunc: func(ctx context.Context, e []domain.Entry, h domain.SummaryHorizon) (string, error) {
-				return "Fresh summary", nil
+				return "Afternoon summary", nil
 			},
 		}
 
@@ -125,7 +139,7 @@ func TestSummaryService_GetSummary(t *testing.T) {
 		result, err := svc.GetSummary(context.Background(), domain.SummaryHorizonDaily, today)
 
 		require.NoError(t, err)
-		assert.Equal(t, "Fresh summary", result.Content)
+		assert.Equal(t, "Afternoon summary", result.Content)
 	})
 
 	t.Run("forceRefresh bypasses cache", func(t *testing.T) {

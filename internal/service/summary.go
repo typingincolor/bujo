@@ -47,8 +47,12 @@ func (s *SummaryService) GetSummaryWithRefresh(ctx context.Context, horizon doma
 			return nil, err
 		}
 
-		if cached != nil && cached.IsRecent(refDate) {
-			return cached, nil
+		if cached != nil {
+			// For completed periods (end date before today), always use cache
+			// For ongoing periods (end date >= today), always regenerate
+			if s.isPeriodComplete(endDate) {
+				return cached, nil
+			}
 		}
 	}
 
@@ -111,4 +115,11 @@ func (s *SummaryService) calculateDateRange(horizon domain.SummaryHorizon, refDa
 	default:
 		return refDate, refDate
 	}
+}
+
+func (s *SummaryService) isPeriodComplete(endDate time.Time) bool {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endDateNormalized := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 0, 0, 0, 0, endDate.Location())
+	return endDateNormalized.Before(today)
 }
