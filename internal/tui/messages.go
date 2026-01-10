@@ -77,3 +77,17 @@ type goalsLoadedMsg struct {
 type goalToggledMsg struct {
 	goalID int64
 }
+
+type goalAddedMsg struct{}
+
+type goalEditedMsg struct {
+	goalID int64
+}
+
+type goalDeletedMsg struct {
+	goalID int64
+}
+
+type goalMovedMsg struct {
+	goalID int64
+}
