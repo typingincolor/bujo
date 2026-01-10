@@ -3247,3 +3247,50 @@ func TestUAT_GoalsView_ShowsMonthInHeader(t *testing.T) {
 		t.Errorf("goals view should show current month name '%s'", monthName)
 	}
 }
+
+func TestUAT_JournalView_ShowsGoalsSection(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a goal for current month
+	now := time.Now()
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+	_, _ = goalSvc.CreateGoal(ctx, "Test journal goal", currentMonth)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view (it's the default view)
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+
+		// Process the goals load command
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	view := model.View()
+
+	// Should show the goal in journal view
+	if !strings.Contains(view, "Test journal goal") {
+		t.Error("journal view should show current month goals")
+	}
+
+	// Should show the month name
+	monthName := now.Format("January")
+	if !strings.Contains(view, monthName+" Goals") {
+		t.Errorf("journal view should show '%s Goals' header", monthName)
+	}
+}

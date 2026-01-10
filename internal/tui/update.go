@@ -30,7 +30,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
-		return m.ensuredVisible(), nil
+		return m.ensuredVisible(), m.loadJournalGoalsCmd()
+
+	case journalGoalsLoadedMsg:
+		m.journalGoals = msg.goals
+		return m, nil
 
 	case errMsg:
 		m.err = msg.err

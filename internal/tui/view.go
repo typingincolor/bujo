@@ -183,6 +183,33 @@ func (m Model) renderJournalContent() string {
 		}
 	}
 
+	// Goals section
+	if len(m.journalGoals) > 0 {
+		sb.WriteString("\n")
+		now := time.Now()
+		monthName := now.Format("January")
+		sb.WriteString(fmt.Sprintf("🎯 %s Goals\n", monthName))
+
+		doneCount := 0
+		for _, goal := range m.journalGoals {
+			var status string
+			var content string
+			if goal.IsDone() {
+				status = DoneStyle.Render("✓")
+				content = DoneStyle.Render(goal.Content)
+				doneCount++
+			} else {
+				status = HelpStyle.Render("○")
+				content = goal.Content
+			}
+			sb.WriteString(fmt.Sprintf("  %s %s\n", status, content))
+		}
+
+		progress := float64(doneCount) / float64(len(m.journalGoals)) * 100
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  Progress: %.0f%%", progress)))
+		sb.WriteString("\n")
+	}
+
 	return sb.String()
 }
 

@@ -33,6 +33,7 @@ type Model struct {
 	listService     *service.ListService
 	goalService     *service.GoalService
 	agenda          *service.MultiDayAgenda
+	journalGoals    []domain.Goal
 	entries         []EntryItem
 	selectedIdx     int
 	scrollOffset    int
@@ -397,6 +398,22 @@ func (m Model) loadAgendaCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return agendaLoadedMsg{agenda}
+	}
+}
+
+func (m Model) loadJournalGoalsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return journalGoalsLoadedMsg{goals: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		goals, err := m.goalService.GetGoalsForMonth(ctx, currentMonth)
+		if err != nil {
+			return journalGoalsLoadedMsg{goals: nil}
+		}
+		return journalGoalsLoadedMsg{goals: goals}
 	}
 }
 
