@@ -203,12 +203,11 @@ type migrateToGoalState struct {
 }
 
 type summaryState struct {
-	summary      *domain.Summary
-	loading      bool
-	error        error
-	horizon      domain.SummaryHorizon
-	refDate      time.Time
-	lastGenerate time.Time
+	summary *domain.Summary
+	loading bool
+	error   error
+	horizon domain.SummaryHorizon
+	refDate time.Time
 }
 
 type commandPaletteState struct {
