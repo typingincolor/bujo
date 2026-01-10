@@ -199,3 +199,45 @@ func TestRenderDailyAgenda_CancelledEntriesHaveStrikethrough(t *testing.T) {
 	assert.False(t, strings.Contains(normalLine, "\x1b[9m"),
 		"Normal task should NOT have strikethrough, got: %q", normalLine)
 }
+
+func TestRenderGoalsSection_ShowsGoalsWithProgress(t *testing.T) {
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	goals := []domain.Goal{
+		{ID: 1, Content: "Learn Go", Status: domain.GoalStatusActive},
+		{ID: 2, Content: "Read more books", Status: domain.GoalStatusDone},
+		{ID: 3, Content: "Exercise daily", Status: domain.GoalStatusActive},
+	}
+
+	result := RenderGoalsSection(goals, month)
+	stripped := stripANSI(result)
+
+	assert.Contains(t, stripped, "January Goals")
+	assert.Contains(t, stripped, "Learn Go")
+	assert.Contains(t, stripped, "Read more books")
+	assert.Contains(t, stripped, "Exercise daily")
+	assert.Contains(t, stripped, "33%") // 1 out of 3 done
+}
+
+func TestRenderGoalsSection_EmptyWhenNoGoals(t *testing.T) {
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	result := RenderGoalsSection([]domain.Goal{}, month)
+
+	assert.Empty(t, result)
+}
+
+func TestRenderGoalsSection_ShowsCheckmarkForDoneGoals(t *testing.T) {
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	goals := []domain.Goal{
+		{ID: 1, Content: "Completed goal", Status: domain.GoalStatusDone},
+	}
+
+	result := RenderGoalsSection(goals, month)
+	stripped := stripANSI(result)
+
+	assert.Contains(t, stripped, "✓")
+	assert.Contains(t, stripped, "Completed goal")
+	assert.Contains(t, stripped, "100%")
+}

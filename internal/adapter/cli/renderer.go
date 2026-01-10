@@ -376,3 +376,35 @@ func formatProgress(progress float64) string {
 	}
 	return Red(text)
 }
+
+func RenderGoalsSection(goals []domain.Goal, month time.Time) string {
+	if len(goals) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	monthName := month.Format("January")
+
+	sb.WriteString(fmt.Sprintf("🎯 %s\n", Cyan(Bold(monthName+" Goals"))))
+
+	doneCount := 0
+	for _, goal := range goals {
+		var status string
+		var content string
+		if goal.IsDone() {
+			status = Green("✓")
+			content = Green(goal.Content)
+			doneCount++
+		} else {
+			status = Dimmed("○")
+			content = goal.Content
+		}
+		sb.WriteString(fmt.Sprintf("  %s %s\n", status, content))
+	}
+
+	progress := float64(doneCount) / float64(len(goals)) * 100
+	sb.WriteString(fmt.Sprintf("  %s\n", Dimmed(fmt.Sprintf("Progress: %s", formatProgress(progress)))))
+	sb.WriteString("\n")
+
+	return sb.String()
+}

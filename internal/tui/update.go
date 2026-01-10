@@ -30,7 +30,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
-		return m.ensuredVisible(), nil
+		return m.ensuredVisible(), m.loadJournalGoalsCmd()
+
+	case journalGoalsLoadedMsg:
+		m.journalGoals = msg.goals
+		return m, nil
 
 	case errMsg:
 		m.err = msg.err
@@ -108,6 +112,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case goalToggledMsg:
 		return m, m.loadGoalsCmd()
 
+	case goalAddedMsg:
+		return m, m.loadGoalsCmd()
+
+	case goalEditedMsg:
+		return m, m.loadGoalsCmd()
+
+	case goalDeletedMsg:
+		m.goalState.selectedIdx = 0
+		return m, m.loadGoalsCmd()
+
+	case goalMovedMsg:
+		return m, m.loadGoalsCmd()
+
+	case entryMigratedToGoalMsg:
+		return m, m.loadAgendaCmd()
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -145,6 +165,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.confirmHabitDeleteMode.active {
 			return m.handleConfirmHabitDeleteMode(msg)
+		}
+		if m.addGoalMode.active {
+			return m.handleAddGoalMode(msg)
+		}
+		if m.editGoalMode.active {
+			return m.handleEditGoalMode(msg)
+		}
+		if m.confirmGoalDeleteMode.active {
+			return m.handleConfirmGoalDeleteMode(msg)
+		}
+		if m.moveGoalMode.active {
+			return m.handleMoveGoalMode(msg)
+		}
+		if m.migrateToGoalMode.active {
+			return m.handleMigrateToGoalMode(msg)
 		}
 
 		// Check for command palette activation
@@ -331,6 +366,27 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			entryID:  entry.ID,
 			fromDate: fromDate,
 			input:    ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.MigrateToGoal):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		if entry.Type != domain.EntryTypeTask {
+			return m, nil
+		}
+		ti := textinput.New()
+		ti.Placeholder = "Target month (YYYY-MM)"
+		ti.Focus()
+		ti.CharLimit = 7
+		ti.Width = m.width - 10
+		m.migrateToGoalMode = migrateToGoalState{
+			active:  true,
+			entryID: entry.ID,
+			content: entry.Content,
+			input:   ti,
 		}
 		return m, nil
 
@@ -1736,9 +1792,180 @@ func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, m.toggleGoalCmd(goal.ID, goal.IsDone())
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.DayLeft):
+		m.goalState.viewMonth = m.goalState.viewMonth.AddDate(0, -1, 0)
+		m.goalState.selectedIdx = 0
+		return m, m.loadGoalsCmd()
+
+	case key.Matches(msg, m.keyMap.DayRight):
+		m.goalState.viewMonth = m.goalState.viewMonth.AddDate(0, 1, 0)
+		m.goalState.selectedIdx = 0
+		return m, m.loadGoalsCmd()
+
+	case key.Matches(msg, m.keyMap.Add):
+		ti := textinput.New()
+		ti.Placeholder = "Goal content"
+		ti.Focus()
+		ti.CharLimit = 200
+		ti.Width = m.width - 10
+		m.addGoalMode = addGoalState{
+			active: true,
+			input:  ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Edit):
+		if len(m.goalState.goals) > 0 && m.goalState.selectedIdx < len(m.goalState.goals) {
+			goal := m.goalState.goals[m.goalState.selectedIdx]
+			ti := textinput.New()
+			ti.Placeholder = "Goal content"
+			ti.SetValue(goal.Content)
+			ti.Focus()
+			ti.CharLimit = 200
+			ti.Width = m.width - 10
+			m.editGoalMode = editGoalState{
+				active: true,
+				goalID: goal.ID,
+				input:  ti,
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Delete):
+		if len(m.goalState.goals) > 0 && m.goalState.selectedIdx < len(m.goalState.goals) {
+			m.confirmGoalDeleteMode = confirmGoalDeleteState{
+				active: true,
+				goalID: m.goalState.goals[m.goalState.selectedIdx].ID,
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Migrate):
+		if len(m.goalState.goals) > 0 && m.goalState.selectedIdx < len(m.goalState.goals) {
+			goal := m.goalState.goals[m.goalState.selectedIdx]
+			ti := textinput.New()
+			ti.Placeholder = "Target month (YYYY-MM)"
+			ti.Focus()
+			ti.CharLimit = 7
+			ti.Width = m.width - 10
+			m.moveGoalMode = moveGoalState{
+				active: true,
+				goalID: goal.ID,
+				input:  ti,
+			}
+		}
+		return m, nil
 	}
 
 	return m, nil
+}
+
+func (m Model) handleAddGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.addGoalMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		content := strings.TrimSpace(m.addGoalMode.input.Value())
+		if content == "" {
+			m.addGoalMode.active = false
+			return m, nil
+		}
+		m.addGoalMode.active = false
+		return m, m.addGoalCmd(content)
+	}
+
+	var cmd tea.Cmd
+	m.addGoalMode.input, cmd = m.addGoalMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleEditGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.editGoalMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		content := strings.TrimSpace(m.editGoalMode.input.Value())
+		if content == "" {
+			m.editGoalMode.active = false
+			return m, nil
+		}
+		goalID := m.editGoalMode.goalID
+		m.editGoalMode.active = false
+		return m, m.editGoalCmd(goalID, content)
+	}
+
+	var cmd tea.Cmd
+	m.editGoalMode.input, cmd = m.editGoalMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleConfirmGoalDeleteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.Confirm):
+		goalID := m.confirmGoalDeleteMode.goalID
+		m.confirmGoalDeleteMode.active = false
+		return m, m.deleteGoalCmd(goalID)
+
+	case key.Matches(msg, m.keyMap.Cancel):
+		m.confirmGoalDeleteMode.active = false
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleMoveGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.moveGoalMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		monthStr := strings.TrimSpace(m.moveGoalMode.input.Value())
+		targetMonth, err := time.Parse("2006-01", monthStr)
+		if err != nil {
+			m.moveGoalMode.active = false
+			m.err = fmt.Errorf("invalid month format, use YYYY-MM")
+			return m, nil
+		}
+		goalID := m.moveGoalMode.goalID
+		m.moveGoalMode.active = false
+		return m, m.moveGoalCmd(goalID, targetMonth)
+	}
+
+	var cmd tea.Cmd
+	m.moveGoalMode.input, cmd = m.moveGoalMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleMigrateToGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.migrateToGoalMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		monthStr := strings.TrimSpace(m.migrateToGoalMode.input.Value())
+		targetMonth, err := time.Parse("2006-01", monthStr)
+		if err != nil {
+			m.migrateToGoalMode.active = false
+			m.err = fmt.Errorf("invalid month format, use YYYY-MM")
+			return m, nil
+		}
+		entryID := m.migrateToGoalMode.entryID
+		content := m.migrateToGoalMode.content
+		m.migrateToGoalMode.active = false
+		return m, m.migrateToGoalCmd(entryID, content, targetMonth)
+	}
+
+	var cmd tea.Cmd
+	m.migrateToGoalMode.input, cmd = m.migrateToGoalMode.input.Update(msg)
+	return m, cmd
 }
 
 func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

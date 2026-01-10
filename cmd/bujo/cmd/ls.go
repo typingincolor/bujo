@@ -16,7 +16,7 @@ var (
 var lsCmd = &cobra.Command{
 	Use:   "ls",
 	Short: "Display entries for the last 7 days",
-	Long: `Display entries for the last 7 days, including overdue tasks.
+	Long: `Display entries for the last 7 days, including overdue tasks and monthly goals.
 
 Use --from and --to to specify a custom date range.
 
@@ -59,6 +59,14 @@ Examples:
 		}
 
 		fmt.Print(cli.RenderMultiDayAgenda(agenda, todayStart))
+
+		currentMonth := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
+		goals, err := goalService.GetGoalsForMonth(cmd.Context(), currentMonth)
+		if err != nil {
+			return fmt.Errorf("failed to get goals: %w", err)
+		}
+
+		fmt.Print(cli.RenderGoalsSection(goals, currentMonth))
 		return nil
 	},
 }

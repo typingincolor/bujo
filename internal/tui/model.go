@@ -33,6 +33,7 @@ type Model struct {
 	listService     *service.ListService
 	goalService     *service.GoalService
 	agenda          *service.MultiDayAgenda
+	journalGoals    []domain.Goal
 	entries         []EntryItem
 	selectedIdx     int
 	scrollOffset    int
@@ -51,8 +52,13 @@ type Model struct {
 	addHabitMode           addHabitState
 	confirmHabitDeleteMode confirmHabitDeleteState
 	listState              listState
-	goalState       goalState
-	commandPalette  commandPaletteState
+	goalState              goalState
+	addGoalMode            addGoalState
+	editGoalMode           editGoalState
+	confirmGoalDeleteMode  confirmGoalDeleteState
+	moveGoalMode           moveGoalState
+	migrateToGoalMode      migrateToGoalState
+	commandPalette         commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
 	keyMap          KeyMap
@@ -152,6 +158,36 @@ type listState struct {
 type goalState struct {
 	goals       []domain.Goal
 	selectedIdx int
+	viewMonth   time.Time
+}
+
+type addGoalState struct {
+	active bool
+	input  textinput.Model
+}
+
+type editGoalState struct {
+	active bool
+	goalID int64
+	input  textinput.Model
+}
+
+type confirmGoalDeleteState struct {
+	active bool
+	goalID int64
+}
+
+type moveGoalState struct {
+	active bool
+	goalID int64
+	input  textinput.Model
+}
+
+type migrateToGoalState struct {
+	active  bool
+	entryID int64
+	content string
+	input   textinput.Model
 }
 
 type commandPaletteState struct {
@@ -195,6 +231,7 @@ func New(bujoSvc *service.BujoService) Model {
 func NewWithConfig(cfg Config) Model {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	editInput := textinput.New()
 	editInput.Placeholder = "Edit content..."
@@ -207,6 +244,9 @@ func NewWithConfig(cfg Config) Model {
 
 	gotoInput := textinput.New()
 	gotoInput.Placeholder = "Enter date..."
+
+	migrateToGoalInput := textinput.New()
+	migrateToGoalInput.Placeholder = "Target month (YYYY-MM)..."
 
 	return Model{
 		bujoService:     cfg.BujoService,
@@ -222,8 +262,10 @@ func NewWithConfig(cfg Config) Model {
 		draftPath:       DraftPath(),
 		editMode:        editState{input: editInput},
 		addMode:         addState{input: addInput},
-		migrateMode:     migrateState{input: migrateInput},
-		gotoMode:        gotoState{input: gotoInput},
+		migrateMode:       migrateState{input: migrateInput},
+		gotoMode:          gotoState{input: gotoInput},
+		goalState:         goalState{viewMonth: currentMonth},
+		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 	}
 }
 
@@ -368,6 +410,22 @@ func (m Model) loadAgendaCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return agendaLoadedMsg{agenda}
+	}
+}
+
+func (m Model) loadJournalGoalsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return journalGoalsLoadedMsg{goals: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		goals, err := m.goalService.GetGoalsForMonth(ctx, currentMonth)
+		if err != nil {
+			return journalGoalsLoadedMsg{goals: nil}
+		}
+		return journalGoalsLoadedMsg{goals: goals}
 	}
 }
 
@@ -518,16 +576,74 @@ func (m Model) deleteListItemCmd(itemID int64) tea.Cmd {
 }
 
 func (m Model) loadGoalsCmd() tea.Cmd {
+	viewMonth := m.goalState.viewMonth
 	return func() tea.Msg {
 		if m.goalService == nil {
 			return errMsg{fmt.Errorf("goal service not available")}
 		}
 		ctx := context.Background()
-		goals, err := m.goalService.GetCurrentMonthGoals(ctx)
+		goals, err := m.goalService.GetGoalsForMonth(ctx, viewMonth)
 		if err != nil {
 			return errMsg{err}
 		}
 		return goalsLoadedMsg{goals}
+	}
+}
+
+func (m Model) addGoalCmd(content string) tea.Cmd {
+	viewMonth := m.goalState.viewMonth
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		_, err := m.goalService.CreateGoal(ctx, content, viewMonth)
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalAddedMsg{}
+	}
+}
+
+func (m Model) editGoalCmd(goalID int64, content string) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		err := m.goalService.UpdateContent(ctx, goalID, content)
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalEditedMsg{goalID}
+	}
+}
+
+func (m Model) deleteGoalCmd(goalID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		err := m.goalService.DeleteGoal(ctx, goalID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalDeletedMsg{goalID}
+	}
+}
+
+func (m Model) moveGoalCmd(goalID int64, targetMonth time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		err := m.goalService.MoveToMonth(ctx, goalID, targetMonth)
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalMovedMsg{goalID}
 	}
 }
 
@@ -547,6 +663,30 @@ func (m Model) toggleGoalCmd(goalID int64, isDone bool) tea.Cmd {
 			return errMsg{err}
 		}
 		return goalToggledMsg{goalID}
+	}
+}
+
+func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+
+		goalID, err := m.goalService.CreateGoal(ctx, content, targetMonth)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		err = m.bujoService.DeleteEntry(ctx, entryID)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		return entryMigratedToGoalMsg{entryID: entryID, goalID: goalID}
 	}
 }
 

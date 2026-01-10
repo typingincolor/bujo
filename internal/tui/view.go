@@ -74,6 +74,26 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderCommandPalette())
 		sb.WriteString("\n")
+	} else if m.addGoalMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAddGoalInput())
+		sb.WriteString("\n")
+	} else if m.editGoalMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderEditGoalInput())
+		sb.WriteString("\n")
+	} else if m.confirmGoalDeleteMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderConfirmGoalDeleteDialog())
+		sb.WriteString("\n")
+	} else if m.moveGoalMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMoveGoalInput())
+		sb.WriteString("\n")
+	} else if m.migrateToGoalMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMigrateToGoalInput())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
@@ -165,6 +185,33 @@ func (m Model) renderJournalContent() string {
 			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↓ %d more below", len(m.entries)-endIdx)))
 			sb.WriteString("\n")
 		}
+	}
+
+	// Goals section
+	if len(m.journalGoals) > 0 {
+		sb.WriteString("\n")
+		now := time.Now()
+		monthName := now.Format("January")
+		sb.WriteString(fmt.Sprintf("🎯 %s Goals\n", monthName))
+
+		doneCount := 0
+		for _, goal := range m.journalGoals {
+			var status string
+			var content string
+			if goal.IsDone() {
+				status = DoneStyle.Render("✓")
+				content = DoneStyle.Render(goal.Content)
+				doneCount++
+			} else {
+				status = HelpStyle.Render("○")
+				content = goal.Content
+			}
+			sb.WriteString(fmt.Sprintf("  %s %s\n", status, content))
+		}
+
+		progress := float64(doneCount) / float64(len(m.journalGoals)) * 100
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  Progress: %.0f%%", progress)))
+		sb.WriteString("\n")
 	}
 
 	return sb.String()
@@ -818,36 +865,36 @@ func (m Model) renderStatsContent() string {
 func (m Model) renderGoalsContent() string {
 	var sb strings.Builder
 
-	sb.WriteString("🎯 Monthly Goals\n\n")
+	monthName := m.goalState.viewMonth.Format("January 2006")
+	sb.WriteString(fmt.Sprintf("🎯 Monthly Goals - %s\n\n", monthName))
 
 	if len(m.goalState.goals) == 0 {
-		sb.WriteString(HelpStyle.Render("No goals for this month. Use 'bujo goal add <content>' to create one."))
+		sb.WriteString(HelpStyle.Render("No goals for this month. Press 'a' to add one."))
 		sb.WriteString("\n\n")
-		return sb.String()
-	}
+	} else {
+		for i, goal := range m.goalState.goals {
+			status := "  "
+			if goal.IsDone() {
+				status = "✓ "
+			}
 
-	for i, goal := range m.goalState.goals {
-		status := "  "
-		if goal.IsDone() {
-			status = "✓ "
+			line := fmt.Sprintf("%s#%-3d %s", status, goal.ID, goal.Content)
+
+			if goal.IsDone() {
+				line = DoneStyle.Render(line)
+			}
+
+			if i == m.goalState.selectedIdx {
+				line = SelectedStyle.Render(line)
+			}
+
+			sb.WriteString(line)
+			sb.WriteString("\n")
 		}
-
-		line := fmt.Sprintf("%s#%-3d %s", status, goal.ID, goal.Content)
-
-		if goal.IsDone() {
-			line = DoneStyle.Render(line)
-		}
-
-		if i == m.goalState.selectedIdx {
-			line = SelectedStyle.Render(line)
-		}
-
-		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString("\n")
-	sb.WriteString(HelpStyle.Render("space: toggle done • j/k: navigate"))
+	sb.WriteString(HelpStyle.Render("h/l: month • a: add • e: edit • d: delete • m: move • space: toggle"))
 	sb.WriteString("\n\n")
 
 	return sb.String()
@@ -868,4 +915,47 @@ func (m Model) renderSettingsContent() string {
 	sb.WriteString("\n\n")
 
 	return sb.String()
+}
+
+func (m Model) renderAddGoalInput() string {
+	var sb strings.Builder
+	sb.WriteString("Add goal:\n")
+	sb.WriteString(m.addGoalMode.input.View())
+	sb.WriteString("\n\nEnter to add, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderEditGoalInput() string {
+	var sb strings.Builder
+	sb.WriteString("Edit goal:\n")
+	sb.WriteString(m.editGoalMode.input.View())
+	sb.WriteString("\n\nEnter to save, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderConfirmGoalDeleteDialog() string {
+	dialog := `Delete this goal?
+
+  y - Yes, delete
+  n - No, cancel`
+
+	return ConfirmStyle.Render(dialog)
+}
+
+func (m Model) renderMoveGoalInput() string {
+	var sb strings.Builder
+	sb.WriteString("Move goal to month (YYYY-MM):\n")
+	sb.WriteString(m.moveGoalMode.input.View())
+	sb.WriteString("\n\nEnter to move, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderMigrateToGoalInput() string {
+	var sb strings.Builder
+	sb.WriteString("Convert task to goal:\n")
+	sb.WriteString(fmt.Sprintf("Task: %s\n\n", m.migrateToGoalMode.content))
+	sb.WriteString("Target month (YYYY-MM):\n")
+	sb.WriteString(m.migrateToGoalMode.input.View())
+	sb.WriteString("\n\nEnter to convert, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
 }
