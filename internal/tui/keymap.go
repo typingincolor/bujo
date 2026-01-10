@@ -34,6 +34,8 @@ type KeyMap struct {
 	ViewSettings   key.Binding
 	CommandPalette key.Binding
 	LogHabit       key.Binding
+	DayLeft        key.Binding
+	DayRight       key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -161,6 +163,14 @@ func DefaultKeyMap() KeyMap {
 		LogHabit: key.NewBinding(
 			key.WithKeys("l"),
 			key.WithHelp("l", "log"),
+		),
+		DayLeft: key.NewBinding(
+			key.WithKeys("h", "left"),
+			key.WithHelp("h/←", "prev day"),
+		),
+		DayRight: key.NewBinding(
+			key.WithKeys("l", "right"),
+			key.WithHelp("l/→", "next day"),
 		),
 	}
 }

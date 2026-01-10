@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
@@ -173,28 +174,42 @@ func (m Model) renderHabitsContent() string {
 	var sb strings.Builder
 
 	if len(m.habitState.habits) == 0 {
-		sb.WriteString(HelpStyle.Render("No habits yet. Use 'bujo habit log <name>' to create one."))
+		sb.WriteString(HelpStyle.Render("No habits yet. Press 'a' to add a habit."))
 		sb.WriteString("\n\n")
 		return sb.String()
 	}
 
+	days := 7
+	if m.habitState.monthView {
+		days = 30
+	}
+
 	for i, habit := range m.habitState.habits {
-		// Build sparkline from day history
-		sparkline := m.renderSparkline(habit.DayHistory)
-
-		// Format: Name | Sparkline | Streak | Completion%
-		line := fmt.Sprintf("%-20s %s  %d day streak  %.0f%%",
-			habit.Name,
-			sparkline,
-			habit.CurrentStreak,
-			habit.CompletionPercent,
-		)
-
-		if i == m.habitState.selectedIdx {
-			line = SelectedStyle.Render(line)
+		// Line 1: Habit name with streak (CLI style)
+		streakText := "day"
+		if habit.CurrentStreak != 1 {
+			streakText = "days"
 		}
+		nameLine := fmt.Sprintf("%s (%d %s streak)", habit.Name, habit.CurrentStreak, streakText)
+		if i == m.habitState.selectedIdx {
+			nameLine = SelectedStyle.Render(nameLine)
+		}
+		sb.WriteString(nameLine)
+		sb.WriteString("\n")
 
-		sb.WriteString(line)
+		// Line 2: Sparkline with circles (CLI style)
+		sparkline := m.renderSparkline(habit.DayHistory, i == m.habitState.selectedIdx)
+		sb.WriteString("  " + sparkline)
+		sb.WriteString("\n")
+
+		// Line 3: Day labels
+		dayLabels := m.renderDayLabels(days)
+		sb.WriteString("  " + HelpStyle.Render(dayLabels))
+		sb.WriteString("\n")
+
+		// Line 4: Today count and completion
+		todayInfo := fmt.Sprintf("  %d/%d today | %.0f%% completion", habit.TodayCount, habit.GoalPerDay, habit.CompletionPercent)
+		sb.WriteString(HelpStyle.Render(todayInfo))
 		sb.WriteString("\n")
 
 		// Show weekly/monthly progress if goals are set
@@ -206,26 +221,52 @@ func (m Model) renderHabitsContent() string {
 			if habit.GoalPerMonth > 0 {
 				progressParts = append(progressParts, fmt.Sprintf("Month: %.0f%%", habit.MonthlyProgress))
 			}
-			progressLine := HelpStyle.Render("                     " + strings.Join(progressParts, "  "))
+			progressLine := HelpStyle.Render("  " + strings.Join(progressParts, "  "))
 			sb.WriteString(progressLine)
 			sb.WriteString("\n")
 		}
+
+		sb.WriteString("\n")
 	}
 
-	sb.WriteString("\n")
 	return sb.String()
 }
 
-func (m Model) renderSparkline(history []service.DayStatus) string {
-	var sb strings.Builder
-	for _, day := range history {
-		if day.Completed {
-			sb.WriteString("▓")
-		} else {
-			sb.WriteString("░")
+func (m Model) renderSparkline(history []service.DayStatus, isSelected bool) string {
+	var parts []string
+	days := len(history)
+
+	// History is ordered [0]=today, [1]=yesterday, etc.
+	// We want to display oldest first, so reverse
+	for i := days - 1; i >= 0; i-- {
+		dayIdx := days - 1 - i // Convert display index to history index
+		if i < len(history) {
+			day := history[dayIdx]
+			char := "○"
+			if day.Completed {
+				char = "●"
+			}
+			// Highlight selected day
+			if isSelected && i == m.habitState.selectedDayIdx {
+				char = "[" + char + "]"
+			}
+			parts = append(parts, char)
 		}
 	}
-	return sb.String()
+	return strings.Join(parts, " ")
+}
+
+func (m Model) renderDayLabels(days int) string {
+	dayNames := []string{"S", "M", "T", "W", "T", "F", "S"}
+	var labels []string
+
+	now := time.Now()
+	for i := days - 1; i >= 0; i-- {
+		date := now.AddDate(0, 0, -i)
+		dayOfWeek := int(date.Weekday())
+		labels = append(labels, dayNames[dayOfWeek])
+	}
+	return strings.Join(labels, " ")
 }
 
 func (m Model) renderListsContent() string {

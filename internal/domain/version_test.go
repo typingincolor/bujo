@@ -7,56 +7,64 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOpType_Insert_IsValid(t *testing.T) {
-	assert.True(t, OpTypeInsert.IsValid())
+func TestOpType_IsValid(t *testing.T) {
+	tests := []struct {
+		name     string
+		opType   OpType
+		expected bool
+	}{
+		{"INSERT is valid", OpTypeInsert, true},
+		{"UPDATE is valid", OpTypeUpdate, true},
+		{"DELETE is valid", OpTypeDelete, true},
+		{"invalid op type", OpType("invalid"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.opType.IsValid())
+		})
+	}
 }
 
-func TestOpType_Update_IsValid(t *testing.T) {
-	assert.True(t, OpTypeUpdate.IsValid())
-}
-
-func TestOpType_Delete_IsValid(t *testing.T) {
-	assert.True(t, OpTypeDelete.IsValid())
-}
-
-func TestOpType_Invalid_IsNotValid(t *testing.T) {
-	invalid := OpType("invalid")
-	assert.False(t, invalid.IsValid())
-}
-
-func TestOpType_String_ReturnsValue(t *testing.T) {
+func TestOpType_String(t *testing.T) {
 	assert.Equal(t, "INSERT", OpTypeInsert.String())
 	assert.Equal(t, "UPDATE", OpTypeUpdate.String())
 	assert.Equal(t, "DELETE", OpTypeDelete.String())
 }
 
-func TestVersionInfo_IsCurrent_WhenValidToNil_ReturnsTrue(t *testing.T) {
-	v := VersionInfo{ValidTo: nil}
-
-	assert.True(t, v.IsCurrent())
-}
-
-func TestVersionInfo_IsCurrent_WhenValidToSet_ReturnsFalse(t *testing.T) {
+func TestVersionInfo_IsCurrent(t *testing.T) {
 	now := time.Now()
-	v := VersionInfo{ValidTo: &now}
+	tests := []struct {
+		name     string
+		info     VersionInfo
+		expected bool
+	}{
+		{"nil ValidTo is current", VersionInfo{ValidTo: nil}, true},
+		{"set ValidTo is not current", VersionInfo{ValidTo: &now}, false},
+	}
 
-	assert.False(t, v.IsCurrent())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.info.IsCurrent())
+		})
+	}
 }
 
-func TestVersionInfo_IsDeleted_WhenOpTypeDelete_ReturnsTrue(t *testing.T) {
-	v := VersionInfo{OpType: OpTypeDelete}
+func TestVersionInfo_IsDeleted(t *testing.T) {
+	tests := []struct {
+		name     string
+		opType   OpType
+		expected bool
+	}{
+		{"DELETE op type is deleted", OpTypeDelete, true},
+		{"INSERT op type is not deleted", OpTypeInsert, false},
+		{"UPDATE op type is not deleted", OpTypeUpdate, false},
+	}
 
-	assert.True(t, v.IsDeleted())
-}
-
-func TestVersionInfo_IsDeleted_WhenOpTypeInsert_ReturnsFalse(t *testing.T) {
-	v := VersionInfo{OpType: OpTypeInsert}
-
-	assert.False(t, v.IsDeleted())
-}
-
-func TestVersionInfo_IsDeleted_WhenOpTypeUpdate_ReturnsFalse(t *testing.T) {
-	v := VersionInfo{OpType: OpTypeUpdate}
-
-	assert.False(t, v.IsDeleted())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := VersionInfo{OpType: tt.opType}
+			assert.Equal(t, tt.expected, v.IsDeleted())
+		})
+	}
 }

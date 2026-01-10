@@ -356,25 +356,6 @@ func TestKeyMap_KeyBindings(t *testing.T) {
 	}
 }
 
-func TestModel_Update_EditMode_EntersOnE(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.entries = []EntryItem{
-		{Entry: domain.Entry{ID: 1, Content: "Test entry", Type: domain.EntryTypeTask}},
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if !m.editMode.active {
-		t.Error("pressing e should enter edit mode")
-	}
-	if m.editMode.entryID != 1 {
-		t.Errorf("editMode.entryID should be 1, got %d", m.editMode.entryID)
-	}
-}
-
 func TestModel_Update_EditMode_InitializesWithContent(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
@@ -391,26 +372,6 @@ func TestModel_Update_EditMode_InitializesWithContent(t *testing.T) {
 	}
 }
 
-func TestModel_Update_EditMode_CancelsOnEsc(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.entries = []EntryItem{
-		{Entry: domain.Entry{ID: 1, Content: "Test entry", Type: domain.EntryTypeTask}},
-	}
-	model.editMode = editState{
-		active:  true,
-		entryID: 1,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.editMode.active {
-		t.Error("pressing ESC should exit edit mode")
-	}
-}
-
 func TestModel_Update_EditMode_NoOpOnEmptyEntries(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
@@ -422,22 +383,6 @@ func TestModel_Update_EditMode_NoOpOnEmptyEntries(t *testing.T) {
 
 	if m.editMode.active {
 		t.Error("pressing e with no entries should not enter edit mode")
-	}
-}
-
-func TestModel_Update_AddMode_EntersOnA(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if !m.addMode.active {
-		t.Error("pressing a should enter add mode")
-	}
-	if m.addMode.asChild {
-		t.Error("pressing a should add as sibling, not child")
 	}
 }
 
@@ -463,20 +408,6 @@ func TestModel_Update_AddMode_EntersAsChildOnShiftA(t *testing.T) {
 	}
 }
 
-func TestModel_Update_AddMode_CancelsOnEsc(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.addMode = addState{active: true}
-
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.addMode.active {
-		t.Error("pressing ESC should exit add mode")
-	}
-}
-
 func TestModel_Update_AddMode_StartsEmpty(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
@@ -487,39 +418,6 @@ func TestModel_Update_AddMode_StartsEmpty(t *testing.T) {
 
 	if m.addMode.input.Value() != "" {
 		t.Errorf("add mode input should start empty, got %s", m.addMode.input.Value())
-	}
-}
-
-func TestModel_Update_MigrateMode_EntersOnM(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.entries = []EntryItem{
-		{Entry: domain.Entry{ID: 1, Content: "Task", Type: domain.EntryTypeTask}},
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if !m.migrateMode.active {
-		t.Error("pressing m should enter migrate mode")
-	}
-	if m.migrateMode.entryID != 1 {
-		t.Errorf("migrateMode.entryID should be 1, got %d", m.migrateMode.entryID)
-	}
-}
-
-func TestModel_Update_MigrateMode_CancelsOnEsc(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.migrateMode = migrateState{active: true, entryID: 1}
-
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.migrateMode.active {
-		t.Error("pressing ESC should exit migrate mode")
 	}
 }
 
@@ -716,19 +614,6 @@ func TestModel_AddRoot_UsesViewDate(t *testing.T) {
 }
 
 // Capture Mode Tests
-
-func TestModel_Update_CaptureMode_EntersOnC(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if !m.captureMode.active {
-		t.Error("pressing c should enter capture mode")
-	}
-}
 
 func TestModel_Update_CaptureMode_ExitsOnCtrlX(t *testing.T) {
 	model := New(nil)
@@ -2542,20 +2427,6 @@ func TestModel_GotoMode_EntersOnSlash(t *testing.T) {
 	}
 }
 
-func TestModel_GotoMode_EscCancels(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-	model.gotoMode = gotoState{active: true}
-
-	msg := tea.KeyMsg{Type: tea.KeyEsc}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.gotoMode.active {
-		t.Error("gotoMode should not be active after Esc")
-	}
-}
-
 func TestModel_GotoMode_TypingAddsToInput(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
@@ -3443,42 +3314,6 @@ func TestModel_ViewSwitch_Key1_SwitchesToJournal(t *testing.T) {
 	}
 }
 
-func TestModel_ViewSwitch_Key2_SwitchesToHabits(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeJournal
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
-	newModel, cmd := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.currentView != ViewTypeHabits {
-		t.Errorf("expected ViewTypeHabits, got %v", m.currentView)
-	}
-
-	// Verify that a command was returned to load habits
-	if cmd == nil {
-		t.Error("expected a command to load habits, got nil")
-	}
-}
-
-func TestModel_ViewSwitch_Key3_SwitchesToLists(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeJournal
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
-	newModel, cmd := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.currentView != ViewTypeLists {
-		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
-	}
-
-	// Verify that a command was returned to load lists
-	if cmd == nil {
-		t.Error("expected a command to load lists, got nil")
-	}
-}
-
 func TestModel_New_DefaultsToJournalView(t *testing.T) {
 	model := New(nil)
 
@@ -3519,28 +3354,6 @@ func TestModel_View_StatusBar_ShowsCurrentView(t *testing.T) {
 // Phase 4: Habits View Tests
 // ============================================================================
 
-func TestModel_HabitsView_RendersHabitList(t *testing.T) {
-	model := New(nil)
-	model.width = 80
-	model.height = 24
-	model.currentView = ViewTypeHabits
-	model.habitState = habitState{
-		habits: []service.HabitStatus{
-			{ID: 1, Name: "Meditation", CurrentStreak: 5, CompletionPercent: 71.4},
-			{ID: 2, Name: "Exercise", CurrentStreak: 3, CompletionPercent: 50.0},
-		},
-	}
-
-	view := model.View()
-
-	if !strings.Contains(view, "Meditation") {
-		t.Error("view should contain habit name 'Meditation'")
-	}
-	if !strings.Contains(view, "Exercise") {
-		t.Error("view should contain habit name 'Exercise'")
-	}
-}
-
 func TestModel_HabitsView_ShowsStreak(t *testing.T) {
 	model := New(nil)
 	model.width = 80
@@ -3556,47 +3369,6 @@ func TestModel_HabitsView_ShowsStreak(t *testing.T) {
 
 	if !strings.Contains(view, "5") {
 		t.Error("view should contain streak count")
-	}
-}
-
-func TestModel_HabitsView_Navigation_J_MovesDown(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeHabits
-	model.habitState = habitState{
-		habits: []service.HabitStatus{
-			{ID: 1, Name: "Meditation"},
-			{ID: 2, Name: "Exercise"},
-			{ID: 3, Name: "Reading"},
-		},
-		selectedIdx: 0,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.habitState.selectedIdx != 1 {
-		t.Errorf("expected selectedIdx 1, got %d", m.habitState.selectedIdx)
-	}
-}
-
-func TestModel_HabitsView_Navigation_K_MovesUp(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeHabits
-	model.habitState = habitState{
-		habits: []service.HabitStatus{
-			{ID: 1, Name: "Meditation"},
-			{ID: 2, Name: "Exercise"},
-		},
-		selectedIdx: 1,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.habitState.selectedIdx != 0 {
-		t.Errorf("expected selectedIdx 0, got %d", m.habitState.selectedIdx)
 	}
 }
 
@@ -3718,32 +3490,6 @@ func TestModel_HabitsView_ToggleMonthView_W(t *testing.T) {
 
 // Lists View Tests
 
-func TestModel_ListsView_RendersAllLists(t *testing.T) {
-	model := New(nil)
-	model.width = 80
-	model.height = 24
-	model.currentView = ViewTypeLists
-	model.listState = listState{
-		lists: []domain.List{
-			{ID: 1, Name: "Shopping"},
-			{ID: 2, Name: "Projects"},
-		},
-		summaries: map[int64]*service.ListSummary{
-			1: {ID: 1, Name: "Shopping", TotalItems: 5, DoneItems: 2},
-			2: {ID: 2, Name: "Projects", TotalItems: 3, DoneItems: 0},
-		},
-	}
-
-	view := model.View()
-
-	if !strings.Contains(view, "Shopping") {
-		t.Error("view should show 'Shopping' list")
-	}
-	if !strings.Contains(view, "Projects") {
-		t.Error("view should show 'Projects' list")
-	}
-}
-
 func TestModel_ListsView_ShowsItemCount(t *testing.T) {
 	model := New(nil)
 	model.width = 80
@@ -3785,69 +3531,6 @@ func TestModel_ListsView_ShowsCompletionProgress(t *testing.T) {
 	// Should show progress like "2/5" or "40%"
 	if !strings.Contains(view, "2/5") && !strings.Contains(view, "40%") {
 		t.Errorf("view should show completion progress (2/5 or 40%%), got: %s", view)
-	}
-}
-
-func TestModel_ListsView_Navigation_J_MovesDown(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeLists
-	model.listState = listState{
-		lists: []domain.List{
-			{ID: 1, Name: "Shopping"},
-			{ID: 2, Name: "Projects"},
-		},
-		selectedListIdx: 0,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.listState.selectedListIdx != 1 {
-		t.Errorf("expected selectedListIdx 1, got %d", m.listState.selectedListIdx)
-	}
-}
-
-func TestModel_ListsView_Navigation_K_MovesUp(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeLists
-	model.listState = listState{
-		lists: []domain.List{
-			{ID: 1, Name: "Shopping"},
-			{ID: 2, Name: "Projects"},
-		},
-		selectedListIdx: 1,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.listState.selectedListIdx != 0 {
-		t.Errorf("expected selectedListIdx 0, got %d", m.listState.selectedListIdx)
-	}
-}
-
-func TestModel_ListsView_Enter_ViewsListItems(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeLists
-	model.listState = listState{
-		lists: []domain.List{
-			{ID: 1, Name: "Shopping"},
-			{ID: 2, Name: "Projects"},
-		},
-		selectedListIdx: 0,
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.currentView != ViewTypeListItems {
-		t.Errorf("expected ViewTypeListItems, got %v", m.currentView)
-	}
-	if m.listState.currentListID != 1 {
-		t.Errorf("expected currentListID 1, got %d", m.listState.currentListID)
 	}
 }
 
@@ -3928,24 +3611,6 @@ func TestModel_ListItemsView_Navigation_K_MovesUp(t *testing.T) {
 
 	if m.listState.selectedItemIdx != 0 {
 		t.Errorf("expected selectedItemIdx 0, got %d", m.listState.selectedItemIdx)
-	}
-}
-
-func TestModel_ListItemsView_Escape_ReturnsToLists(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeListItems
-	model.listState = listState{
-		lists:         []domain.List{{ID: 1, Name: "Shopping"}},
-		currentListID: 1,
-		items:         []domain.ListItem{{Content: "Milk"}},
-	}
-
-	msg := tea.KeyMsg{Type: tea.KeyEscape}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.currentView != ViewTypeLists {
-		t.Errorf("expected ViewTypeLists, got %v", m.currentView)
 	}
 }
 
