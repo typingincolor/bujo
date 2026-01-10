@@ -563,8 +563,8 @@ func TestUAT_HabitsView_LogHabitFromTUI(t *testing.T) {
 		initialCount = model.habitState.habits[0].TodayCount
 	}
 
-	// Press 'l' to log habit
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	// Press Space to log habit
+	msg = tea.KeyMsg{Type: tea.KeySpace}
 	newModel, cmd = model.Update(msg)
 	model = newModel.(Model)
 
@@ -2117,6 +2117,334 @@ func TestUAT_HabitsView_HidesProgressWhenNoGoalsSet(t *testing.T) {
 	// Should NOT show weekly/monthly progress lines
 	if strings.Contains(view, "Week:") || strings.Contains(view, "Month:") {
 		t.Error("habits view should NOT show weekly/monthly progress for habits without those goals")
+	}
+}
+
+func TestUAT_HabitsView_MatchesCLIStyle(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit and log it today
+	if err := habitSvc.LogHabit(ctx, "CrossFit", 1); err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show habit name with streak
+	if !strings.Contains(view, "CrossFit") {
+		t.Error("view should show habit name")
+	}
+	if !strings.Contains(view, "streak") {
+		t.Error("view should show streak info")
+	}
+
+	// Should use circle characters like CLI (● for completed, ○ for empty)
+	if !strings.Contains(view, "●") && !strings.Contains(view, "○") {
+		t.Error("view should use circle characters (● and ○) like CLI")
+	}
+
+	// Should show day labels
+	if !strings.Contains(view, "S") && !strings.Contains(view, "M") {
+		t.Error("view should show day labels")
+	}
+
+	// Should show completion percentage
+	if !strings.Contains(view, "%") {
+		t.Error("view should show completion percentage")
+	}
+}
+
+func TestUAT_HabitsView_DayNavigation(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit
+	if err := habitSvc.LogHabit(ctx, "Exercise", 1); err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Initially selected day should be 6 (rightmost = today) for 7-day view
+	if model.habitState.selectedDayIdx != 6 {
+		t.Fatalf("expected selectedDayIdx to be 6 (today), got %d", model.habitState.selectedDayIdx)
+	}
+
+	// Press 'h' to move left (to yesterday)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.habitState.selectedDayIdx != 5 {
+		t.Errorf("expected selectedDayIdx to be 5 after 'h', got %d", model.habitState.selectedDayIdx)
+	}
+
+	// Press 'l' to move right (back to today)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.habitState.selectedDayIdx != 6 {
+		t.Errorf("expected selectedDayIdx to be 6 after 'l', got %d", model.habitState.selectedDayIdx)
+	}
+
+	// Can't go past today
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	if model.habitState.selectedDayIdx != 6 {
+		t.Errorf("expected selectedDayIdx to stay at 6 (can't go past today), got %d", model.habitState.selectedDayIdx)
+	}
+}
+
+func TestUAT_HabitsView_LogOnSelectedDay(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit
+	if err := habitSvc.LogHabit(ctx, "Workout", 1); err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Move to yesterday (index 5)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	// Log habit on yesterday
+	msg = tea.KeyMsg{Type: tea.KeySpace}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("logging habit should return a command")
+	}
+
+	logMsg := cmd()
+	newModel, cmd = model.Update(logMsg)
+	model = newModel.(Model)
+
+	// Process reload command
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Check that yesterday's status shows completed
+	if len(model.habitState.habits) == 0 {
+		t.Fatal("should have habits")
+	}
+
+	habit := model.habitState.habits[0]
+	// DayHistory is ordered: [0]=today, [1]=yesterday, etc.
+	if len(habit.DayHistory) < 2 {
+		t.Fatalf("expected at least 2 days of history, got %d", len(habit.DayHistory))
+	}
+
+	// Yesterday is DayHistory[1] (0=today, 1=yesterday)
+	if !habit.DayHistory[1].Completed {
+		t.Error("yesterday should be marked as completed after logging")
+	}
+}
+
+func TestUAT_HabitsView_DeleteHabitFromTUI(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit first
+	if err := habitSvc.LogHabit(ctx, "To Delete", 1); err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Verify habit exists
+	if len(model.habitState.habits) != 1 {
+		t.Fatalf("expected 1 habit, got %d", len(model.habitState.habits))
+	}
+
+	// Press 'd' to start delete
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	// Should be in confirm delete mode
+	if !model.confirmHabitDeleteMode.active {
+		t.Fatal("pressing 'd' should activate confirm habit delete mode")
+	}
+
+	// Press 'y' to confirm
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	// Should have exited confirm mode
+	if model.confirmHabitDeleteMode.active {
+		t.Fatal("pressing 'y' should deactivate confirm mode")
+	}
+
+	// Execute the delete command
+	if cmd == nil {
+		t.Fatal("should return a command to delete the habit")
+	}
+	deleteMsg := cmd()
+	newModel, cmd = model.Update(deleteMsg)
+	model = newModel.(Model)
+
+	// Execute reload command
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify habit was deleted
+	if len(model.habitState.habits) != 0 {
+		t.Fatalf("expected 0 habits after deleting, got %d", len(model.habitState.habits))
+	}
+}
+
+func TestUAT_HabitsView_AddHabitFromTUI(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Verify no habits initially
+	if len(model.habitState.habits) != 0 {
+		t.Fatalf("expected 0 habits initially, got %d", len(model.habitState.habits))
+	}
+
+	// Press 'a' to start adding a habit
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	// Should be in add habit mode
+	if !model.addHabitMode.active {
+		t.Fatal("pressing 'a' should activate add habit mode")
+	}
+
+	// Type habit name
+	for _, r := range "Morning Run" {
+		charMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
+		newModel, _ = model.Update(charMsg)
+		model = newModel.(Model)
+	}
+
+	// Press Enter to confirm
+	msg = tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	// Should have exited add mode
+	if model.addHabitMode.active {
+		t.Fatal("pressing Enter should deactivate add habit mode")
+	}
+
+	// Execute the add command
+	if cmd == nil {
+		t.Fatal("should return a command to add the habit")
+	}
+	addMsg := cmd()
+	newModel, cmd = model.Update(addMsg)
+	model = newModel.(Model)
+
+	// Execute reload command
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify habit was added
+	if len(model.habitState.habits) != 1 {
+		t.Fatalf("expected 1 habit after adding, got %d", len(model.habitState.habits))
+	}
+
+	if model.habitState.habits[0].Name != "Morning Run" {
+		t.Errorf("expected habit name 'Morning Run', got '%s'", model.habitState.habits[0].Name)
 	}
 }
 

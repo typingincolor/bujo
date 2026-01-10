@@ -48,7 +48,9 @@ type Model struct {
 	searchMode      searchState
 	retypeMode      retypeState
 	habitState      habitState
-	listState       listState
+	addHabitMode           addHabitState
+	confirmHabitDeleteMode confirmHabitDeleteState
+	listState              listState
 	goalState       goalState
 	commandPalette  commandPaletteState
 	commandRegistry *CommandRegistry
@@ -122,9 +124,20 @@ type captureState struct {
 }
 
 type habitState struct {
-	habits      []service.HabitStatus
-	selectedIdx int
-	monthView   bool
+	habits         []service.HabitStatus
+	selectedIdx    int
+	selectedDayIdx int
+	monthView      bool
+}
+
+type addHabitState struct {
+	active bool
+	input  textinput.Model
+}
+
+type confirmHabitDeleteState struct {
+	active  bool
+	habitID int64
 }
 
 type listState struct {
@@ -372,6 +385,20 @@ func (m Model) logHabitCmd(habitID int64) tea.Cmd {
 	}
 }
 
+func (m Model) logHabitForDateCmd(habitID int64, date time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.LogHabitByIDForDate(ctx, habitID, 1, date)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitLoggedMsg{habitID}
+	}
+}
+
 func (m Model) loadHabitsCmd() tea.Cmd {
 	days := 7
 	if m.habitState.monthView {
@@ -387,6 +414,34 @@ func (m Model) loadHabitsCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return habitsLoadedMsg{status.Habits}
+	}
+}
+
+func (m Model) addHabitCmd(name string) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.LogHabit(ctx, name, 1)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitAddedMsg{name}
+	}
+}
+
+func (m Model) deleteHabitCmd(habitID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.DeleteHabitByID(ctx, habitID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitDeletedMsg{habitID}
 	}
 }
 

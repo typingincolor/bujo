@@ -40,6 +40,14 @@ type habitLoggedMsg struct {
 	habitID int64
 }
 
+type habitAddedMsg struct {
+	name string
+}
+
+type habitDeletedMsg struct {
+	habitID int64
+}
+
 type listsLoadedMsg struct {
 	lists     []domain.List
 	summaries map[int64]*service.ListSummary

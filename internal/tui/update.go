@@ -57,9 +57,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.habitState.selectedIdx >= len(m.habitState.habits) {
 			m.habitState.selectedIdx = 0
 		}
+		// Initialize selected day to today (rightmost in 7-day view)
+		days := 7
+		if m.habitState.monthView {
+			days = 30
+		}
+		m.habitState.selectedDayIdx = days - 1
 		return m, nil
 
 	case habitLoggedMsg:
+		return m, m.loadHabitsCmd()
+
+	case habitAddedMsg:
+		return m, m.loadHabitsCmd()
+
+	case habitDeletedMsg:
 		return m, m.loadHabitsCmd()
 
 	case listsLoadedMsg:
@@ -127,6 +139,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.commandPalette.active {
 			return m.handleCommandPaletteMode(msg)
+		}
+		if m.addHabitMode.active {
+			return m.handleAddHabitMode(msg)
+		}
+		if m.confirmHabitDeleteMode.active {
+			return m.handleConfirmHabitDeleteMode(msg)
 		}
 
 		// Check for command palette activation
@@ -1334,6 +1352,42 @@ func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+func (m Model) handleAddHabitMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.addHabitMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		name := strings.TrimSpace(m.addHabitMode.input.Value())
+		if name == "" {
+			m.addHabitMode.active = false
+			return m, nil
+		}
+		m.addHabitMode.active = false
+		return m, m.addHabitCmd(name)
+	}
+
+	var cmd tea.Cmd
+	m.addHabitMode.input, cmd = m.addHabitMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleConfirmHabitDeleteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.Confirm):
+		habitID := m.confirmHabitDeleteMode.habitID
+		m.confirmHabitDeleteMode.active = false
+		return m, m.deleteHabitCmd(habitID)
+
+	case key.Matches(msg, m.keyMap.Cancel):
+		m.confirmHabitDeleteMode.active = false
+		return m, nil
+	}
+
+	return m, nil
+}
+
 func (m Model) addEntryCmd(content string, parentID *int64) tea.Cmd {
 	viewDate := m.viewDate
 	return func() tea.Msg {
@@ -1598,14 +1652,57 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, m.keyMap.Done), key.Matches(msg, m.keyMap.LogHabit):
+	case key.Matches(msg, m.keyMap.Done):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
-			return m, m.logHabitCmd(m.habitState.habits[m.habitState.selectedIdx].ID)
+			days := 7
+			if m.habitState.monthView {
+				days = 30
+			}
+			daysAgo := days - 1 - m.habitState.selectedDayIdx
+			logDate := time.Now().AddDate(0, 0, -daysAgo)
+			return m, m.logHabitForDateCmd(m.habitState.habits[m.habitState.selectedIdx].ID, logDate)
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.DayLeft):
+		if m.habitState.selectedDayIdx > 0 {
+			m.habitState.selectedDayIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.DayRight):
+		days := 7
+		if m.habitState.monthView {
+			days = 30
+		}
+		if m.habitState.selectedDayIdx < days-1 {
+			m.habitState.selectedDayIdx++
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.ToggleView):
 		m.habitState.monthView = !m.habitState.monthView
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Add):
+		ti := textinput.New()
+		ti.Placeholder = "Habit name"
+		ti.Focus()
+		ti.CharLimit = 100
+		ti.Width = m.width - 10
+		m.addHabitMode = addHabitState{
+			active: true,
+			input:  ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Delete):
+		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
+			m.confirmHabitDeleteMode = confirmHabitDeleteState{
+				active:  true,
+				habitID: m.habitState.habits[m.habitState.selectedIdx].ID,
+			}
+		}
 		return m, nil
 	}
 
