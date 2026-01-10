@@ -9,6 +9,7 @@ import (
 )
 
 var moodSetDate string
+var moodSetYes bool
 
 var moodSetCmd = &cobra.Command{
 	Use:   "set <mood>",
@@ -31,6 +32,13 @@ Examples:
 			return err
 		}
 
+		if moodSetDate != "" {
+			targetDate, err = confirmDate(moodSetDate, targetDate, moodSetYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.SetMood(cmd.Context(), targetDate, mood)
 		if err != nil {
 			return fmt.Errorf("failed to set mood: %w", err)
@@ -47,5 +55,6 @@ Examples:
 
 func init() {
 	moodSetCmd.Flags().StringVarP(&moodSetDate, "date", "d", "", "Date to set mood for (e.g., 'yesterday', '2026-01-05')")
+	moodSetCmd.Flags().BoolVarP(&moodSetYes, "yes", "y", false, "Skip date confirmation prompt")
 	moodCmd.AddCommand(moodSetCmd)
 }

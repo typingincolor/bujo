@@ -94,6 +94,22 @@ func (r *HabitLogRepository) GetRange(ctx context.Context, habitID int64, start,
 	return r.scanLogs(rows)
 }
 
+func (r *HabitLogRepository) GetRangeByEntityID(ctx context.Context, habitEntityID domain.EntityID, start, end time.Time) ([]domain.HabitLog, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, habit_id, count, logged_at, entity_id, habit_entity_id
+		FROM habit_logs
+		WHERE habit_entity_id = ? AND logged_at >= ? AND logged_at <= ?
+		AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+		ORDER BY logged_at
+	`, habitEntityID.String(), start.Format(time.RFC3339), end.Format(time.RFC3339))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanLogs(rows)
+}
+
 func (r *HabitLogRepository) GetAllRange(ctx context.Context, start, end time.Time) ([]domain.HabitLog, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, habit_id, count, logged_at, entity_id, habit_entity_id

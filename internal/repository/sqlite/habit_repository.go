@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -37,10 +38,23 @@ func (r *HabitRepository) Insert(ctx context.Context, habit domain.Habit) (int64
 }
 
 func (r *HabitRepository) GetByID(ctx context.Context, id int64) (*domain.Habit, error) {
+	// First, get the entity_id for this ID (may be from a closed version)
+	var entityID string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT entity_id FROM habits WHERE id = ?
+	`, id).Scan(&entityID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Then get the current version for that entity
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, name, goal_per_day, created_at, entity_id
-		FROM habits WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
-	`, id)
+		FROM habits WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID)
 
 	return r.scanHabit(row)
 }
@@ -67,6 +81,7 @@ func (r *HabitRepository) GetOrCreate(ctx context.Context, name string, goalPerD
 		Name:       name,
 		GoalPerDay: goalPerDay,
 		CreatedAt:  time.Now(),
+		EntityID:   domain.NewEntityID(),
 	}
 
 	id, err := r.Insert(ctx, habit)
@@ -111,11 +126,50 @@ func (r *HabitRepository) GetAll(ctx context.Context) ([]domain.Habit, error) {
 }
 
 func (r *HabitRepository) Update(ctx context.Context, habit domain.Habit) error {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE habits SET name = ?, goal_per_day = ? WHERE id = ?
-	`, habit.Name, habit.GoalPerDay, habit.ID)
+	current, err := r.GetByID(ctx, habit.ID)
+	if err != nil {
+		return err
+	}
+	if current == nil {
+		return fmt.Errorf("habit not found: %d", habit.ID)
+	}
 
-	return err
+	now := time.Now().Format(time.RFC3339)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Close current version
+	_, err = tx.ExecContext(ctx, `
+		UPDATE habits SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, current.EntityID.String())
+	if err != nil {
+		return err
+	}
+
+	// Get next version number
+	var maxVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(version), 0) FROM habits WHERE entity_id = ?
+	`, current.EntityID.String()).Scan(&maxVersion)
+	if err != nil {
+		return err
+	}
+
+	// Insert new version with UPDATE op_type
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO habits (name, goal_per_day, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, habit.Name, habit.GoalPerDay, current.CreatedAt.Format(time.RFC3339),
+		current.EntityID.String(), maxVersion+1, now, domain.OpTypeUpdate.String())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *HabitRepository) Delete(ctx context.Context, id int64) error {

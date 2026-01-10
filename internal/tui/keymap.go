@@ -15,12 +15,12 @@ type KeyMap struct {
 	AddChild       key.Binding
 	AddRoot        key.Binding
 	Migrate        key.Binding
+	Priority       key.Binding
 	ToggleView     key.Binding
 	GotoDate       key.Binding
 	Capture        key.Binding
 	Confirm        key.Binding
 	Cancel         key.Binding
-	CancelEntry    key.Binding
 	UncancelEntry  key.Binding
 	Retype         key.Binding
 	Quit           key.Binding
@@ -85,6 +85,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("m"),
 			key.WithHelp("m", "migrate"),
 		),
+		Priority: key.NewBinding(
+			key.WithKeys("!"),
+			key.WithHelp("!", "priority"),
+		),
 		ToggleView: key.NewBinding(
 			key.WithKeys("w"),
 			key.WithHelp("w", "day/week"),
@@ -104,10 +108,6 @@ func DefaultKeyMap() KeyMap {
 		Cancel: key.NewBinding(
 			key.WithKeys("n", "N", "esc"),
 			key.WithHelp("n/esc", "cancel"),
-		),
-		CancelEntry: key.NewBinding(
-			key.WithKeys("x"),
-			key.WithHelp("x", "cancel entry"),
 		),
 		UncancelEntry: key.NewBinding(
 			key.WithKeys("X"),
@@ -167,7 +167,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.Done, k.CancelEntry, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Capture, k.Delete},
+		{k.Done, k.CancelEntry, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Priority, k.Capture, k.Delete},
 		{k.ToggleView, k.GotoDate, k.Quit, k.Help},
 	}
 }

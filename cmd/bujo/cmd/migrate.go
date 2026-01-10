@@ -8,6 +8,7 @@ import (
 )
 
 var migrateTo string
+var migrateYes bool
 
 var migrateCmd = &cobra.Command{
 	Use:   "migrate <id> --to <date>",
@@ -39,6 +40,11 @@ Examples:
 			return err
 		}
 
+		toDate, err = confirmDate(migrateTo, toDate, migrateYes)
+		if err != nil {
+			return err
+		}
+
 		newID, err := bujoService.MigrateEntry(cmd.Context(), id, toDate)
 		if err != nil {
 			return fmt.Errorf("failed to migrate entry: %w", err)
@@ -52,5 +58,6 @@ Examples:
 
 func init() {
 	migrateCmd.Flags().StringVar(&migrateTo, "to", "", "Target date (e.g., 'tomorrow', 'next monday', '2026-01-15')")
+	migrateCmd.Flags().BoolVarP(&migrateYes, "yes", "y", false, "Skip date confirmation prompt")
 	rootCmd.AddCommand(migrateCmd)
 }

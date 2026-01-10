@@ -9,6 +9,7 @@ import (
 )
 
 var weatherSetDate string
+var weatherSetYes bool
 
 var weatherSetCmd = &cobra.Command{
 	Use:   "set <weather>",
@@ -31,6 +32,13 @@ Examples:
 			return err
 		}
 
+		if weatherSetDate != "" {
+			targetDate, err = confirmDate(weatherSetDate, targetDate, weatherSetYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.SetWeather(cmd.Context(), targetDate, weather)
 		if err != nil {
 			return fmt.Errorf("failed to set weather: %w", err)
@@ -47,5 +55,6 @@ Examples:
 
 func init() {
 	weatherSetCmd.Flags().StringVarP(&weatherSetDate, "date", "d", "", "Date to set weather for (e.g., 'yesterday', '2026-01-05')")
+	weatherSetCmd.Flags().BoolVarP(&weatherSetYes, "yes", "y", false, "Skip date confirmation prompt")
 	weatherCmd.AddCommand(weatherSetCmd)
 }

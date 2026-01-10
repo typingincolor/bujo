@@ -215,3 +215,86 @@ func TestTreeParser_Parse_UnknownSymbol(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown entry type")
 }
+
+func TestTreeParser_Parse_WithPriority(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		expectedContent  string
+		expectedPriority Priority
+	}{
+		{
+			name:             "low priority single exclamation",
+			input:            ". ! Buy groceries",
+			expectedContent:  "Buy groceries",
+			expectedPriority: PriorityLow,
+		},
+		{
+			name:             "medium priority double exclamation",
+			input:            ". !! Urgent task",
+			expectedContent:  "Urgent task",
+			expectedPriority: PriorityMedium,
+		},
+		{
+			name:             "high priority triple exclamation",
+			input:            ". !!! Critical task",
+			expectedContent:  "Critical task",
+			expectedPriority: PriorityHigh,
+		},
+		{
+			name:             "no priority",
+			input:            ". Regular task",
+			expectedContent:  "Regular task",
+			expectedPriority: PriorityNone,
+		},
+		{
+			name:             "note with priority",
+			input:            "- ! Important note",
+			expectedContent:  "Important note",
+			expectedPriority: PriorityLow,
+		},
+		{
+			name:             "event with priority",
+			input:            "o !! Urgent meeting",
+			expectedContent:  "Urgent meeting",
+			expectedPriority: PriorityMedium,
+		},
+	}
+
+	parser := NewTreeParser()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+			require.Len(t, entries, 1)
+			assert.Equal(t, tt.expectedContent, entries[0].Content)
+			assert.Equal(t, tt.expectedPriority, entries[0].Priority)
+		})
+	}
+}
+
+func TestParsePriorityAndContent(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		expectedContent  string
+		expectedPriority Priority
+	}{
+		{"no priority", "Buy groceries", "Buy groceries", PriorityNone},
+		{"low priority", "! Buy groceries", "Buy groceries", PriorityLow},
+		{"medium priority", "!! Buy groceries", "Buy groceries", PriorityMedium},
+		{"high priority", "!!! Buy groceries", "Buy groceries", PriorityHigh},
+		{"exclamation in content", "Say hello!", "Say hello!", PriorityNone},
+		{"exclamation not at start", "Hello ! World", "Hello ! World", PriorityNone},
+		{"four exclamations treated as high", "!!!! Too many", "! Too many", PriorityHigh},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			content, priority := ParsePriorityAndContent(tt.input)
+			assert.Equal(t, tt.expectedContent, content)
+			assert.Equal(t, tt.expectedPriority, priority)
+		})
+	}
+}

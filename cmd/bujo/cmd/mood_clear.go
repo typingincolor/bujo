@@ -8,6 +8,7 @@ import (
 )
 
 var moodClearDate string
+var moodClearYes bool
 
 var moodClearCmd = &cobra.Command{
 	Use:   "clear",
@@ -26,6 +27,13 @@ Examples:
 			return err
 		}
 
+		if moodClearDate != "" {
+			targetDate, err = confirmDate(moodClearDate, targetDate, moodClearYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.ClearMood(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear mood: %w", err)
@@ -42,5 +50,6 @@ Examples:
 
 func init() {
 	moodClearCmd.Flags().StringVarP(&moodClearDate, "date", "d", "", "Date to clear mood for (e.g., 'yesterday', '2026-01-05')")
+	moodClearCmd.Flags().BoolVarP(&moodClearYes, "yes", "y", false, "Skip date confirmation prompt")
 	moodCmd.AddCommand(moodClearCmd)
 }

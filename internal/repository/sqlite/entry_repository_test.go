@@ -281,14 +281,18 @@ func TestEntryRepository_Update(t *testing.T) {
 	id, err := repo.Insert(ctx, entry)
 	require.NoError(t, err)
 
-	entry.ID = id
-	entry.Type = domain.EntryTypeDone
-	entry.Content = "Updated content"
-
-	err = repo.Update(ctx, entry)
+	// Get inserted entry to obtain entity_id
+	inserted, err := repo.GetByID(ctx, id)
 	require.NoError(t, err)
 
-	result, err := repo.GetByID(ctx, id)
+	inserted.Type = domain.EntryTypeDone
+	inserted.Content = "Updated content"
+
+	err = repo.Update(ctx, *inserted)
+	require.NoError(t, err)
+
+	// With event sourcing, original ID row is closed; use GetByEntityID
+	result, err := repo.GetByEntityID(ctx, inserted.EntityID)
 	require.NoError(t, err)
 	assert.Equal(t, domain.EntryTypeDone, result.Type)
 	assert.Equal(t, "Updated content", result.Content)

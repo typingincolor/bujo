@@ -295,9 +295,15 @@ func (m Model) renderEntry(item EntryItem) string {
 	indent := strings.Repeat("  ", item.Indent)
 
 	symbol := entry.Type.Symbol()
+	prioritySymbol := entry.Priority.Symbol()
 	content := entry.Content
 
-	base := fmt.Sprintf("%s%s %s", indent, symbol, content)
+	var base string
+	if prioritySymbol != "" {
+		base = fmt.Sprintf("%s%s %s %s", indent, symbol, prioritySymbol, content)
+	} else {
+		base = fmt.Sprintf("%s%s %s", indent, symbol, content)
+	}
 
 	switch entry.Type {
 	case domain.EntryTypeDone:

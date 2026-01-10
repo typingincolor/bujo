@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -96,7 +98,7 @@ func validateDateRange(from, to time.Time) error {
 	return nil
 }
 
-func parseAddArgs(args []string) (entries []string, location, date, file string, help bool) {
+func parseAddArgs(args []string) (entries []string, location, date, file string, help, yes bool) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		switch {
@@ -115,6 +117,8 @@ func parseAddArgs(args []string) (entries []string, location, date, file string,
 				file = args[i+1]
 				i++
 			}
+		case arg == "-y" || arg == "--yes":
+			yes = true
 		case strings.HasPrefix(arg, "-a="):
 			location = arg[3:]
 		case strings.HasPrefix(arg, "--at="):
@@ -146,6 +150,41 @@ func parseAddArgs(args []string) (entries []string, location, date, file string,
 		}
 	}
 	return
+}
+
+func isNaturalLanguageDate(s string) bool {
+	if s == "" {
+		return false
+	}
+	// Check if it's ISO format (2006-01-02)
+	if _, err := time.Parse("2006-01-02", s); err == nil {
+		return false
+	}
+	// Check if it's compact format (20060102)
+	if _, err := time.Parse("20060102", s); err == nil {
+		return false
+	}
+	// If not a recognized date format, it's natural language
+	return true
+}
+
+func confirmDate(dateStr string, parsed time.Time, skipConfirm bool) (time.Time, error) {
+	if !isNaturalLanguageDate(dateStr) || skipConfirm {
+		return parsed, nil
+	}
+
+	formatted := parsed.Format("Monday, Jan 2, 2006")
+	fmt.Fprintf(os.Stderr, "Using date: %s [Y/n]: ", formatted)
+
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	response := strings.TrimSpace(strings.ToLower(input))
+
+	if response == "" || response == "y" || response == "yes" {
+		return parsed, nil
+	}
+
+	return time.Time{}, fmt.Errorf("cancelled")
 }
 
 func parseFutureDate(s string) (time.Time, error) {

@@ -9,6 +9,7 @@ import (
 )
 
 var workSetDate string
+var workSetYes bool
 
 var workSetCmd = &cobra.Command{
 	Use:   "set <location>",
@@ -32,6 +33,13 @@ Examples:
 			return err
 		}
 
+		if workSetDate != "" {
+			targetDate, err = confirmDate(workSetDate, targetDate, workSetYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.SetLocation(cmd.Context(), targetDate, location)
 		if err != nil {
 			return fmt.Errorf("failed to set location: %w", err)
@@ -48,5 +56,6 @@ Examples:
 
 func init() {
 	workSetCmd.Flags().StringVarP(&workSetDate, "date", "d", "", "Date to set location for (e.g., 'yesterday', '2026-01-05')")
+	workSetCmd.Flags().BoolVarP(&workSetYes, "yes", "y", false, "Skip date confirmation prompt")
 	workCmd.AddCommand(workSetCmd)
 }

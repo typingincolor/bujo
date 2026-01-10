@@ -8,6 +8,7 @@ import (
 )
 
 var workClearDate string
+var workClearYes bool
 
 var workClearCmd = &cobra.Command{
 	Use:   "clear",
@@ -26,6 +27,13 @@ Examples:
 			return err
 		}
 
+		if workClearDate != "" {
+			targetDate, err = confirmDate(workClearDate, targetDate, workClearYes)
+			if err != nil {
+				return err
+			}
+		}
+
 		err = bujoService.ClearLocation(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear location: %w", err)
@@ -42,5 +50,6 @@ Examples:
 
 func init() {
 	workClearCmd.Flags().StringVarP(&workClearDate, "date", "d", "", "Date to clear location for (e.g., 'yesterday', '2026-01-05')")
+	workClearCmd.Flags().BoolVarP(&workClearYes, "yes", "y", false, "Skip date confirmation prompt")
 	workCmd.AddCommand(workClearCmd)
 }

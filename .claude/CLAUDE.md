@@ -57,6 +57,56 @@ SQLite with these tables:
 - `day_context`: Daily location, mood, weather
 - `summaries`: Cached AI summaries (daily/weekly/quarterly/annual)
 
+## Event Sourcing (MANDATORY)
+
+**ALL entities use event sourcing.** Every mutation creates a new versioned row. No exceptions.
+
+### Event Sourcing Columns (on all entity tables)
+
+| Column | Purpose |
+|--------|---------|
+| `entity_id` | Stable UUID identifying the logical entity across versions |
+| `version` | Incrementing version number (1, 2, 3...) |
+| `valid_from` | Timestamp when this version became active |
+| `valid_to` | Timestamp when this version was superseded (NULL = current) |
+| `op_type` | Operation type: `INSERT`, `UPDATE`, or `DELETE` |
+
+### Repository Pattern
+
+Every repository mutation MUST follow this pattern:
+
+```go
+func (r *Repo) Update(ctx context.Context, entity Entity) error {
+    // 1. Get current version
+    current, err := r.GetByID(ctx, entity.ID)
+
+    // 2. Close current version
+    tx.Exec("UPDATE table SET valid_to = ? WHERE entity_id = ? AND valid_to IS NULL", now, current.EntityID)
+
+    // 3. Get next version number
+    tx.QueryRow("SELECT MAX(version) FROM table WHERE entity_id = ?", current.EntityID)
+
+    // 4. Insert new version
+    tx.Exec("INSERT INTO table (..., entity_id, version, valid_from, op_type) VALUES (..., ?, ?, ?, 'UPDATE')",
+        current.EntityID, maxVersion+1, now)
+}
+```
+
+### GetByID Semantics
+
+`GetByID(id)` returns the **current version** of the entity, even if `id` refers to an old row:
+1. Look up `entity_id` for the given `id`
+2. Return current version (`valid_to IS NULL AND op_type != 'DELETE'`) for that `entity_id`
+
+### Why This Matters
+
+- Full audit trail of all changes
+- Point-in-time queries (`GetAsOf`)
+- Undo/restore deleted items
+- No data loss from updates
+
+**If you write a repository method that does `UPDATE ... SET` without creating a new version, STOP and rewrite it.**
+
 ## Core Philosophy
 
 **TEST-DRIVEN DEVELOPMENT IS NON-NEGOTIABLE.** Every line of production code must be written in response to a failing test. No exceptions.

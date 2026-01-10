@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -42,13 +43,26 @@ func (r *ListRepository) Create(ctx context.Context, name string) (*domain.List,
 }
 
 func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, error) {
-	var list domain.List
-	var entityID sql.NullString
-	var createdAt string
+	// First, get the entity_id for this ID (may be from a closed version)
+	var entityID string
 	err := r.db.QueryRowContext(ctx,
-		"SELECT id, entity_id, name, created_at FROM lists WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'",
-		id,
-	).Scan(&list.ID, &entityID, &list.Name, &createdAt)
+		"SELECT entity_id FROM lists WHERE id = ?", id,
+	).Scan(&entityID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Then get the current version for that entity
+	var list domain.List
+	var eid sql.NullString
+	var createdAt string
+	err = r.db.QueryRowContext(ctx,
+		"SELECT id, entity_id, name, created_at FROM lists WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'",
+		entityID,
+	).Scan(&list.ID, &eid, &list.Name, &createdAt)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -57,8 +71,8 @@ func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, e
 		return nil, err
 	}
 	list.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-	if entityID.Valid {
-		list.EntityID = domain.EntityID(entityID.String)
+	if eid.Valid {
+		list.EntityID = domain.EntityID(eid.String)
 	}
 	return &list, nil
 }
@@ -139,11 +153,50 @@ func (r *ListRepository) GetAll(ctx context.Context) ([]domain.List, error) {
 }
 
 func (r *ListRepository) Rename(ctx context.Context, id int64, newName string) error {
-	_, err := r.db.ExecContext(ctx,
-		"UPDATE lists SET name = ? WHERE id = ?",
-		newName, id,
-	)
-	return err
+	current, err := r.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if current == nil {
+		return fmt.Errorf("list not found: %d", id)
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Close current version
+	_, err = tx.ExecContext(ctx, `
+		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, current.EntityID.String())
+	if err != nil {
+		return err
+	}
+
+	// Get next version number
+	var maxVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(version), 0) FROM lists WHERE entity_id = ?
+	`, current.EntityID.String()).Scan(&maxVersion)
+	if err != nil {
+		return err
+	}
+
+	// Insert new version with UPDATE op_type
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, newName, current.EntityID.String(), current.CreatedAt.Format(time.RFC3339),
+		maxVersion+1, now, domain.OpTypeUpdate.String())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *ListRepository) Delete(ctx context.Context, id int64) error {
