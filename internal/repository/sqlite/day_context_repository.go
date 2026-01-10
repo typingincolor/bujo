@@ -184,6 +184,54 @@ func (r *DayContextRepository) GetRange(ctx context.Context, start, end time.Tim
 	return contexts, rows.Err()
 }
 
+func (r *DayContextRepository) GetAll(ctx context.Context) ([]domain.DayContext, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT date, location, mood, weather, entity_id
+		FROM day_context
+		WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+		ORDER BY date
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var contexts []domain.DayContext
+	for rows.Next() {
+		var dayCtx domain.DayContext
+		var dateStr string
+		var location, mood, weather, entityID sql.NullString
+
+		err := rows.Scan(&dateStr, &location, &mood, &weather, &entityID)
+		if err != nil {
+			return nil, err
+		}
+
+		dayCtx.Date, _ = time.Parse("2006-01-02", dateStr)
+		if location.Valid {
+			dayCtx.Location = &location.String
+		}
+		if mood.Valid {
+			dayCtx.Mood = &mood.String
+		}
+		if weather.Valid {
+			dayCtx.Weather = &weather.String
+		}
+		if entityID.Valid {
+			dayCtx.EntityID = domain.EntityID(entityID.String)
+		}
+
+		contexts = append(contexts, dayCtx)
+	}
+
+	return contexts, rows.Err()
+}
+
+func (r *DayContextRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM day_context")
+	return err
+}
+
 func (r *DayContextRepository) scanDayContext(row *sql.Row) (*domain.DayContext, error) {
 	var dayCtx domain.DayContext
 	var dateStr string

@@ -281,6 +281,11 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 	return tx.Commit()
 }
 
+func (r *EntryRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM entries")
+	return err
+}
+
 func (r *EntryRepository) GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
@@ -515,6 +520,21 @@ func (r *EntryRepository) GetAsOf(ctx context.Context, entityID domain.EntityID,
 	`, entityID.String(), asOfStr, asOfStr)
 
 	return r.scanEntry(row)
+}
+
+func (r *EntryRepository) GetAll(ctx context.Context) ([]domain.Entry, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
+		FROM entries
+		WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+		ORDER BY scheduled_date, created_at
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanEntries(rows)
 }
 
 func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {

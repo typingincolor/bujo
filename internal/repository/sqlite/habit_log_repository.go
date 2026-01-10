@@ -126,6 +126,26 @@ func (r *HabitLogRepository) GetAllRange(ctx context.Context, start, end time.Ti
 	return r.scanLogs(rows)
 }
 
+func (r *HabitLogRepository) GetAll(ctx context.Context) ([]domain.HabitLog, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT id, habit_id, count, logged_at, entity_id, habit_entity_id
+		FROM habit_logs
+		WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+		ORDER BY logged_at
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	return r.scanLogs(rows)
+}
+
+func (r *HabitLogRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM habit_logs")
+	return err
+}
+
 func (r *HabitLogRepository) Delete(ctx context.Context, id int64) error {
 	log, err := r.GetByID(ctx, id)
 	if err != nil {

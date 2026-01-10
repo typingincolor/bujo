@@ -225,6 +225,20 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 	return tx.Commit()
 }
 
+func (r *GoalRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM goals")
+	return err
+}
+
+func (r *GoalRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Goal, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, entity_id, content, month, status, created_at
+		FROM goals WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID.String())
+
+	return r.scanGoal(row)
+}
+
 func (r *GoalRepository) MoveToMonth(ctx context.Context, id int64, newMonth time.Time) error {
 	goal, err := r.GetByID(ctx, id)
 	if err != nil {

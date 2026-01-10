@@ -219,6 +219,20 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 	return tx.Commit()
 }
 
+func (r *HabitRepository) DeleteAll(ctx context.Context) error {
+	_, err := r.db.ExecContext(ctx, "DELETE FROM habits")
+	return err
+}
+
+func (r *HabitRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Habit, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
+		FROM habits WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID.String())
+
+	return r.scanHabit(row)
+}
+
 func (r *HabitRepository) GetDeleted(ctx context.Context) ([]domain.Habit, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
