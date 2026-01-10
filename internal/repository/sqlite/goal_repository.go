@@ -43,10 +43,19 @@ func (r *GoalRepository) Insert(ctx context.Context, goal domain.Goal) (int64, e
 }
 
 func (r *GoalRepository) GetByID(ctx context.Context, id int64) (*domain.Goal, error) {
+	var entityID string
+	err := r.db.QueryRowContext(ctx, `SELECT entity_id FROM goals WHERE id = ?`, id).Scan(&entityID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, entity_id, content, month, status, created_at
-		FROM goals WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
-	`, id)
+		FROM goals WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID)
 
 	return r.scanGoal(row)
 }
@@ -124,13 +133,48 @@ func (r *GoalRepository) GetAll(ctx context.Context) ([]domain.Goal, error) {
 }
 
 func (r *GoalRepository) Update(ctx context.Context, goal domain.Goal) error {
+	current, err := r.GetByID(ctx, goal.ID)
+	if err != nil {
+		return err
+	}
+	if current == nil {
+		return nil
+	}
+
+	now := time.Now().Format(time.RFC3339)
 	monthKey := goal.Month.Format("2006-01")
 
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE goals SET content = ?, month = ?, status = ? WHERE id = ?
-	`, goal.Content, monthKey, string(goal.Status), goal.ID)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
 
-	return err
+	_, err = tx.ExecContext(ctx, `
+		UPDATE goals SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
+	`, now, current.EntityID.String())
+	if err != nil {
+		return err
+	}
+
+	var maxVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COALESCE(MAX(version), 0) FROM goals WHERE entity_id = ?
+	`, current.EntityID.String()).Scan(&maxVersion)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO goals (entity_id, content, month, status, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, current.EntityID.String(), goal.Content, monthKey, string(goal.Status),
+		current.CreatedAt.Format(time.RFC3339), maxVersion+1, now, domain.OpTypeUpdate.String())
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
