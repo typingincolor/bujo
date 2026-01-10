@@ -840,7 +840,7 @@ func TestModel_Update_CaptureMode_StartsEmpty(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_ParsesContentRealtime(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
 		HabitService: habitSvc,
@@ -860,7 +860,7 @@ func TestModel_Update_CaptureMode_ParsesContentRealtime(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
 		HabitService: habitSvc,
@@ -877,7 +877,7 @@ func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
 }
 
 func TestModel_Update_CaptureMode_DetectsMissingSymbol(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
 		HabitService: habitSvc,
@@ -1069,7 +1069,7 @@ func TestModel_CaptureMode_BackspaceDeletesChar(t *testing.T) {
 }
 
 func TestModel_CaptureMode_ParsesOnChange(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
 		HabitService: habitSvc,

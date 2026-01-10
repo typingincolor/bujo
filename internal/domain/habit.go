@@ -6,19 +6,30 @@ import (
 )
 
 type Habit struct {
-	ID         int64
-	EntityID   EntityID
-	Name       string
-	GoalPerDay int
-	CreatedAt  time.Time
+	ID           int64
+	EntityID     EntityID
+	Name         string
+	GoalPerDay   int
+	GoalPerWeek  int
+	GoalPerMonth int
+	CreatedAt    time.Time
 }
 
 func (h Habit) Validate() error {
 	if h.Name == "" {
 		return errors.New("habit name cannot be empty")
 	}
-	if h.GoalPerDay <= 0 {
-		return errors.New("goal per day must be positive")
+	if h.GoalPerDay < 0 {
+		return errors.New("goal per day cannot be negative")
+	}
+	if h.GoalPerWeek < 0 {
+		return errors.New("goal per week cannot be negative")
+	}
+	if h.GoalPerMonth < 0 {
+		return errors.New("goal per month cannot be negative")
+	}
+	if h.GoalPerDay == 0 && h.GoalPerWeek == 0 && h.GoalPerMonth == 0 {
+		return errors.New("at least one goal must be set")
 	}
 	return nil
 }
@@ -124,4 +135,66 @@ func SumCountForDay(logs []HabitLog, day time.Time) int {
 		sum += log.Count
 	}
 	return sum
+}
+
+func GetLogsForWeek(logs []HabitLog, weekEnd time.Time) []HabitLog {
+	weekEndStart := time.Date(weekEnd.Year(), weekEnd.Month(), weekEnd.Day(), 0, 0, 0, 0, weekEnd.Location())
+	weekEndEnd := weekEndStart.AddDate(0, 0, 1)
+	weekStart := weekEndStart.AddDate(0, 0, -6)
+
+	result := make([]HabitLog, 0)
+	for _, log := range logs {
+		if !log.LoggedAt.Before(weekStart) && log.LoggedAt.Before(weekEndEnd) {
+			result = append(result, log)
+		}
+	}
+	return result
+}
+
+func SumCountForWeek(logs []HabitLog, weekEnd time.Time) int {
+	weekLogs := GetLogsForWeek(logs, weekEnd)
+	sum := 0
+	for _, log := range weekLogs {
+		sum += log.Count
+	}
+	return sum
+}
+
+func GetLogsForMonth(logs []HabitLog, date time.Time) []HabitLog {
+	year, month, _ := date.Date()
+	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, date.Location())
+	monthEnd := monthStart.AddDate(0, 1, 0)
+
+	result := make([]HabitLog, 0)
+	for _, log := range logs {
+		if !log.LoggedAt.Before(monthStart) && log.LoggedAt.Before(monthEnd) {
+			result = append(result, log)
+		}
+	}
+	return result
+}
+
+func SumCountForMonth(logs []HabitLog, date time.Time) int {
+	monthLogs := GetLogsForMonth(logs, date)
+	sum := 0
+	for _, log := range monthLogs {
+		sum += log.Count
+	}
+	return sum
+}
+
+func CalculateWeeklyProgress(logs []HabitLog, goalPerWeek int, weekEnd time.Time) float64 {
+	if goalPerWeek <= 0 {
+		return 0.0
+	}
+	count := SumCountForWeek(logs, weekEnd)
+	return (float64(count) / float64(goalPerWeek)) * 100.0
+}
+
+func CalculateMonthlyProgress(logs []HabitLog, goalPerMonth int, date time.Time) float64 {
+	if goalPerMonth <= 0 {
+		return 0.0
+	}
+	count := SumCountForMonth(logs, date)
+	return (float64(count) / float64(goalPerMonth)) * 100.0
 }

@@ -566,3 +566,87 @@ func TestHabitService_HabitExists(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, exists)
 }
+
+func TestHabitService_GetTrackerStatus_IncludesWeeklyProgress(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 9, 12, 0, 0, 0, time.UTC)
+
+	// Create habit with weekly goal (LogHabit creates one log today)
+	err := service.LogHabitForDate(ctx, "Workout", 1, today)
+	require.NoError(t, err)
+	err = service.SetHabitWeeklyGoal(ctx, "Workout", 5)
+	require.NoError(t, err)
+
+	// Log 2 more times this week (total 3)
+	for i := 1; i <= 2; i++ {
+		err = service.LogHabitForDate(ctx, "Workout", 1, today.AddDate(0, 0, -i))
+		require.NoError(t, err)
+	}
+
+	status, err := service.GetTrackerStatus(ctx, today, 7)
+	require.NoError(t, err)
+	require.Len(t, status.Habits, 1)
+	assert.Equal(t, 5, status.Habits[0].GoalPerWeek)
+	assert.Equal(t, 60.0, status.Habits[0].WeeklyProgress) // 3/5 = 60%
+}
+
+func TestHabitService_GetTrackerStatus_IncludesMonthlyProgress(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+
+	// Create habit with monthly goal by logging first
+	err := service.LogHabitForDate(ctx, "Reading", 1, time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC))
+	require.NoError(t, err)
+	err = service.SetHabitMonthlyGoal(ctx, "Reading", 20)
+	require.NoError(t, err)
+
+	// Log 9 more times this month (total 10)
+	for i := 1; i < 10; i++ {
+		err = service.LogHabitForDate(ctx, "Reading", 1, time.Date(2026, 1, i+1, 10, 0, 0, 0, time.UTC))
+		require.NoError(t, err)
+	}
+
+	status, err := service.GetTrackerStatus(ctx, today, 7)
+	require.NoError(t, err)
+	require.Len(t, status.Habits, 1)
+	assert.Equal(t, 20, status.Habits[0].GoalPerMonth)
+	assert.Equal(t, 50.0, status.Habits[0].MonthlyProgress) // 10/20 = 50%
+}
+
+func TestHabitService_SetHabitWeeklyGoal(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create habit
+	err := service.LogHabit(ctx, "Exercise", 1)
+	require.NoError(t, err)
+
+	// Set weekly goal
+	err = service.SetHabitWeeklyGoal(ctx, "Exercise", 4)
+	require.NoError(t, err)
+
+	// Verify
+	status, err := service.GetTrackerStatus(ctx, time.Now(), 7)
+	require.NoError(t, err)
+	assert.Equal(t, 4, status.Habits[0].GoalPerWeek)
+}
+
+func TestHabitService_SetHabitMonthlyGoal(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	// Create habit
+	err := service.LogHabit(ctx, "Meditation", 1)
+	require.NoError(t, err)
+
+	// Set monthly goal
+	err = service.SetHabitMonthlyGoal(ctx, "Meditation", 15)
+	require.NoError(t, err)
+
+	// Verify
+	status, err := service.GetTrackerStatus(ctx, time.Now(), 7)
+	require.NoError(t, err)
+	assert.Equal(t, 15, status.Habits[0].GoalPerMonth)
+}

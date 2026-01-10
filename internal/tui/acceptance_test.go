@@ -16,7 +16,7 @@ import (
 // =============================================================================
 
 func TestUAT_Navigation_NumberKeys_SwitchViews(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -36,7 +36,8 @@ func TestUAT_Navigation_NumberKeys_SwitchViews(t *testing.T) {
 		{'3', ViewTypeLists, "Lists"},
 		{'4', ViewTypeSearch, "Search"},
 		{'5', ViewTypeStats, "Stats"},
-		{'6', ViewTypeSettings, "Settings"},
+		{'6', ViewTypeGoals, "Goals"},
+		{'7', ViewTypeSettings, "Settings"},
 	}
 
 	for _, tt := range tests {
@@ -53,7 +54,7 @@ func TestUAT_Navigation_NumberKeys_SwitchViews(t *testing.T) {
 }
 
 func TestUAT_Navigation_CommandPalette_Opens(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -74,7 +75,7 @@ func TestUAT_Navigation_CommandPalette_Opens(t *testing.T) {
 }
 
 func TestUAT_Navigation_CommandPalette_Colon_Opens(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -94,7 +95,7 @@ func TestUAT_Navigation_CommandPalette_Colon_Opens(t *testing.T) {
 }
 
 func TestUAT_Navigation_CommandPalette_ShowsCommands(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -121,7 +122,7 @@ func TestUAT_Navigation_CommandPalette_ShowsCommands(t *testing.T) {
 }
 
 func TestUAT_Navigation_CommandPalette_FuzzyFilter(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -151,7 +152,7 @@ func TestUAT_Navigation_CommandPalette_FuzzyFilter(t *testing.T) {
 }
 
 func TestUAT_Navigation_Quit(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -181,7 +182,7 @@ func TestUAT_Navigation_Quit(t *testing.T) {
 // =============================================================================
 
 func TestUAT_JournalView_ShowsTodaysEntries(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create entries for today
@@ -218,7 +219,7 @@ func TestUAT_JournalView_ShowsTodaysEntries(t *testing.T) {
 }
 
 func TestUAT_JournalView_Navigation_UpDown(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create multiple entries
@@ -268,7 +269,7 @@ func TestUAT_JournalView_Navigation_UpDown(t *testing.T) {
 }
 
 func TestUAT_JournalView_MarkDone(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	opts := service.LogEntriesOptions{Date: time.Now()}
@@ -329,7 +330,7 @@ func TestUAT_JournalView_MarkDone(t *testing.T) {
 }
 
 func TestUAT_JournalView_CaptureMode_Available(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -351,7 +352,7 @@ func TestUAT_JournalView_CaptureMode_Available(t *testing.T) {
 }
 
 func TestUAT_JournalView_CaptureMode_NotInOtherViews(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -382,7 +383,7 @@ func TestUAT_JournalView_CaptureMode_NotInOtherViews(t *testing.T) {
 }
 
 func TestUAT_JournalView_Edit(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	opts := service.LogEntriesOptions{Date: time.Now()}
@@ -414,7 +415,7 @@ func TestUAT_JournalView_Edit(t *testing.T) {
 }
 
 func TestUAT_JournalView_Delete(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	opts := service.LogEntriesOptions{Date: time.Now()}
@@ -450,7 +451,7 @@ func TestUAT_JournalView_Delete(t *testing.T) {
 // =============================================================================
 
 func TestUAT_HabitsView_ShowsHabitDetails(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create a habit with a streak
@@ -492,7 +493,7 @@ func TestUAT_HabitsView_ShowsHabitDetails(t *testing.T) {
 }
 
 func TestUAT_HabitsView_DeletedHabitsNotShown(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create and log habits
@@ -534,7 +535,7 @@ func TestUAT_HabitsView_DeletedHabitsNotShown(t *testing.T) {
 }
 
 func TestUAT_HabitsView_LogHabitFromTUI(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	if err := habitSvc.LogHabit(ctx, "Water", 1); err != nil {
@@ -593,7 +594,7 @@ func TestUAT_HabitsView_LogHabitFromTUI(t *testing.T) {
 }
 
 func TestUAT_HabitsView_MonthlyHistoryShown(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create habit with history over multiple days
@@ -632,7 +633,7 @@ func TestUAT_HabitsView_MonthlyHistoryShown(t *testing.T) {
 }
 
 func TestUAT_HabitsView_Navigation(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	if err := habitSvc.LogHabit(ctx, "Habit 1", 1); err != nil {
@@ -670,7 +671,7 @@ func TestUAT_HabitsView_Navigation(t *testing.T) {
 }
 
 func TestUAT_HabitsView_ContextAppropriateCommands(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -694,7 +695,7 @@ func TestUAT_HabitsView_ContextAppropriateCommands(t *testing.T) {
 // =============================================================================
 
 func TestUAT_ListsView_ShowsAllLists(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	if _, err := listSvc.CreateList(ctx, "Shopping"); err != nil {
@@ -730,7 +731,7 @@ func TestUAT_ListsView_ShowsAllLists(t *testing.T) {
 }
 
 func TestUAT_ListsView_ShowsAccurateCompletionCounts(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -780,7 +781,7 @@ func TestUAT_ListsView_ShowsAccurateCompletionCounts(t *testing.T) {
 }
 
 func TestUAT_ListsView_DeletedListsNotShown(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	if _, err := listSvc.CreateList(ctx, "Active List"); err != nil {
@@ -821,7 +822,7 @@ func TestUAT_ListsView_DeletedListsNotShown(t *testing.T) {
 }
 
 func TestUAT_ListsView_EnterOpensItems(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -863,7 +864,7 @@ func TestUAT_ListsView_EnterOpensItems(t *testing.T) {
 // =============================================================================
 
 func TestUAT_ListItemsView_ShowsAllItems(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -913,7 +914,7 @@ func TestUAT_ListItemsView_ShowsAllItems(t *testing.T) {
 }
 
 func TestUAT_ListItemsView_ToggleDone(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -984,7 +985,7 @@ func TestUAT_ListItemsView_ToggleDone(t *testing.T) {
 }
 
 func TestUAT_ListItemsView_AddItem(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	_, err := listSvc.CreateList(ctx, "Shopping")
@@ -1028,7 +1029,7 @@ func TestUAT_ListItemsView_AddItem(t *testing.T) {
 }
 
 func TestUAT_ListItemsView_DeleteItem(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -1075,7 +1076,7 @@ func TestUAT_ListItemsView_DeleteItem(t *testing.T) {
 }
 
 func TestUAT_ListItemsView_EscapeReturnsToLists(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	_, err := listSvc.CreateList(ctx, "Shopping")
@@ -1114,7 +1115,7 @@ func TestUAT_ListItemsView_EscapeReturnsToLists(t *testing.T) {
 }
 
 func TestUAT_ListItemsView_EditItem(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -1165,7 +1166,7 @@ func TestUAT_ListItemsView_EditItem(t *testing.T) {
 // =============================================================================
 
 func TestUAT_SearchView_Accessible(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1185,7 +1186,7 @@ func TestUAT_SearchView_Accessible(t *testing.T) {
 }
 
 func TestUAT_SearchView_ShowsSearchInput(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1209,7 +1210,7 @@ func TestUAT_SearchView_ShowsSearchInput(t *testing.T) {
 // =============================================================================
 
 func TestUAT_StatsView_Accessible(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1229,7 +1230,7 @@ func TestUAT_StatsView_Accessible(t *testing.T) {
 }
 
 func TestUAT_StatsView_ShowsProductivityInfo(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create some data
@@ -1269,7 +1270,7 @@ func TestUAT_StatsView_ShowsProductivityInfo(t *testing.T) {
 // =============================================================================
 
 func TestUAT_SettingsView_Accessible(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1279,17 +1280,17 @@ func TestUAT_SettingsView_Accessible(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeSettings {
-		t.Errorf("'6' should switch to settings view, got %v", m.currentView)
+		t.Errorf("'7' should switch to settings view, got %v", m.currentView)
 	}
 }
 
 func TestUAT_SettingsView_ShowsCurrentSettings(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1317,7 +1318,7 @@ func TestUAT_SettingsView_ShowsCurrentSettings(t *testing.T) {
 // =============================================================================
 
 func TestUAT_ErrorHandling_EmptyStates(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1357,7 +1358,7 @@ func TestUAT_ErrorHandling_EmptyStates(t *testing.T) {
 // =============================================================================
 
 func TestUAT_DataAccuracy_DeletedItemsNeverAppear(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	// Create and delete entries
@@ -1434,7 +1435,7 @@ func TestUAT_DataAccuracy_DeletedItemsNeverAppear(t *testing.T) {
 }
 
 func TestUAT_DataAccuracy_CountsAreAccurate(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Test List")
@@ -1487,7 +1488,7 @@ func TestUAT_DataAccuracy_CountsAreAccurate(t *testing.T) {
 }
 
 func TestUAT_DataAccuracy_ChangesAppearImmediately(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	list, err := listSvc.CreateList(ctx, "Shopping")
@@ -1559,7 +1560,7 @@ func TestUAT_DataAccuracy_ChangesAppearImmediately(t *testing.T) {
 // =============================================================================
 
 func TestUAT_HelpSystem_BottomBarShowsCommands(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -1589,7 +1590,7 @@ func TestUAT_HelpSystem_BottomBarShowsCommands(t *testing.T) {
 // =============================================================================
 
 func TestUAT_JournalView_CancelEntry(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1626,7 +1627,7 @@ func TestUAT_JournalView_CancelEntry(t *testing.T) {
 }
 
 func TestUAT_JournalView_CancelledEntryShowsStrikethrough(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1664,7 +1665,7 @@ func TestUAT_JournalView_CancelledEntryShowsStrikethrough(t *testing.T) {
 }
 
 func TestUAT_JournalView_UncancelEntry(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1711,7 +1712,7 @@ func TestUAT_JournalView_UncancelEntry(t *testing.T) {
 // =============================================================================
 
 func TestUAT_JournalView_RetypeEntry_OpensTypePicker(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1747,7 +1748,7 @@ func TestUAT_JournalView_RetypeEntry_OpensTypePicker(t *testing.T) {
 }
 
 func TestUAT_JournalView_RetypeEntry_ChangesType(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1787,7 +1788,7 @@ func TestUAT_JournalView_RetypeEntry_ChangesType(t *testing.T) {
 }
 
 func TestUAT_JournalView_RetypeEntry_PreservesContent(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1830,7 +1831,7 @@ func TestUAT_JournalView_RetypeEntry_PreservesContent(t *testing.T) {
 // =============================================================================
 
 func TestUAT_DeletedEntries_CanBeViewed(t *testing.T) {
-	bujoSvc, _, _ := setupTestServices(t)
+	bujoSvc, _, _, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1871,7 +1872,7 @@ func TestUAT_DeletedEntries_CanBeViewed(t *testing.T) {
 }
 
 func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
-	bujoSvc, _, _ := setupTestServices(t)
+	bujoSvc, _, _, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1938,7 +1939,7 @@ func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
 }
 
 func TestUAT_DeletedEntries_NotShownInJournal(t *testing.T) {
-	bujoSvc, habitSvc, listSvc := setupTestServices(t)
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
 	today := time.Now()
@@ -1981,5 +1982,467 @@ func TestUAT_DeletedEntries_NotShownInJournal(t *testing.T) {
 
 	if !strings.Contains(view, "Keep this entry") {
 		t.Error("non-deleted entry should appear in journal view")
+	}
+}
+
+// =============================================================================
+// UAT Section: Habit Weekly/Monthly Goals
+// =============================================================================
+
+func TestUAT_HabitsView_ShowsWeeklyProgress(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+	today := time.Now()
+
+	// Create a habit with weekly goal
+	if err := habitSvc.LogHabitForDate(ctx, "Workout", 1, today); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.SetHabitWeeklyGoal(ctx, "Workout", 5); err != nil {
+		t.Fatalf("failed to set weekly goal: %v", err)
+	}
+
+	// Log 2 more times this week (total 3)
+	for i := 1; i <= 2; i++ {
+		if err := habitSvc.LogHabitForDate(ctx, "Workout", 1, today.AddDate(0, 0, -i)); err != nil {
+			t.Fatalf("failed to log habit: %v", err)
+		}
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show habit name
+	if !strings.Contains(view, "Workout") {
+		t.Error("habits view should show habit name")
+	}
+
+	// Should show weekly progress
+	if !strings.Contains(view, "Week:") {
+		t.Error("habits view should show weekly progress for habits with weekly goals")
+	}
+}
+
+func TestUAT_HabitsView_ShowsMonthlyProgress(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit with monthly goal
+	if err := habitSvc.LogHabit(ctx, "Reading", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.SetHabitMonthlyGoal(ctx, "Reading", 20); err != nil {
+		t.Fatalf("failed to set monthly goal: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show habit name
+	if !strings.Contains(view, "Reading") {
+		t.Error("habits view should show habit name")
+	}
+
+	// Should show monthly progress
+	if !strings.Contains(view, "Month:") {
+		t.Error("habits view should show monthly progress for habits with monthly goals")
+	}
+}
+
+func TestUAT_HabitsView_HidesProgressWhenNoGoalsSet(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit without weekly/monthly goals (only daily)
+	if err := habitSvc.LogHabit(ctx, "Simple", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show habit name
+	if !strings.Contains(view, "Simple") {
+		t.Error("habits view should show habit name")
+	}
+
+	// Should NOT show weekly/monthly progress lines
+	if strings.Contains(view, "Week:") || strings.Contains(view, "Month:") {
+		t.Error("habits view should NOT show weekly/monthly progress for habits without those goals")
+	}
+}
+
+// =============================================================================
+// UAT Section 16: Goals View
+// =============================================================================
+
+func TestUAT_GoalsView_Accessible(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeGoals {
+		t.Errorf("'6' should switch to goals view, got %v", m.currentView)
+	}
+}
+
+func TestUAT_GoalsView_ShowsEmptyState(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeGoals
+
+	view := model.View()
+
+	if !strings.Contains(view, "No goals") {
+		t.Error("goals view should show empty state message when no goals exist")
+	}
+}
+
+func TestUAT_GoalsView_ShowsGoalContent(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a test goal
+	currentMonth := time.Now()
+	_, err := goalSvc.CreateGoal(ctx, "Learn Go programming", currentMonth)
+	if err != nil {
+		t.Fatalf("failed to create goal: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to goals view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Learn Go programming") {
+		t.Error("goals view should display goal content")
+	}
+}
+
+func TestUAT_GoalsView_ShowsMonthlyGoalsHeader(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeGoals
+
+	view := model.View()
+
+	if !strings.Contains(view, "Monthly Goals") {
+		t.Error("goals view should show 'Monthly Goals' header")
+	}
+}
+
+func TestUAT_GoalsView_NavigationUpDown(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create multiple goals
+	currentMonth := time.Now()
+	_, _ = goalSvc.CreateGoal(ctx, "Goal One", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Goal Two", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Goal Three", currentMonth)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to goals view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Initial selection should be 0
+	if model.goalState.selectedIdx != 0 {
+		t.Errorf("initial selection should be 0, got %d", model.goalState.selectedIdx)
+	}
+
+	// Press j to move down
+	jMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}
+	newModel, _ = model.Update(jMsg)
+	model = newModel.(Model)
+
+	if model.goalState.selectedIdx != 1 {
+		t.Errorf("after pressing j, selection should be 1, got %d", model.goalState.selectedIdx)
+	}
+
+	// Press k to move up
+	kMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}}
+	newModel, _ = model.Update(kMsg)
+	model = newModel.(Model)
+
+	if model.goalState.selectedIdx != 0 {
+		t.Errorf("after pressing k, selection should be 0, got %d", model.goalState.selectedIdx)
+	}
+}
+
+func TestUAT_GoalsView_ToggleDoneWithSpace(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a goal
+	currentMonth := time.Now()
+	goalID, _ := goalSvc.CreateGoal(ctx, "Complete task", currentMonth)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to goals view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify goal is not done initially
+	goal, _ := goalSvc.GetGoal(ctx, goalID)
+	if goal.IsDone() {
+		t.Error("goal should not be done initially")
+	}
+
+	// Press space to toggle
+	spaceMsg := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, cmd = model.Update(spaceMsg)
+	model = newModel.(Model)
+
+	// Execute the command chain
+	if cmd != nil {
+		toggleMsg := cmd()
+		newModel, cmd = model.Update(toggleMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			reloadMsg := cmd()
+			newModel, _ = model.Update(reloadMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify goal is now done
+	goal, _ = goalSvc.GetGoal(ctx, goalID)
+	if !goal.IsDone() {
+		t.Error("goal should be marked as done after pressing space")
+	}
+}
+
+func TestUAT_GoalsView_ShowsDoneStatus(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create and complete a goal
+	currentMonth := time.Now()
+	goalID, _ := goalSvc.CreateGoal(ctx, "Completed goal", currentMonth)
+	_ = goalSvc.MarkDone(ctx, goalID)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to goals view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	view := model.View()
+
+	// Should show checkmark for done goals
+	if !strings.Contains(view, "✓") {
+		t.Error("goals view should show checkmark for completed goals")
+	}
+}
+
+func TestUAT_GoalsView_ShowsGoalID(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a goal
+	currentMonth := time.Now()
+	_, _ = goalSvc.CreateGoal(ctx, "Test goal", currentMonth)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to goals view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	view := model.View()
+
+	// Should show goal ID with # prefix
+	if !strings.Contains(view, "#") {
+		t.Error("goals view should show goal ID with # prefix")
+	}
+}
+
+func TestUAT_GoalsView_ShowsHelpText(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeGoals
+
+	view := model.View()
+
+	// Should show help text for navigation
+	hasHelp := strings.Contains(view, "space") || strings.Contains(view, "j/k")
+	if !hasHelp {
+		t.Error("goals view should show help text for navigation")
+	}
+}
+
+func TestUAT_GoalsView_ToolbarShowsGoals(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeGoals
+
+	view := model.View()
+
+	// Toolbar should indicate Goals view
+	if !strings.Contains(view, "Goals") {
+		t.Error("toolbar should show 'Goals' when in goals view")
 	}
 }

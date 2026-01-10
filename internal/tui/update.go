@@ -80,6 +80,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listItemToggledMsg:
 		return m, m.loadListItemsCmd(m.listState.currentListID)
 
+	case listItemAddedMsg:
+		return m, m.loadListItemsCmd(msg.listID)
+
+	case listItemDeletedMsg:
+		return m, m.loadListItemsCmd(msg.listID)
+
+	case goalsLoadedMsg:
+		m.goalState.goals = msg.goals
+		if m.goalState.selectedIdx >= len(m.goalState.goals) {
+			m.goalState.selectedIdx = 0
+		}
+		return m, nil
+
+	case goalToggledMsg:
+		return m, m.loadGoalsCmd()
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -128,6 +144,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleHabitsMode(msg)
 		case ViewTypeLists, ViewTypeListItems:
 			return m.handleListsMode(msg)
+		case ViewTypeGoals:
+			return m.handleGoalsMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -1244,6 +1262,12 @@ func (m Model) handleConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Confirm):
 		entryID := m.confirmMode.entryID
 		m.confirmMode.active = false
+
+		// Handle list items differently
+		if m.currentView == ViewTypeListItems {
+			return m, m.deleteListItemCmd(entryID)
+		}
+
 		return m, m.deleteWithChildrenCmd(entryID)
 
 	case key.Matches(msg, m.keyMap.Cancel):
@@ -1294,8 +1318,14 @@ func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.addMode.active = false
 			return m, nil
 		}
-		parentID := m.addMode.parentID
 		m.addMode.active = false
+
+		// Handle list items differently
+		if m.currentView == ViewTypeListItems {
+			return m, m.addListItemCmd(content)
+		}
+
+		parentID := m.addMode.parentID
 		return m, m.addEntryCmd(content, parentID)
 	}
 
@@ -1582,6 +1612,38 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m, tea.Quit
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.goalState.selectedIdx < len(m.goalState.goals)-1 {
+			m.goalState.selectedIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.goalState.selectedIdx > 0 {
+			m.goalState.selectedIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Done):
+		if len(m.goalState.goals) > 0 && m.goalState.selectedIdx < len(m.goalState.goals) {
+			goal := m.goalState.goals[m.goalState.selectedIdx]
+			return m, m.toggleGoalCmd(goal.ID, goal.IsDone())
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
 func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Handle ViewTypeListItems separately
 	if m.currentView == ViewTypeListItems {
@@ -1674,7 +1736,9 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Delete):
 		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
+			item := m.listState.items[m.listState.selectedItemIdx]
 			m.confirmMode.active = true
+			m.confirmMode.entryID = item.RowID
 		}
 		return m, nil
 	}
@@ -1751,6 +1815,10 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.ViewStats):
 		m.currentView = ViewTypeStats
 		return true, m, nil
+
+	case key.Matches(msg, m.keyMap.ViewGoals):
+		m.currentView = ViewTypeGoals
+		return true, m, m.loadGoalsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewSettings):
 		m.currentView = ViewTypeSettings

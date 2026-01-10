@@ -279,3 +279,80 @@ func TestHabitRepository_Restore_BringsBackDeletedHabit(t *testing.T) {
 	assert.Equal(t, "RestoreTest", restored.Name)
 	assert.Equal(t, 3, restored.GoalPerDay)
 }
+
+func TestHabitRepository_InsertWithWeeklyMonthlyGoals(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewHabitRepository(db)
+	ctx := context.Background()
+
+	habit := domain.Habit{
+		Name:         "Workout",
+		GoalPerDay:   1,
+		GoalPerWeek:  5,
+		GoalPerMonth: 20,
+		CreatedAt:    time.Now(),
+	}
+
+	id, err := repo.Insert(ctx, habit)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, "Workout", result.Name)
+	assert.Equal(t, 1, result.GoalPerDay)
+	assert.Equal(t, 5, result.GoalPerWeek)
+	assert.Equal(t, 20, result.GoalPerMonth)
+}
+
+func TestHabitRepository_UpdateWithWeeklyMonthlyGoals(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewHabitRepository(db)
+	ctx := context.Background()
+
+	habit := domain.Habit{
+		Name:       "Running",
+		GoalPerDay: 1,
+		CreatedAt:  time.Now(),
+	}
+
+	id, err := repo.Insert(ctx, habit)
+	require.NoError(t, err)
+
+	// Update with weekly and monthly goals
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	result.GoalPerWeek = 3
+	result.GoalPerMonth = 12
+
+	err = repo.Update(ctx, *result)
+	require.NoError(t, err)
+
+	// Verify update
+	updated, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 3, updated.GoalPerWeek)
+	assert.Equal(t, 12, updated.GoalPerMonth)
+}
+
+func TestHabitRepository_GetAll_IncludesWeeklyMonthlyGoals(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewHabitRepository(db)
+	ctx := context.Background()
+
+	habit := domain.Habit{
+		Name:         "Reading",
+		GoalPerDay:   0,
+		GoalPerWeek:  0,
+		GoalPerMonth: 4,
+		CreatedAt:    time.Now(),
+	}
+
+	_, err := repo.Insert(ctx, habit)
+	require.NoError(t, err)
+
+	habits, err := repo.GetAll(ctx)
+	require.NoError(t, err)
+	require.Len(t, habits, 1)
+	assert.Equal(t, 4, habits[0].GoalPerMonth)
+}

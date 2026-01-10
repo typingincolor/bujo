@@ -1,0 +1,99 @@
+package domain
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGoal_Validate(t *testing.T) {
+	now := time.Now()
+	tests := []struct {
+		name    string
+		goal    Goal
+		wantErr bool
+	}{
+		{
+			name: "valid goal",
+			goal: Goal{
+				Content:   "Learn Go",
+				Month:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+				CreatedAt: now,
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty content is invalid",
+			goal: Goal{
+				Content:   "",
+				Month:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+				CreatedAt: now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "zero month is invalid",
+			goal: Goal{
+				Content:   "Learn Go",
+				Month:     time.Time{},
+				CreatedAt: now,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.goal.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGoal_IsDone(t *testing.T) {
+	goal := Goal{
+		Content: "Learn Go",
+		Status:  GoalStatusActive,
+	}
+	assert.False(t, goal.IsDone())
+
+	goal.Status = GoalStatusDone
+	assert.True(t, goal.IsDone())
+}
+
+func TestGoal_MarkDone(t *testing.T) {
+	goal := Goal{
+		Content: "Learn Go",
+		Status:  GoalStatusActive,
+	}
+
+	goal.MarkDone()
+
+	assert.Equal(t, GoalStatusDone, goal.Status)
+}
+
+func TestGoal_MarkActive(t *testing.T) {
+	goal := Goal{
+		Content: "Learn Go",
+		Status:  GoalStatusDone,
+	}
+
+	goal.MarkActive()
+
+	assert.Equal(t, GoalStatusActive, goal.Status)
+}
+
+func TestGoal_MonthKey(t *testing.T) {
+	goal := Goal{
+		Month: time.Date(2026, 1, 15, 10, 30, 0, 0, time.UTC),
+	}
+
+	key := goal.MonthKey()
+
+	assert.Equal(t, "2026-01", key)
+}
