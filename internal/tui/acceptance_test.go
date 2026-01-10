@@ -2229,9 +2229,9 @@ func TestUAT_GoalsView_NavigationUpDown(t *testing.T) {
 
 	// Create multiple goals
 	currentMonth := time.Now()
-	goalSvc.CreateGoal(ctx, "Goal One", currentMonth)
-	goalSvc.CreateGoal(ctx, "Goal Two", currentMonth)
-	goalSvc.CreateGoal(ctx, "Goal Three", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Goal One", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Goal Two", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Goal Three", currentMonth)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -2340,7 +2340,7 @@ func TestUAT_GoalsView_ShowsDoneStatus(t *testing.T) {
 	// Create and complete a goal
 	currentMonth := time.Now()
 	goalID, _ := goalSvc.CreateGoal(ctx, "Completed goal", currentMonth)
-	goalSvc.MarkDone(ctx, goalID)
+	_ = goalSvc.MarkDone(ctx, goalID)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,

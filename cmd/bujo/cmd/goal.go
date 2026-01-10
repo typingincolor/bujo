@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/typingincolor/bujo/internal/domain"
 )
 
 var goalMonthFlag string
@@ -77,13 +76,6 @@ func parseGoalID(arg string) (int64, error) {
 		return 0, fmt.Errorf("invalid goal ID: %s", arg)
 	}
 	return id, nil
-}
-
-func formatGoalStatus(status domain.GoalStatus) string {
-	if status == domain.GoalStatusDone {
-		return "done"
-	}
-	return "active"
 }
 
 func init() {
