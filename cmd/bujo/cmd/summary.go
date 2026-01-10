@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -50,7 +49,10 @@ Examples:
 			horizon = domain.SummaryHorizonAnnual
 		}
 
-		today := time.Now()
+		refDate, err := parseDateOrToday(summaryDate)
+		if err != nil {
+			return fmt.Errorf("invalid date: %w", err)
+		}
 
 		bold := color.New(color.Bold).SprintFunc()
 		dimmed := color.New(color.Faint).SprintFunc()
@@ -58,7 +60,7 @@ Examples:
 		fmt.Printf("%s\n", bold(fmt.Sprintf("Generating %s summary...", horizon)))
 		fmt.Println(dimmed(strings.Repeat("-", 50)))
 
-		summary, err := summaryService.GetSummary(cmd.Context(), horizon, today)
+		summary, err := summaryService.GetSummaryWithRefresh(cmd.Context(), horizon, refDate, summaryRefresh)
 		if err != nil {
 			return fmt.Errorf("failed to generate summary: %w", err)
 		}
@@ -79,5 +81,7 @@ func init() {
 	summaryCmd.Flags().BoolVar(&summaryWeekly, "weekly", false, "Generate weekly reflection")
 	summaryCmd.Flags().BoolVar(&summaryQuarterly, "quarterly", false, "Generate quarterly review")
 	summaryCmd.Flags().BoolVar(&summaryAnnual, "annual", false, "Generate annual review")
+	summaryCmd.Flags().StringVarP(&summaryDate, "date", "d", "", "Reference date (e.g., yesterday, 2026-01-05)")
+	summaryCmd.Flags().BoolVar(&summaryRefresh, "refresh", false, "Force regenerate even for completed periods")
 	rootCmd.AddCommand(summaryCmd)
 }

@@ -128,6 +128,48 @@ func TestSummaryService_GetSummary(t *testing.T) {
 		assert.Equal(t, "Fresh summary", result.Content)
 	})
 
+	t.Run("forceRefresh bypasses cache", func(t *testing.T) {
+		today := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+		entries := []domain.Entry{{ID: 1, Type: domain.EntryTypeTask, Content: "Task"}}
+
+		cachedSummary := &domain.Summary{
+			ID:        1,
+			Horizon:   domain.SummaryHorizonDaily,
+			Content:   "Cached summary",
+			StartDate: today,
+			EndDate:   today,
+			CreatedAt: time.Date(2026, 1, 10, 10, 0, 0, 0, time.UTC), // recent cache
+		}
+
+		entryRepo := &mockEntryRepoForSummary{
+			getByDateRangeFunc: func(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+				return entries, nil
+			},
+		}
+
+		summaryRepo := &mockSummaryRepo{
+			getFunc: func(ctx context.Context, horizon domain.SummaryHorizon, start, end time.Time) (*domain.Summary, error) {
+				return cachedSummary, nil
+			},
+			insertFunc: func(ctx context.Context, summary domain.Summary) (int64, error) {
+				return 2, nil
+			},
+		}
+
+		generator := &mockSummaryGenerator{
+			generateFunc: func(ctx context.Context, e []domain.Entry, h domain.SummaryHorizon) (string, error) {
+				return "Fresh summary", nil
+			},
+		}
+
+		svc := NewSummaryService(entryRepo, summaryRepo, generator)
+
+		result, err := svc.GetSummaryWithRefresh(context.Background(), domain.SummaryHorizonDaily, today, true)
+
+		require.NoError(t, err)
+		assert.Equal(t, "Fresh summary", result.Content)
+	})
+
 	t.Run("calculates weekly date range correctly", func(t *testing.T) {
 		refDate := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC) // Friday
 

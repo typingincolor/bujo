@@ -35,15 +35,21 @@ func NewSummaryService(entryRepo SummaryEntryRepository, summaryRepo SummaryRepo
 }
 
 func (s *SummaryService) GetSummary(ctx context.Context, horizon domain.SummaryHorizon, refDate time.Time) (*domain.Summary, error) {
+	return s.GetSummaryWithRefresh(ctx, horizon, refDate, false)
+}
+
+func (s *SummaryService) GetSummaryWithRefresh(ctx context.Context, horizon domain.SummaryHorizon, refDate time.Time, forceRefresh bool) (*domain.Summary, error) {
 	startDate, endDate := s.calculateDateRange(horizon, refDate)
 
-	cached, err := s.summaryRepo.Get(ctx, horizon, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
+	if !forceRefresh {
+		cached, err := s.summaryRepo.Get(ctx, horizon, startDate, endDate)
+		if err != nil {
+			return nil, err
+		}
 
-	if cached != nil && cached.IsRecent(refDate) {
-		return cached, nil
+		if cached != nil && cached.IsRecent(refDate) {
+			return cached, nil
+		}
 	}
 
 	entries, err := s.entryRepo.GetByDateRange(ctx, startDate, endDate)

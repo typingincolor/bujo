@@ -2270,9 +2270,35 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.summaryState.horizon = "annual"
 		m.summaryState.summary = nil
 		return m, nil
+
+	case msg.String() == "h":
+		m.summaryState.refDate = m.navigateSummaryPeriod(-1)
+		m.summaryState.summary = nil
+		return m, nil
+
+	case msg.String() == "l":
+		m.summaryState.refDate = m.navigateSummaryPeriod(1)
+		m.summaryState.summary = nil
+		return m, nil
 	}
 
 	return m, nil
+}
+
+func (m Model) navigateSummaryPeriod(direction int) time.Time {
+	refDate := m.summaryState.refDate
+	switch m.summaryState.horizon {
+	case domain.SummaryHorizonDaily:
+		return refDate.AddDate(0, 0, direction)
+	case domain.SummaryHorizonWeekly:
+		return refDate.AddDate(0, 0, direction*7)
+	case domain.SummaryHorizonQuarterly:
+		return refDate.AddDate(0, direction*3, 0)
+	case domain.SummaryHorizonAnnual:
+		return refDate.AddDate(direction, 0, 0)
+	default:
+		return refDate.AddDate(0, 0, direction)
+	}
 }
 
 func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {

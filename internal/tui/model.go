@@ -207,6 +207,7 @@ type summaryState struct {
 	loading      bool
 	error        error
 	horizon      domain.SummaryHorizon
+	refDate      time.Time
 	lastGenerate time.Time
 }
 
@@ -290,7 +291,7 @@ func NewWithConfig(cfg Config) Model {
 		gotoMode:          gotoState{input: gotoInput},
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
-		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily},
+		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
 	}
 }
 
@@ -746,12 +747,13 @@ func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.
 
 func (m Model) loadSummaryCmd() tea.Cmd {
 	horizon := m.summaryState.horizon
+	refDate := m.summaryState.refDate
 	return func() tea.Msg {
 		if m.summaryService == nil {
 			return summaryErrorMsg{fmt.Errorf("AI summaries require GEMINI_API_KEY")}
 		}
 		ctx := context.Background()
-		summary, err := m.summaryService.GetSummary(ctx, horizon, time.Now())
+		summary, err := m.summaryService.GetSummary(ctx, horizon, refDate)
 		if err != nil {
 			return summaryErrorMsg{err}
 		}
