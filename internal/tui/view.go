@@ -288,21 +288,21 @@ func (m Model) renderSparkline(history []service.DayStatus, isSelected bool) str
 	days := len(history)
 
 	// History is ordered [0]=today, [1]=yesterday, etc.
-	// We want to display oldest first, so reverse
+	// Display oldest (left) to today (right) to match day labels
+	// Loop from oldest to today for correct visual order
 	for i := days - 1; i >= 0; i-- {
-		dayIdx := days - 1 - i // Convert display index to history index
-		if i < len(history) {
-			day := history[dayIdx]
-			char := "○"
-			if day.Completed {
-				char = "●"
-			}
-			// Highlight selected day
-			if isSelected && i == m.habitState.selectedDayIdx {
-				char = "[" + char + "]"
-			}
-			parts = append(parts, char)
+		day := history[i]
+		char := "○"
+		if day.Completed {
+			char = "●"
 		}
+		// Highlight selected day
+		// displayPos is 0 for leftmost (oldest), days-1 for rightmost (today)
+		displayPos := days - 1 - i
+		if isSelected && displayPos == m.habitState.selectedDayIdx {
+			char = "[" + char + "]"
+		}
+		parts = append(parts, char)
 	}
 	return strings.Join(parts, " ")
 }

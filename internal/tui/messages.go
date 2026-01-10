@@ -40,6 +40,10 @@ type habitLoggedMsg struct {
 	habitID int64
 }
 
+type habitLogRemovedMsg struct {
+	habitID int64
+}
+
 type habitAddedMsg struct {
 	name string
 }

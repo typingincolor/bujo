@@ -497,6 +497,20 @@ func (m Model) logHabitForDateCmd(habitID int64, date time.Time) tea.Cmd {
 	}
 }
 
+func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.RemoveHabitLogForDateByID(ctx, habitID, date)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitLogRemovedMsg{habitID}
+	}
+}
+
 func (m Model) loadHabitsCmd() tea.Cmd {
 	days := 7
 	if m.habitState.monthView {

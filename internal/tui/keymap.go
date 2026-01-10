@@ -35,9 +35,10 @@ type KeyMap struct {
 	ViewGoals      key.Binding
 	ViewSettings   key.Binding
 	CommandPalette key.Binding
-	LogHabit       key.Binding
-	DayLeft        key.Binding
-	DayRight       key.Binding
+	LogHabit        key.Binding
+	RemoveHabitLog  key.Binding
+	DayLeft         key.Binding
+	DayRight        key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -173,6 +174,10 @@ func DefaultKeyMap() KeyMap {
 		LogHabit: key.NewBinding(
 			key.WithKeys("l"),
 			key.WithHelp("l", "log"),
+		),
+		RemoveHabitLog: key.NewBinding(
+			key.WithKeys("backspace", "delete"),
+			key.WithHelp("⌫/del", "remove"),
 		),
 		DayLeft: key.NewBinding(
 			key.WithKeys("h", "left"),

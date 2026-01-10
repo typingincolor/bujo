@@ -650,3 +650,82 @@ func TestHabitService_SetHabitMonthlyGoal(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 15, status.Habits[0].GoalPerMonth)
 }
+
+func TestHabitService_RemoveHabitLogForDateByID(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	yesterday := today.AddDate(0, 0, -1)
+
+	// Create habit and log multiple times for today
+	err := service.LogHabitForDate(ctx, "Gym", 1, today)
+	require.NoError(t, err)
+	err = service.LogHabitForDate(ctx, "Gym", 1, today)
+	require.NoError(t, err)
+	// Also log for yesterday
+	err = service.LogHabitForDate(ctx, "Gym", 1, yesterday)
+	require.NoError(t, err)
+
+	// Get habit ID
+	status, err := service.GetTrackerStatus(ctx, today, 7)
+	require.NoError(t, err)
+	habitID := status.Habits[0].ID
+
+	// Verify we have 3 logs total, 2 for today
+	from := today.AddDate(0, 0, -7)
+	details, err := service.InspectHabitByID(ctx, habitID, from, today, today)
+	require.NoError(t, err)
+	require.Len(t, details.Logs, 3)
+
+	// Remove one log for today
+	err = service.RemoveHabitLogForDateByID(ctx, habitID, today)
+	require.NoError(t, err)
+
+	// Verify only 2 logs remain (1 for today, 1 for yesterday)
+	details, err = service.InspectHabitByID(ctx, habitID, from, today, today)
+	require.NoError(t, err)
+	assert.Len(t, details.Logs, 2)
+
+	// Remove another log for today
+	err = service.RemoveHabitLogForDateByID(ctx, habitID, today)
+	require.NoError(t, err)
+
+	// Verify only 1 log remains (yesterday's)
+	details, err = service.InspectHabitByID(ctx, habitID, from, today, today)
+	require.NoError(t, err)
+	assert.Len(t, details.Logs, 1)
+}
+
+func TestHabitService_RemoveHabitLogForDateByID_NoLogsForDate(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	yesterday := today.AddDate(0, 0, -1)
+
+	// Create habit with log for yesterday only
+	err := service.LogHabitForDate(ctx, "Gym", 1, yesterday)
+	require.NoError(t, err)
+
+	// Get habit ID
+	status, err := service.GetTrackerStatus(ctx, today, 7)
+	require.NoError(t, err)
+	habitID := status.Habits[0].ID
+
+	// Try to remove log for today (which has no logs)
+	err = service.RemoveHabitLogForDateByID(ctx, habitID, today)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no logs")
+}
+
+func TestHabitService_RemoveHabitLogForDateByID_HabitNotFound(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	err := service.RemoveHabitLogForDateByID(ctx, 99999, time.Now())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
