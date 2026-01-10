@@ -2375,7 +2375,7 @@ func TestUAT_GoalsView_ShowsGoalID(t *testing.T) {
 
 	// Create a goal
 	currentMonth := time.Now()
-	goalSvc.CreateGoal(ctx, "Test goal", currentMonth)
+	_, _ = goalSvc.CreateGoal(ctx, "Test goal", currentMonth)
 
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
