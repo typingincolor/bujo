@@ -30,28 +30,21 @@ func TestRenderSparkline_OrderMatchesLabels(t *testing.T) {
 	}
 
 	result := m.renderSparkline(history, true)
-
-	// Parse the result - split by space, ignoring the selection brackets
 	parts := strings.Split(result, " ")
 
-	// First element (leftmost) should be 6 days ago (history[6]) = completed (●)
-	// Last element (rightmost) should be today (history[0]) = completed (●)
-	// The pattern should be: ● ○ ● ○ ● ○ ● (6 days ago to today)
-	// With history[6]=completed, history[5]=not, history[4]=completed, etc.
-
-	// Leftmost should show history[6] = completed
+	// Leftmost (position 0) = 6 days ago = completed + selected (styled with ANSI)
 	if !strings.Contains(parts[0], "●") {
-		t.Errorf("Leftmost (6 days ago) should be completed (●), got %s", parts[0])
+		t.Errorf("Leftmost (6 days ago, completed) should contain ●, got %s", parts[0])
 	}
 
-	// Rightmost should show history[0] = completed
-	if !strings.Contains(parts[6], "●") {
-		t.Errorf("Rightmost (today) should be completed (●), got %s", parts[6])
+	// Rightmost (position 6) = today = completed (not selected) = ●
+	if parts[6] != "●" {
+		t.Errorf("Rightmost (today, completed) should be ●, got %s", parts[6])
 	}
 
-	// Second from left should show history[5] = not completed
-	if !strings.Contains(parts[1], "○") {
-		t.Errorf("Second from left (5 days ago) should be not completed (○), got %s", parts[1])
+	// Second from left (position 1) = 5 days ago = not completed = ○
+	if parts[1] != "○" {
+		t.Errorf("Second from left (5 days ago, empty) should be ○, got %s", parts[1])
 	}
 }
 
@@ -103,17 +96,21 @@ func TestRenderSparkline_SelectionHighlightsCorrectDay(t *testing.T) {
 			result := m.renderSparkline(history, true)
 			parts := strings.Split(result, " ")
 
-			// Check that the selection bracket is at the expected position
-			if !strings.Contains(parts[tt.wantPosition], "[") {
-				t.Errorf("Expected selection at position %d (%s), but got: %v",
-					tt.wantPosition, tt.description, parts)
+			// Selected day should contain ○ with ANSI styling (longer string)
+			if !strings.Contains(parts[tt.wantPosition], "○") {
+				t.Errorf("Expected ○ at position %d (%s), but got: %s",
+					tt.wantPosition, tt.description, parts[tt.wantPosition])
+			}
+			// Selected position should be styled (contains ANSI escape codes, so longer)
+			if len(parts[tt.wantPosition]) <= 3 {
+				t.Errorf("Position %d should be styled (longer than plain char), got: %s",
+					tt.wantPosition, parts[tt.wantPosition])
 			}
 
-			// Check that other positions don't have brackets
+			// Other positions should show plain ○ (empty, not selected)
 			for i, part := range parts {
-				if i != tt.wantPosition && strings.Contains(part, "[") {
-					t.Errorf("Unexpected selection at position %d, expected only at %d",
-						i, tt.wantPosition)
+				if i != tt.wantPosition && part != "○" {
+					t.Errorf("Position %d should be plain ○, got %s", i, part)
 				}
 			}
 		})

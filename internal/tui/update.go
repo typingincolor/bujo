@@ -61,12 +61,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.habitState.selectedIdx >= len(m.habitState.habits) {
 			m.habitState.selectedIdx = 0
 		}
-		// Initialize selected day to today (rightmost in 7-day view)
-		days := 7
-		if m.habitState.monthView {
-			days = 30
+		// Initialize selected day to today only on first load
+		if !m.habitState.dayIdxInited {
+			days := 7
+			if m.habitState.monthView {
+				days = 30
+			}
+			m.habitState.selectedDayIdx = days - 1
+			m.habitState.dayIdxInited = true
 		}
-		m.habitState.selectedDayIdx = days - 1
 		return m, nil
 
 	case habitLoggedMsg:
