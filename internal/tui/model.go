@@ -50,6 +50,7 @@ type Model struct {
 	gotoMode        gotoState
 	captureMode     captureState
 	searchMode      searchState
+	searchView      searchViewState
 	retypeMode      retypeState
 	habitState      habitState
 	addHabitMode           addHabitState
@@ -77,6 +78,14 @@ type searchState struct {
 	active  bool
 	forward bool
 	query   string
+}
+
+type searchViewState struct {
+	query       string
+	results     []domain.Entry
+	selectedIdx int
+	loading     bool
+	input       textinput.Model
 }
 
 type confirmState struct {
@@ -270,6 +279,10 @@ func NewWithConfig(cfg Config) Model {
 	migrateToGoalInput := textinput.New()
 	migrateToGoalInput.Placeholder = "Target month (YYYY-MM)..."
 
+	searchInput := textinput.New()
+	searchInput.Placeholder = "Search entries..."
+	searchInput.Focus()
+
 	return Model{
 		bujoService:     cfg.BujoService,
 		habitService:    cfg.HabitService,
@@ -291,6 +304,7 @@ func NewWithConfig(cfg Config) Model {
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
+		searchView:        searchViewState{input: searchInput},
 	}
 }
 
@@ -757,6 +771,24 @@ func (m Model) loadSummaryCmd() tea.Cmd {
 			return summaryErrorMsg{err}
 		}
 		return summaryLoadedMsg{summary}
+	}
+}
+
+func (m Model) searchEntriesCmd(query string) tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		if query == "" {
+			return searchResultsMsg{results: nil, query: query}
+		}
+		ctx := context.Background()
+		opts := domain.NewSearchOptions(query)
+		results, err := m.bujoService.SearchEntries(ctx, opts)
+		if err != nil {
+			return errMsg{err}
+		}
+		return searchResultsMsg{results: results, query: query}
 	}
 }
 

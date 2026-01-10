@@ -1,0 +1,144 @@
+package cmd
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+	"github.com/typingincolor/bujo/internal/adapter/cli"
+	"github.com/typingincolor/bujo/internal/domain"
+)
+
+var (
+	searchFrom  string
+	searchTo    string
+	searchType  string
+	searchLimit int
+)
+
+var searchCmd = &cobra.Command{
+	Use:   "search <query>",
+	Short: "Search through entries",
+	Long: `Search through entries by content.
+
+Supports optional filters for date range and entry type.
+
+Examples:
+  bujo search "groceries"                    # Search all entries
+  bujo search "meeting" --from "last month"  # With date range
+  bujo search "project" --type task          # Filter by type
+  bujo search "call" -f "last week" -t today # Date range filter
+  bujo search "report" -n 10                 # Limit results`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		query := args[0]
+
+		opts := domain.NewSearchOptions(query)
+
+		if searchType != "" {
+			entryType := domain.EntryType(searchType)
+			if !entryType.IsValid() {
+				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled)", searchType)
+			}
+			opts = opts.WithType(entryType)
+		}
+
+		if searchFrom != "" || searchTo != "" {
+			var from, to time.Time
+			if searchFrom != "" {
+				parsed, err := parsePastDate(searchFrom)
+				if err != nil {
+					return fmt.Errorf("invalid --from date: %w", err)
+				}
+				from = parsed
+			} else {
+				from = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+			}
+			if searchTo != "" {
+				parsed, err := parsePastDate(searchTo)
+				if err != nil {
+					return fmt.Errorf("invalid --to date: %w", err)
+				}
+				to = parsed
+			} else {
+				to = time.Now()
+			}
+			opts = opts.WithDateRange(from, to)
+		}
+
+		if searchLimit > 0 {
+			opts = opts.WithLimit(searchLimit)
+		}
+
+		results, err := bujoService.SearchEntries(cmd.Context(), opts)
+		if err != nil {
+			return fmt.Errorf("search failed: %w", err)
+		}
+
+		if len(results) == 0 {
+			fmt.Printf("No results found for %q\n", query)
+			return nil
+		}
+
+		for _, entry := range results {
+			fmt.Println(formatSearchResult(entry, query))
+		}
+		fmt.Printf("\nFound %d result(s) for %q\n", len(results), query)
+
+		return nil
+	},
+}
+
+func init() {
+	searchCmd.Flags().StringVarP(&searchFrom, "from", "f", "", "Start date for search (natural language supported)")
+	searchCmd.Flags().StringVarP(&searchTo, "to", "t", "", "End date for search (natural language supported)")
+	searchCmd.Flags().StringVar(&searchType, "type", "", "Filter by entry type (task, note, event, done, migrated, cancelled)")
+	searchCmd.Flags().IntVarP(&searchLimit, "limit", "n", 50, "Maximum number of results")
+	rootCmd.AddCommand(searchCmd)
+}
+
+func formatSearchResult(entry domain.Entry, query string) string {
+	var parts []string
+
+	if entry.ScheduledDate != nil {
+		parts = append(parts, cli.Dimmed(fmt.Sprintf("[%s]", entry.ScheduledDate.Format("2006-01-02"))))
+	} else {
+		parts = append(parts, cli.Dimmed("[no date]"))
+	}
+
+	symbol := entry.Type.Symbol()
+	content := entry.Content
+
+	switch entry.Type {
+	case domain.EntryTypeDone:
+		symbol = cli.Green(symbol)
+		content = cli.Green(content)
+	case domain.EntryTypeMigrated, domain.EntryTypeCancelled:
+		symbol = cli.Dimmed(symbol)
+		content = cli.Dimmed(content)
+	}
+
+	content = highlightQuery(content, query)
+
+	parts = append(parts, symbol)
+	parts = append(parts, content)
+	parts = append(parts, cli.Dimmed(fmt.Sprintf("(%d)", entry.ID)))
+
+	return strings.Join(parts, " ")
+}
+
+func highlightQuery(content, query string) string {
+	lower := strings.ToLower(content)
+	queryLower := strings.ToLower(query)
+	idx := strings.Index(lower, queryLower)
+	if idx == -1 {
+		return content
+	}
+
+	before := content[:idx]
+	match := content[idx : idx+len(query)]
+	after := content[idx+len(query):]
+
+	return before + cli.Highlight(match) + after
+}

@@ -1391,3 +1391,94 @@ func TestBujoService_RetypeEntry_PreservesContent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Buy groceries", entry.Content)
 }
+
+func TestBujoService_SearchEntries_FindsMatchingContent(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	_, err := service.LogEntries(ctx, `. Buy groceries
+- Meeting notes
+o Doctor appointment`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	opts := domain.NewSearchOptions("groceries")
+	results, err := service.SearchEntries(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, "Buy groceries", results[0].Content)
+}
+
+func TestBujoService_SearchEntries_WithTypeFilter(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	_, err := service.LogEntries(ctx, `. Project task
+- Project notes
+o Project meeting`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	opts := domain.NewSearchOptions("project").WithType(domain.EntryTypeNote)
+	results, err := service.SearchEntries(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, domain.EntryTypeNote, results[0].Type)
+}
+
+func TestBujoService_SearchEntries_WithDateRange(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	jan5 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	jan10 := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	jan15 := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+
+	_, err := service.LogEntries(ctx, ". Early meeting", LogEntriesOptions{Date: jan5})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Middle meeting", LogEntriesOptions{Date: jan10})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Late meeting", LogEntriesOptions{Date: jan15})
+	require.NoError(t, err)
+
+	from := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	opts := domain.NewSearchOptions("meeting").WithDateRange(from, to)
+	results, err := service.SearchEntries(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, "Middle meeting", results[0].Content)
+}
+
+func TestBujoService_SearchEntries_EmptyQuery(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	_, err := service.LogEntries(ctx, ". Some task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	opts := domain.NewSearchOptions("")
+	results, err := service.SearchEntries(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 0)
+}
+
+func TestBujoService_SearchEntries_NoMatches(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	_, err := service.LogEntries(ctx, ". Some task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	opts := domain.NewSearchOptions("nonexistent")
+	results, err := service.SearchEntries(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 0)
+}
