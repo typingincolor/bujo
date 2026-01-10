@@ -145,6 +145,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summaryState.error = msg.err
 		return m, nil
 
+	case statsLoadedMsg:
+		m.statsViewState.loading = false
+		m.statsViewState.stats = msg.stats
+		return m, nil
+
 	case searchResultsMsg:
 		m.searchView.loading = false
 		m.searchView.results = msg.results
@@ -2389,7 +2394,8 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ViewStats):
 		m.currentView = ViewTypeStats
-		return true, m, nil
+		m.statsViewState.loading = true
+		return true, m, m.loadStatsCmd()
 
 	case key.Matches(msg, m.keyMap.ViewGoals):
 		m.currentView = ViewTypeGoals

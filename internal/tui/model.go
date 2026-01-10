@@ -25,6 +25,7 @@ type Config struct {
 	ListService    *service.ListService
 	GoalService    *service.GoalService
 	SummaryService *service.SummaryService
+	StatsService   *service.StatsService
 	Theme          string
 }
 
@@ -34,6 +35,7 @@ type Model struct {
 	listService     *service.ListService
 	goalService     *service.GoalService
 	summaryService  *service.SummaryService
+	statsService    *service.StatsService
 	agenda          *service.MultiDayAgenda
 	journalGoals    []domain.Goal
 	entries         []EntryItem
@@ -64,6 +66,7 @@ type Model struct {
 	moveGoalMode           moveGoalState
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
+	statsViewState         statsState
 	commandPalette         commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
@@ -219,6 +222,13 @@ type summaryState struct {
 	refDate time.Time
 }
 
+type statsState struct {
+	stats   *domain.Stats
+	loading bool
+	from    time.Time
+	to      time.Time
+}
+
 type commandPaletteState struct {
 	active      bool
 	query       string
@@ -283,12 +293,16 @@ func NewWithConfig(cfg Config) Model {
 	searchInput.Placeholder = "Search entries..."
 	searchInput.Focus()
 
+	statsFrom := now.AddDate(0, 0, -29)
+	statsTo := now
+
 	return Model{
 		bujoService:     cfg.BujoService,
 		habitService:    cfg.HabitService,
 		listService:     cfg.ListService,
 		goalService:     cfg.GoalService,
 		summaryService:  cfg.SummaryService,
+		statsService:    cfg.StatsService,
 		collapsed:       make(map[domain.EntityID]bool),
 		viewMode:        ViewModeDay,
 		viewDate:        today,
@@ -305,6 +319,7 @@ func NewWithConfig(cfg Config) Model {
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
 		searchView:        searchViewState{input: searchInput},
+		statsViewState:    statsState{from: statsFrom, to: statsTo},
 	}
 }
 
@@ -789,6 +804,22 @@ func (m Model) searchEntriesCmd(query string) tea.Cmd {
 			return errMsg{err}
 		}
 		return searchResultsMsg{results: results, query: query}
+	}
+}
+
+func (m Model) loadStatsCmd() tea.Cmd {
+	from := m.statsViewState.from
+	to := m.statsViewState.to
+	return func() tea.Msg {
+		if m.statsService == nil {
+			return errMsg{fmt.Errorf("stats service not available")}
+		}
+		ctx := context.Background()
+		stats, err := m.statsService.GetStats(ctx, from, to)
+		if err != nil {
+			return errMsg{err}
+		}
+		return statsLoadedMsg{stats}
 	}
 }
 

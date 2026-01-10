@@ -19,6 +19,7 @@ var tuiCmd = &cobra.Command{
 			ListService:    listService,
 			GoalService:    goalService,
 			SummaryService: summaryService,
+			StatsService:   statsService,
 		})
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
