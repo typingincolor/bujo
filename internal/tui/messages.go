@@ -95,3 +95,8 @@ type goalMovedMsg struct {
 type journalGoalsLoadedMsg struct {
 	goals []domain.Goal
 }
+
+type entryMigratedToGoalMsg struct {
+	entryID int64
+	goalID  int64
+}

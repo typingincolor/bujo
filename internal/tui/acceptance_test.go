@@ -3294,3 +3294,167 @@ func TestUAT_JournalView_ShowsGoalsSection(t *testing.T) {
 		t.Errorf("journal view should show '%s Goals' header", monthName)
 	}
 }
+
+func TestUAT_JournalView_MigrateTaskToGoal(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a task for today
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	opts := service.LogEntriesOptions{Date: today}
+	_, err := bujoSvc.LogEntries(ctx, ". Task to migrate", opts)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify task exists in journal
+	if len(model.entries) == 0 {
+		t.Fatal("expected at least one entry in journal")
+	}
+
+	// Press 'M' to migrate to goal
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'M'}}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// Should be in migrate to goal mode
+	if !model.migrateToGoalMode.active {
+		t.Fatal("pressing 'M' should activate migrate to goal mode")
+	}
+
+	// Type target month (next month)
+	nextMonth := today.AddDate(0, 1, 0)
+	targetMonthStr := nextMonth.Format("2006-01")
+	for _, r := range targetMonthStr {
+		charMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
+		newModel, _ = model.Update(charMsg)
+		model = newModel.(Model)
+	}
+
+	// Press Enter to confirm
+	msg = tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	// Should have exited migrate mode
+	if model.migrateToGoalMode.active {
+		t.Fatal("pressing Enter should deactivate migrate to goal mode")
+	}
+
+	// Execute the migrate command
+	if cmd == nil {
+		t.Fatal("should return a command to migrate the task")
+	}
+	migrateMsg := cmd()
+	newModel, cmd = model.Update(migrateMsg)
+	model = newModel.(Model)
+
+	// Process any reload commands
+	for cmd != nil {
+		reloadMsg := cmd()
+		newModel, cmd = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify task was removed from journal (soft deleted via event sourcing)
+	foundTask := false
+	for _, entry := range model.entries {
+		if entry.Entry.Content == "Task to migrate" {
+			foundTask = true
+			break
+		}
+	}
+	if foundTask {
+		t.Error("task should be removed from journal after migration")
+	}
+
+	// Verify goal was created in the target month
+	targetMonth := time.Date(nextMonth.Year(), nextMonth.Month(), 1, 0, 0, 0, 0, now.Location())
+	goals, err := goalSvc.GetGoalsForMonth(ctx, targetMonth)
+	if err != nil {
+		t.Fatalf("failed to get goals: %v", err)
+	}
+
+	if len(goals) != 1 {
+		t.Fatalf("expected 1 goal in target month, got %d", len(goals))
+	}
+
+	if goals[0].Content != "Task to migrate" {
+		t.Errorf("expected goal content 'Task to migrate', got '%s'", goals[0].Content)
+	}
+}
+
+func TestUAT_JournalView_MigrateToGoal_OnlyWorksOnIncompleteTasks(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a completed task
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	opts := service.LogEntriesOptions{Date: today}
+	ids, err := bujoSvc.LogEntries(ctx, ". Completed task", opts)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	// Mark it as done
+	err = bujoSvc.MarkDone(ctx, ids[0])
+	if err != nil {
+		t.Fatalf("failed to mark task done: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Press 'M' to try to migrate - should NOT activate migrate mode for done tasks
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'M'}}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// Should NOT be in migrate to goal mode for completed tasks
+	if model.migrateToGoalMode.active {
+		t.Error("migrate to goal should not activate for completed tasks")
+	}
+}

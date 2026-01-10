@@ -57,6 +57,7 @@ type Model struct {
 	editGoalMode           editGoalState
 	confirmGoalDeleteMode  confirmGoalDeleteState
 	moveGoalMode           moveGoalState
+	migrateToGoalMode      migrateToGoalState
 	commandPalette         commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
@@ -182,6 +183,13 @@ type moveGoalState struct {
 	input  textinput.Model
 }
 
+type migrateToGoalState struct {
+	active  bool
+	entryID int64
+	content string
+	input   textinput.Model
+}
+
 type commandPaletteState struct {
 	active      bool
 	query       string
@@ -237,6 +245,9 @@ func NewWithConfig(cfg Config) Model {
 	gotoInput := textinput.New()
 	gotoInput.Placeholder = "Enter date..."
 
+	migrateToGoalInput := textinput.New()
+	migrateToGoalInput.Placeholder = "Target month (YYYY-MM)..."
+
 	return Model{
 		bujoService:     cfg.BujoService,
 		habitService:    cfg.HabitService,
@@ -251,9 +262,10 @@ func NewWithConfig(cfg Config) Model {
 		draftPath:       DraftPath(),
 		editMode:        editState{input: editInput},
 		addMode:         addState{input: addInput},
-		migrateMode:     migrateState{input: migrateInput},
-		gotoMode:        gotoState{input: gotoInput},
-		goalState:       goalState{viewMonth: currentMonth},
+		migrateMode:       migrateState{input: migrateInput},
+		gotoMode:          gotoState{input: gotoInput},
+		goalState:         goalState{viewMonth: currentMonth},
+		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 	}
 }
 
@@ -651,6 +663,30 @@ func (m Model) toggleGoalCmd(goalID int64, isDone bool) tea.Cmd {
 			return errMsg{err}
 		}
 		return goalToggledMsg{goalID}
+	}
+}
+
+func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+
+		goalID, err := m.goalService.CreateGoal(ctx, content, targetMonth)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		err = m.bujoService.DeleteEntry(ctx, entryID)
+		if err != nil {
+			return errMsg{err}
+		}
+
+		return entryMigratedToGoalMsg{entryID: entryID, goalID: goalID}
 	}
 }
 

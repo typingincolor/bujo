@@ -125,6 +125,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case goalMovedMsg:
 		return m, m.loadGoalsCmd()
 
+	case entryMigratedToGoalMsg:
+		return m, m.loadAgendaCmd()
+
 	case tea.KeyMsg:
 		if m.err != nil {
 			m.err = nil
@@ -174,6 +177,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.moveGoalMode.active {
 			return m.handleMoveGoalMode(msg)
+		}
+		if m.migrateToGoalMode.active {
+			return m.handleMigrateToGoalMode(msg)
 		}
 
 		// Check for command palette activation
@@ -360,6 +366,27 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			entryID:  entry.ID,
 			fromDate: fromDate,
 			input:    ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.MigrateToGoal):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		if entry.Type != domain.EntryTypeTask {
+			return m, nil
+		}
+		ti := textinput.New()
+		ti.Placeholder = "Target month (YYYY-MM)"
+		ti.Focus()
+		ti.CharLimit = 7
+		ti.Width = m.width - 10
+		m.migrateToGoalMode = migrateToGoalState{
+			active:  true,
+			entryID: entry.ID,
+			content: entry.Content,
+			input:   ti,
 		}
 		return m, nil
 
@@ -1913,6 +1940,31 @@ func (m Model) handleMoveGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 	m.moveGoalMode.input, cmd = m.moveGoalMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleMigrateToGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.migrateToGoalMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		monthStr := strings.TrimSpace(m.migrateToGoalMode.input.Value())
+		targetMonth, err := time.Parse("2006-01", monthStr)
+		if err != nil {
+			m.migrateToGoalMode.active = false
+			m.err = fmt.Errorf("invalid month format, use YYYY-MM")
+			return m, nil
+		}
+		entryID := m.migrateToGoalMode.entryID
+		content := m.migrateToGoalMode.content
+		m.migrateToGoalMode.active = false
+		return m, m.migrateToGoalCmd(entryID, content, targetMonth)
+	}
+
+	var cmd tea.Cmd
+	m.migrateToGoalMode.input, cmd = m.migrateToGoalMode.input.Update(msg)
 	return m, cmd
 }
 

@@ -90,6 +90,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderMoveGoalInput())
 		sb.WriteString("\n")
+	} else if m.migrateToGoalMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMigrateToGoalInput())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
@@ -943,5 +947,15 @@ func (m Model) renderMoveGoalInput() string {
 	sb.WriteString("Move goal to month (YYYY-MM):\n")
 	sb.WriteString(m.moveGoalMode.input.View())
 	sb.WriteString("\n\nEnter to move, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderMigrateToGoalInput() string {
+	var sb strings.Builder
+	sb.WriteString("Convert task to goal:\n")
+	sb.WriteString(fmt.Sprintf("Task: %s\n\n", m.migrateToGoalMode.content))
+	sb.WriteString("Target month (YYYY-MM):\n")
+	sb.WriteString(m.migrateToGoalMode.input.View())
+	sb.WriteString("\n\nEnter to convert, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }
