@@ -864,7 +864,7 @@ func (m Model) renderSearchContent() string {
 func (m Model) renderStatsContent() string {
 	var sb strings.Builder
 
-	sb.WriteString("📊 Statistics\n\n")
+	sb.WriteString("📊 Statistics & AI Summary\n\n")
 
 	sb.WriteString("Summary of your productivity:\n\n")
 
@@ -874,8 +874,45 @@ func (m Model) renderStatsContent() string {
 	sb.WriteString(fmt.Sprintf("  Lists:            %d\n", len(m.listState.lists)))
 	sb.WriteString("\n")
 
-	sb.WriteString(HelpStyle.Render("Detailed statistics coming soon"))
-	sb.WriteString("\n\n")
+	// Horizon selector
+	horizonLabel := "Daily"
+	switch m.summaryState.horizon {
+	case "weekly":
+		horizonLabel = "Weekly"
+	case "quarterly":
+		horizonLabel = "Quarterly"
+	case "annual":
+		horizonLabel = "Annual"
+	}
+	sb.WriteString(fmt.Sprintf("AI Summary Mode: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
+	sb.WriteString(fmt.Sprintf("Viewing: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
+
+	// AI Summary section
+	if m.summaryService == nil {
+		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
+		sb.WriteString("\n\n")
+	} else if m.summaryState.loading {
+		sb.WriteString("⏳ Generating AI summary...\n\n")
+	} else if m.summaryState.error != nil {
+		sb.WriteString(fmt.Sprintf("❌ Error: %v\n\n", m.summaryState.error))
+		sb.WriteString(HelpStyle.Render("Press 'r' to retry"))
+		sb.WriteString("\n\n")
+	} else if m.summaryState.summary != nil {
+		sb.WriteString("🤖 AI Reflection:\n")
+		sb.WriteString(strings.Repeat("─", 50))
+		sb.WriteString("\n\n")
+		sb.WriteString(m.summaryState.summary.Content)
+		sb.WriteString("\n\n")
+		sb.WriteString(HelpStyle.Render(fmt.Sprintf("Period: %s to %s",
+			m.summaryState.summary.StartDate.Format("Jan 2, 2006"),
+			m.summaryState.summary.EndDate.Format("Jan 2, 2006"))))
+		sb.WriteString("\n\n")
+		sb.WriteString(HelpStyle.Render("Press 'r' to refresh"))
+		sb.WriteString("\n\n")
+	} else {
+		sb.WriteString(HelpStyle.Render("Press 'r' to generate AI summary"))
+		sb.WriteString("\n\n")
+	}
 
 	return sb.String()
 }
@@ -997,4 +1034,35 @@ func (m Model) renderMoveListItemModal() string {
 
 	sb.WriteString("\n1-9 or Enter to move, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) formatSummaryPeriod() string {
+	refDate := m.summaryState.refDate
+	switch m.summaryState.horizon {
+	case domain.SummaryHorizonDaily:
+		today := time.Now()
+		if refDate.Year() == today.Year() && refDate.YearDay() == today.YearDay() {
+			return "Today"
+		}
+		yesterday := today.AddDate(0, 0, -1)
+		if refDate.Year() == yesterday.Year() && refDate.YearDay() == yesterday.YearDay() {
+			return "Yesterday"
+		}
+		return refDate.Format("Mon, Jan 2")
+	case domain.SummaryHorizonWeekly:
+		weekday := int(refDate.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		monday := refDate.AddDate(0, 0, -(weekday - 1))
+		sunday := monday.AddDate(0, 0, 6)
+		return fmt.Sprintf("Week of %s - %s", monday.Format("Jan 2"), sunday.Format("Jan 2"))
+	case domain.SummaryHorizonQuarterly:
+		quarter := (refDate.Month()-1)/3 + 1
+		return fmt.Sprintf("Q%d %d", quarter, refDate.Year())
+	case domain.SummaryHorizonAnnual:
+		return fmt.Sprintf("Year %d", refDate.Year())
+	default:
+		return refDate.Format("Jan 2, 2006")
+	}
 }

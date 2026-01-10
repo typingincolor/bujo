@@ -15,3 +15,7 @@ coverage.out
 
 # Local database
 *.db
+
+# Environment files
+.env
+.env.local
