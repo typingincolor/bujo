@@ -38,6 +38,7 @@ type KeyMap struct {
 	LogHabit       key.Binding
 	DayLeft        key.Binding
 	DayRight       key.Binding
+	RemoveHabitLog key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -181,6 +182,10 @@ func DefaultKeyMap() KeyMap {
 		DayRight: key.NewBinding(
 			key.WithKeys("l", "right"),
 			key.WithHelp("l/→", "next day"),
+		),
+		RemoveHabitLog: key.NewBinding(
+			key.WithKeys("backspace", "delete"),
+			key.WithHelp("backspace", "remove"),
 		),
 	}
 }

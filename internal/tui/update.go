@@ -1792,6 +1792,25 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.RemoveHabitLog):
+		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
+			habit := m.habitState.habits[m.habitState.selectedIdx]
+			days := 7
+			if m.habitState.monthView {
+				days = 30
+			}
+			// Check if there are any occurrences to remove for this day
+			historyIdx := days - 1 - m.habitState.selectedDayIdx
+			if historyIdx >= 0 && historyIdx < len(habit.DayHistory) {
+				if habit.DayHistory[historyIdx].Count > 0 {
+					daysAgo := days - 1 - m.habitState.selectedDayIdx
+					logDate := time.Now().AddDate(0, 0, -daysAgo)
+					return m, m.removeHabitLogForDateCmd(habit.ID, logDate)
+				}
+			}
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.ToggleView):
 		m.habitState.monthView = !m.habitState.monthView
 		return m, nil
