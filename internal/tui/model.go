@@ -371,20 +371,6 @@ func (m Model) loadAgendaCmd() tea.Cmd {
 	}
 }
 
-func (m Model) logHabitCmd(habitID int64) tea.Cmd {
-	return func() tea.Msg {
-		if m.habitService == nil {
-			return errMsg{fmt.Errorf("habit service not available")}
-		}
-		ctx := context.Background()
-		err := m.habitService.LogHabitByID(ctx, habitID, 1)
-		if err != nil {
-			return errMsg{err}
-		}
-		return habitLoggedMsg{habitID}
-	}
-}
-
 func (m Model) logHabitForDateCmd(habitID int64, date time.Time) tea.Cmd {
 	return func() tea.Msg {
 		if m.habitService == nil {
