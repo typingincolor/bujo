@@ -102,6 +102,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case listItemDeletedMsg:
 		return m, m.loadListItemsCmd(msg.listID)
 
+	case listItemEditedMsg:
+		return m, m.loadListItemsCmd(msg.listID)
+
+	case listItemMovedMsg:
+		return m, m.loadListItemsCmd(msg.fromListID)
+
 	case goalsLoadedMsg:
 		m.goalState.goals = msg.goals
 		if m.goalState.selectedIdx >= len(m.goalState.goals) {
@@ -180,6 +186,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.migrateToGoalMode.active {
 			return m.handleMigrateToGoalMode(msg)
+		}
+		if m.moveListItemMode.active {
+			return m.handleMoveListItemMode(msg)
 		}
 
 		// Check for command palette activation
@@ -1362,6 +1371,9 @@ func (m Model) handleEditMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		entryID := m.editMode.entryID
 		newContent := m.editMode.input.Value()
 		m.editMode.active = false
+		if m.currentView == ViewTypeListItems {
+			return m, m.editListItemCmd(entryID, newContent)
+		}
 		return m, m.editEntryCmd(entryID, newContent)
 	}
 
@@ -2052,9 +2064,16 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Edit):
 		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
 			item := m.listState.items[m.listState.selectedItemIdx]
-			m.editMode.active = true
-			m.editMode.input.SetValue(item.Content)
-			m.editMode.input.Focus()
+			ti := textinput.New()
+			ti.SetValue(item.Content)
+			ti.Focus()
+			ti.CharLimit = 256
+			ti.Width = m.width - 10
+			m.editMode = editState{
+				active:  true,
+				entryID: item.RowID,
+				input:   ti,
+			}
 		}
 		return m, nil
 
@@ -2065,6 +2084,73 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.confirmMode.entryID = item.RowID
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.MoveListItem):
+		if len(m.listState.items) > 0 && m.listState.selectedItemIdx < len(m.listState.items) {
+			item := m.listState.items[m.listState.selectedItemIdx]
+			targetLists := make([]domain.List, 0, len(m.listState.lists)-1)
+			for _, list := range m.listState.lists {
+				if list.ID != m.listState.currentListID {
+					targetLists = append(targetLists, list)
+				}
+			}
+			if len(targetLists) > 0 {
+				m.moveListItemMode = moveListItemState{
+					active:      true,
+					itemID:      item.RowID,
+					targetLists: targetLists,
+					selectedIdx: 0,
+				}
+			}
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) handleMoveListItemMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.moveListItemMode.active = false
+		return m, nil
+
+	case tea.KeyUp:
+		if m.moveListItemMode.selectedIdx > 0 {
+			m.moveListItemMode.selectedIdx--
+		}
+		return m, nil
+
+	case tea.KeyDown:
+		if m.moveListItemMode.selectedIdx < len(m.moveListItemMode.targetLists)-1 {
+			m.moveListItemMode.selectedIdx++
+		}
+		return m, nil
+
+	case tea.KeyEnter:
+		if len(m.moveListItemMode.targetLists) > 0 && m.moveListItemMode.selectedIdx < len(m.moveListItemMode.targetLists) {
+			targetList := m.moveListItemMode.targetLists[m.moveListItemMode.selectedIdx]
+			itemID := m.moveListItemMode.itemID
+			fromListID := m.listState.currentListID
+			m.moveListItemMode.active = false
+			return m, m.moveListItemCmd(itemID, targetList.ID, fromListID)
+		}
+		return m, nil
+
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 {
+			r := msg.Runes[0]
+			if r >= '1' && r <= '9' {
+				idx := int(r - '1')
+				if idx < len(m.moveListItemMode.targetLists) {
+					targetList := m.moveListItemMode.targetLists[idx]
+					itemID := m.moveListItemMode.itemID
+					fromListID := m.listState.currentListID
+					m.moveListItemMode.active = false
+					return m, m.moveListItemCmd(itemID, targetList.ID, fromListID)
+				}
+			}
+		}
 	}
 
 	return m, nil

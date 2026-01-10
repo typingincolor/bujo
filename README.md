@@ -528,6 +528,61 @@ bujo list delete "#1"
 bujo list delete Shopping --force    # Delete with items
 ```
 
+### Monthly Goals
+
+Goals are higher-level objectives tracked by month. They help you plan longer-term and can be converted from tasks.
+
+#### `bujo goal`
+
+Show goals for the current month.
+
+```bash
+bujo goal                     # Current month's goals
+bujo goal --month 2026-02     # February 2026 goals
+```
+
+#### `bujo goal add <content>`
+
+Add a new goal to a month.
+
+```bash
+bujo goal add "Learn Go"
+bujo goal add "Read 12 books" --month 2026-02
+```
+
+#### `bujo goal done <#id>`
+
+Mark a goal as completed.
+
+```bash
+bujo goal done #1
+bujo goal done 1
+```
+
+#### `bujo goal undo <#id>`
+
+Mark a completed goal as active again.
+
+```bash
+bujo goal undo #1
+```
+
+#### `bujo goal move <#id> <YYYY-MM>`
+
+Move a goal to a different month.
+
+```bash
+bujo goal move #1 2026-02
+```
+
+#### `bujo goal delete <#id>`
+
+Delete a goal permanently.
+
+```bash
+bujo goal delete #1
+```
+
 ### Interactive TUI
 
 #### `bujo tui`
@@ -569,6 +624,38 @@ j/k: move  space: done  x: cancel  d: delete  q: quit  ?: help
 | `Ctrl+R` | Search reverse |
 | `?` | Toggle help |
 | `q` | Quit |
+
+**List Items View shortcuts:**
+
+When viewing items in a list (press `3` for lists, then `Enter` to view items):
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `Space` | Toggle done/undone |
+| `e` | Edit item content |
+| `a` | Add new item |
+| `M` | Move item to another list |
+| `d` | Delete item |
+| `Esc` | Return to lists view |
+
+**Goals View shortcuts:**
+
+Press `6` to view monthly goals:
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `Space` | Toggle done/undone |
+| `e` | Edit goal content |
+| `a` | Add new goal |
+| `m` | Move goal to different month |
+| `M` | Convert selected task to goal (in journal view) |
+| `d` | Delete goal |
+| `h` / `←` | Previous month |
+| `l` / `→` | Next month |
 
 #### Capture Mode
 

@@ -177,6 +177,16 @@ func (s *ListService) MoveItem(ctx context.Context, itemID int64, targetListID i
 	return s.listItemRepo.Update(ctx, *item)
 }
 
+func (s *ListService) EditItem(ctx context.Context, itemID int64, content string) error {
+	item, err := s.getItemByID(ctx, itemID)
+	if err != nil {
+		return err
+	}
+
+	item.Content = content
+	return s.listItemRepo.Update(ctx, *item)
+}
+
 type ListSummary struct {
 	ID         int64
 	Name       string

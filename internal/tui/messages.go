@@ -70,6 +70,15 @@ type listItemDeletedMsg struct {
 	listID int64
 }
 
+type listItemEditedMsg struct {
+	listID int64
+}
+
+type listItemMovedMsg struct {
+	fromListID int64
+	toListID   int64
+}
+
 type goalsLoadedMsg struct {
 	goals []domain.Goal
 }

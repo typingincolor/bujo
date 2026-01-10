@@ -52,6 +52,7 @@ type Model struct {
 	addHabitMode           addHabitState
 	confirmHabitDeleteMode confirmHabitDeleteState
 	listState              listState
+	moveListItemMode       moveListItemState
 	goalState              goalState
 	addGoalMode            addGoalState
 	editGoalMode           editGoalState
@@ -153,6 +154,13 @@ type listState struct {
 	selectedListIdx int
 	selectedItemIdx int
 	currentListID   int64
+}
+
+type moveListItemState struct {
+	active      bool
+	itemID      int64
+	targetLists []domain.List
+	selectedIdx int
 }
 
 type goalState struct {
@@ -572,6 +580,35 @@ func (m Model) deleteListItemCmd(itemID int64) tea.Cmd {
 			return errMsg{err}
 		}
 		return listItemDeletedMsg{listID}
+	}
+}
+
+func (m Model) editListItemCmd(itemID int64, content string) tea.Cmd {
+	listID := m.listState.currentListID
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		err := m.listService.EditItem(ctx, itemID, content)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemEditedMsg{listID}
+	}
+}
+
+func (m Model) moveListItemCmd(itemID int64, targetListID int64, fromListID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		err := m.listService.MoveItem(ctx, itemID, targetListID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemMovedMsg{fromListID: fromListID, toListID: targetListID}
 	}
 }
 

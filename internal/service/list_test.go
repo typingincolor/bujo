@@ -368,3 +368,53 @@ func TestListService_GetListSummary(t *testing.T) {
 	assert.Equal(t, 2, summary.TotalItems)
 	assert.Equal(t, 1, summary.DoneItems)
 }
+
+func TestListService_EditItem(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	itemID, err := svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
+	require.NoError(t, err)
+
+	err = svc.EditItem(ctx, itemID, "Oat Milk")
+	require.NoError(t, err)
+
+	items, err := svc.GetListItems(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Oat Milk", items[0].Content)
+}
+
+func TestListService_EditItem_NotFound(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	err := svc.EditItem(ctx, 99999, "New Content")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "item not found")
+}
+
+func TestListService_EditItem_PreservesType(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	itemID, err := svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
+	require.NoError(t, err)
+
+	err = svc.MarkDone(ctx, itemID)
+	require.NoError(t, err)
+
+	err = svc.EditItem(ctx, itemID, "Oat Milk")
+	require.NoError(t, err)
+
+	items, err := svc.GetListItems(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Oat Milk", items[0].Content)
+	assert.Equal(t, domain.ListItemTypeDone, items[0].Type)
+}

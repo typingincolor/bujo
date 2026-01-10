@@ -94,6 +94,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderMigrateToGoalInput())
 		sb.WriteString("\n")
+	} else if m.moveListItemMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMoveListItemModal())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
@@ -957,5 +961,26 @@ func (m Model) renderMigrateToGoalInput() string {
 	sb.WriteString("Target month (YYYY-MM):\n")
 	sb.WriteString(m.migrateToGoalMode.input.View())
 	sb.WriteString("\n\nEnter to convert, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderMoveListItemModal() string {
+	var sb strings.Builder
+	sb.WriteString("Move item to list:\n\n")
+
+	for i, list := range m.moveListItemMode.targetLists {
+		prefix := "  "
+		if i == m.moveListItemMode.selectedIdx {
+			prefix = "> "
+		}
+		num := i + 1
+		if num <= 9 {
+			sb.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, num, list.Name))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s   %s\n", prefix, list.Name))
+		}
+	}
+
+	sb.WriteString("\n1-9 or Enter to move, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }

@@ -1122,7 +1122,8 @@ func TestUAT_ListItemsView_EditItem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create list: %v", err)
 	}
-	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+	itemID, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk")
+	if err != nil {
 		t.Fatalf("failed to add item: %v", err)
 	}
 
@@ -1158,6 +1159,168 @@ func TestUAT_ListItemsView_EditItem(t *testing.T) {
 
 	if !m.editMode.active {
 		t.Error("'e' should activate edit mode in list items view")
+	}
+
+	if m.editMode.entryID != itemID {
+		t.Errorf("editMode.entryID should be %d, got %d", itemID, m.editMode.entryID)
+	}
+
+	if m.editMode.input.Value() != "Buy milk" {
+		t.Errorf("editMode.input should contain 'Buy milk', got '%s'", m.editMode.input.Value())
+	}
+}
+
+func TestUAT_ListItemsView_EditItem_PersistsChange(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	list, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'e' to edit
+	eMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
+	newModel, _ = model.Update(eMsg)
+	model = newModel.(Model)
+
+	// Type new content
+	model.editMode.input.SetValue("Buy oat milk")
+
+	// Press Enter to confirm
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		editMsg := cmd()
+		newModel, cmd = model.Update(editMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			reloadMsg := cmd()
+			newModel, _ = model.Update(reloadMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify the item was updated
+	items, err := listSvc.GetListItems(ctx, list.ID)
+	if err != nil {
+		t.Fatalf("failed to get list items: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+	if items[0].Content != "Buy oat milk" {
+		t.Errorf("item content should be 'Buy oat milk', got '%s'", items[0].Content)
+	}
+}
+
+func TestUAT_ListItemsView_MoveItem(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	list1, err := listSvc.CreateList(ctx, "Shopping")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	list2, err := listSvc.CreateList(ctx, "Work")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+	if _, err := listSvc.AddItem(ctx, list1.ID, domain.EntryTypeTask, "Buy milk"); err != nil {
+		t.Fatalf("failed to add item: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to list items (Shopping list)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg = cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'M' to move item
+	shiftMMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'M'}}
+	newModel, _ = model.Update(shiftMMsg)
+	model = newModel.(Model)
+
+	if !model.moveListItemMode.active {
+		t.Error("'M' should activate move list item mode")
+	}
+
+	// Press '1' to select Work list (first in target list since Shopping is filtered out)
+	oneMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'1'}}
+	newModel, cmd = model.Update(oneMsg)
+	model = newModel.(Model)
+
+	// Process the move command
+	if cmd != nil {
+		moveMsg := cmd()
+		newModel, cmd = model.Update(moveMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			reloadMsg := cmd()
+			newModel, _ = model.Update(reloadMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify item was moved
+	items1, _ := listSvc.GetListItems(ctx, list1.ID)
+	items2, _ := listSvc.GetListItems(ctx, list2.ID)
+
+	if len(items1) != 0 {
+		t.Errorf("Shopping list should be empty, has %d items", len(items1))
+	}
+	if len(items2) != 1 {
+		t.Errorf("Work list should have 1 item, has %d items", len(items2))
+	}
+	if len(items2) == 1 && items2[0].Content != "Buy milk" {
+		t.Errorf("Work list item should be 'Buy milk', got '%s'", items2[0].Content)
 	}
 }
 
