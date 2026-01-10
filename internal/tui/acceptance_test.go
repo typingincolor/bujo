@@ -3621,3 +3621,254 @@ func TestUAT_JournalView_MigrateToGoal_OnlyWorksOnIncompleteTasks(t *testing.T) 
 		t.Error("migrate to goal should not activate for completed tasks")
 	}
 }
+
+// =============================================================================
+// UAT Section 14: Collapse/Expand Parent Entries
+// =============================================================================
+
+func TestUAT_Collapse_EnterTogglesCollapseState(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent entry with child
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	ids, err := bujoSvc.LogEntries(ctx, ". Parent task\n  . Child task", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+	if len(ids) < 2 {
+		t.Fatalf("expected at least 2 entries created, got %d", len(ids))
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Verify initial state - parent should be collapsed by default (only 1 visible)
+	if len(model.entries) != 1 {
+		t.Fatalf("expected 1 visible entry (collapsed parent), got %d", len(model.entries))
+	}
+
+	// Select parent entry
+	model.selectedIdx = 0
+	parentEntry := model.entries[0].Entry
+
+	// Press Enter to expand
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// After expanding, should see 2 entries (parent + child)
+	if len(model.entries) != 2 {
+		t.Errorf("after expanding, expected 2 entries, got %d", len(model.entries))
+	}
+
+	// Parent should now be expanded (not collapsed)
+	if model.collapsed[parentEntry.EntityID] {
+		t.Error("after pressing Enter, parent should be expanded (not collapsed)")
+	}
+
+	// Press Enter again to collapse
+	newModel, _ = model.Update(msg)
+	model = newModel.(Model)
+
+	// After collapsing, should see only 1 entry
+	if len(model.entries) != 1 {
+		t.Errorf("after collapsing, expected 1 entry, got %d", len(model.entries))
+	}
+
+	// Parent should now be collapsed
+	if !model.collapsed[parentEntry.EntityID] {
+		t.Error("after pressing Enter again, parent should be collapsed")
+	}
+}
+
+func TestUAT_Collapse_DefaultCollapsedState(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent entry with children
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent task\n  . Child 1\n  . Child 2", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// All parents should start collapsed by default
+	// So we should only see 1 entry (the parent), not all 3
+	if len(model.entries) != 1 {
+		t.Errorf("expected 1 visible entry (collapsed parent), got %d", len(model.entries))
+	}
+}
+
+func TestUAT_Collapse_ShowsHiddenCount(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent entry with 3 children
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent task\n  . Child 1\n  . Child 2\n  . Child 3", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	view := model.View()
+
+	// Should show collapse indicator with hidden count
+	if !strings.Contains(view, "▶") {
+		t.Error("collapsed parent should show ▶ indicator")
+	}
+	if !strings.Contains(view, "[3 hidden]") {
+		t.Error("collapsed parent should show hidden count [3 hidden]")
+	}
+}
+
+func TestUAT_Collapse_ExpandedShowsDownArrow(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent entry with child
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent task\n  . Child task", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Press Enter to expand
+	model.selectedIdx = 0
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	view := model.View()
+
+	// Should show expanded indicator
+	if !strings.Contains(view, "▼") {
+		t.Error("expanded parent should show ▼ indicator")
+	}
+}
+
+func TestUAT_Collapse_LeafEntryNoIndicator(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a standalone entry with no children
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Single task", opts)
+	if err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	view := model.View()
+
+	// Leaf entries should NOT show collapse indicators
+	if strings.Contains(view, "▶") || strings.Contains(view, "▼") {
+		t.Error("leaf entry (no children) should not show collapse indicator")
+	}
+}

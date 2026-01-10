@@ -35,6 +35,7 @@ type Model struct {
 	agenda          *service.MultiDayAgenda
 	journalGoals    []domain.Goal
 	entries         []EntryItem
+	collapsed       map[domain.EntityID]bool
 	selectedIdx     int
 	scrollOffset    int
 	viewMode        ViewMode
@@ -226,10 +227,12 @@ const (
 )
 
 type EntryItem struct {
-	Entry     domain.Entry
-	DayHeader string
-	IsOverdue bool
-	Indent    int
+	Entry            domain.Entry
+	DayHeader        string
+	IsOverdue        bool
+	Indent           int
+	HasChildren      bool
+	HiddenChildCount int
 }
 
 func New(bujoSvc *service.BujoService) Model {
@@ -261,6 +264,7 @@ func NewWithConfig(cfg Config) Model {
 		habitService:    cfg.HabitService,
 		listService:     cfg.ListService,
 		goalService:     cfg.GoalService,
+		collapsed:       make(map[domain.EntityID]bool),
 		viewMode:        ViewModeDay,
 		viewDate:        today,
 		currentView:     ViewTypeJournal,
@@ -779,22 +783,48 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 		}
 	}
 
+	var countDescendants func(entryID int64) int
+	countDescendants = func(entryID int64) int {
+		children := parentMap[entryID]
+		count := len(children)
+		for _, child := range children {
+			count += countDescendants(child.ID)
+		}
+		return count
+	}
+
 	var flatten func(entry domain.Entry, depth int, showHeader bool)
 	flatten = func(entry domain.Entry, depth int, showHeader bool) {
-		// Check if entry is overdue: either forced (in OVERDUE section) or per-entry check
+		children := parentMap[entry.ID]
+		hasChildren := len(children) > 0
+
+		isCollapsed, hasCollapseState := m.collapsed[entry.EntityID]
+		if !hasCollapseState && hasChildren {
+			isCollapsed = true
+		}
+
+		hiddenCount := 0
+		if isCollapsed && hasChildren {
+			hiddenCount = countDescendants(entry.ID)
+		}
+
 		entryIsOverdue := forceOverdue || entry.IsOverdue(today)
 		item := EntryItem{
-			Entry:     entry,
-			IsOverdue: entryIsOverdue,
-			Indent:    depth,
+			Entry:            entry,
+			IsOverdue:        entryIsOverdue,
+			Indent:           depth,
+			HasChildren:      hasChildren,
+			HiddenChildCount: hiddenCount,
 		}
 		if showHeader {
 			item.DayHeader = header
 		}
 		items = append(items, item)
 
-		for _, child := range parentMap[entry.ID] {
-			flatten(child, depth+1, false)
+		if !isCollapsed {
+			for _, child := range children {
+				flatten(child, depth+1, false)
+			}
 		}
 	}
 
