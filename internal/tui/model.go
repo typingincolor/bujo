@@ -147,10 +147,11 @@ type captureState struct {
 }
 
 type habitState struct {
-	habits         []service.HabitStatus
-	selectedIdx    int
-	selectedDayIdx int
-	monthView      bool
+	habits           []service.HabitStatus
+	selectedIdx      int
+	selectedDayIdx   int
+	dayIdxInited     bool
+	monthView        bool
 }
 
 type addHabitState struct {
@@ -494,6 +495,20 @@ func (m Model) logHabitForDateCmd(habitID int64, date time.Time) tea.Cmd {
 			return errMsg{err}
 		}
 		return habitLoggedMsg{habitID}
+	}
+}
+
+func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
+	return func() tea.Msg {
+		if m.habitService == nil {
+			return errMsg{fmt.Errorf("habit service not available")}
+		}
+		ctx := context.Background()
+		err := m.habitService.RemoveHabitLogForDateByID(ctx, habitID, date)
+		if err != nil {
+			return errMsg{err}
+		}
+		return habitLogRemovedMsg{habitID}
 	}
 }
 

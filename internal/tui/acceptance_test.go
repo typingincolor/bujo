@@ -3872,3 +3872,72 @@ func TestUAT_Collapse_LeafEntryNoIndicator(t *testing.T) {
 		t.Error("leaf entry (no children) should not show collapse indicator")
 	}
 }
+
+func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a habit with 2 logs for today
+	if err := habitSvc.LogHabit(ctx, "Exercise", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+	if err := habitSvc.LogHabit(ctx, "Exercise", 1); err != nil {
+		t.Fatalf("failed to log habit: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to habits view and load
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	loadMsg := cmd()
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Navigate to rightmost day (today) - selectedDayIdx should be days-1
+	days := 7
+	model.habitState.selectedDayIdx = days - 1
+
+	if len(model.habitState.habits) == 0 {
+		t.Fatal("should have habits")
+	}
+
+	initialCount := model.habitState.habits[0].TodayCount
+	if initialCount != 2 {
+		t.Fatalf("expected 2 logs for today, got %d", initialCount)
+	}
+
+	// Press Backspace to remove one occurrence
+	msg = tea.KeyMsg{Type: tea.KeyBackspace}
+	newModel, cmd = model.Update(msg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("removing habit log should return a command")
+	}
+
+	// Process the remove message
+	removeMsg := cmd()
+	newModel, cmd = model.Update(removeMsg)
+	model = newModel.(Model)
+
+	// Process reload command
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify count decreased by 1
+	newCount := model.habitState.habits[0].TodayCount
+	if newCount != initialCount-1 {
+		t.Errorf("today's count should decrease from %d to %d, got %d", initialCount, initialCount-1, newCount)
+	}
+}

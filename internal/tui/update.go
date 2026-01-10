@@ -61,15 +61,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.habitState.selectedIdx >= len(m.habitState.habits) {
 			m.habitState.selectedIdx = 0
 		}
-		// Initialize selected day to today (rightmost in 7-day view)
-		days := 7
-		if m.habitState.monthView {
-			days = 30
+		// Initialize selected day to today only on first load
+		if !m.habitState.dayIdxInited {
+			days := 7
+			if m.habitState.monthView {
+				days = 30
+			}
+			m.habitState.selectedDayIdx = days - 1
+			m.habitState.dayIdxInited = true
 		}
-		m.habitState.selectedDayIdx = days - 1
 		return m, nil
 
 	case habitLoggedMsg:
+		return m, m.loadHabitsCmd()
+
+	case habitLogRemovedMsg:
 		return m, m.loadHabitsCmd()
 
 	case habitAddedMsg:
@@ -1789,6 +1795,18 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if m.habitState.selectedDayIdx < days-1 {
 			m.habitState.selectedDayIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.RemoveHabitLog):
+		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
+			days := 7
+			if m.habitState.monthView {
+				days = 30
+			}
+			daysAgo := days - 1 - m.habitState.selectedDayIdx
+			removeDate := time.Now().AddDate(0, 0, -daysAgo)
+			return m, m.removeHabitLogForDateCmd(m.habitState.habits[m.habitState.selectedIdx].ID, removeDate)
 		}
 		return m, nil
 

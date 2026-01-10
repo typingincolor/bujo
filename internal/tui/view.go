@@ -98,12 +98,37 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderMoveListItemModal())
 		sb.WriteString("\n")
+	} else if m.addHabitMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAddHabitInput())
+		sb.WriteString("\n")
+	} else if m.confirmHabitDeleteMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderConfirmHabitDeleteDialog())
+		sb.WriteString("\n")
 	}
 
 	sb.WriteString("\n")
-	sb.WriteString(HelpStyle.Render(m.help.View(m.keyMap)))
+	sb.WriteString(HelpStyle.Render(m.renderContextHelp()))
 
 	return sb.String()
+}
+
+func (m Model) renderContextHelp() string {
+	switch m.currentView {
+	case ViewTypeHabits:
+		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  q: quit"
+	case ViewTypeLists, ViewTypeListItems:
+		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+	case ViewTypeGoals:
+		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+	case ViewTypeSearch:
+		return "j/k: navigate  /: search  q: quit"
+	case ViewTypeStats:
+		return "q: quit"
+	default:
+		return m.help.View(m.keyMap)
+	}
 }
 
 func (m Model) renderJournalContent() string {
@@ -288,21 +313,23 @@ func (m Model) renderSparkline(history []service.DayStatus, isSelected bool) str
 	days := len(history)
 
 	// History is ordered [0]=today, [1]=yesterday, etc.
-	// We want to display oldest first, so reverse
+	// Display oldest (left) to today (right) to match day labels
+	// Loop from oldest to today for correct visual order
 	for i := days - 1; i >= 0; i-- {
-		dayIdx := days - 1 - i // Convert display index to history index
-		if i < len(history) {
-			day := history[dayIdx]
-			char := "○"
-			if day.Completed {
-				char = "●"
-			}
-			// Highlight selected day
-			if isSelected && i == m.habitState.selectedDayIdx {
-				char = "[" + char + "]"
-			}
-			parts = append(parts, char)
+		day := history[i]
+		// displayPos is 0 for leftmost (oldest), days-1 for rightmost (today)
+		displayPos := days - 1 - i
+		selected := isSelected && displayPos == m.habitState.selectedDayIdx
+
+		char := "○"
+		if day.Completed {
+			char = "●"
 		}
+
+		if selected {
+			char = HabitSelectedStyle.Render(char)
+		}
+		parts = append(parts, char)
 	}
 	return strings.Join(parts, " ")
 }
@@ -447,6 +474,30 @@ func (m Model) renderConfirmDialog() string {
 
   y - Yes, delete all
   n - No, cancel`
+
+	return ConfirmStyle.Render(dialog)
+}
+
+func (m Model) renderAddHabitInput() string {
+	var sb strings.Builder
+	sb.WriteString("Add habit:\n")
+	sb.WriteString(m.addHabitMode.input.View())
+	sb.WriteString("\n\nEnter to add, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderConfirmHabitDeleteDialog() string {
+	habitName := ""
+	for _, h := range m.habitState.habits {
+		if h.ID == m.confirmHabitDeleteMode.habitID {
+			habitName = h.Name
+			break
+		}
+	}
+	dialog := fmt.Sprintf(`Delete habit "%s"?
+
+  y - Yes, delete
+  n - No, cancel`, habitName)
 
 	return ConfirmStyle.Render(dialog)
 }

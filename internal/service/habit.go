@@ -151,6 +151,35 @@ func (s *HabitService) DeleteLog(ctx context.Context, logID int64) error {
 	return s.logRepo.Delete(ctx, logID)
 }
 
+func (s *HabitService) RemoveHabitLogForDateByID(ctx context.Context, habitID int64, date time.Time) error {
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
+		return err
+	}
+
+	dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	dayEnd := dayStart.AddDate(0, 0, 1)
+
+	logs, err := s.logRepo.GetRange(ctx, habit.ID, dayStart, dayEnd)
+	if err != nil {
+		return err
+	}
+
+	dayLogs := domain.GetLogsForDay(logs, date)
+	if len(dayLogs) == 0 {
+		return fmt.Errorf("no logs to remove for this date")
+	}
+
+	latestLog := dayLogs[0]
+	for _, log := range dayLogs[1:] {
+		if log.LoggedAt.After(latestLog.LoggedAt) {
+			latestLog = log
+		}
+	}
+
+	return s.logRepo.Delete(ctx, latestLog.ID)
+}
+
 func (s *HabitService) DeleteHabit(ctx context.Context, name string) error {
 	habit, err := s.getHabitByName(ctx, name)
 	if err != nil {

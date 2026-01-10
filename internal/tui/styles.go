@@ -68,4 +68,7 @@ var (
 	SearchHighlightStyle = lipgloss.NewStyle().
 				Background(YellowColor).
 				Foreground(lipgloss.Color("0"))
+
+	HabitSelectedStyle = lipgloss.NewStyle().
+			       Reverse(true)
 )
