@@ -237,17 +237,21 @@ func TestModel_FlattenAgenda_WithDays(t *testing.T) {
 func TestModel_FlattenAgenda_WithHierarchy(t *testing.T) {
 	model := New(nil)
 	parentID := int64(1)
+	parentEntityID := domain.EntityID("parent-entity-1")
 	agenda := &service.MultiDayAgenda{
 		Days: []service.DayEntries{
 			{
 				Date: time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
 				Entries: []domain.Entry{
-					{ID: 1, Content: "Parent", Type: domain.EntryTypeTask, ParentID: nil},
+					{ID: 1, EntityID: parentEntityID, Content: "Parent", Type: domain.EntryTypeTask, ParentID: nil},
 					{ID: 2, Content: "Child", Type: domain.EntryTypeNote, ParentID: &parentID},
 				},
 			},
 		},
 	}
+
+	// Expand the parent so we can test hierarchy
+	model.collapsed[parentEntityID] = false
 
 	result := model.flattenAgenda(agenda)
 

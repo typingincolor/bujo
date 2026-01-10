@@ -402,15 +402,29 @@ func (m Model) renderEntry(item EntryItem) string {
 	entry := item.Entry
 	indent := strings.Repeat("  ", item.Indent)
 
+	collapseIndicator := ""
+	if item.HasChildren {
+		if item.HiddenChildCount > 0 {
+			collapseIndicator = "▶ "
+		} else {
+			collapseIndicator = "▼ "
+		}
+	}
+
 	symbol := entry.Type.Symbol()
 	prioritySymbol := entry.Priority.Symbol()
 	content := entry.Content
 
+	hiddenSuffix := ""
+	if item.HiddenChildCount > 0 {
+		hiddenSuffix = fmt.Sprintf(" [%d hidden]", item.HiddenChildCount)
+	}
+
 	var base string
 	if prioritySymbol != "" {
-		base = fmt.Sprintf("%s%s %s %s", indent, symbol, prioritySymbol, content)
+		base = fmt.Sprintf("%s%s%s %s %s%s", indent, collapseIndicator, symbol, prioritySymbol, content, hiddenSuffix)
 	} else {
-		base = fmt.Sprintf("%s%s %s", indent, symbol, content)
+		base = fmt.Sprintf("%s%s%s %s%s", indent, collapseIndicator, symbol, content, hiddenSuffix)
 	}
 
 	switch entry.Type {

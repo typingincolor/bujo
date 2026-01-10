@@ -250,6 +250,23 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case msg.Type == tea.KeyEnter:
+		if len(m.entries) > 0 {
+			item := m.entries[m.selectedIdx]
+			if item.HasChildren {
+				entityID := item.Entry.EntityID
+				_, hasState := m.collapsed[entityID]
+				if hasState {
+					m.collapsed[entityID] = !m.collapsed[entityID]
+				} else {
+					m.collapsed[entityID] = false
+				}
+				m.entries = m.flattenAgenda(m.agenda)
+				return m.ensuredVisible(), nil
+			}
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()
 
