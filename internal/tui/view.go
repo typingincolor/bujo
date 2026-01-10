@@ -36,6 +36,8 @@ func (m Model) View() string {
 		sb.WriteString(m.renderSearchContent())
 	case ViewTypeStats:
 		sb.WriteString(m.renderStatsContent())
+	case ViewTypeGoals:
+		sb.WriteString(m.renderGoalsContent())
 	case ViewTypeSettings:
 		sb.WriteString(m.renderSettingsContent())
 	default:
@@ -194,6 +196,20 @@ func (m Model) renderHabitsContent() string {
 
 		sb.WriteString(line)
 		sb.WriteString("\n")
+
+		// Show weekly/monthly progress if goals are set
+		if habit.GoalPerWeek > 0 || habit.GoalPerMonth > 0 {
+			var progressParts []string
+			if habit.GoalPerWeek > 0 {
+				progressParts = append(progressParts, fmt.Sprintf("Week: %.0f%%", habit.WeeklyProgress))
+			}
+			if habit.GoalPerMonth > 0 {
+				progressParts = append(progressParts, fmt.Sprintf("Month: %.0f%%", habit.MonthlyProgress))
+			}
+			progressLine := HelpStyle.Render("                     " + strings.Join(progressParts, "  "))
+			sb.WriteString(progressLine)
+			sb.WriteString("\n")
+		}
 	}
 
 	sb.WriteString("\n")
@@ -416,6 +432,14 @@ func (m Model) renderToolbar() string {
 		viewTypeStr = "Lists"
 	case ViewTypeListItems:
 		viewTypeStr = "List Items"
+	case ViewTypeGoals:
+		viewTypeStr = "Goals"
+	case ViewTypeSearch:
+		viewTypeStr = "Search"
+	case ViewTypeStats:
+		viewTypeStr = "Stats"
+	case ViewTypeSettings:
+		viewTypeStr = "Settings"
 	default:
 		viewTypeStr = "Journal"
 	}
@@ -745,6 +769,44 @@ func (m Model) renderStatsContent() string {
 	sb.WriteString("\n")
 
 	sb.WriteString(HelpStyle.Render("Detailed statistics coming soon"))
+	sb.WriteString("\n\n")
+
+	return sb.String()
+}
+
+func (m Model) renderGoalsContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("🎯 Monthly Goals\n\n")
+
+	if len(m.goalState.goals) == 0 {
+		sb.WriteString(HelpStyle.Render("No goals for this month. Use 'bujo goal add <content>' to create one."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for i, goal := range m.goalState.goals {
+		status := "  "
+		if goal.IsDone() {
+			status = "✓ "
+		}
+
+		line := fmt.Sprintf("%s#%-3d %s", status, goal.ID, goal.Content)
+
+		if goal.IsDone() {
+			line = DoneStyle.Render(line)
+		}
+
+		if i == m.goalState.selectedIdx {
+			line = SelectedStyle.Render(line)
+		}
+
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render("space: toggle done • j/k: navigate"))
 	sb.WriteString("\n\n")
 
 	return sb.String()

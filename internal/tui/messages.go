@@ -53,3 +53,19 @@ type listItemsLoadedMsg struct {
 type listItemToggledMsg struct {
 	itemID int64
 }
+
+type listItemAddedMsg struct {
+	listID int64
+}
+
+type listItemDeletedMsg struct {
+	listID int64
+}
+
+type goalsLoadedMsg struct {
+	goals []domain.Goal
+}
+
+type goalToggledMsg struct {
+	goalID int64
+}

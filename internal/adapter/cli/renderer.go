@@ -319,18 +319,36 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 	var sb strings.Builder
 
 	// Header
-	sb.WriteString(fmt.Sprintf("📋 %s\n", Cyan(Bold(details.Name))))
+	sb.WriteString(fmt.Sprintf("%s\n", Cyan(Bold(details.Name))))
 
-	// Stats line
+	// Streak
 	streakColor := Green
 	if details.CurrentStreak == 0 {
 		streakColor = Red
 	}
-	sb.WriteString(fmt.Sprintf("Streak: %s | Goal: %d/day\n\n",
-		streakColor(fmt.Sprintf("%d days", details.CurrentStreak)),
-		details.GoalPerDay))
+	sb.WriteString(fmt.Sprintf("Streak: %s\n", streakColor(fmt.Sprintf("%d days", details.CurrentStreak))))
+
+	// Goals section
+	sb.WriteString("\nGoals:\n")
+	if details.GoalPerDay > 0 {
+		sb.WriteString(fmt.Sprintf("  Daily:   %d/day\n", details.GoalPerDay))
+	}
+	if details.GoalPerWeek > 0 {
+		sb.WriteString(fmt.Sprintf("  Weekly:  %d/week  %s\n",
+			details.GoalPerWeek,
+			formatProgress(details.WeeklyProgress)))
+	}
+	if details.GoalPerMonth > 0 {
+		sb.WriteString(fmt.Sprintf("  Monthly: %d/month %s\n",
+			details.GoalPerMonth,
+			formatProgress(details.MonthlyProgress)))
+	}
+	if details.GoalPerDay == 0 && details.GoalPerWeek == 0 && details.GoalPerMonth == 0 {
+		sb.WriteString(Dimmed("  No goals set\n"))
+	}
 
 	// Logs table
+	sb.WriteString("\n")
 	if len(details.Logs) == 0 {
 		sb.WriteString(Dimmed("No logs in this period\n"))
 	} else {
@@ -347,4 +365,14 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 	sb.WriteString(fmt.Sprintf("\n%s %d\n", Dimmed("Habit ID:"), details.ID))
 
 	return sb.String()
+}
+
+func formatProgress(progress float64) string {
+	text := fmt.Sprintf("%.0f%%", progress)
+	if progress >= 100 {
+		return Green(text)
+	} else if progress >= 50 {
+		return Yellow(text)
+	}
+	return Red(text)
 }

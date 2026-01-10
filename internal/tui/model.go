@@ -23,6 +23,7 @@ type Config struct {
 	BujoService  *service.BujoService
 	HabitService *service.HabitService
 	ListService  *service.ListService
+	GoalService  *service.GoalService
 	Theme        string
 }
 
@@ -30,6 +31,7 @@ type Model struct {
 	bujoService     *service.BujoService
 	habitService    *service.HabitService
 	listService     *service.ListService
+	goalService     *service.GoalService
 	agenda          *service.MultiDayAgenda
 	entries         []EntryItem
 	selectedIdx     int
@@ -47,6 +49,7 @@ type Model struct {
 	retypeMode      retypeState
 	habitState      habitState
 	listState       listState
+	goalState       goalState
 	commandPalette  commandPaletteState
 	commandRegistry *CommandRegistry
 	help            help.Model
@@ -133,6 +136,11 @@ type listState struct {
 	currentListID   int64
 }
 
+type goalState struct {
+	goals       []domain.Goal
+	selectedIdx int
+}
+
 type commandPaletteState struct {
 	active      bool
 	query       string
@@ -156,6 +164,7 @@ const (
 	ViewTypeListItems
 	ViewTypeSearch
 	ViewTypeStats
+	ViewTypeGoals
 	ViewTypeSettings
 )
 
@@ -190,6 +199,7 @@ func NewWithConfig(cfg Config) Model {
 		bujoService:     cfg.BujoService,
 		habitService:    cfg.HabitService,
 		listService:     cfg.ListService,
+		goalService:     cfg.GoalService,
 		viewMode:        ViewModeDay,
 		viewDate:        today,
 		currentView:     ViewTypeJournal,
@@ -433,6 +443,69 @@ func (m Model) toggleListItemCmd(item domain.ListItem) tea.Cmd {
 			return errMsg{err}
 		}
 		return listItemToggledMsg{item.RowID}
+	}
+}
+
+func (m Model) addListItemCmd(content string) tea.Cmd {
+	listID := m.listState.currentListID
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		_, err := m.listService.AddItem(ctx, listID, domain.EntryTypeTask, content)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemAddedMsg{listID}
+	}
+}
+
+func (m Model) deleteListItemCmd(itemID int64) tea.Cmd {
+	listID := m.listState.currentListID
+	return func() tea.Msg {
+		if m.listService == nil {
+			return errMsg{fmt.Errorf("list service not available")}
+		}
+		ctx := context.Background()
+		err := m.listService.RemoveItem(ctx, itemID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return listItemDeletedMsg{listID}
+	}
+}
+
+func (m Model) loadGoalsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		goals, err := m.goalService.GetCurrentMonthGoals(ctx)
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalsLoadedMsg{goals}
+	}
+}
+
+func (m Model) toggleGoalCmd(goalID int64, isDone bool) tea.Cmd {
+	return func() tea.Msg {
+		if m.goalService == nil {
+			return errMsg{fmt.Errorf("goal service not available")}
+		}
+		ctx := context.Background()
+		var err error
+		if isDone {
+			err = m.goalService.MarkActive(ctx, goalID)
+		} else {
+			err = m.goalService.MarkDone(ctx, goalID)
+		}
+		if err != nil {
+			return errMsg{err}
+		}
+		return goalToggledMsg{goalID}
 	}
 }
 

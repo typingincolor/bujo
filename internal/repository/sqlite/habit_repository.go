@@ -25,9 +25,9 @@ func (r *HabitRepository) Insert(ctx context.Context, habit domain.Habit) (int64
 	now := time.Now().Format(time.RFC3339)
 
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO habits (name, goal_per_day, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, habit.Name, habit.GoalPerDay, habit.CreatedAt.Format(time.RFC3339),
+		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, habit.Name, habit.GoalPerDay, habit.GoalPerWeek, habit.GoalPerMonth, habit.CreatedAt.Format(time.RFC3339),
 		entityID.String(), 1, now, domain.OpTypeInsert.String())
 
 	if err != nil {
@@ -52,7 +52,7 @@ func (r *HabitRepository) GetByID(ctx context.Context, id int64) (*domain.Habit,
 
 	// Then get the current version for that entity
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, goal_per_day, created_at, entity_id
+		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
 		FROM habits WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 	`, entityID)
 
@@ -61,7 +61,7 @@ func (r *HabitRepository) GetByID(ctx context.Context, id int64) (*domain.Habit,
 
 func (r *HabitRepository) GetByName(ctx context.Context, name string) (*domain.Habit, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, name, goal_per_day, created_at, entity_id
+		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
 		FROM habits WHERE name = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 	`, name)
 
@@ -95,7 +95,7 @@ func (r *HabitRepository) GetOrCreate(ctx context.Context, name string, goalPerD
 
 func (r *HabitRepository) GetAll(ctx context.Context) ([]domain.Habit, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, goal_per_day, created_at, entity_id
+		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
 		FROM habits WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY name
 	`)
@@ -110,7 +110,7 @@ func (r *HabitRepository) GetAll(ctx context.Context) ([]domain.Habit, error) {
 		var createdAt string
 		var entityID sql.NullString
 
-		err := rows.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &createdAt, &entityID)
+		err := rows.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &habit.GoalPerWeek, &habit.GoalPerMonth, &createdAt, &entityID)
 		if err != nil {
 			return nil, err
 		}
@@ -161,9 +161,9 @@ func (r *HabitRepository) Update(ctx context.Context, habit domain.Habit) error 
 
 	// Insert new version with UPDATE op_type
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO habits (name, goal_per_day, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, habit.Name, habit.GoalPerDay, current.CreatedAt.Format(time.RFC3339),
+		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, habit.Name, habit.GoalPerDay, habit.GoalPerWeek, habit.GoalPerMonth, current.CreatedAt.Format(time.RFC3339),
 		current.EntityID.String(), maxVersion+1, now, domain.OpTypeUpdate.String())
 	if err != nil {
 		return err
@@ -208,9 +208,9 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 
 	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO habits (name, goal_per_day, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, habit.Name, habit.GoalPerDay, habit.CreatedAt.Format(time.RFC3339),
+		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, habit.Name, habit.GoalPerDay, habit.GoalPerWeek, habit.GoalPerMonth, habit.CreatedAt.Format(time.RFC3339),
 		habit.EntityID.String(), maxVersion+1, now, domain.OpTypeDelete.String())
 	if err != nil {
 		return err
@@ -221,7 +221,7 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 
 func (r *HabitRepository) GetDeleted(ctx context.Context) ([]domain.Habit, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, goal_per_day, created_at, entity_id
+		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
 		FROM habits
 		WHERE op_type = 'DELETE'
 		AND valid_to IS NULL
@@ -238,7 +238,7 @@ func (r *HabitRepository) GetDeleted(ctx context.Context) ([]domain.Habit, error
 		var createdAt string
 		var entityID sql.NullString
 
-		err := rows.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &createdAt, &entityID)
+		err := rows.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &habit.GoalPerWeek, &habit.GoalPerMonth, &createdAt, &entityID)
 		if err != nil {
 			return nil, err
 		}
@@ -258,19 +258,21 @@ func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID)
 
 	// Get the most recent version (which should be a DELETE marker)
 	var lastHabit struct {
-		Name       string
-		GoalPerDay int
-		CreatedAt  string
-		Version    int
-		OpType     string
+		Name         string
+		GoalPerDay   int
+		GoalPerWeek  int
+		GoalPerMonth int
+		CreatedAt    string
+		Version      int
+		OpType       string
 	}
 
 	err := r.db.QueryRowContext(ctx, `
-		SELECT name, goal_per_day, created_at, version, op_type
+		SELECT name, goal_per_day, goal_per_week, goal_per_month, created_at, version, op_type
 		FROM habits WHERE entity_id = ?
 		ORDER BY version DESC LIMIT 1
 	`, entityID.String()).Scan(
-		&lastHabit.Name, &lastHabit.GoalPerDay, &lastHabit.CreatedAt,
+		&lastHabit.Name, &lastHabit.GoalPerDay, &lastHabit.GoalPerWeek, &lastHabit.GoalPerMonth, &lastHabit.CreatedAt,
 		&lastHabit.Version, &lastHabit.OpType)
 	if err != nil {
 		return 0, err
@@ -296,9 +298,9 @@ func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID)
 
 	// Insert a new version with INSERT op_type to restore
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO habits (name, goal_per_day, created_at, entity_id, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, lastHabit.Name, lastHabit.GoalPerDay, lastHabit.CreatedAt,
+		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, lastHabit.Name, lastHabit.GoalPerDay, lastHabit.GoalPerWeek, lastHabit.GoalPerMonth, lastHabit.CreatedAt,
 		entityID.String(), lastHabit.Version+1, now, domain.OpTypeInsert.String())
 	if err != nil {
 		return 0, err
@@ -316,7 +318,7 @@ func (r *HabitRepository) scanHabit(row *sql.Row) (*domain.Habit, error) {
 	var createdAt string
 	var entityID sql.NullString
 
-	err := row.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &createdAt, &entityID)
+	err := row.Scan(&habit.ID, &habit.Name, &habit.GoalPerDay, &habit.GoalPerWeek, &habit.GoalPerMonth, &createdAt, &entityID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

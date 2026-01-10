@@ -30,6 +30,7 @@ type KeyMap struct {
 	ViewLists      key.Binding
 	ViewSearch     key.Binding
 	ViewStats      key.Binding
+	ViewGoals      key.Binding
 	ViewSettings   key.Binding
 	CommandPalette key.Binding
 	LogHabit       key.Binding
@@ -145,9 +146,13 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("5"),
 			key.WithHelp("5", "stats"),
 		),
-		ViewSettings: key.NewBinding(
+		ViewGoals: key.NewBinding(
 			key.WithKeys("6"),
-			key.WithHelp("6", "settings"),
+			key.WithHelp("6", "goals"),
+		),
+		ViewSettings: key.NewBinding(
+			key.WithKeys("7"),
+			key.WithHelp("7", "settings"),
 		),
 		CommandPalette: key.NewBinding(
 			key.WithKeys("ctrl+p", ":"),

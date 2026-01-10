@@ -217,12 +217,72 @@ func (s *HabitService) SetHabitGoalByID(ctx context.Context, habitID int64, goal
 	return s.habitRepo.Update(ctx, *habit)
 }
 
+func (s *HabitService) SetHabitWeeklyGoal(ctx context.Context, name string, goal int) error {
+	if goal < 0 {
+		return fmt.Errorf("weekly goal cannot be negative")
+	}
+
+	habit, err := s.getHabitByName(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerWeek = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
+func (s *HabitService) SetHabitWeeklyGoalByID(ctx context.Context, habitID int64, goal int) error {
+	if goal < 0 {
+		return fmt.Errorf("weekly goal cannot be negative")
+	}
+
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerWeek = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
+func (s *HabitService) SetHabitMonthlyGoal(ctx context.Context, name string, goal int) error {
+	if goal < 0 {
+		return fmt.Errorf("monthly goal cannot be negative")
+	}
+
+	habit, err := s.getHabitByName(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerMonth = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
+func (s *HabitService) SetHabitMonthlyGoalByID(ctx context.Context, habitID int64, goal int) error {
+	if goal < 0 {
+		return fmt.Errorf("monthly goal cannot be negative")
+	}
+
+	habit, err := s.getHabitByID(ctx, habitID)
+	if err != nil {
+		return err
+	}
+
+	habit.GoalPerMonth = goal
+	return s.habitRepo.Update(ctx, *habit)
+}
+
 type HabitDetails struct {
 	ID                int64
 	Name              string
 	GoalPerDay        int
+	GoalPerWeek       int
+	GoalPerMonth      int
 	CurrentStreak     int
 	CompletionPercent float64
+	WeeklyProgress    float64
+	MonthlyProgress   float64
 	Logs              []domain.HabitLog
 }
 
@@ -258,12 +318,29 @@ func (s *HabitService) inspectHabitByHabit(ctx context.Context, habit *domain.Ha
 		return nil, err
 	}
 
+	// Get logs for weekly/monthly progress calculation
+	year, month, _ := todayStart.Date()
+	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, todayStart.Location())
+	weekStart := todayStart.AddDate(0, 0, -6)
+	progressStart := monthStart
+	if weekStart.Before(progressStart) {
+		progressStart = weekStart
+	}
+	progressLogs, err := s.logRepo.GetRange(ctx, habit.ID, progressStart, todayStart.Add(24*time.Hour))
+	if err != nil {
+		return nil, err
+	}
+
 	return &HabitDetails{
 		ID:                habit.ID,
 		Name:              habit.Name,
 		GoalPerDay:        habit.GoalPerDay,
+		GoalPerWeek:       habit.GoalPerWeek,
+		GoalPerMonth:      habit.GoalPerMonth,
 		CurrentStreak:     domain.CalculateStreak(streakLogs, todayStart),
 		CompletionPercent: domain.CalculateCompletion(logs, int(to.Sub(from).Hours()/24)+1, todayStart),
+		WeeklyProgress:    domain.CalculateWeeklyProgress(progressLogs, habit.GoalPerWeek, todayStart),
+		MonthlyProgress:   domain.CalculateMonthlyProgress(progressLogs, habit.GoalPerMonth, todayStart),
 		Logs:              logs,
 	}, nil
 }
@@ -272,8 +349,12 @@ type HabitStatus struct {
 	ID                int64
 	Name              string
 	GoalPerDay        int
+	GoalPerWeek       int
+	GoalPerMonth      int
 	CurrentStreak     int
 	CompletionPercent float64
+	WeeklyProgress    float64
+	MonthlyProgress   float64
 	TodayCount        int
 	DayHistory        []DayStatus
 }
@@ -303,8 +384,22 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 	startDate := todayStart.AddDate(0, 0, -(days - 1))
 	endDate := todayStart.Add(24 * time.Hour)
 
+	// For weekly/monthly progress, we may need logs beyond the day range
+	weekStart := todayStart.AddDate(0, 0, -6)
+	year, month, _ := todayStart.Date()
+	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, todayStart.Location())
+
+	// Use the earliest start date for log queries
+	logStartDate := startDate
+	if weekStart.Before(logStartDate) {
+		logStartDate = weekStart
+	}
+	if monthStart.Before(logStartDate) {
+		logStartDate = monthStart
+	}
+
 	for _, habit := range habits {
-		logs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, startDate, endDate)
+		logs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, logStartDate, endDate)
 		if err != nil {
 			return nil, err
 		}
@@ -313,8 +408,12 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 			ID:                habit.ID,
 			Name:              habit.Name,
 			GoalPerDay:        habit.GoalPerDay,
+			GoalPerWeek:       habit.GoalPerWeek,
+			GoalPerMonth:      habit.GoalPerMonth,
 			CurrentStreak:     domain.CalculateStreak(logs, todayStart),
 			CompletionPercent: domain.CalculateCompletion(logs, days, todayStart),
+			WeeklyProgress:    domain.CalculateWeeklyProgress(logs, habit.GoalPerWeek, todayStart),
+			MonthlyProgress:   domain.CalculateMonthlyProgress(logs, habit.GoalPerMonth, todayStart),
 			TodayCount:        domain.SumCountForDay(logs, todayStart),
 			DayHistory:        buildDayHistory(logs, todayStart, days),
 		}

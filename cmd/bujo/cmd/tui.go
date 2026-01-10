@@ -17,6 +17,7 @@ var tuiCmd = &cobra.Command{
 			BujoService:  bujoService,
 			HabitService: habitService,
 			ListService:  listService,
+			GoalService:  goalService,
 		})
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
