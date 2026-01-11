@@ -1,0 +1,350 @@
+# Codebase Review: CLAUDE.md Principle Violations
+
+This document contains findings from a comprehensive review of the codebase against the principles defined in CLAUDE.md and ARCHITECTURE.md.
+
+**Review Date:** 2026-01-11
+**Reviewer:** Claude Code Review
+
+---
+
+## Issue 1: Summaries Table Missing Event Sourcing (CRITICAL)
+
+**Severity:** Critical
+**Location:** `internal/repository/sqlite/summary_repository.go`, migration `000005_create_summaries.up.sql`
+
+### Description
+
+The `summaries` table completely lacks event sourcing columns, violating the MANDATORY requirement: "ALL entities use event sourcing. Every mutation creates a new versioned row. No exceptions."
+
+### Missing Columns
+- `entity_id` (stable UUID)
+- `version` (incrementing)
+- `valid_from` (timestamp)
+- `valid_to` (NULL = current)
+- `op_type` (INSERT, UPDATE, DELETE)
+
+### Violations
+- **Line 20-32:** Insert without event sourcing columns
+- **Line 113:** Direct `DELETE FROM summaries WHERE id = ?` without creating DELETE marker
+- **Line 118:** Direct `DELETE FROM summaries` (DeleteAll)
+
+### Fix
+1. Add migration to add event sourcing columns to `summaries` table
+2. Refactor SummaryRepository to follow the event sourcing pattern
+
+---
+
+## Issue 2: HabitLogRepository GetByID Breaks Event Sourcing Pattern
+
+**Severity:** High
+**Location:** `internal/repository/sqlite/habit_log_repository.go:39-65`
+
+### Description
+
+`GetByID` does not follow the required two-step pattern documented in CLAUDE.md:
+1. Look up `entity_id` for the given row `id`
+2. Return current version (`valid_to IS NULL AND op_type != 'DELETE'`) for that `entity_id`
+
+### Current (Wrong)
+```go
+row := r.db.QueryRowContext(ctx, `
+    SELECT id, habit_id, count, logged_at, entity_id, habit_entity_id
+    FROM habit_logs WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+`, id)
+```
+
+### Expected Pattern
+Should first lookup `entity_id` from the given `id`, then query for current version by `entity_id` (like EntryRepository, HabitRepository, GoalRepository do correctly).
+
+---
+
+## Issue 3: DeleteAll Methods Use Direct DELETE (7 Repositories)
+
+**Severity:** High
+**Location:** Multiple repository files
+
+### Description
+
+All `DeleteAll` methods perform direct DELETE statements instead of creating DELETE markers (version rows with `op_type='DELETE'`), violating event sourcing requirements.
+
+### Affected Files
+| Repository | File | Line |
+|------------|------|------|
+| EntryRepository | `entry_repository.go` | 285 |
+| HabitRepository | `habit_repository.go` | 223 |
+| HabitLogRepository | `habit_log_repository.go` | 145 |
+| DayContextRepository | `day_context_repository.go` | 231 |
+| GoalRepository | `goal_repository.go` | 229 |
+| ListRepository | `list_repository.go` | 264 |
+| ListItemRepository | `list_item_repository.go` | 206 |
+
+### Fix
+Replace direct DELETE with event sourcing pattern that creates DELETE marker rows for each entity.
+
+---
+
+## Issue 4: Comments in Production Code (100+ Violations)
+
+**Severity:** Medium
+**Location:** Multiple files across all layers
+
+### Principle Violated
+> "No comments - code should be self-documenting"
+
+### Summary by Layer
+| Layer | File Count | Comment Count |
+|-------|------------|---------------|
+| Domain | 2 | 3 |
+| Service | 6 | 28+ |
+| Repository | - | - |
+| TUI | 3 | 40+ |
+| CLI | 8 | 24+ |
+| **Total** | **19+** | **95+** |
+
+### Notable Violations
+
+**Domain Layer:**
+- `habit.go:101` - `// Normalize to start of day for consistent date comparisons`
+- `parser.go:9,15` - Symbol mapping comments
+
+**Service Layer:**
+- `bujo.go` - 22+ comments explaining what code does
+- `habit.go` - 6 comments
+- `stats.go` - 5 comments
+
+**TUI Layer:**
+- `view.go` - 15+ comments (especially in renderCaptureMode)
+- `update.go` - 15+ comments
+- `model.go` - 4 comments
+
+**CLI Layer:**
+- `root.go` - 7 comments
+- `add.go` - 5 comments
+- `helpers.go` - 8 comments
+
+### Fix
+Refactor code to be self-documenting through clear variable names and function extraction.
+
+---
+
+## Issue 5: Mutable State Patterns Violate Functional Principles
+
+**Severity:** Medium
+**Location:** Multiple files
+
+### Principle Violated
+> "Prefer immutability where practical"
+> "Pure functions wherever possible"
+
+### Domain Layer Violations
+
+**`internal/domain/goal.go:38-43`**
+```go
+func (g *Goal) MarkDone() {
+    g.Status = GoalStatusDone  // Mutates receiver
+}
+func (g *Goal) MarkActive() {
+    g.Status = GoalStatusActive  // Mutates receiver
+}
+```
+
+### Service Layer Violations (12+ locations)
+
+**`internal/service/bujo.go`:**
+- Line 63-64: Mutates entry parameters
+- Line 71: Mutates parent ID in loop
+- Line 312: `entry.Type = domain.EntryTypeDone`
+- Line 406-411: Mutates child entries
+- Line 459: Mutates children array elements
+- Line 560, 580: updateChildrenDepths/Dates mutates children
+
+**`internal/service/habit.go:173-178`:**
+```go
+latestLog := dayLogs[0]
+for _, log := range dayLogs[1:] {
+    if log.LoggedAt.After(latestLog.LoggedAt) {
+        latestLog = log  // Variable reassignment
+    }
+}
+```
+
+### Fix
+- Use value receivers and return new objects instead of mutating
+- Extract domain logic that finds "latest" items as pure functions
+- Create new objects instead of mutating parameters
+
+---
+
+## Issue 6: Nested If/Else Instead of Early Returns
+
+**Severity:** Medium
+**Location:** Multiple files
+
+### Principle Violated
+> "No nested if/else - use early returns"
+
+### Domain Layer
+- `parser.go:133-144` - Nested if inside else block
+
+### Service Layer (15+ locations)
+- `bujo.go:224-234` - SetMood nested if/else
+- `bujo.go:264-273` - SetWeather
+- `bujo.go:510-523` - MoveEntry
+- `export.go:154-242` - Multiple nested if for merge mode
+- `list.go:96-110` - DeleteList
+
+### TUI Layer (15+ locations)
+- `update.go:171-221` - Sequential if checks (could use dispatch table)
+- `update.go:631-646` - Draft handling
+- `view.go:614-798` - renderCaptureMode (185 lines, deeply nested)
+- `view.go:184-196` - Header rendering
+
+### Fix
+Use early returns and flatten control flow. Consider dispatch tables for mode switching.
+
+---
+
+## Issue 7: Business Logic in CLI Layer (Should Be Domain/Service)
+
+**Severity:** High
+**Location:** `cmd/bujo/cmd/`
+
+### Principle Violated
+> "Business logic isolated in internal/domain. CLI and future web server are adapters to shared logic."
+
+### Date Calculation Logic (Should be Service Layer)
+| File | Lines | Logic |
+|------|-------|-------|
+| `tasks.go` | 30-34 | Date normalization, default range |
+| `next.go` | 22-25 | Tomorrow/endDate calculation |
+| `tomorrow.go` | 21-23 | Today/tomorrow calculations |
+| `ls.go` | 29-34 | 7-day default range |
+| `habit_show.go` | 53-57 | 30-day default range |
+| `search.go` | 48-68 | Date range defaulting |
+
+### Entry Type Parsing (Should be Domain Layer)
+| File | Lines | Logic |
+|------|-------|-------|
+| `list_add.go` | 37-54 | Entry type prefix parsing |
+| `retype.go` | 51-62 | parseEntryType function |
+| `search.go` | 40-45 | Entry type validation |
+
+### Formatting Logic (Should use Renderer)
+| File | Lines | Logic |
+|------|-------|-------|
+| `view.go` | 48-110 | renderViewTree, renderViewEntry |
+| `search.go` | 101-144 | formatSearchResult, highlightQuery |
+| `stats.go` | 37-137 | Entire runStats function |
+| `export.go` | 86-242 | write*CSV functions |
+
+### Fix
+1. Move date calculations to service layer with proper methods
+2. Move entry type parsing to domain layer
+3. Extract rendering functions to `internal/adapter/cli/renderer.go`
+
+---
+
+## Issue 8: Service Layer Holds State (BackupService)
+
+**Severity:** Medium
+**Location:** `internal/service/backup.go:17-18`
+
+### Principle Violated
+> "Services are stateless and depend only on repository interfaces."
+
+### Violation
+```go
+type BackupService struct {
+    db        *sql.DB    // Direct state, not interface
+    backupDir string     // Configuration as state
+}
+```
+
+### Fix
+BackupService should depend on a repository interface, not `*sql.DB` directly.
+
+---
+
+## Issue 9: TUI Complex Logic Not Extracted for Testing
+
+**Severity:** High
+**Location:** `internal/tui/`
+
+### Principle Violated
+> "Hard to test is not an excuse. Extract the logic into a pure, testable function."
+
+### Critical Untestable Functions
+
+**`model.go:879-942` - flattenEntries()**
+- Contains recursive closures that cannot be unit tested independently
+- Complex parent-child relationship processing mixed with collapse state
+
+**`update.go:860-891` - captureInsertRunes()**
+- Symbol conversion mixed with string manipulation
+- Should extract: `maybeConvertSymbol(rune) string`
+
+**`update.go:953-981` - captureInsertNewline()**
+- Indentation detection (lines 960-973) is complex
+- Should extract: `detectLineIndentation(content, pos) string`
+
+**`view.go:614-798` - renderCaptureMode()**
+- 185 lines with deeply nested conditionals
+- Should extract: `renderCaptureEditor()`, `renderSearchHighlight()`, `insertCursorInLine()`
+
+**`update.go:1286-1348` - captureSearchFrom()**
+- Forward/backward search intertwined
+- Should extract: `searchForward()`, `searchBackward()` separately
+
+### Fix
+Extract these complex functions into pure, testable helper functions in the domain or a separate utilities package.
+
+---
+
+## Issue 10: 12-Factor Output Stream Violations
+
+**Severity:** Low
+**Location:** `cmd/bujo/cmd/`
+
+### Principle Violated
+> "Logs: Diagnostic messages to stderr, data output to stdout"
+
+### Violations
+| File | Line | Issue |
+|------|------|-------|
+| `goal.go` | 39 | Informational "No goals" to stderr (should be stdout) |
+| `deleted.go` | 28 | "No deleted entries" to stderr |
+
+### Inconsistent Patterns
+- `add.go:98-103` - Correct pattern (IDs to stdout, messages to stderr)
+- `stats.go` - All data to stdout with no stderr context
+- Various commands mix informational messages inconsistently
+
+### Fix
+Standardize: data output to stdout, diagnostic/error messages to stderr.
+
+---
+
+## Summary
+
+| Issue | Severity | Estimated Files |
+|-------|----------|-----------------|
+| #1 Summaries no event sourcing | Critical | 2 |
+| #2 HabitLog GetByID pattern | High | 1 |
+| #3 DeleteAll violations | High | 7 |
+| #4 Comments in code | Medium | 19+ |
+| #5 Mutable state patterns | Medium | 8+ |
+| #6 Nested if/else | Medium | 15+ |
+| #7 Business logic in CLI | High | 12+ |
+| #8 Service holds state | Medium | 1 |
+| #9 TUI untestable logic | High | 3 |
+| #10 Output stream issues | Low | 3 |
+
+**Total Violations:** 150+ across the codebase
+
+### Recommended Priority Order
+1. **Critical:** Issue #1 (Summaries event sourcing)
+2. **High:** Issues #2, #3 (Event sourcing consistency)
+3. **High:** Issue #7 (CLI business logic extraction)
+4. **High:** Issue #9 (TUI testability)
+5. **Medium:** Issues #4, #5, #6, #8 (Code style)
+6. **Low:** Issue #10 (Output streams)
