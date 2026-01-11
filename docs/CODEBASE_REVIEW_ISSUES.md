@@ -167,43 +167,47 @@ Use early returns and flatten control flow. Consider dispatch tables for mode sw
 
 ---
 
-## Issue 5: Business Logic in CLI Layer (Should Be Domain/Service)
+## Issue 5: Duplicated Logic Between CLI and TUI
 
-**Severity:** High
-**Location:** `cmd/bujo/cmd/`
+**Severity:** Medium
+**Location:** `cmd/bujo/cmd/helpers.go`, `internal/tui/update.go`
 
 ### Principle Violated
 > "Business logic isolated in internal/domain. CLI and future web server are adapters to shared logic."
 
-### Date Calculation Logic (Should be Service Layer)
-| File | Lines | Logic |
-|------|-------|-------|
-| `tasks.go` | 30-34 | Date normalization, default range |
-| `next.go` | 22-25 | Tomorrow/endDate calculation |
-| `tomorrow.go` | 21-23 | Today/tomorrow calculations |
-| `ls.go` | 29-34 | 7-day default range |
-| `habit_show.go` | 53-57 | 30-day default range |
-| `search.go` | 48-68 | Date range defaulting |
+### Date Parsing - Duplicated Between Adapters
 
-### Entry Type Parsing (Should be Domain Layer)
-| File | Lines | Logic |
-|------|-------|-------|
-| `list_add.go` | 37-54 | Entry type prefix parsing |
-| `retype.go` | 51-62 | parseEntryType function |
-| `search.go` | 40-45 | Entry type validation |
+**CLI (`helpers.go`):**
+- `parsePastDate()` (lines 68-85) - natural language date parsing with Past direction
+- `parseFutureDate()` (lines 190-207) - natural language date parsing with Future direction
 
-### Formatting Logic (Should use Renderer)
-| File | Lines | Logic |
-|------|-------|-------|
-| `view.go` | 48-110 | renderViewTree, renderViewEntry |
-| `search.go` | 101-144 | formatSearchResult, highlightQuery |
-| `stats.go` | 37-137 | Entire runStats function |
-| `export.go` | 86-242 | write*CSV functions |
+**TUI (`update.go`):**
+- `parseDateFrom()` (lines 1739-1749) - natural language date parsing with Future direction
+
+Both use `github.com/tj/go-naturaldate` but implement separately.
+
+### Entry Type Parsing - Domain Has It, CLI Duplicates It
+
+**Domain already has (`parser.go:23-31`):**
+```go
+func ParseEntryType(line string) EntryType  // parses from symbol character
+var symbolToType = map[rune]EntryType{...}  // maps '.', '-', 'o', 'x', '>'
+```
+
+**CLI duplicates instead of using domain:**
+| File | Lines | Duplication |
+|------|-------|-------------|
+| `list_add.go` | 37-54 | Manual `". "`, `"- "`, `"o "` prefix checking |
+| `retype.go` | 51-62 | Separate `parseEntryType()` with string matching |
+
+### Not Violations - Configuration Values
+
+Date range defaults like `-30 days` or `-7 days` in CLI commands are **configuration**, not business logic. Simple arithmetic like `today.AddDate(0,0,-7)` is appropriate in adapters - they specify parameters to pass to service methods.
 
 ### Fix
-1. Move date calculations to service layer with proper methods
-2. Move entry type parsing to domain layer
-3. Extract rendering functions to `internal/adapter/cli/renderer.go`
+1. Move date parsing utilities to shared package (e.g., `internal/dateutil/`)
+2. CLI's `list_add.go` should use `domain.ParseEntryType()` instead of manual prefix checking
+3. Add `domain.ParseEntryTypeFromString()` for `retype.go` use case (accepts "task", "note", "event")
 
 ---
 
@@ -295,16 +299,15 @@ Standardize: data output to stdout, diagnostic/error messages to stderr.
 | #2 Comments in code | Medium | 19+ |
 | #3 Mutable state patterns | Medium | 8+ |
 | #4 Nested if/else | Medium | 15+ |
-| #5 Business logic in CLI | High | 12+ |
+| #5 Duplicated logic CLI/TUI | Medium | 4 |
 | #6 Service holds state | Medium | 1 |
 | #7 TUI untestable logic | High | 3 |
 | #8 Output stream issues | Low | 3 |
 
-**Total Violations:** 130+ across the codebase
+**Total Violations:** 120+ across the codebase
 
 ### Recommended Priority Order
 1. **High:** Issue #1 (Event sourcing consistency)
-2. **High:** Issue #5 (CLI business logic extraction)
-3. **High:** Issue #7 (TUI testability)
-4. **Medium:** Issues #2, #3, #4, #6 (Code style)
-5. **Low:** Issue #8 (Output streams)
+2. **High:** Issue #7 (TUI testability)
+3. **Medium:** Issues #2, #3, #4, #5, #6 (Code style and duplication)
+4. **Low:** Issue #8 (Output streams)
