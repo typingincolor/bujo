@@ -309,6 +309,10 @@ func TestHabitLogRepository_GetByID_ReturnsCurrentVersionFromOldRowID(t *testing
 	assert.Equal(t, newID, result.ID, "Should return the current version's row ID")
 	assert.Equal(t, 5, result.Count)
 	assert.Equal(t, entityID, result.EntityID)
+
+	resultByEntity, err := repo.GetByEntityID(ctx, entityID)
+	require.NoError(t, err)
+	assert.Equal(t, result, resultByEntity, "GetByEntityID should return same result")
 }
 
 func TestHabitLogRepository_GetRangeByEntityID_AfterHabitRename(t *testing.T) {

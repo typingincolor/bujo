@@ -59,9 +59,9 @@ func (r *HabitLogRepository) GetByEntityID(ctx context.Context, entityID domain.
 
 	var log domain.HabitLog
 	var loggedAt string
-	var entID, habitEntityID sql.NullString
+	var scannedEntityID, habitEntityID sql.NullString
 
-	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt, &entID, &habitEntityID)
+	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt, &scannedEntityID, &habitEntityID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -70,8 +70,8 @@ func (r *HabitLogRepository) GetByEntityID(ctx context.Context, entityID domain.
 	}
 
 	log.LoggedAt, _ = time.Parse(time.RFC3339, loggedAt)
-	if entID.Valid {
-		log.EntityID = domain.EntityID(entID.String)
+	if scannedEntityID.Valid {
+		log.EntityID = domain.EntityID(scannedEntityID.String)
 	}
 	if habitEntityID.Valid {
 		log.HabitEntityID = domain.EntityID(habitEntityID.String)
