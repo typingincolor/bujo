@@ -276,6 +276,41 @@ func TestHabitLogRepository_GetRangeByEntityID(t *testing.T) {
 	assert.Len(t, results, 3) // -3, -1, and today
 }
 
+func TestHabitLogRepository_GetByID_ReturnsCurrentVersionFromOldRowID(t *testing.T) {
+	db := setupTestDB(t)
+	habitRepo := NewHabitRepository(db)
+	repo := NewHabitLogRepository(db)
+	ctx := context.Background()
+
+	habitID := createTestHabit(t, habitRepo, "GetByIDTest")
+
+	log := domain.HabitLog{
+		HabitID:  habitID,
+		Count:    5,
+		LoggedAt: time.Now(),
+	}
+	originalID, err := repo.Insert(ctx, log)
+	require.NoError(t, err)
+
+	original, err := repo.GetByID(ctx, originalID)
+	require.NoError(t, err)
+	entityID := original.EntityID
+
+	err = repo.Delete(ctx, originalID)
+	require.NoError(t, err)
+
+	newID, err := repo.Restore(ctx, entityID)
+	require.NoError(t, err)
+	require.NotEqual(t, originalID, newID, "Restored log should have a new row ID")
+
+	result, err := repo.GetByID(ctx, originalID)
+	require.NoError(t, err)
+	require.NotNil(t, result, "GetByID with old row ID should return current version")
+	assert.Equal(t, newID, result.ID, "Should return the current version's row ID")
+	assert.Equal(t, 5, result.Count)
+	assert.Equal(t, entityID, result.EntityID)
+}
+
 func TestHabitLogRepository_GetRangeByEntityID_AfterHabitRename(t *testing.T) {
 	db := setupTestDB(t)
 	habitRepo := NewHabitRepository(db)
