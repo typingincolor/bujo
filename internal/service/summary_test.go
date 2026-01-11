@@ -101,7 +101,8 @@ func TestSummaryService_GetSummary(t *testing.T) {
 
 	t.Run("regenerates for ongoing period even with cache", func(t *testing.T) {
 		// Today is an ongoing period - should always regenerate
-		today := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, time.UTC)
 		entries := []domain.Entry{{ID: 1, Type: domain.EntryTypeTask, Content: "Task"}}
 
 		cachedSummary := &domain.Summary{
