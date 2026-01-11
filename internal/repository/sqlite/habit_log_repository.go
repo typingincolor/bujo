@@ -37,16 +37,31 @@ func (r *HabitLogRepository) Insert(ctx context.Context, log domain.HabitLog) (i
 }
 
 func (r *HabitLogRepository) GetByID(ctx context.Context, id int64) (*domain.HabitLog, error) {
+	var entityID string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT entity_id FROM habit_logs WHERE id = ?
+	`, id).Scan(&entityID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetByEntityID(ctx, domain.EntityID(entityID))
+}
+
+func (r *HabitLogRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.HabitLog, error) {
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, habit_id, count, logged_at, entity_id, habit_entity_id
-		FROM habit_logs WHERE id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
-	`, id)
+		FROM habit_logs WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
+	`, entityID.String())
 
 	var log domain.HabitLog
 	var loggedAt string
-	var entityID, habitEntityID sql.NullString
+	var scannedEntityID, habitEntityID sql.NullString
 
-	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt, &entityID, &habitEntityID)
+	err := row.Scan(&log.ID, &log.HabitID, &log.Count, &loggedAt, &scannedEntityID, &habitEntityID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -55,8 +70,8 @@ func (r *HabitLogRepository) GetByID(ctx context.Context, id int64) (*domain.Hab
 	}
 
 	log.LoggedAt, _ = time.Parse(time.RFC3339, loggedAt)
-	if entityID.Valid {
-		log.EntityID = domain.EntityID(entityID.String)
+	if scannedEntityID.Valid {
+		log.EntityID = domain.EntityID(scannedEntityID.String)
 	}
 	if habitEntityID.Valid {
 		log.HabitEntityID = domain.EntityID(habitEntityID.String)
