@@ -255,6 +255,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
+	case key.Matches(msg, m.keyMap.ExpandAll):
+		m = m.expandAllSiblings()
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.CollapseAll):
+		m = m.collapseAllSiblings()
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
 
@@ -476,6 +484,24 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			input:  ti,
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.DayLeft):
+		if m.viewMode == ViewModeDay {
+			m.viewDate = m.viewDate.AddDate(0, 0, -1)
+		} else {
+			m.viewDate = m.viewDate.AddDate(0, 0, -7)
+		}
+		m.selectedIdx = 0
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.DayRight):
+		if m.viewMode == ViewModeDay {
+			m.viewDate = m.viewDate.AddDate(0, 0, 1)
+		} else {
+			m.viewDate = m.viewDate.AddDate(0, 0, 7)
+		}
+		m.selectedIdx = 0
+		return m, m.loadAgendaCmd()
 
 	case key.Matches(msg, m.keyMap.Help):
 		m.help.ShowAll = !m.help.ShowAll

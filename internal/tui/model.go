@@ -846,10 +846,13 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	// Calculate today for per-entry overdue checks
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	viewDateNormalized := time.Date(m.viewDate.Year(), m.viewDate.Month(), m.viewDate.Day(), 0, 0, 0, 0, m.viewDate.Location())
+	isViewingPast := viewDateNormalized.Before(today)
 
 	var items []EntryItem
 
-	if len(agenda.Overdue) > 0 {
+	// Only show overdue section when viewing today or future
+	if len(agenda.Overdue) > 0 && !isViewingPast {
 		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true, today)...)
 	}
 
@@ -940,4 +943,89 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 	}
 
 	return items
+}
+
+func (m Model) expandAllSiblings() Model {
+	if len(m.entries) == 0 || m.agenda == nil {
+		return m
+	}
+
+	selectedEntry := m.entries[m.selectedIdx].Entry
+	parentID := selectedEntry.ParentID
+
+	for _, day := range m.agenda.Days {
+		for _, entry := range day.Entries {
+			if (parentID == nil && entry.ParentID == nil) ||
+				(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
+				m.collapsed[entry.EntityID] = false
+			}
+		}
+	}
+	for _, entry := range m.agenda.Overdue {
+		if (parentID == nil && entry.ParentID == nil) ||
+			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
+			m.collapsed[entry.EntityID] = false
+		}
+	}
+
+	m.entries = m.flattenAgenda(m.agenda)
+	return m.ensuredVisible()
+}
+
+func (m Model) collapseAllSiblings() Model {
+	if len(m.entries) == 0 || m.agenda == nil {
+		return m
+	}
+
+	selectedEntry := m.entries[m.selectedIdx].Entry
+	parentID := selectedEntry.ParentID
+
+	for _, day := range m.agenda.Days {
+		for _, entry := range day.Entries {
+			if (parentID == nil && entry.ParentID == nil) ||
+				(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
+				m.collapsed[entry.EntityID] = true
+			}
+		}
+	}
+	for _, entry := range m.agenda.Overdue {
+		if (parentID == nil && entry.ParentID == nil) ||
+			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
+			m.collapsed[entry.EntityID] = true
+		}
+	}
+
+	m.entries = m.flattenAgenda(m.agenda)
+	return m.ensuredVisible()
+}
+
+func (m Model) ensureSelectedAndAncestorsExpanded() Model {
+	if len(m.entries) == 0 || m.agenda == nil {
+		return m
+	}
+
+	selectedEntry := m.entries[m.selectedIdx].Entry
+
+	entryByID := make(map[int64]domain.Entry)
+	for _, day := range m.agenda.Days {
+		for _, entry := range day.Entries {
+			entryByID[entry.ID] = entry
+		}
+	}
+	for _, entry := range m.agenda.Overdue {
+		entryByID[entry.ID] = entry
+	}
+
+	current := selectedEntry
+	for current.ParentID != nil {
+		parent, exists := entryByID[*current.ParentID]
+		if !exists {
+			break
+		}
+		m.collapsed[parent.EntityID] = false
+		current = parent
+	}
+
+	m.entries = m.flattenAgenda(m.agenda)
+	return m
 }

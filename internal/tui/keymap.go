@@ -39,6 +39,8 @@ type KeyMap struct {
 	RemoveHabitLog  key.Binding
 	DayLeft         key.Binding
 	DayRight        key.Binding
+	ExpandAll       key.Binding
+	CollapseAll     key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -132,7 +134,7 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("t", "change type"),
 		),
 		Quit: key.NewBinding(
-			key.WithKeys("q", "ctrl+c"),
+			key.WithKeys("q"),
 			key.WithHelp("q", "quit"),
 		),
 		Help: key.NewBinding(
@@ -186,6 +188,14 @@ func DefaultKeyMap() KeyMap {
 		DayRight: key.NewBinding(
 			key.WithKeys("l", "right"),
 			key.WithHelp("l/→", "next day"),
+		),
+		ExpandAll: key.NewBinding(
+			key.WithKeys("ctrl+e"),
+			key.WithHelp("ctrl+e", "expand all"),
+		),
+		CollapseAll: key.NewBinding(
+			key.WithKeys("ctrl+c"),
+			key.WithHelp("ctrl+c", "collapse all"),
 		),
 	}
 }

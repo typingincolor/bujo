@@ -138,6 +138,12 @@ func (m Model) renderJournalContent() string {
 
 	var sb strings.Builder
 
+	// Show AI summary section for past dates
+	if m.isViewingPast() {
+		sb.WriteString(m.renderJournalAISummary())
+		sb.WriteString("\n")
+	}
+
 	if len(m.entries) == 0 {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
 		sb.WriteString("\n\n")
@@ -1248,4 +1254,23 @@ func (m Model) formatSummaryPeriod() string {
 	default:
 		return refDate.Format("Jan 2, 2006")
 	}
+}
+
+func (m Model) isViewingPast() bool {
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	viewDate := time.Date(m.viewDate.Year(), m.viewDate.Month(), m.viewDate.Day(), 0, 0, 0, 0, m.viewDate.Location())
+	return viewDate.Before(today)
+}
+
+func (m Model) renderJournalAISummary() string {
+	var sb strings.Builder
+	sb.WriteString(HelpStyle.Render("📊 AI Summary"))
+	sb.WriteString("\n")
+	if m.summaryService == nil {
+		sb.WriteString(HelpStyle.Render("  (AI summary service not configured)"))
+	} else {
+		sb.WriteString(HelpStyle.Render("  Press '5' to view AI summary for this period"))
+	}
+	return sb.String()
 }
