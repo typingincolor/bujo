@@ -125,7 +125,9 @@ func (e Entry) IsOverdue(today time.Time) bool {
 	if e.ScheduledDate == nil {
 		return false
 	}
-	return e.ScheduledDate.Before(today)
+	scheduledDate := e.ScheduledDate.Year()*10000 + int(e.ScheduledDate.Month())*100 + e.ScheduledDate.Day()
+	todayDate := today.Year()*10000 + int(today.Month())*100 + today.Day()
+	return scheduledDate < todayDate
 }
 
 func (e Entry) Validate() error {

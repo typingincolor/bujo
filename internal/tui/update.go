@@ -2267,10 +2267,6 @@ func (m Model) handleCommandPaletteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
-		return newModel, cmd
-	}
-
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit
@@ -2312,6 +2308,10 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.summaryState.refDate = m.navigateSummaryPeriod(1)
 		m.summaryState.summary = nil
 		return m, nil
+	}
+
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
 	}
 
 	return m, nil

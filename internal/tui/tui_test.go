@@ -4264,3 +4264,60 @@ func TestModel_CaptureMode_CtrlEnd_GoesToDocumentEnd(t *testing.T) {
 		t.Errorf("cursor should be at %d, got %d", expectedPos, m.captureMode.cursorPos)
 	}
 }
+
+func TestRenderEntry_SelectedMigratedEntry_HasReadableForeground(t *testing.T) {
+	model := New(nil)
+	item := EntryItem{
+		Entry: domain.Entry{
+			Type:    domain.EntryTypeMigrated,
+			Content: "Migrated task",
+		},
+	}
+
+	rendered := model.renderEntry(item, true)
+
+	migratedFgCode := "\x1b[38;5;8m"
+
+	if strings.Contains(rendered, migratedFgCode) {
+		t.Error("selected migrated entry should NOT have gray foreground (color 8) - would be unreadable against gray background")
+	}
+	if !strings.Contains(rendered, "Migrated task") {
+		t.Error("rendered output should contain the task content")
+	}
+}
+
+func TestRenderEntry_UnselectedMigratedEntry_HasDimStyle(t *testing.T) {
+	model := New(nil)
+	item := EntryItem{
+		Entry: domain.Entry{
+			Type:    domain.EntryTypeMigrated,
+			Content: "Migrated task",
+		},
+	}
+
+	rendered := model.renderEntry(item, false)
+
+	if !strings.Contains(rendered, "Migrated task") {
+		t.Error("rendered output should contain the task content")
+	}
+	if !strings.Contains(rendered, "→") {
+		t.Error("migrated entry should show the migrated symbol")
+	}
+}
+
+func TestStatsView_Pressing1_SelectsDailyHorizon_NotJournalView(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeStats
+	model.summaryState.horizon = "weekly"
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeStats {
+		t.Error("pressing '1' in stats view should NOT switch to journal view")
+	}
+	if m.summaryState.horizon != "daily" {
+		t.Errorf("pressing '1' in stats view should select daily horizon, got %s", m.summaryState.horizon)
+	}
+}

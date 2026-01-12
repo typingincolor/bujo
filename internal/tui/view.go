@@ -195,13 +195,10 @@ func (m Model) renderJournalContent() string {
 				linesUsed++
 			}
 
-			line := m.renderEntry(item)
+			line := m.renderEntry(item, i == m.selectedIdx)
 			// Highlight search matches
 			if m.searchMode.active && m.searchMode.query != "" {
 				line = m.highlightSearchTerm(line)
-			}
-			if i == m.selectedIdx {
-				line = SelectedStyle.Render(line)
 			}
 			sb.WriteString(line)
 			sb.WriteString("\n")
@@ -425,7 +422,7 @@ func (m Model) renderListItemsContent() string {
 	return sb.String()
 }
 
-func (m Model) renderEntry(item EntryItem) string {
+func (m Model) renderEntry(item EntryItem, selected bool) string {
 	entry := item.Entry
 	indent := strings.Repeat("  ", item.Indent)
 
@@ -452,6 +449,10 @@ func (m Model) renderEntry(item EntryItem) string {
 		base = fmt.Sprintf("%s%s%s %s %s%s", indent, collapseIndicator, symbol, prioritySymbol, content, hiddenSuffix)
 	} else {
 		base = fmt.Sprintf("%s%s%s %s%s", indent, collapseIndicator, symbol, content, hiddenSuffix)
+	}
+
+	if selected {
+		return SelectedStyle.Render(base)
 	}
 
 	switch entry.Type {
