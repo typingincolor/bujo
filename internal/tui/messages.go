@@ -27,7 +27,7 @@ type entryMovedToListMsg struct {
 	entryID int64
 }
 
-type confirmDeleteMsg struct{
+type confirmDeleteMsg struct {
 	entryID     int64
 	hasChildren bool
 }
@@ -70,7 +70,7 @@ type listsForMoveLoadedMsg struct {
 	lists        []domain.List
 }
 
-type listItemsLoadedMsg struct{
+type listItemsLoadedMsg struct {
 	listID int64
 	items  []domain.ListItem
 }
