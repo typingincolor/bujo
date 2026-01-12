@@ -50,6 +50,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderEditInput())
 		sb.WriteString("\n")
+	} else if m.answerMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAnswerInput())
+		sb.WriteString("\n")
 	} else if m.addMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderAddInput())
@@ -462,7 +466,7 @@ func (m Model) renderEntry(item EntryItem, selected bool) string {
 	}
 
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		return DoneStyle.Render(base)
 	case domain.EntryTypeMigrated:
 		return MigratedStyle.Render(base)
@@ -514,6 +518,14 @@ func (m Model) renderEditInput() string {
 	sb.WriteString("Edit entry:\n")
 	sb.WriteString(m.editMode.input.View())
 	sb.WriteString("\n\nEnter to save, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderAnswerInput() string {
+	var sb strings.Builder
+	sb.WriteString("Answer question:\n")
+	sb.WriteString(m.answerMode.input.View())
+	sb.WriteString("\n\nEnter to submit, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }
 
@@ -953,7 +965,7 @@ func (m Model) renderSearchResultLine(entry domain.Entry, selected bool) string 
 	idStr := fmt.Sprintf("(%d)", entry.ID)
 
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		symbol = DoneStyle.Render(symbol)
 		content = DoneStyle.Render(content)
 		dateStr = DoneStyle.Render(dateStr)

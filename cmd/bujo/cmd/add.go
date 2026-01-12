@@ -32,11 +32,12 @@ Examples:
   bujo add --date yesterday ". Forgot to log this"
   bujo add -d "last monday" ". Backfill task"
   bujo add -d "next friday" -y ". Skip confirmation"
+  bujo add --parent 123 ". Add as child of entry 123"
 
 `,
 	DisableFlagParsing: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		entries, addLocation, addDate, addFile, showHelp, skipConfirm := parseAddArgs(args)
+		entries, addLocation, addDate, addFile, addParent, showHelp, skipConfirm := parseAddArgs(args)
 		if showHelp {
 			return cmd.Help()
 		}
@@ -90,6 +91,14 @@ Examples:
 			opts.Location = &addLocation
 		}
 
+		if addParent != "" {
+			parentID, err := parseEntryID(addParent)
+			if err != nil {
+				return fmt.Errorf("invalid parent ID: %w", err)
+			}
+			opts.ParentID = &parentID
+		}
+
 		ids, err := bujoService.LogEntries(cmd.Context(), input, opts)
 		if err != nil {
 			return fmt.Errorf("failed to add entries: %w", err)
@@ -110,6 +119,7 @@ func init() {
 	addCmd.Flags().StringP("at", "a", "", "Set location for entries")
 	addCmd.Flags().StringP("date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	addCmd.Flags().StringP("file", "f", "", "Read entries from file")
+	addCmd.Flags().StringP("parent", "p", "", "Add entries as children of specified entry ID")
 	addCmd.Flags().BoolP("yes", "y", false, "Skip date confirmation prompt")
 	rootCmd.AddCommand(addCmd)
 }

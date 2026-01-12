@@ -8,6 +8,7 @@ type KeyMap struct {
 	Top            key.Binding
 	Bottom         key.Binding
 	Done           key.Binding
+	Answer         key.Binding
 	CancelEntry    key.Binding
 	Delete         key.Binding
 	Edit           key.Binding
@@ -64,6 +65,10 @@ func DefaultKeyMap() KeyMap {
 		Done: key.NewBinding(
 			key.WithKeys(" "),
 			key.WithHelp("space", "done"),
+		),
+		Answer: key.NewBinding(
+			key.WithKeys("R"),
+			key.WithHelp("R", "answer"),
 		),
 		CancelEntry: key.NewBinding(
 			key.WithKeys("x"),

@@ -47,6 +47,7 @@ type Model struct {
 	currentView     ViewType
 	confirmMode     confirmState
 	editMode        editState
+	answerMode      answerState
 	addMode         addState
 	migrateMode     migrateState
 	gotoMode        gotoState
@@ -101,6 +102,12 @@ type editState struct {
 	active  bool
 	entryID int64
 	input   textinput.Model
+}
+
+type answerState struct {
+	active     bool
+	questionID int64
+	input      textinput.Model
 }
 
 type addState struct {
@@ -910,7 +917,12 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 
 		isCollapsed, hasCollapseState := m.collapsed[entry.EntityID]
 		if !hasCollapseState && hasChildren {
-			isCollapsed = true
+			// Auto-expand answered questions to show the answer
+			if entry.Type == domain.EntryTypeAnswered {
+				isCollapsed = false
+			} else {
+				isCollapsed = true
+			}
 		}
 
 		hiddenCount := 0

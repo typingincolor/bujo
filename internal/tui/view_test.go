@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
 
@@ -114,5 +116,97 @@ func TestRenderSparkline_SelectionHighlightsCorrectDay(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFlattenEntries_AnsweredQuestionsAutoExpanded(t *testing.T) {
+	today := time.Now()
+	questionEntityID := uuid.New().String()
+	answerEntityID := uuid.New().String()
+
+	questionID := int64(1)
+	question := domain.Entry{
+		ID:       questionID,
+		EntityID: domain.EntityID(questionEntityID),
+		Type:     domain.EntryTypeAnswered,
+		Content:  "What is the deadline?",
+	}
+	answer := domain.Entry{
+		ID:       2,
+		EntityID: domain.EntityID(answerEntityID),
+		Type:     domain.EntryTypeNote,
+		Content:  "The deadline is next Friday",
+		ParentID: &questionID,
+	}
+
+	entries := []domain.Entry{question, answer}
+
+	m := Model{
+		collapsed: make(map[domain.EntityID]bool),
+	}
+
+	items := m.flattenEntries(entries, "Test Day", false, today)
+
+	// Answered question should have HasChildren = true
+	if !items[0].HasChildren {
+		t.Errorf("Expected answered question to have children")
+	}
+
+	// Answered question should be expanded by default (HiddenChildCount = 0)
+	if items[0].HiddenChildCount != 0 {
+		t.Errorf("Expected answered question to be expanded (HiddenChildCount=0), got %d", items[0].HiddenChildCount)
+	}
+
+	// Answer should be included in the items
+	if len(items) != 2 {
+		t.Errorf("Expected 2 items (question + answer), got %d", len(items))
+	}
+
+	if len(items) >= 2 && items[1].Entry.Content != "The deadline is next Friday" {
+		t.Errorf("Expected second item to be the answer, got %s", items[1].Entry.Content)
+	}
+}
+
+func TestFlattenEntries_UnansweredQuestionsCollapsedByDefault(t *testing.T) {
+	today := time.Now()
+	questionEntityID := uuid.New().String()
+	noteEntityID := uuid.New().String()
+
+	questionID := int64(1)
+	question := domain.Entry{
+		ID:       questionID,
+		EntityID: domain.EntityID(questionEntityID),
+		Type:     domain.EntryTypeQuestion,
+		Content:  "What is the deadline?",
+	}
+	note := domain.Entry{
+		ID:       2,
+		EntityID: domain.EntityID(noteEntityID),
+		Type:     domain.EntryTypeNote,
+		Content:  "Some context",
+		ParentID: &questionID,
+	}
+
+	entries := []domain.Entry{question, note}
+
+	m := Model{
+		collapsed: make(map[domain.EntityID]bool),
+	}
+
+	items := m.flattenEntries(entries, "Test Day", false, today)
+
+	// Unanswered question with children should be collapsed by default
+	if !items[0].HasChildren {
+		t.Errorf("Expected question to have children")
+	}
+
+	// Unanswered question should be collapsed (HiddenChildCount > 0)
+	if items[0].HiddenChildCount == 0 {
+		t.Errorf("Expected unanswered question to be collapsed by default")
+	}
+
+	// Only the question should be visible (child is hidden)
+	if len(items) != 1 {
+		t.Errorf("Expected 1 item (question only, child hidden), got %d", len(items))
 	}
 }

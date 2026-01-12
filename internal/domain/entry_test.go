@@ -19,8 +19,11 @@ func TestEntryType_IsValid(t *testing.T) {
 		{"done is valid", EntryTypeDone, true},
 		{"migrated is valid", EntryTypeMigrated, true},
 		{"cancelled is valid", EntryTypeCancelled, true},
+		{"question is valid", EntryTypeQuestion, true},
+		{"answered is valid", EntryTypeAnswered, true},
+		{"answer is valid", EntryTypeAnswer, true},
 		{"empty is invalid", EntryType(""), false},
-		{"unknown is invalid", EntryType("?"), false},
+		{"unknown is invalid", EntryType("invalid"), false},
 	}
 
 	for _, tt := range tests {
@@ -42,6 +45,9 @@ func TestEntryType_Symbol(t *testing.T) {
 		{"done symbol", EntryTypeDone, "✓"},
 		{"migrated symbol", EntryTypeMigrated, "→"},
 		{"cancelled symbol", EntryTypeCancelled, "✗"},
+		{"question symbol", EntryTypeQuestion, "?"},
+		{"answered symbol", EntryTypeAnswered, "★"},
+		{"answer symbol", EntryTypeAnswer, "↳"},
 	}
 
 	for _, tt := range tests {
@@ -86,6 +92,21 @@ func TestEntry_IsComplete(t *testing.T) {
 			name:     "cancelled entry is complete",
 			entry:    Entry{Type: EntryTypeCancelled},
 			expected: true,
+		},
+		{
+			name:     "question entry is not complete",
+			entry:    Entry{Type: EntryTypeQuestion},
+			expected: false,
+		},
+		{
+			name:     "answered entry is complete",
+			entry:    Entry{Type: EntryTypeAnswered},
+			expected: true,
+		},
+		{
+			name:     "answer entry is not complete",
+			entry:    Entry{Type: EntryTypeAnswer},
+			expected: false,
 		},
 	}
 

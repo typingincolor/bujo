@@ -174,6 +174,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.editMode.active {
 			return m.handleEditMode(msg)
 		}
+		if m.answerMode.active {
+			return m.handleAnswerMode(msg)
+		}
 		if m.addMode.active {
 			return m.handleAddMode(msg)
 		}
@@ -310,6 +313,25 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()
+
+	case key.Matches(msg, m.keyMap.Answer):
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			if entry.Type == domain.EntryTypeQuestion {
+				ti := textinput.New()
+				ti.Placeholder = "Enter your answer..."
+				ti.Focus()
+				ti.CharLimit = 512
+				ti.Width = m.width - 10
+				m.answerMode = answerState{
+					active:     true,
+					questionID: entry.ID,
+					input:      ti,
+				}
+				return m, nil
+			}
+		}
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.CancelEntry):
 		if len(m.entries) > 0 {
@@ -1468,6 +1490,37 @@ func (m Model) editEntryCmd(id int64, content string) tea.Cmd {
 	}
 }
 
+func (m Model) handleAnswerMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.answerMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		questionID := m.answerMode.questionID
+		answerText := m.answerMode.input.Value()
+		m.answerMode.active = false
+		if answerText == "" {
+			return m, nil
+		}
+		return m, m.answerQuestionCmd(questionID, answerText)
+	}
+
+	var cmd tea.Cmd
+	m.answerMode.input, cmd = m.answerMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) answerQuestionCmd(id int64, answerText string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.MarkAnswered(ctx, id, answerText); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{id}
+	}
+}
+
 func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
@@ -1670,8 +1723,14 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 	entry := m.entries[m.selectedIdx].Entry
 
-	// Only tasks and done entries can be toggled
-	if entry.Type != domain.EntryTypeTask && entry.Type != domain.EntryTypeDone {
+	// Tasks and done entries can be toggled
+	// Answered questions can be reopened, but questions cannot be answered here
+	// (use 'bujo answer' CLI command to mark questions as answered with answer text)
+	validTypes := entry.Type == domain.EntryTypeTask ||
+		entry.Type == domain.EntryTypeDone ||
+		entry.Type == domain.EntryTypeAnswered
+
+	if !validTypes {
 		return nil
 	}
 
@@ -1679,10 +1738,13 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 		ctx := context.Background()
 		var err error
 
-		if entry.Type == domain.EntryTypeDone {
+		switch entry.Type {
+		case domain.EntryTypeDone:
 			err = m.bujoService.Undo(ctx, entry.ID)
-		} else {
+		case domain.EntryTypeTask:
 			err = m.bujoService.MarkDone(ctx, entry.ID)
+		case domain.EntryTypeAnswered:
+			err = m.bujoService.ReopenQuestion(ctx, entry.ID)
 		}
 
 		if err != nil {
