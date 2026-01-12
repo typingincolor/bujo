@@ -1670,8 +1670,14 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 	entry := m.entries[m.selectedIdx].Entry
 
-	// Only tasks and done entries can be toggled
-	if entry.Type != domain.EntryTypeTask && entry.Type != domain.EntryTypeDone {
+	// Tasks and done entries can be toggled
+	// Answered questions can be reopened, but questions cannot be answered here
+	// (use 'bujo answer' CLI command to mark questions as answered with answer text)
+	validTypes := entry.Type == domain.EntryTypeTask ||
+		entry.Type == domain.EntryTypeDone ||
+		entry.Type == domain.EntryTypeAnswered
+
+	if !validTypes {
 		return nil
 	}
 
@@ -1679,10 +1685,13 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 		ctx := context.Background()
 		var err error
 
-		if entry.Type == domain.EntryTypeDone {
+		switch entry.Type {
+		case domain.EntryTypeDone:
 			err = m.bujoService.Undo(ctx, entry.ID)
-		} else {
+		case domain.EntryTypeTask:
 			err = m.bujoService.MarkDone(ctx, entry.ID)
+		case domain.EntryTypeAnswered:
+			err = m.bujoService.ReopenQuestion(ctx, entry.ID)
 		}
 
 		if err != nil {

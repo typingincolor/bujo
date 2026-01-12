@@ -1482,3 +1482,250 @@ func TestBujoService_SearchEntries_NoMatches(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 0)
 }
+
+func TestBujoService_LogEntries_WithParentID(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+
+	// Create a parent entry
+	parentIDs, err := service.LogEntries(ctx, ". Parent task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, parentIDs, 1)
+
+	// Add a child entry using the ParentID option
+	childIDs, err := service.LogEntries(ctx, ". Child task", LogEntriesOptions{
+		Date:     today,
+		ParentID: &parentIDs[0],
+	})
+	require.NoError(t, err)
+	require.Len(t, childIDs, 1)
+
+	// Verify the child has the correct parent
+	child, err := entryRepo.GetByID(ctx, childIDs[0])
+	require.NoError(t, err)
+	require.NotNil(t, child.ParentID)
+	assert.Equal(t, parentIDs[0], *child.ParentID)
+	assert.Equal(t, 1, child.Depth)
+}
+
+func TestBujoService_LogEntries_WithParentID_MultipleEntries(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+
+	// Create a parent entry
+	parentIDs, err := service.LogEntries(ctx, ". Parent task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Add multiple child entries
+	childIDs, err := service.LogEntries(ctx, `. Child task 1
+- Child note`, LogEntriesOptions{
+		Date:     today,
+		ParentID: &parentIDs[0],
+	})
+	require.NoError(t, err)
+	require.Len(t, childIDs, 2)
+
+	// Both should have parent as their root parent
+	child1, err := entryRepo.GetByID(ctx, childIDs[0])
+	require.NoError(t, err)
+	require.NotNil(t, child1.ParentID)
+	assert.Equal(t, parentIDs[0], *child1.ParentID)
+	assert.Equal(t, 1, child1.Depth)
+
+	child2, err := entryRepo.GetByID(ctx, childIDs[1])
+	require.NoError(t, err)
+	require.NotNil(t, child2.ParentID)
+	assert.Equal(t, parentIDs[0], *child2.ParentID)
+	assert.Equal(t, 1, child2.Depth)
+}
+
+func TestBujoService_LogEntries_WithParentID_NestedInput(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+
+	// Create a parent entry
+	parentIDs, err := service.LogEntries(ctx, ". Parent task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Add nested entries with parent ID - the internal nesting should be relative
+	childIDs, err := service.LogEntries(ctx, `. Child task
+  - Grandchild note`, LogEntriesOptions{
+		Date:     today,
+		ParentID: &parentIDs[0],
+	})
+	require.NoError(t, err)
+	require.Len(t, childIDs, 2)
+
+	// Child should have depth 1 (parent's depth + 1)
+	child, err := entryRepo.GetByID(ctx, childIDs[0])
+	require.NoError(t, err)
+	assert.Equal(t, 1, child.Depth)
+	assert.Equal(t, parentIDs[0], *child.ParentID)
+
+	// Grandchild should have depth 2
+	grandchild, err := entryRepo.GetByID(ctx, childIDs[1])
+	require.NoError(t, err)
+	assert.Equal(t, 2, grandchild.Depth)
+	assert.Equal(t, childIDs[0], *grandchild.ParentID)
+}
+
+func TestBujoService_LogEntries_WithParentID_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	invalidParent := int64(99999)
+
+	_, err := service.LogEntries(ctx, ". Child task", LogEntriesOptions{
+		Date:     today,
+		ParentID: &invalidParent,
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "parent")
+}
+
+func TestBujoService_GetEntryAncestors_ReturnsParentChain(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, `. Grandparent
+  - Parent
+    . Grandchild`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 3)
+
+	ancestors, err := service.GetEntryAncestors(ctx, ids[2])
+	require.NoError(t, err)
+
+	require.Len(t, ancestors, 2)
+	assert.Equal(t, "Grandparent", ancestors[0].Content)
+	assert.Equal(t, "Parent", ancestors[1].Content)
+}
+
+func TestBujoService_GetEntryAncestors_RootEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Root task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	ancestors, err := service.GetEntryAncestors(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Empty(t, ancestors)
+}
+
+func TestBujoService_GetEntryAncestors_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	_, err := service.GetEntryAncestors(ctx, 99999)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestBujoService_MarkAnswered_QuestionBecomesAnswered(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = service.MarkAnswered(ctx, ids[0], "42")
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeAnswered, entry.Type)
+}
+
+func TestBujoService_MarkAnswered_CreatesAnswerEntry(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkAnswered(ctx, ids[0], "42")
+	require.NoError(t, err)
+
+	children, err := entryRepo.GetChildren(ctx, ids[0])
+	require.NoError(t, err)
+	require.Len(t, children, 1)
+	assert.Equal(t, "42", children[0].Content)
+	assert.Equal(t, domain.EntryTypeNote, children[0].Type)
+}
+
+func TestBujoService_MarkAnswered_RequiresAnswerText(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkAnswered(ctx, ids[0], "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "answer text is required")
+}
+
+func TestBujoService_MarkAnswered_OnlyQuestions(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". This is a task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkAnswered(ctx, ids[0], "Some answer")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only questions")
+}
+
+func TestBujoService_MarkAnswered_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.MarkAnswered(ctx, 99999, "Some answer")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestBujoService_ReopenQuestion_AnsweredBecomesQuestion(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkAnswered(ctx, ids[0], "42")
+	require.NoError(t, err)
+
+	err = service.ReopenQuestion(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeQuestion, entry.Type)
+}
+
+func TestBujoService_ReopenQuestion_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	err := service.ReopenQuestion(ctx, 99999)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}

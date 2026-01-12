@@ -39,7 +39,7 @@ Examples:
 		if searchType != "" {
 			entryType := domain.EntryType(searchType)
 			if !entryType.IsValid() {
-				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled)", searchType)
+				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled, question, answered)", searchType)
 			}
 			opts = opts.WithType(entryType)
 		}
@@ -82,7 +82,11 @@ Examples:
 		}
 
 		for _, entry := range results {
-			fmt.Println(formatSearchResult(entry, query))
+			ancestors, err := bujoService.GetEntryAncestors(cmd.Context(), entry.ID)
+			if err != nil {
+				ancestors = nil
+			}
+			fmt.Println(formatSearchResultWithContext(entry, ancestors, query))
 		}
 		fmt.Printf("\nFound %d result(s) for %q\n", len(results), query)
 
@@ -98,7 +102,18 @@ func init() {
 	rootCmd.AddCommand(searchCmd)
 }
 
-func formatSearchResult(entry domain.Entry, query string) string {
+func formatSearchResultWithContext(entry domain.Entry, ancestors []domain.Entry, query string) string {
+	var lines []string
+
+	if len(ancestors) > 0 {
+		var contextParts []string
+		for _, a := range ancestors {
+			contextParts = append(contextParts, a.Content)
+		}
+		contextLine := cli.Dimmed("  ↳ " + strings.Join(contextParts, " > "))
+		lines = append(lines, contextLine)
+	}
+
 	var parts []string
 
 	if entry.ScheduledDate != nil {
@@ -111,7 +126,7 @@ func formatSearchResult(entry domain.Entry, query string) string {
 	content := entry.Content
 
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		symbol = cli.Green(symbol)
 		content = cli.Green(content)
 	case domain.EntryTypeMigrated, domain.EntryTypeCancelled:
@@ -125,7 +140,9 @@ func formatSearchResult(entry domain.Entry, query string) string {
 	parts = append(parts, content)
 	parts = append(parts, cli.Dimmed(fmt.Sprintf("(%d)", entry.ID)))
 
-	return strings.Join(parts, " ")
+	lines = append(lines, strings.Join(parts, " "))
+
+	return strings.Join(lines, "\n")
 }
 
 func highlightQuery(content, query string) string {

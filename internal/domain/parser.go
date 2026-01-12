@@ -12,12 +12,15 @@ var symbolToType = map[rune]EntryType{
 	'o': EntryTypeEvent,
 	'x': EntryTypeDone,
 	'>': EntryTypeMigrated,
+	'?': EntryTypeQuestion,
+	'a': EntryTypeAnswered,
 	// Unicode display symbols (also accepted as input)
 	'•': EntryTypeTask,
 	'–': EntryTypeNote,
 	'○': EntryTypeEvent,
 	'✓': EntryTypeDone,
 	'→': EntryTypeMigrated,
+	'★': EntryTypeAnswered,
 }
 
 func ParseEntryType(line string) EntryType {

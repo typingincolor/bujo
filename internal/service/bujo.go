@@ -49,12 +49,25 @@ func NewBujoService(entryRepo EntryRepository, dayCtxRepo DayContextRepository, 
 type LogEntriesOptions struct {
 	Date     time.Time
 	Location *string
+	ParentID *int64
 }
 
 func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntriesOptions) ([]int64, error) {
 	entries, err := s.parser.Parse(input)
 	if err != nil {
 		return nil, err
+	}
+
+	var parentDepth int
+	if opts.ParentID != nil {
+		parent, err := s.entryRepo.GetByID(ctx, *opts.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil {
+			return nil, fmt.Errorf("parent entry %d not found", *opts.ParentID)
+		}
+		parentDepth = parent.Depth + 1
 	}
 
 	ids := make([]int64, 0, len(entries))
@@ -65,12 +78,21 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 		entry.Location = opts.Location
 		entry.CreatedAt = time.Now()
 
-		// Update parent ID if this entry has a parent
+		// Handle parent ID - either from opts or from parsed hierarchy
 		if entry.ParentID != nil {
+			// Entry has a parent from parsed input (indentation)
 			parentIdx := int(*entry.ParentID)
 			if dbID, ok := idMap[parentIdx]; ok {
 				entry.ParentID = &dbID
 			}
+		} else if opts.ParentID != nil && entry.Depth == 0 {
+			// Root-level entry should become child of opts.ParentID
+			entry.ParentID = opts.ParentID
+		}
+
+		// Adjust depth when adding to a parent
+		if opts.ParentID != nil {
+			entry.Depth += parentDepth
 		}
 
 		id, err := s.entryRepo.Insert(ctx, entry)
@@ -674,4 +696,69 @@ func (s *BujoService) ParseEntries(content string) ([]domain.Entry, error) {
 
 func (s *BujoService) SearchEntries(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
 	return s.entryRepo.Search(ctx, opts)
+}
+
+func (s *BujoService) GetEntryAncestors(ctx context.Context, id int64) ([]domain.Entry, error) {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var ancestors []domain.Entry
+	current := entry
+
+	for current.ParentID != nil {
+		parent, err := s.entryRepo.GetByID(ctx, *current.ParentID)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil {
+			break
+		}
+		ancestors = append([]domain.Entry{*parent}, ancestors...)
+		current = parent
+	}
+
+	return ancestors, nil
+}
+
+func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText string) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if entry.Type != domain.EntryTypeQuestion {
+		return fmt.Errorf("only questions can be marked answered, this is a %s", entry.Type)
+	}
+
+	if answerText == "" {
+		return fmt.Errorf("answer text is required")
+	}
+
+	answerEntry := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       answerText,
+		ParentID:      &id,
+		Depth:         entry.Depth + 1,
+		ScheduledDate: entry.ScheduledDate,
+		CreatedAt:     time.Now(),
+	}
+
+	if _, err := s.entryRepo.Insert(ctx, answerEntry); err != nil {
+		return fmt.Errorf("failed to add answer: %w", err)
+	}
+
+	entry.Type = domain.EntryTypeAnswered
+	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) ReopenQuestion(ctx context.Context, id int64) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Type = domain.EntryTypeQuestion
+	return s.entryRepo.Update(ctx, *entry)
 }

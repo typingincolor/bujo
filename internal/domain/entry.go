@@ -14,6 +14,8 @@ const (
 	EntryTypeDone      EntryType = "done"
 	EntryTypeMigrated  EntryType = "migrated"
 	EntryTypeCancelled EntryType = "cancelled"
+	EntryTypeQuestion  EntryType = "question"
+	EntryTypeAnswered  EntryType = "answered"
 )
 
 type Priority string
@@ -72,6 +74,8 @@ var validEntryTypes = map[EntryType]string{
 	EntryTypeDone:      "✓",
 	EntryTypeMigrated:  "→",
 	EntryTypeCancelled: "✗",
+	EntryTypeQuestion:  "?",
+	EntryTypeAnswered:  "★",
 }
 
 func (et EntryType) IsValid() bool {
@@ -108,7 +112,7 @@ func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Ent
 }
 
 func (e Entry) IsComplete() bool {
-	return e.Type == EntryTypeDone || e.Type == EntryTypeCancelled
+	return e.Type == EntryTypeDone || e.Type == EntryTypeCancelled || e.Type == EntryTypeAnswered
 }
 
 func (e Entry) HasParent() bool {

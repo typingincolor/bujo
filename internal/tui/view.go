@@ -462,7 +462,7 @@ func (m Model) renderEntry(item EntryItem, selected bool) string {
 	}
 
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		return DoneStyle.Render(base)
 	case domain.EntryTypeMigrated:
 		return MigratedStyle.Render(base)
@@ -953,7 +953,7 @@ func (m Model) renderSearchResultLine(entry domain.Entry, selected bool) string 
 	idStr := fmt.Sprintf("(%d)", entry.ID)
 
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		symbol = DoneStyle.Render(symbol)
 		content = DoneStyle.Render(content)
 		dateStr = DoneStyle.Render(dateStr)
