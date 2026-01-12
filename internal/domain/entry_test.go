@@ -155,6 +155,16 @@ func TestEntry_IsOverdue(t *testing.T) {
 	}
 }
 
+func TestEntry_IsOverdue_ComparesDateOnly(t *testing.T) {
+	todayMidnight := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	todayAfternoon := time.Date(2026, 1, 6, 14, 30, 0, 0, time.UTC)
+
+	entry := Entry{Type: EntryTypeTask, ScheduledDate: &todayMidnight}
+
+	assert.False(t, entry.IsOverdue(todayAfternoon),
+		"task scheduled for today should NOT be overdue even when checked later in the day")
+}
+
 func TestEntry_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
