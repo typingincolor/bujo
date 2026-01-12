@@ -50,6 +50,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderEditInput())
 		sb.WriteString("\n")
+	} else if m.answerMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderAnswerInput())
+		sb.WriteString("\n")
 	} else if m.addMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderAddInput())
@@ -514,6 +518,14 @@ func (m Model) renderEditInput() string {
 	sb.WriteString("Edit entry:\n")
 	sb.WriteString(m.editMode.input.View())
 	sb.WriteString("\n\nEnter to save, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderAnswerInput() string {
+	var sb strings.Builder
+	sb.WriteString("Answer question:\n")
+	sb.WriteString(m.answerMode.input.View())
+	sb.WriteString("\n\nEnter to submit, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }
 

@@ -67,8 +67,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("space", "done"),
 		),
 		Answer: key.NewBinding(
-			key.WithKeys("Q"),
-			key.WithHelp("Q", "answer"),
+			key.WithKeys("?"),
+			key.WithHelp("?", "answer"),
 		),
 		CancelEntry: key.NewBinding(
 			key.WithKeys("x"),

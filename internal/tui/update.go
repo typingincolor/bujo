@@ -1490,6 +1490,37 @@ func (m Model) editEntryCmd(id int64, content string) tea.Cmd {
 	}
 }
 
+func (m Model) handleAnswerMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.answerMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		questionID := m.answerMode.questionID
+		answerText := m.answerMode.input.Value()
+		m.answerMode.active = false
+		if answerText == "" {
+			return m, nil
+		}
+		return m, m.answerQuestionCmd(questionID, answerText)
+	}
+
+	var cmd tea.Cmd
+	m.answerMode.input, cmd = m.answerMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) answerQuestionCmd(id int64, answerText string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.MarkAnswered(ctx, id, answerText); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{id}
+	}
+}
+
 func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
