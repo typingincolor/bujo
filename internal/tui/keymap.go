@@ -18,6 +18,7 @@ type KeyMap struct {
 	Migrate        key.Binding
 	MigrateToGoal  key.Binding
 	MoveListItem   key.Binding
+	MoveToList     key.Binding
 	Priority       key.Binding
 	ToggleView     key.Binding
 	GotoDate       key.Binding
@@ -105,6 +106,10 @@ func DefaultKeyMap() KeyMap {
 		MoveListItem: key.NewBinding(
 			key.WithKeys("M"),
 			key.WithHelp("M", "move"),
+		),
+		MoveToList: key.NewBinding(
+			key.WithKeys("L"),
+			key.WithHelp("L", "to list"),
 		),
 		Priority: key.NewBinding(
 			key.WithKeys("!"),
