@@ -219,7 +219,8 @@ func TestParseAddArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, location, date, file, help, yes := parseAddArgs(tt.args)
+			entries, location, date, file, parent, help, yes := parseAddArgs(tt.args)
+		_ = parent // not tested yet
 
 			if help != tt.wantHelp {
 				t.Errorf("parseAddArgs() help = %v, want %v", help, tt.wantHelp)

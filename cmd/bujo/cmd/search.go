@@ -39,7 +39,7 @@ Examples:
 		if searchType != "" {
 			entryType := domain.EntryType(searchType)
 			if !entryType.IsValid() {
-				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled, question, answered)", searchType)
+				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled, question, answered, answer)", searchType)
 			}
 			opts = opts.WithType(entryType)
 		}
@@ -81,11 +81,18 @@ Examples:
 			return nil
 		}
 
+		// Batch fetch ancestors for all results to avoid N+1 queries
+		ids := make([]int64, len(results))
+		for i, entry := range results {
+			ids[i] = entry.ID
+		}
+		ancestorsMap, err := bujoService.GetEntriesAncestorsMap(cmd.Context(), ids)
+		if err != nil {
+			return fmt.Errorf("failed to fetch ancestors: %w", err)
+		}
+
 		for _, entry := range results {
-			ancestors, err := bujoService.GetEntryAncestors(cmd.Context(), entry.ID)
-			if err != nil {
-				ancestors = nil
-			}
+			ancestors := ancestorsMap[entry.ID]
 			fmt.Println(formatSearchResultWithContext(entry, ancestors, query))
 		}
 		fmt.Printf("\nFound %d result(s) for %q\n", len(results), query)

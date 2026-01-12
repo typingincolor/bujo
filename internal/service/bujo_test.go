@@ -1660,11 +1660,18 @@ func TestBujoService_MarkAnswered_CreatesAnswerEntry(t *testing.T) {
 	err = service.MarkAnswered(ctx, ids[0], "42")
 	require.NoError(t, err)
 
-	children, err := entryRepo.GetChildren(ctx, ids[0])
+	// Get the question after marking as answered to get its current ID
+	// (Update creates a new version with a new ID due to event sourcing)
+	question, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	require.Equal(t, domain.EntryTypeAnswered, question.Type)
+
+	// Get children using the current question ID
+	children, err := entryRepo.GetChildren(ctx, question.ID)
 	require.NoError(t, err)
 	require.Len(t, children, 1)
 	assert.Equal(t, "42", children[0].Content)
-	assert.Equal(t, domain.EntryTypeNote, children[0].Type)
+	assert.Equal(t, domain.EntryTypeAnswer, children[0].Type)
 }
 
 func TestBujoService_MarkAnswered_RequiresAnswerText(t *testing.T) {

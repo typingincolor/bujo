@@ -126,6 +126,9 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 		content = Green(content)
 		symbol = Green(symbol)
 		idStr = Green(idStr)
+	case domain.EntryTypeAnswer:
+		// Answers are informational content, style subtly
+		symbol = Dimmed(symbol)
 	case domain.EntryTypeMigrated:
 		content = Dimmed(content)
 		symbol = Dimmed(symbol)

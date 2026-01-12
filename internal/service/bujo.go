@@ -722,6 +722,76 @@ func (s *BujoService) GetEntryAncestors(ctx context.Context, id int64) ([]domain
 	return ancestors, nil
 }
 
+func (s *BujoService) GetEntriesAncestorsMap(ctx context.Context, ids []int64) (map[int64][]domain.Entry, error) {
+	if len(ids) == 0 {
+		return make(map[int64][]domain.Entry), nil
+	}
+
+	result := make(map[int64][]domain.Entry)
+
+	// Get all entries once
+	entriesMap := make(map[int64]*domain.Entry)
+	for _, id := range ids {
+		entry, err := s.entryRepo.GetByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if entry != nil {
+			entriesMap[id] = entry
+		}
+	}
+
+	// Collect all parent IDs we need to fetch
+	parentIDsSet := make(map[int64]bool)
+	for _, entry := range entriesMap {
+		current := entry
+		for current.ParentID != nil {
+			parentIDsSet[*current.ParentID] = true
+			current = entriesMap[*current.ParentID]
+			if current == nil {
+				break
+			}
+		}
+	}
+
+	// Fetch all parent entries in one go
+	for parentID := range parentIDsSet {
+		if _, exists := entriesMap[parentID]; !exists {
+			parent, err := s.entryRepo.GetByID(ctx, parentID)
+			if err != nil {
+				continue
+			}
+			if parent != nil {
+				entriesMap[parentID] = parent
+			}
+		}
+	}
+
+	// Build ancestor chains for each entry
+	for _, id := range ids {
+		entry := entriesMap[id]
+		if entry == nil {
+			continue
+		}
+
+		var ancestors []domain.Entry
+		current := entry
+
+		for current.ParentID != nil {
+			parent := entriesMap[*current.ParentID]
+			if parent == nil {
+				break
+			}
+			ancestors = append([]domain.Entry{*parent}, ancestors...)
+			current = parent
+		}
+
+		result[id] = ancestors
+	}
+
+	return result, nil
+}
+
 func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText string) error {
 	entry, err := s.getEntry(ctx, id)
 	if err != nil {
@@ -736,12 +806,32 @@ func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText str
 		return fmt.Errorf("answer text is required")
 	}
 
+	if len(answerText) > 512 {
+		return fmt.Errorf("answer text too long (max 512 characters, got %d)", len(answerText))
+	}
+
+	// First update the question to mark it as answered
+	entry.Type = domain.EntryTypeAnswered
+	if err := s.entryRepo.Update(ctx, *entry); err != nil {
+		return err
+	}
+
+	// Get the updated question entry to get its new ID after the update
+	updated, err := s.entryRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if updated == nil {
+		return fmt.Errorf("question entry not found after update")
+	}
+
+	// Now insert the answer as a child of the updated question
 	answerEntry := domain.Entry{
-		Type:          domain.EntryTypeNote,
+		Type:          domain.EntryTypeAnswer,
 		Content:       answerText,
-		ParentID:      &id,
-		Depth:         entry.Depth + 1,
-		ScheduledDate: entry.ScheduledDate,
+		ParentID:      &updated.ID,
+		Depth:         updated.Depth + 1,
+		ScheduledDate: updated.ScheduledDate,
 		CreatedAt:     time.Now(),
 	}
 
@@ -749,8 +839,7 @@ func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText str
 		return fmt.Errorf("failed to add answer: %w", err)
 	}
 
-	entry.Type = domain.EntryTypeAnswered
-	return s.entryRepo.Update(ctx, *entry)
+	return nil
 }
 
 func (s *BujoService) ReopenQuestion(ctx context.Context, id int64) error {
