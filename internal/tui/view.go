@@ -102,6 +102,14 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderMoveListItemModal())
 		sb.WriteString("\n")
+	} else if m.createListMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderCreateListInput())
+		sb.WriteString("\n")
+	} else if m.moveToListMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderMoveToListModal())
+		sb.WriteString("\n")
 	} else if m.addHabitMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderAddHabitInput())
@@ -1231,6 +1239,35 @@ func (m Model) renderMoveListItemModal() string {
 	for i, list := range m.moveListItemMode.targetLists {
 		prefix := "  "
 		if i == m.moveListItemMode.selectedIdx {
+			prefix = "> "
+		}
+		num := i + 1
+		if num <= 9 {
+			sb.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, num, list.Name))
+		} else {
+			sb.WriteString(fmt.Sprintf("%s   %s\n", prefix, list.Name))
+		}
+	}
+
+	sb.WriteString("\n1-9 or Enter to move, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderCreateListInput() string {
+	var sb strings.Builder
+	sb.WriteString("Create new list:\n")
+	sb.WriteString(m.createListMode.input.View())
+	sb.WriteString("\n\nEnter to create, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderMoveToListModal() string {
+	var sb strings.Builder
+	sb.WriteString("Move entry to list:\n\n")
+
+	for i, list := range m.moveToListMode.targetLists {
+		prefix := "  "
+		if i == m.moveToListMode.selectedIdx {
 			prefix = "> "
 		}
 		num := i + 1

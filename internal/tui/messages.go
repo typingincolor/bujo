@@ -23,7 +23,11 @@ type entryDeletedMsg struct {
 	id int64
 }
 
-type confirmDeleteMsg struct {
+type entryMovedToListMsg struct {
+	entryID int64
+}
+
+type confirmDeleteMsg struct{
 	entryID     int64
 	hasChildren bool
 }
@@ -57,7 +61,16 @@ type listsLoadedMsg struct {
 	summaries map[int64]*service.ListSummary
 }
 
-type listItemsLoadedMsg struct {
+type listCreatedMsg struct{}
+
+type listsForMoveLoadedMsg struct {
+	entryID      int64
+	entryType    domain.EntryType
+	entryContent string
+	lists        []domain.List
+}
+
+type listItemsLoadedMsg struct{
 	listID int64
 	items  []domain.ListItem
 }

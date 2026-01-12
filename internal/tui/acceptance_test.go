@@ -364,6 +364,72 @@ func TestUAT_JournalView_TimeNavigation_L_GoesToNextPeriod(t *testing.T) {
 	}
 }
 
+func TestUAT_JournalView_NavigateToFutureDates(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create an entry for tomorrow
+	tomorrow := time.Now().AddDate(0, 0, 1)
+	opts := service.LogEntriesOptions{Date: tomorrow}
+	entries, err := bujoSvc.LogEntries(ctx, ". Future task", opts)
+	if err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no entries created")
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Start at today
+	now := time.Now()
+	model.viewDate = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, cmd := model.Update(msg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Press 'l' to go to tomorrow
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	// Execute the command to load tomorrow's agenda
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// viewDate should be tomorrow
+	tomorrowDate := time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 0, 0, 0, 0, tomorrow.Location())
+	if !model.viewDate.Equal(tomorrowDate) {
+		t.Errorf("after pressing 'l' from today, viewDate should be %v, got %v", tomorrowDate, model.viewDate)
+	}
+
+	// The future task should be shown in the view
+	view := model.View()
+	if !strings.Contains(view, "Future task") {
+		t.Error("future task should be visible when navigating to tomorrow")
+	}
+}
+
 func TestUAT_JournalView_PastDays_NoOverdueSection(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
 	ctx := context.Background()
@@ -1033,6 +1099,159 @@ func TestUAT_ListsView_EnterOpensItems(t *testing.T) {
 
 	if model.currentView != ViewTypeListItems {
 		t.Errorf("Enter should open list items view, got %v", model.currentView)
+	}
+}
+
+func TestUAT_ListsView_CreateListWithAddKey(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to lists view
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// Press 'a' to create a new list
+	addMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
+	newModel, _ = model.Update(addMsg)
+	model = newModel.(Model)
+
+	if !model.createListMode.active {
+		t.Fatal("pressing 'a' in lists view should activate create list mode")
+	}
+
+	// Type list name
+	for _, r := range "My New List" {
+		charMsg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}}
+		newModel, _ = model.Update(charMsg)
+		model = newModel.(Model)
+	}
+
+	// Press Enter to create the list
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("submitting list name should return a command to create the list")
+	}
+
+	// Execute the create command
+	createMsg := cmd()
+	newModel, cmd = model.Update(createMsg)
+	model = newModel.(Model)
+
+	// Reload lists
+	if cmd != nil {
+		reloadMsg := cmd()
+		newModel, _ = model.Update(reloadMsg)
+		model = newModel.(Model)
+	}
+
+	// Verify list was created and is shown
+	view := model.View()
+	if !strings.Contains(view, "My New List") {
+		t.Error("newly created list should appear in the lists view")
+	}
+
+	if model.createListMode.active {
+		t.Error("create list mode should be deactivated after submission")
+	}
+}
+
+func TestUAT_JournalView_MoveEntryToList(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a journal entry
+	entries, err := bujoSvc.LogEntries(ctx, ". Task to move", service.LogEntriesOptions{})
+	if err != nil {
+		t.Fatalf("failed to create entry: %v", err)
+	}
+	if len(entries) == 0 {
+		t.Fatal("no entries created")
+	}
+
+	// Create a list to move to
+	list, err := listSvc.CreateList(ctx, "My List")
+	if err != nil {
+		t.Fatalf("failed to create list: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, _ := model.Update(msg)
+		model = newModel.(Model)
+	}
+
+	// Press 'L' to move entry to list
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'L'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	// Execute the load lists command
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	if !model.moveToListMode.active {
+		t.Fatal("pressing 'L' should activate move to list mode")
+	}
+
+	if len(model.moveToListMode.targetLists) == 0 {
+		t.Fatal("move to list mode should have target lists")
+	}
+
+	// Press Enter to select the first list
+	enterMsg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd = model.Update(enterMsg)
+	model = newModel.(Model)
+
+	if cmd == nil {
+		t.Fatal("selecting a list should return a command to move the entry")
+	}
+
+	// Execute the move command
+	moveMsg := cmd()
+	newModel, _ = model.Update(moveMsg)
+	model = newModel.(Model)
+
+	// Verify the entry was moved to the list
+	items, err := listSvc.GetListItems(ctx, list.ID)
+	if err != nil {
+		t.Fatalf("failed to get list items: %v", err)
+	}
+
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item in list, got %d", len(items))
+	}
+
+	if items[0].Content != "Task to move" {
+		t.Errorf("expected content 'Task to move', got '%s'", items[0].Content)
 	}
 }
 

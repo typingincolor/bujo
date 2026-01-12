@@ -40,7 +40,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		return m, nil
 
-	case entryUpdatedMsg, entryDeletedMsg:
+	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg:
 		return m, m.loadAgendaCmd()
 
 	case gotoDateMsg:
@@ -89,6 +89,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.listState.summaries = msg.summaries
 		if m.listState.selectedListIdx >= len(m.listState.lists) {
 			m.listState.selectedListIdx = 0
+		}
+		return m, nil
+
+	case listCreatedMsg:
+		return m, m.loadListsCmd()
+
+	case listsForMoveLoadedMsg:
+		m.moveToListMode = moveToListState{
+			active:       true,
+			entryID:      msg.entryID,
+			entryType:    msg.entryType,
+			entryContent: msg.entryContent,
+			targetLists:  msg.lists,
+			selectedIdx:  0,
 		}
 		return m, nil
 
@@ -221,6 +235,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.moveListItemMode.active {
 			return m.handleMoveListItemMode(msg)
+		}
+		if m.createListMode.active {
+			return m.handleCreateListMode(msg)
+		}
+		if m.moveToListMode.active {
+			return m.handleMoveToListMode(msg)
 		}
 
 		// Check for command palette activation
@@ -478,6 +498,16 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			input:   ti,
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.MoveToList):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		if entry.Type != domain.EntryTypeTask && entry.Type != domain.EntryTypeNote {
+			return m, nil
+		}
+		return m, m.loadListsForMoveCmd(entry.ID, entry.Type, entry.Content)
 
 	case key.Matches(msg, m.keyMap.Priority):
 		if len(m.entries) == 0 {
@@ -2157,6 +2187,17 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.Add):
+		ti := textinput.New()
+		ti.Focus()
+		ti.CharLimit = 256
+		ti.Width = m.width - 10
+		m.createListMode = createListState{
+			active: true,
+			input:  ti,
+		}
+		return m, nil
+
 	case msg.Type == tea.KeyEnter:
 		if len(m.listState.lists) > 0 && m.listState.selectedListIdx < len(m.listState.lists) {
 			selectedList := m.listState.lists[m.listState.selectedListIdx]
@@ -2298,6 +2339,76 @@ func (m Model) handleMoveListItemMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 					fromListID := m.listState.currentListID
 					m.moveListItemMode.active = false
 					return m, m.moveListItemCmd(itemID, targetList.ID, fromListID)
+				}
+			}
+		}
+	}
+
+	return m, nil
+}
+
+func (m Model) handleCreateListMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.createListMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		listName := m.createListMode.input.Value()
+		if listName == "" {
+			m.createListMode.active = false
+			return m, nil
+		}
+		m.createListMode.active = false
+		return m, m.createListCmd(listName)
+	}
+
+	var cmd tea.Cmd
+	m.createListMode.input, cmd = m.createListMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) handleMoveToListMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.moveToListMode.active = false
+		return m, nil
+
+	case tea.KeyUp:
+		if m.moveToListMode.selectedIdx > 0 {
+			m.moveToListMode.selectedIdx--
+		}
+		return m, nil
+
+	case tea.KeyDown:
+		if m.moveToListMode.selectedIdx < len(m.moveToListMode.targetLists)-1 {
+			m.moveToListMode.selectedIdx++
+		}
+		return m, nil
+
+	case tea.KeyEnter:
+		if len(m.moveToListMode.targetLists) > 0 && m.moveToListMode.selectedIdx < len(m.moveToListMode.targetLists) {
+			targetList := m.moveToListMode.targetLists[m.moveToListMode.selectedIdx]
+			entryID := m.moveToListMode.entryID
+			entryType := m.moveToListMode.entryType
+			entryContent := m.moveToListMode.entryContent
+			m.moveToListMode.active = false
+			return m, m.moveEntryToListCmd(entryID, targetList.ID, entryType, entryContent)
+		}
+		return m, nil
+
+	case tea.KeyRunes:
+		if len(msg.Runes) == 1 {
+			r := msg.Runes[0]
+			if r >= '1' && r <= '9' {
+				idx := int(r - '1')
+				if idx < len(m.moveToListMode.targetLists) {
+					targetList := m.moveToListMode.targetLists[idx]
+					entryID := m.moveToListMode.entryID
+					entryType := m.moveToListMode.entryType
+					entryContent := m.moveToListMode.entryContent
+					m.moveToListMode.active = false
+					return m, m.moveEntryToListCmd(entryID, targetList.ID, entryType, entryContent)
 				}
 			}
 		}
