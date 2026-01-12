@@ -206,14 +206,49 @@ func TestTreeParser_Parse_InvalidIndentation(t *testing.T) {
 	assert.Contains(t, err.Error(), "invalid indentation")
 }
 
-func TestTreeParser_Parse_UnknownSymbol(t *testing.T) {
+func TestTreeParser_Parse_UnknownSymbol_DefaultsToNote(t *testing.T) {
 	parser := NewTreeParser()
-	input := "? Unknown symbol"
 
-	_, err := parser.Parse(input)
+	tests := []struct {
+		name    string
+		input   string
+		content string
+	}{
+		{"question mark", "? Unknown symbol", "Unknown symbol"},
+		{"letter prefix", "a Random text", "Random text"},
+		{"number prefix", "1 Numbered item", "Numbered item"},
+		{"hash prefix", "# Heading style", "Heading style"},
+		{"asterisk prefix", "* Bullet point", "Bullet point"},
+	}
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown entry type")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, err := parser.Parse(tt.input)
+
+			require.NoError(t, err, "Unknown symbols should not cause an error")
+			require.Len(t, entries, 1)
+			assert.Equal(t, EntryTypeNote, entries[0].Type, "Unknown symbols should default to note")
+			assert.Equal(t, tt.content, entries[0].Content)
+		})
+	}
+}
+
+func TestTreeParser_Parse_UnknownSymbol_PreservesHierarchy(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Valid task
+  ? Unknown child symbol
+  - Valid note`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	assert.Equal(t, EntryTypeTask, entries[0].Type)
+	assert.Equal(t, EntryTypeNote, entries[1].Type, "Unknown symbol should default to note")
+	assert.Equal(t, "Unknown child symbol", entries[1].Content)
+	assert.NotNil(t, entries[1].ParentID)
+	assert.Equal(t, EntryTypeNote, entries[2].Type)
 }
 
 func TestTreeParser_Parse_WithPriority(t *testing.T) {

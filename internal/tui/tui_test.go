@@ -765,7 +765,7 @@ func TestModel_Update_CaptureMode_DetectsIndentationError(t *testing.T) {
 	}
 }
 
-func TestModel_Update_CaptureMode_DetectsMissingSymbol(t *testing.T) {
+func TestModel_Update_CaptureMode_MissingSymbolDefaultsToNote(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	model := NewWithConfig(Config{
 		BujoService:  bujoSvc,
@@ -773,12 +773,18 @@ func TestModel_Update_CaptureMode_DetectsMissingSymbol(t *testing.T) {
 		ListService:  listSvc,
 	})
 	model.agenda = &service.MultiDayAgenda{}
-	model.captureMode = captureState{active: true, content: "Missing symbol"}
+	model.captureMode = captureState{active: true, content: "Missing symbol text"}
 
 	model.captureMode.parsedEntries, model.captureMode.parseError = model.parseCapture(model.captureMode.content)
 
-	if model.captureMode.parseError == nil {
-		t.Error("expected error for missing symbol prefix")
+	if model.captureMode.parseError != nil {
+		t.Errorf("expected no error for missing symbol prefix (should default to note), got: %v", model.captureMode.parseError)
+	}
+	if len(model.captureMode.parsedEntries) != 1 {
+		t.Errorf("expected 1 parsed entry, got %d", len(model.captureMode.parsedEntries))
+	}
+	if model.captureMode.parsedEntries[0].Type != domain.EntryTypeNote {
+		t.Errorf("expected entry type to be note, got %s", model.captureMode.parsedEntries[0].Type)
 	}
 }
 

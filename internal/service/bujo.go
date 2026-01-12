@@ -11,6 +11,7 @@ import (
 type EntryRepository interface {
 	Insert(ctx context.Context, entry domain.Entry) (int64, error)
 	GetByID(ctx context.Context, id int64) (*domain.Entry, error)
+	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]domain.Entry, error)
 	GetByDateRange(ctx context.Context, from, to time.Time) ([]domain.Entry, error)
 	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
@@ -505,6 +506,7 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 	}
 
 	oldDepth := entry.Depth
+	entityID := entry.EntityID
 
 	// Handle parent change
 	if opts.MoveToRoot != nil && *opts.MoveToRoot {
@@ -532,17 +534,24 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 		return err
 	}
 
+	// Get the updated entry to get its new row ID (event sourcing creates new rows)
+	updatedEntry, err := s.entryRepo.GetByEntityID(ctx, entityID)
+	if err != nil {
+		return err
+	}
+	newID := updatedEntry.ID
+
 	// Update children depths if parent changed
 	depthDelta := entry.Depth - oldDepth
 	if depthDelta != 0 {
-		if err := s.updateChildrenDepths(ctx, id, depthDelta); err != nil {
+		if err := s.updateChildrenDepths(ctx, newID, depthDelta); err != nil {
 			return err
 		}
 	}
 
 	// Update children dates if logged date changed
 	if opts.NewLoggedDate != nil {
-		if err := s.updateChildrenDates(ctx, id, *opts.NewLoggedDate); err != nil {
+		if err := s.updateChildrenDates(ctx, newID, *opts.NewLoggedDate); err != nil {
 			return err
 		}
 	}
@@ -557,12 +566,18 @@ func (s *BujoService) updateChildrenDepths(ctx context.Context, parentID int64, 
 	}
 
 	for _, child := range children {
+		entityID := child.EntityID
 		child.Depth += depthDelta
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
+		// Get new row ID after update (event sourcing creates new rows)
+		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
+		if err != nil {
+			return err
+		}
 		// Recursively update grandchildren
-		if err := s.updateChildrenDepths(ctx, child.ID, depthDelta); err != nil {
+		if err := s.updateChildrenDepths(ctx, updatedChild.ID, depthDelta); err != nil {
 			return err
 		}
 	}
@@ -577,11 +592,17 @@ func (s *BujoService) updateChildrenDates(ctx context.Context, parentID int64, n
 	}
 
 	for _, child := range children {
+		entityID := child.EntityID
 		child.ScheduledDate = &newDate
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
-		if err := s.updateChildrenDates(ctx, child.ID, newDate); err != nil {
+		// Get new row ID after update (event sourcing creates new rows)
+		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
+		if err != nil {
+			return err
+		}
+		if err := s.updateChildrenDates(ctx, updatedChild.ID, newDate); err != nil {
 			return err
 		}
 	}

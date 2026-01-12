@@ -299,6 +299,74 @@ func TestEntryRepository_Update(t *testing.T) {
 	assert.Equal(t, "Updated content", result.Content)
 }
 
+func TestEntryRepository_Update_PreservesChildren(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	parent := domain.Entry{
+		Type:      domain.EntryTypeEvent,
+		Content:   "Parent meeting",
+		Depth:     0,
+		CreatedAt: time.Now(),
+	}
+	parentID, err := repo.Insert(ctx, parent)
+	require.NoError(t, err)
+
+	child1 := domain.Entry{
+		Type:      domain.EntryTypeNote,
+		Content:   "First child note",
+		ParentID:  &parentID,
+		Depth:     1,
+		CreatedAt: time.Now(),
+	}
+	child1ID, err := repo.Insert(ctx, child1)
+	require.NoError(t, err)
+
+	child2 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Second child task",
+		ParentID:  &parentID,
+		Depth:     1,
+		CreatedAt: time.Now(),
+	}
+	_, err = repo.Insert(ctx, child2)
+	require.NoError(t, err)
+
+	grandchild := domain.Entry{
+		Type:      domain.EntryTypeNote,
+		Content:   "Grandchild note",
+		ParentID:  &child1ID,
+		Depth:     2,
+		CreatedAt: time.Now(),
+	}
+	_, err = repo.Insert(ctx, grandchild)
+	require.NoError(t, err)
+
+	// Update the parent (creates new row with new ID in event sourcing)
+	parentEntry, err := repo.GetByID(ctx, parentID)
+	require.NoError(t, err)
+	parentEntry.Content = "Updated parent meeting"
+	err = repo.Update(ctx, *parentEntry)
+	require.NoError(t, err)
+
+	// Get the updated parent (may have new row ID)
+	updatedParent, err := repo.GetByEntityID(ctx, parentEntry.EntityID)
+	require.NoError(t, err)
+	require.NotNil(t, updatedParent)
+	assert.Equal(t, "Updated parent meeting", updatedParent.Content)
+
+	// Children should still be accessible via GetChildren using the new parent ID
+	children, err := repo.GetChildren(ctx, updatedParent.ID)
+	require.NoError(t, err)
+	assert.Len(t, children, 2, "Children should still be linked to parent after update")
+
+	// GetWithChildren should return parent and all descendants
+	tree, err := repo.GetWithChildren(ctx, updatedParent.ID)
+	require.NoError(t, err)
+	assert.Len(t, tree, 4, "Should return parent + 2 children + 1 grandchild")
+}
+
 func TestEntryRepository_Delete_SoftDeletes(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)
