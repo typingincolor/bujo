@@ -1095,9 +1095,10 @@ func (m Model) renderStatsContent() string {
 	sb.WriteString(fmt.Sprintf("AI Summary: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
 	sb.WriteString(fmt.Sprintf("Period: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
 
+	// Check for summary first (even if service is nil) to allow testing with mock summaries
 	if m.summaryState.summary != nil {
 		sb.WriteString("🤖 AI Reflection:\n\n")
-		rendered, err := renderMarkdown(m.summaryState.summary.Content)
+		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
 		if err != nil {
 			sb.WriteString(m.summaryState.summary.Content)
 		} else {

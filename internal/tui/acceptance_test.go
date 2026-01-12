@@ -4390,6 +4390,12 @@ func TestUAT_StatsView_RendersMarkdownHeaders(t *testing.T) {
 	if !strings.Contains(view, "Some text") {
 		t.Error("view should contain regular text")
 	}
+
+	// Verify glamour styling is applied (check for extra whitespace/formatting that glamour adds)
+	// Glamour adds padding and formatting around headers, which increases the view length
+	if len(view) < 200 {
+		t.Error("view should contain glamour-styled content with formatting")
+	}
 }
 
 func TestUAT_StatsView_RendersMarkdownLists(t *testing.T) {
@@ -4417,6 +4423,12 @@ func TestUAT_StatsView_RendersMarkdownLists(t *testing.T) {
 	if !strings.Contains(view, "Item 1") || !strings.Contains(view, "Item 2") {
 		t.Error("view should contain list content")
 	}
+
+	// Verify glamour is rendering lists (glamour uses • bullet points)
+	// Check for the bullet character that glamour uses
+	if !strings.Contains(view, "•") {
+		t.Error("view should contain glamour-styled bullet points (•)")
+	}
 }
 
 func TestUAT_StatsView_RendersMarkdownEmphasis(t *testing.T) {
@@ -4443,5 +4455,11 @@ func TestUAT_StatsView_RendersMarkdownEmphasis(t *testing.T) {
 	// Content should be present (glamour will style it)
 	if !strings.Contains(view, "bold") || !strings.Contains(view, "italic") {
 		t.Error("view should contain emphasized text content")
+	}
+
+	// Verify glamour adds ANSI styling (check for escape sequences)
+	// Glamour uses ANSI codes to style text, which will be present in the output
+	if !strings.Contains(view, "\x1b[") {
+		t.Error("view should contain ANSI escape codes from glamour styling")
 	}
 }
