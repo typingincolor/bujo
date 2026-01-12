@@ -47,6 +47,7 @@ type Model struct {
 	currentView     ViewType
 	confirmMode     confirmState
 	editMode        editState
+	answerMode      answerState
 	addMode         addState
 	migrateMode     migrateState
 	gotoMode        gotoState
@@ -101,6 +102,12 @@ type editState struct {
 	active  bool
 	entryID int64
 	input   textinput.Model
+}
+
+type answerState struct {
+	active     bool
+	questionID int64
+	input      textinput.Model
 }
 
 type addState struct {

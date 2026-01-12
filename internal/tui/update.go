@@ -174,6 +174,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.editMode.active {
 			return m.handleEditMode(msg)
 		}
+		if m.answerMode.active {
+			return m.handleAnswerMode(msg)
+		}
 		if m.addMode.active {
 			return m.handleAddMode(msg)
 		}
@@ -310,6 +313,25 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Done):
 		return m, m.toggleDoneCmd()
+
+	case key.Matches(msg, m.keyMap.Answer):
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			if entry.Type == domain.EntryTypeQuestion {
+				ti := textinput.New()
+				ti.Placeholder = "Enter your answer..."
+				ti.Focus()
+				ti.CharLimit = 512
+				ti.Width = m.width - 10
+				m.answerMode = answerState{
+					active:     true,
+					questionID: entry.ID,
+					input:      ti,
+				}
+				return m, nil
+			}
+		}
+		return m, nil
 
 	case key.Matches(msg, m.keyMap.CancelEntry):
 		if len(m.entries) > 0 {
