@@ -122,7 +122,7 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 
 	// Color based on type
 	switch entry.Type {
-	case domain.EntryTypeDone:
+	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		content = Green(content)
 		symbol = Green(symbol)
 		idStr = Green(idStr)

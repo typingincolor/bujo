@@ -917,7 +917,12 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 
 		isCollapsed, hasCollapseState := m.collapsed[entry.EntityID]
 		if !hasCollapseState && hasChildren {
-			isCollapsed = true
+			// Auto-expand answered questions to show the answer
+			if entry.Type == domain.EntryTypeAnswered {
+				isCollapsed = false
+			} else {
+				isCollapsed = true
+			}
 		}
 
 		hiddenCount := 0

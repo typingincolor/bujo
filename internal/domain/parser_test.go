@@ -214,8 +214,6 @@ func TestTreeParser_Parse_UnknownSymbol_DefaultsToNote(t *testing.T) {
 		input   string
 		content string
 	}{
-		{"question mark", "? Unknown symbol", "Unknown symbol"},
-		{"letter prefix", "a Random text", "Random text"},
 		{"number prefix", "1 Numbered item", "Numbered item"},
 		{"hash prefix", "# Heading style", "Heading style"},
 		{"asterisk prefix", "* Bullet point", "Bullet point"},
@@ -236,7 +234,7 @@ func TestTreeParser_Parse_UnknownSymbol_DefaultsToNote(t *testing.T) {
 func TestTreeParser_Parse_UnknownSymbol_PreservesHierarchy(t *testing.T) {
 	parser := NewTreeParser()
 	input := `. Valid task
-  ? Unknown child symbol
+  # Unknown child symbol
   - Valid note`
 
 	entries, err := parser.Parse(input)
@@ -330,6 +328,77 @@ func TestParsePriorityAndContent(t *testing.T) {
 			content, priority := ParsePriorityAndContent(tt.input)
 			assert.Equal(t, tt.expectedContent, content)
 			assert.Equal(t, tt.expectedPriority, priority)
+		})
+	}
+}
+
+func TestParseEntryType_QuestionAndAnswered(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected EntryType
+	}{
+		{"question from ?", "? What is the deadline", EntryTypeQuestion},
+		{"answered from a", "a This is the answer", EntryTypeAnswered},
+		{"answered from star", "★ This is answered", EntryTypeAnswered},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseEntryType(tt.line)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestTreeParser_Parse_QuestionWithPriority(t *testing.T) {
+	tests := []struct {
+		name             string
+		input            string
+		expectedType     EntryType
+		expectedContent  string
+		expectedPriority Priority
+	}{
+		{
+			name:             "question with low priority",
+			input:            "? ! What is the deadline",
+			expectedType:     EntryTypeQuestion,
+			expectedContent:  "What is the deadline",
+			expectedPriority: PriorityLow,
+		},
+		{
+			name:             "question with medium priority",
+			input:            "? !! Need clarification on requirements",
+			expectedType:     EntryTypeQuestion,
+			expectedContent:  "Need clarification on requirements",
+			expectedPriority: PriorityMedium,
+		},
+		{
+			name:             "question with high priority",
+			input:            "? !!! Critical question about deployment",
+			expectedType:     EntryTypeQuestion,
+			expectedContent:  "Critical question about deployment",
+			expectedPriority: PriorityHigh,
+		},
+		{
+			name:             "question without priority",
+			input:            "? Simple question",
+			expectedType:     EntryTypeQuestion,
+			expectedContent:  "Simple question",
+			expectedPriority: PriorityNone,
+		},
+	}
+
+	parser := NewTreeParser()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, err := parser.Parse(tt.input)
+			require.NoError(t, err)
+			require.Len(t, entries, 1)
+			assert.Equal(t, tt.expectedType, entries[0].Type)
+			assert.Equal(t, tt.expectedContent, entries[0].Content)
+			assert.Equal(t, tt.expectedPriority, entries[0].Priority)
 		})
 	}
 }
