@@ -4357,3 +4357,109 @@ func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
 		t.Errorf("today's count should decrease from %d to %d, got %d", initialCount, initialCount-1, newCount)
 	}
 }
+
+// =============================================================================
+// UAT Section: Markdown Rendering in AI Summaries (#132)
+// =============================================================================
+
+func TestUAT_StatsView_RendersMarkdownHeaders(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Set up a summary with markdown headers
+	model.summaryState.summary = &domain.Summary{
+		Content: "# Header 1\n## Header 2\nSome text",
+	}
+
+	// Switch to stats view
+	model.currentView = ViewTypeStats
+
+	view := model.View()
+
+	// Glamour should render headers - content should be present
+	if !strings.Contains(view, "Header 1") || !strings.Contains(view, "Header 2") {
+		t.Error("view should contain header content")
+	}
+	if !strings.Contains(view, "Some text") {
+		t.Error("view should contain regular text")
+	}
+
+	// Verify glamour styling is applied (check for extra whitespace/formatting that glamour adds)
+	// Glamour adds padding and formatting around headers, which increases the view length
+	if len(view) < 200 {
+		t.Error("view should contain glamour-styled content with formatting")
+	}
+}
+
+func TestUAT_StatsView_RendersMarkdownLists(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Set up a summary with markdown lists
+	model.summaryState.summary = &domain.Summary{
+		Content: "- Item 1\n- Item 2\n- Item 3",
+	}
+
+	// Switch to stats view
+	model.currentView = ViewTypeStats
+
+	view := model.View()
+
+	// List items should still be present (glamour renders them styled)
+	if !strings.Contains(view, "Item 1") || !strings.Contains(view, "Item 2") {
+		t.Error("view should contain list content")
+	}
+
+	// Verify glamour is rendering lists (glamour uses • bullet points)
+	// Check for the bullet character that glamour uses
+	if !strings.Contains(view, "•") {
+		t.Error("view should contain glamour-styled bullet points (•)")
+	}
+}
+
+func TestUAT_StatsView_RendersMarkdownEmphasis(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Set up a summary with bold and italic text
+	model.summaryState.summary = &domain.Summary{
+		Content: "This is **bold** and this is *italic* text",
+	}
+
+	// Switch to stats view
+	model.currentView = ViewTypeStats
+
+	view := model.View()
+
+	// Content should be present (glamour will style it)
+	if !strings.Contains(view, "bold") || !strings.Contains(view, "italic") {
+		t.Error("view should contain emphasized text content")
+	}
+
+	// Verify glamour adds ANSI styling (check for escape sequences)
+	// Glamour uses ANSI codes to style text, which will be present in the output
+	if !strings.Contains(view, "\x1b[") {
+		t.Error("view should contain ANSI escape codes from glamour styling")
+	}
+}

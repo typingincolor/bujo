@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -30,32 +31,32 @@ type Config struct {
 }
 
 type Model struct {
-	bujoService     *service.BujoService
-	habitService    *service.HabitService
-	listService     *service.ListService
-	goalService     *service.GoalService
-	summaryService  *service.SummaryService
-	statsService    *service.StatsService
-	agenda          *service.MultiDayAgenda
-	journalGoals    []domain.Goal
-	entries         []EntryItem
-	collapsed       map[domain.EntityID]bool
-	selectedIdx     int
-	scrollOffset    int
-	viewMode        ViewMode
-	viewDate        time.Time
-	currentView     ViewType
-	confirmMode     confirmState
-	editMode        editState
-	answerMode      answerState
-	addMode         addState
-	migrateMode     migrateState
-	gotoMode        gotoState
-	captureMode     captureState
-	searchMode      searchState
-	searchView      searchViewState
-	retypeMode      retypeState
-	habitState      habitState
+	bujoService            *service.BujoService
+	habitService           *service.HabitService
+	listService            *service.ListService
+	goalService            *service.GoalService
+	summaryService         *service.SummaryService
+	statsService           *service.StatsService
+	agenda                 *service.MultiDayAgenda
+	journalGoals           []domain.Goal
+	entries                []EntryItem
+	collapsed              map[domain.EntityID]bool
+	selectedIdx            int
+	scrollOffset           int
+	viewMode               ViewMode
+	viewDate               time.Time
+	currentView            ViewType
+	confirmMode            confirmState
+	editMode               editState
+	answerMode             answerState
+	addMode                addState
+	migrateMode            migrateState
+	gotoMode               gotoState
+	captureMode            captureState
+	searchMode             searchState
+	searchView             searchViewState
+	retypeMode             retypeState
+	habitState             habitState
 	addHabitMode           addHabitState
 	confirmHabitDeleteMode confirmHabitDeleteState
 	listState              listState
@@ -69,13 +70,14 @@ type Model struct {
 	summaryState           summaryState
 	statsViewState         statsState
 	commandPalette         commandPaletteState
-	commandRegistry *CommandRegistry
-	help            help.Model
-	keyMap          KeyMap
-	width           int
-	height          int
-	err             error
-	draftPath       string
+	commandRegistry        *CommandRegistry
+	help                   help.Model
+	keyMap                 KeyMap
+	markdownRenderer       *glamour.TermRenderer
+	width                  int
+	height                 int
+	err                    error
+	draftPath              string
 }
 
 type searchState struct {
@@ -154,11 +156,11 @@ type captureState struct {
 }
 
 type habitState struct {
-	habits           []service.HabitStatus
-	selectedIdx      int
-	selectedDayIdx   int
-	dayIdxInited     bool
-	monthView        bool
+	habits         []service.HabitStatus
+	selectedIdx    int
+	selectedDayIdx int
+	dayIdxInited   bool
+	monthView      bool
 }
 
 type addHabitState struct {
@@ -304,23 +306,31 @@ func NewWithConfig(cfg Config) Model {
 	statsFrom := now.AddDate(0, 0, -29)
 	statsTo := now
 
+	// Create markdown renderer once for reuse (performance optimization)
+	// We use a default width of 80; it will be adjusted based on terminal width during rendering
+	mdRenderer, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(80),
+	)
+
 	return Model{
-		bujoService:     cfg.BujoService,
-		habitService:    cfg.HabitService,
-		listService:     cfg.ListService,
-		goalService:     cfg.GoalService,
-		summaryService:  cfg.SummaryService,
-		statsService:    cfg.StatsService,
-		collapsed:       make(map[domain.EntityID]bool),
-		viewMode:        ViewModeDay,
-		viewDate:        today,
-		currentView:     ViewTypeJournal,
-		commandRegistry: DefaultCommands(),
-		help:            help.New(),
-		keyMap:          DefaultKeyMap(),
-		draftPath:       DraftPath(),
-		editMode:        editState{input: editInput},
-		addMode:         addState{input: addInput},
+		bujoService:       cfg.BujoService,
+		habitService:      cfg.HabitService,
+		listService:       cfg.ListService,
+		goalService:       cfg.GoalService,
+		summaryService:    cfg.SummaryService,
+		statsService:      cfg.StatsService,
+		collapsed:         make(map[domain.EntityID]bool),
+		viewMode:          ViewModeDay,
+		viewDate:          today,
+		currentView:       ViewTypeJournal,
+		commandRegistry:   DefaultCommands(),
+		help:              help.New(),
+		keyMap:            DefaultKeyMap(),
+		markdownRenderer:  mdRenderer,
+		draftPath:         DraftPath(),
+		editMode:          editState{input: editInput},
+		addMode:           addState{input: addInput},
 		migrateMode:       migrateState{input: migrateInput},
 		gotoMode:          gotoState{input: gotoInput},
 		goalState:         goalState{viewMonth: currentMonth},

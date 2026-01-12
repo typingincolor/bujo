@@ -1095,7 +1095,21 @@ func (m Model) renderStatsContent() string {
 	sb.WriteString(fmt.Sprintf("AI Summary: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
 	sb.WriteString(fmt.Sprintf("Period: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
 
-	if m.summaryService == nil {
+	// Check for summary first (even if service is nil) to allow testing with mock summaries
+	if m.summaryState.summary != nil {
+		sb.WriteString("🤖 AI Reflection:\n\n")
+		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
+		if err != nil {
+			sb.WriteString(m.summaryState.summary.Content)
+		} else {
+			sb.WriteString(rendered)
+		}
+		sb.WriteString("\n")
+		if m.summaryService != nil {
+			sb.WriteString(HelpStyle.Render("Press 'r' to refresh"))
+		}
+		sb.WriteString("\n\n")
+	} else if m.summaryService == nil {
 		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
 		sb.WriteString("\n\n")
 	} else if m.summaryState.loading {
@@ -1103,12 +1117,6 @@ func (m Model) renderStatsContent() string {
 	} else if m.summaryState.error != nil {
 		sb.WriteString(fmt.Sprintf("❌ Error: %v\n\n", m.summaryState.error))
 		sb.WriteString(HelpStyle.Render("Press 'r' to retry"))
-		sb.WriteString("\n\n")
-	} else if m.summaryState.summary != nil {
-		sb.WriteString("🤖 AI Reflection:\n\n")
-		sb.WriteString(m.summaryState.summary.Content)
-		sb.WriteString("\n\n")
-		sb.WriteString(HelpStyle.Render("Press 'r' to refresh"))
 		sb.WriteString("\n\n")
 	} else {
 		sb.WriteString(HelpStyle.Render("Press 'r' to generate AI summary"))
