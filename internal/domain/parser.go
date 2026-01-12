@@ -117,7 +117,7 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 		entryType := ParseEntryType(rest)
 
 		if !entryType.IsValid() {
-			return nil, errors.New("unknown entry type symbol")
+			entryType = EntryTypeNote
 		}
 
 		rawContent := ParseContent(rest)

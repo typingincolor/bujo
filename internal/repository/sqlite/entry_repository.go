@@ -211,13 +211,30 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 	}
 
 	// Insert new version with UPDATE op_type
-	_, err = tx.ExecContext(ctx, `
+	result, err := tx.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
 		current.CreatedAt.Format(time.RFC3339), current.EntityID.String(), maxVersion+1, now, domain.OpTypeUpdate.String())
 	if err != nil {
 		return err
+	}
+
+	// Get the new row ID
+	newID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	// Cascade update: update children's parent_id to point to the new row ID
+	if newID != current.ID {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE entries SET parent_id = ?
+			WHERE parent_id = ? AND (valid_to IS NULL OR valid_to = '')
+		`, newID, current.ID)
+		if err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit()
