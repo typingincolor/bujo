@@ -268,6 +268,183 @@ func TestUAT_JournalView_Navigation_UpDown(t *testing.T) {
 	}
 }
 
+func TestUAT_JournalView_TimeNavigation_H_GoesToPreviousPeriod(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, cmd := model.Update(msg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// In day mode, record current date
+	initialDate := model.viewDate
+
+	// Press 'h' to go to previous day
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	// Execute the command to load the new agenda
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// viewDate should be one day before
+	expectedDate := initialDate.AddDate(0, 0, -1)
+	if !model.viewDate.Equal(expectedDate) {
+		t.Errorf("after pressing 'h', viewDate should be %v, got %v", expectedDate, model.viewDate)
+	}
+}
+
+func TestUAT_JournalView_TimeNavigation_L_GoesToNextPeriod(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Start with yesterday's date so we can go forward
+	model.viewDate = time.Now().AddDate(0, 0, -1)
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, cmd := model.Update(msg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	initialDate := model.viewDate
+
+	// Press 'l' to go to next day
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	// Execute the command to load the new agenda
+	if cmd != nil {
+		loadMsg := cmd()
+		newModel, _ = model.Update(loadMsg)
+		model = newModel.(Model)
+	}
+
+	// viewDate should be one day after
+	expectedDate := initialDate.AddDate(0, 0, 1)
+	if !model.viewDate.Equal(expectedDate) {
+		t.Errorf("after pressing 'l', viewDate should be %v, got %v", expectedDate, model.viewDate)
+	}
+}
+
+func TestUAT_JournalView_PastDays_NoOverdueSection(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a task for a past date that would normally be overdue
+	pastDate := time.Now().AddDate(0, 0, -3)
+	opts := service.LogEntriesOptions{Date: pastDate}
+	_, err := bujoSvc.LogEntries(ctx, ". Old task", opts)
+	if err != nil {
+		t.Fatalf("failed to log entry: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Set view to a past date (2 days ago)
+	model.viewDate = time.Now().AddDate(0, 0, -2)
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, cmd := model.Update(msg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	view := model.View()
+
+	// When viewing past dates, should NOT show overdue section
+	if strings.Contains(view, "OVERDUE") {
+		t.Error("viewing past dates should not show OVERDUE section")
+	}
+}
+
+func TestUAT_JournalView_PastDays_ShowsAISummaryPrompt(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Set view to a past date
+	model.viewDate = time.Now().AddDate(0, 0, -2)
+
+	// Load journal view
+	cmd := model.Init()
+	if cmd != nil {
+		msg := cmd()
+		newModel, cmd := model.Update(msg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	view := model.View()
+
+	// When viewing past dates, should show AI summary section or prompt
+	if !strings.Contains(view, "AI Summary") && !strings.Contains(view, "summary") {
+		t.Error("viewing past dates should show AI summary section")
+	}
+}
+
 func TestUAT_JournalView_MarkDone(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
@@ -3870,6 +4047,245 @@ func TestUAT_Collapse_LeafEntryNoIndicator(t *testing.T) {
 	// Leaf entries should NOT show collapse indicators
 	if strings.Contains(view, "▶") || strings.Contains(view, "▼") {
 		t.Error("leaf entry (no children) should not show collapse indicator")
+	}
+}
+
+// =============================================================================
+// UAT Section 14a: Expand/Collapse All Siblings
+// =============================================================================
+
+func TestUAT_Collapse_CtrlE_ExpandsAllSiblings(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create two parent entries, each with children
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent 1\n  . Child 1a\n  . Child 1b\n. Parent 2\n  . Child 2a", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Both parents start collapsed, so we see 2 entries
+	if len(model.entries) != 2 {
+		t.Fatalf("expected 2 visible entries (both parents collapsed), got %d", len(model.entries))
+	}
+
+	// Press Ctrl+E to expand all siblings (both parent entries at root level)
+	msg := tea.KeyMsg{Type: tea.KeyCtrlE}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// After Ctrl+E, all siblings should be expanded - we should see all 5 entries
+	if len(model.entries) != 5 {
+		t.Errorf("after Ctrl+E, expected 5 entries (all expanded), got %d", len(model.entries))
+	}
+}
+
+func TestUAT_Collapse_SelectedItemAndAncestorsStayExpanded(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent with a child that has a grandchild
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent\n  . Child\n    . Grandchild", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Manually expand all entries from agenda to see the full tree
+	for _, day := range model.agenda.Days {
+		for _, entry := range day.Entries {
+			model.collapsed[entry.EntityID] = false
+		}
+	}
+	model.entries = model.flattenAgenda(model.agenda)
+
+	// Should now see all 3 entries
+	if len(model.entries) != 3 {
+		t.Fatalf("expected 3 entries after expanding all, got %d", len(model.entries))
+	}
+
+	// Navigate to the grandchild (index 2)
+	model.selectedIdx = 2
+	grandchild := model.entries[2].Entry
+	child := model.entries[1].Entry
+	parent := model.entries[0].Entry
+
+	// Collapse all entries
+	model.collapsed[parent.EntityID] = true
+	model.collapsed[child.EntityID] = true
+
+	// Now call ensureSelectedAndAncestorsExpanded - should re-expand ancestors
+	model = model.ensureSelectedAndAncestorsExpanded()
+
+	// The child and parent should be expanded (not collapsed)
+	if model.collapsed[parent.EntityID] {
+		t.Error("parent should be expanded when grandchild is selected")
+	}
+	if model.collapsed[child.EntityID] {
+		t.Error("child should be expanded when grandchild is selected")
+	}
+	// Grandchild has no children, so it doesn't matter if it's in the collapsed map
+	_ = grandchild
+}
+
+func TestUAT_Collapse_AncestorsStayExpandedAfterReload(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create a parent with a child
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent\n  . Child", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Expand the parent (press Enter)
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// Should now see 2 entries
+	if len(model.entries) != 2 {
+		t.Fatalf("expected 2 entries after expand, got %d", len(model.entries))
+	}
+
+	// Navigate to child
+	model.selectedIdx = 1
+
+	// Simulate agenda reload (this happens after editing an entry)
+	reloadCmd := model.loadAgendaCmd()
+	reloadMsg := reloadCmd()
+	newModel, _ = model.Update(reloadMsg)
+	model = newModel.(Model)
+
+	// After reload, child's parent should still be expanded
+	if len(model.entries) != 2 {
+		t.Errorf("after reload, expected 2 entries (parent still expanded), got %d", len(model.entries))
+	}
+}
+
+func TestUAT_Collapse_CtrlC_CollapsesAllSiblings(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create two parent entries, each with children
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	_, err := bujoSvc.LogEntries(ctx, ". Parent 1\n  . Child 1a\n. Parent 2\n  . Child 2a", opts)
+	if err != nil {
+		t.Fatalf("failed to log entries: %v", err)
+	}
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Load the journal view
+	cmd := model.Init()
+	if cmd != nil {
+		agendaMsg := cmd()
+		newModel, cmd := model.Update(agendaMsg)
+		model = newModel.(Model)
+		if cmd != nil {
+			goalsMsg := cmd()
+			newModel, _ = model.Update(goalsMsg)
+			model = newModel.(Model)
+		}
+	}
+
+	// Manually expand both parents
+	for i, item := range model.entries {
+		if item.HasChildren {
+			model.collapsed[item.Entry.EntityID] = false
+			_ = i
+		}
+	}
+	model.entries = model.flattenAgenda(model.agenda)
+
+	// After manual expansion, should see all 4 entries
+	if len(model.entries) != 4 {
+		t.Fatalf("expected 4 visible entries after expansion, got %d", len(model.entries))
+	}
+
+	// Press Ctrl+C to collapse all siblings
+	msg := tea.KeyMsg{Type: tea.KeyCtrlC}
+	newModel, _ := model.Update(msg)
+	model = newModel.(Model)
+
+	// After Ctrl+C, all siblings should be collapsed - we should see only 2 parent entries
+	if len(model.entries) != 2 {
+		t.Errorf("after Ctrl+C, expected 2 entries (all collapsed), got %d", len(model.entries))
 	}
 }
 

@@ -10,13 +10,13 @@ Organized batches of open issues for systematic resolution.
 | #129 | Migrated task row highlight - unreadable foreground text | ✅ |
 | #120 | Summary view: AI navigation bug (pressing "1" goes to today) | ✅ |
 
-## Batch B: TUI Navigation & Usability
+## Batch B: TUI Navigation & Usability - COMPLETE
 
 | Issue | Description | Status |
 |-------|-------------|--------|
-| #124 | Keyboard shortcuts to expand/collapse all | ⏳ |
-| #134 | Don't auto-collapse the tree of current working item | ⏳ |
-| #128 | Navigate forwards/backwards in time for day/week view | ⏳ |
+| #124 | Keyboard shortcuts to expand/collapse all | ✅ |
+| #134 | Don't auto-collapse the tree of current working item | ✅ |
+| #128 | Navigate forwards/backwards in time for day/week view | ✅ |
 
 ## Batch C: CLI Enhancements
 
