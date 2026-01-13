@@ -353,14 +353,15 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
 			oldEntry := entry
-			if entry.Type == domain.EntryTypeDone {
+			switch entry.Type {
+			case domain.EntryTypeDone:
 				m.undoState = undoState{
 					operation: UndoOpMarkDone,
 					entryID:   entry.ID,
 					entityID:  entry.EntityID,
 					oldEntry:  &oldEntry,
 				}
-			} else if entry.Type == domain.EntryTypeTask {
+			case domain.EntryTypeTask:
 				m.undoState = undoState{
 					operation: UndoOpMarkUndone,
 					entryID:   entry.ID,
