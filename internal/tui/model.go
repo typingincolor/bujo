@@ -163,6 +163,7 @@ type habitState struct {
 	selectedDayIdx int
 	dayIdxInited   bool
 	monthView      bool
+	weekOffset     int
 }
 
 type addHabitState struct {
@@ -529,10 +530,21 @@ func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
 		ctx := context.Background()
 		err := m.habitService.RemoveHabitLogForDateByID(ctx, habitID, date)
 		if err != nil {
+			if err.Error() == "no logs to remove for this date" {
+				return habitLogRemovedMsg{habitID}
+			}
 			return errMsg{err}
 		}
 		return habitLogRemovedMsg{habitID}
 	}
+}
+
+func (m Model) getHabitReferenceDate() time.Time {
+	days := 7
+	if m.habitState.monthView {
+		days = 30
+	}
+	return time.Now().AddDate(0, 0, -m.habitState.weekOffset*days)
 }
 
 func (m Model) loadHabitsCmd() tea.Cmd {
@@ -540,12 +552,13 @@ func (m Model) loadHabitsCmd() tea.Cmd {
 	if m.habitState.monthView {
 		days = 30
 	}
+	referenceDate := m.getHabitReferenceDate()
 	return func() tea.Msg {
 		if m.habitService == nil {
 			return errMsg{fmt.Errorf("habit service not available")}
 		}
 		ctx := context.Background()
-		status, err := m.habitService.GetTrackerStatus(ctx, time.Now(), days)
+		status, err := m.habitService.GetTrackerStatus(ctx, referenceDate, days)
 		if err != nil {
 			return errMsg{err}
 		}

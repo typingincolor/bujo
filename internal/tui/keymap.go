@@ -41,6 +41,8 @@ type KeyMap struct {
 	RemoveHabitLog  key.Binding
 	DayLeft         key.Binding
 	DayRight        key.Binding
+	PrevPeriod      key.Binding
+	NextPeriod      key.Binding
 	ExpandAll       key.Binding
 	CollapseAll     key.Binding
 }
@@ -198,6 +200,14 @@ func DefaultKeyMap() KeyMap {
 		DayRight: key.NewBinding(
 			key.WithKeys("l", "right"),
 			key.WithHelp("l/→", "next day"),
+		),
+		PrevPeriod: key.NewBinding(
+			key.WithKeys("["),
+			key.WithHelp("[", "prev period"),
+		),
+		NextPeriod: key.NewBinding(
+			key.WithKeys("]"),
+			key.WithHelp("]", "next period"),
 		),
 		ExpandAll: key.NewBinding(
 			key.WithKeys("ctrl+e"),
