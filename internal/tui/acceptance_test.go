@@ -4545,7 +4545,7 @@ func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
 	model = newModel.(Model)
 
 	// Navigate to rightmost day (today) - selectedDayIdx should be days-1
-	days := 7
+	days := HabitDaysWeek
 	model.habitState.selectedDayIdx = days - 1
 
 	if len(model.habitState.habits) == 0 {

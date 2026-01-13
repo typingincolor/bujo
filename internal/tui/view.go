@@ -265,12 +265,12 @@ func (m Model) renderHabitsContent() string {
 		return sb.String()
 	}
 
-	days := 7
+	days := HabitDaysWeek
 	switch m.habitState.viewMode {
 	case HabitViewModeMonth:
-		days = 30
+		days = HabitDaysMonth
 	case HabitViewModeQuarter:
-		days = 90
+		days = HabitDaysQuarter
 	}
 
 	for i, habit := range m.habitState.habits {
@@ -575,12 +575,26 @@ func (m Model) renderSearchInput() string {
 		selectedEntry := m.entries[m.selectedIdx].Entry
 		ancestors := m.getAncestryChain(selectedEntry.ID)
 		if len(ancestors) > 0 {
+			const maxAncestors = 3
+			const maxContentLen = 40
+
+			start := 0
+			prefix := ""
+			if len(ancestors) > maxAncestors {
+				start = len(ancestors) - maxAncestors
+				prefix = "... > "
+			}
+
 			var ancestorNames []string
-			for _, a := range ancestors {
-				ancestorNames = append(ancestorNames, a.Content)
+			for i := start; i < len(ancestors); i++ {
+				content := ancestors[i].Content
+				if len(content) > maxContentLen {
+					content = content[:maxContentLen] + "..."
+				}
+				ancestorNames = append(ancestorNames, content)
 			}
 			sb.WriteString("\n\n")
-			sb.WriteString(HelpStyle.Render("↳ " + strings.Join(ancestorNames, " > ")))
+			sb.WriteString(HelpStyle.Render("↳ " + prefix + strings.Join(ancestorNames, " > ")))
 		}
 	}
 

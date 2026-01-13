@@ -307,15 +307,18 @@ const (
 	HabitViewModeQuarter
 )
 
+const (
+	HabitDaysWeek    = 7
+	HabitDaysMonth   = 30
+	HabitDaysQuarter = 90
+)
+
 type UndoOperation int
 
 const (
 	UndoOpNone UndoOperation = iota
 	UndoOpMarkDone
 	UndoOpMarkUndone
-	UndoOpDelete
-	UndoOpEdit
-	UndoOpAdd
 )
 
 type undoState struct {
@@ -582,23 +585,23 @@ func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
 }
 
 func (m Model) getHabitReferenceDate() time.Time {
-	days := 7
+	days := HabitDaysWeek
 	switch m.habitState.viewMode {
 	case HabitViewModeMonth:
-		days = 30
+		days = HabitDaysMonth
 	case HabitViewModeQuarter:
-		days = 90
+		days = HabitDaysQuarter
 	}
 	return time.Now().AddDate(0, 0, -m.habitState.weekOffset*days)
 }
 
 func (m Model) loadHabitsCmd() tea.Cmd {
-	days := 7
+	days := HabitDaysWeek
 	switch m.habitState.viewMode {
 	case HabitViewModeMonth:
-		days = 30
+		days = HabitDaysMonth
 	case HabitViewModeQuarter:
-		days = 90
+		days = HabitDaysQuarter
 	}
 	referenceDate := m.getHabitReferenceDate()
 	return func() tea.Msg {

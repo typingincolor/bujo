@@ -76,12 +76,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.habitState.selectedIdx = 0
 		}
 		if !m.habitState.dayIdxInited {
-			days := 7
+			days := HabitDaysWeek
 			switch m.habitState.viewMode {
 			case HabitViewModeMonth:
-				days = 30
+				days = HabitDaysMonth
 			case HabitViewModeQuarter:
-				days = 90
+				days = HabitDaysQuarter
 			}
 			m.habitState.selectedDayIdx = days - 1
 			m.habitState.dayIdxInited = true
@@ -1878,12 +1878,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Done):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
-			days := 7
+			days := HabitDaysWeek
 			switch m.habitState.viewMode {
 			case HabitViewModeMonth:
-				days = 30
+				days = HabitDaysMonth
 			case HabitViewModeQuarter:
-				days = 90
+				days = HabitDaysQuarter
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			logDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
@@ -1898,12 +1898,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.DayRight):
-		days := 7
+		days := HabitDaysWeek
 		switch m.habitState.viewMode {
 		case HabitViewModeMonth:
-			days = 30
+			days = HabitDaysMonth
 		case HabitViewModeQuarter:
-			days = 90
+			days = HabitDaysQuarter
 		}
 		if m.habitState.selectedDayIdx < days-1 {
 			m.habitState.selectedDayIdx++
@@ -1912,12 +1912,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.RemoveHabitLog):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
-			days := 7
+			days := HabitDaysWeek
 			switch m.habitState.viewMode {
 			case HabitViewModeMonth:
-				days = 30
+				days = HabitDaysMonth
 			case HabitViewModeQuarter:
-				days = 90
+				days = HabitDaysQuarter
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			removeDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
