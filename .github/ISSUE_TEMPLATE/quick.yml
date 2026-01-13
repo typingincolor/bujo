@@ -1,0 +1,30 @@
+name: Quick Issue
+description: Quick note or idea (will be auto-enriched by bot)
+title: ""
+labels: ["needs-triage"]
+body:
+  - type: textarea
+    id: quick
+    attributes:
+      label: Quick Note
+      description: Jot down your idea quickly - the bot will add context
+      placeholder: |
+        Just write whatever's on your mind. Examples:
+        - "Add undo feature"
+        - "Search results need better context"
+        - "Habit tracker should show quarterly view"
+
+        The enrichment bot will automatically:
+        - Find relevant files in the codebase
+        - Suggest which layer to implement in
+        - Add TDD checklist
+        - Link to related code
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Note:** This issue will be automatically enriched with context from the codebase.
+        You can come back later to add more details, or let the bot's analysis guide your implementation.

@@ -1,0 +1,159 @@
+name: Issue Enrichment
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Analyze issue and add context
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title.toLowerCase();
+            const body = (issue.body || '').toLowerCase();
+            const text = title + ' ' + body;
+
+            // Check if already enriched
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number
+            });
+
+            const alreadyEnriched = comments.data.some(c =>
+              c.user.type === 'Bot' && c.body.includes('🤖 Automated Analysis')
+            );
+
+            if (alreadyEnriched) {
+              console.log('Issue already enriched, skipping');
+              return;
+            }
+
+            const { execSync } = require('child_process');
+
+            // Extract keywords for searching
+            const keywords = [];
+            const layers = [];
+
+            // Detect feature areas
+            if (text.match(/\b(habit|tracker|log)\b/)) keywords.push('habit');
+            if (text.match(/\b(entry|entries|task|note|event)\b/)) keywords.push('entry');
+            if (text.match(/\b(summary|summaries|ai|gemini|reflect)\b/)) keywords.push('summary');
+            if (text.match(/\b(tui|interface|view|display|render)\b/)) keywords.push('tui');
+            if (text.match(/\b(cli|command|flag)\b/)) keywords.push('cli');
+            if (text.match(/\b(export|import|backup)\b/)) keywords.push('export');
+            if (text.match(/\b(search|find|filter)\b/)) keywords.push('search');
+            if (text.match(/\b(goal|goals)\b/)) keywords.push('goal');
+            if (text.match(/\b(location|context|mood|weather)\b/)) keywords.push('context');
+
+            // Detect architecture layers
+            if (text.match(/\b(domain|model|type|struct)\b/)) layers.push('internal/domain');
+            if (text.match(/\b(service|business logic)\b/)) layers.push('internal/service');
+            if (text.match(/\b(repository|database|sql|sqlite)\b/)) layers.push('internal/repository');
+            if (text.match(/\b(tui|interface|bubbletea)\b/)) layers.push('internal/tui');
+            if (text.match(/\b(cli|command|cobra)\b/)) layers.push('cmd/bujo/cmd');
+
+            let analysis = '## 🤖 Automated Analysis\n\n';
+
+            // Find relevant files
+            if (keywords.length > 0 || layers.length > 0) {
+              analysis += '### 📁 Potentially Relevant Files\n\n';
+
+              const searchPaths = layers.length > 0 ? layers : ['.'];
+              const searchTerms = keywords.length > 0 ? keywords : [''];
+
+              for (const term of searchTerms) {
+                for (const path of searchPaths) {
+                  try {
+                    const grepCmd = term
+                      ? `grep -r -l -i "${term}" ${path} --include="*.go" 2>/dev/null || true`
+                      : `find ${path} -name "*.go" 2>/dev/null | head -10 || true`;
+
+                    const files = execSync(grepCmd, { encoding: 'utf8' })
+                      .split('\n')
+                      .filter(f => f && !f.includes('_test.go'))
+                      .slice(0, 5);
+
+                    if (files.length > 0) {
+                      analysis += `\n**${term || path}:**\n`;
+                      files.forEach(f => analysis += `- \`${f}\`\n`);
+                    }
+                  } catch (e) {
+                    // Ignore grep errors
+                  }
+                }
+              }
+            }
+
+            // Suggest architecture layer
+            analysis += '\n### 🏗️ Suggested Implementation Layer\n\n';
+            if (text.match(/\b(type|struct|model|domain)\b/)) {
+              analysis += '- Start with **`internal/domain`** (core types/business logic)\n';
+              analysis += '- Add tests in `internal/domain/*_test.go`\n';
+            }
+            if (text.match(/\b(tui|view|display|interface)\b/)) {
+              analysis += '- Implement in **`internal/tui`** (user interface)\n';
+              analysis += '- Update `model.go`, `view.go`, `update.go` as needed\n';
+            }
+            if (text.match(/\b(cli|command)\b/)) {
+              analysis += '- Add command in **`cmd/bujo/cmd`** (CLI adapter)\n';
+            }
+            if (text.match(/\b(service|use case)\b/)) {
+              analysis += '- Add to **`internal/service`** (application services)\n';
+            }
+            if (text.match(/\b(repository|database|persist)\b/)) {
+              analysis += '- Modify **`internal/repository/sqlite`** (data layer)\n';
+              analysis += '- Create migration if needed\n';
+            }
+
+            // TDD reminder
+            analysis += '\n### ✅ TDD Checklist\n\n';
+            analysis += '- [ ] Write failing test first (RED)\n';
+            analysis += '- [ ] Implement minimum code to pass (GREEN)\n';
+            analysis += '- [ ] Refactor if needed\n';
+            analysis += '- [ ] Run full test suite: `go test ./...`\n';
+            analysis += '- [ ] Run pre-push checks: `scripts/pre-push`\n';
+
+            // Related files hint
+            analysis += '\n### 💡 Quick Start\n\n';
+            analysis += '```bash\n';
+            analysis += '# Search for related code\n';
+            if (keywords.length > 0) {
+              analysis += `grep -r "${keywords[0]}" internal/ --include="*.go"\n`;
+            }
+            analysis += '\n# Run tests for specific package\n';
+            if (layers.length > 0) {
+              analysis += `go test -v ${layers[0]}/...\n`;
+            } else {
+              analysis += 'go test -v ./...\n';
+            }
+            analysis += '```\n';
+
+            analysis += '\n---\n';
+            analysis += '*This analysis was automatically generated. Feel free to edit or ignore.*\n';
+
+            // Post comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: analysis
+            });
+
+            console.log('Issue enrichment complete');

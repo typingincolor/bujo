@@ -1,0 +1,69 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Brief description of the feature
+      placeholder: What should this feature do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Behavior
+      description: How does it work now (if applicable)?
+      placeholder: Optional - describe current state
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: How should it work with this feature?
+      placeholder: What should happen?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      description: Which part of the app does this affect?
+      options:
+        - TUI (Terminal Interface)
+        - CLI (Command Line)
+        - Habits
+        - Entries (Tasks/Notes/Events)
+        - Goals
+        - AI/Summaries
+        - Search
+        - Export/Import
+        - Context (Location/Mood)
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Implementation Layer (if known)
+      description: Which architecture layer needs changes?
+      options:
+        - Not sure
+        - Domain (core types/logic)
+        - Service (business logic)
+        - TUI (interface)
+        - CLI (commands)
+        - Repository (database)
+        - Multiple layers
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Context
+      description: Any other details, examples, or references
+      placeholder: Screenshots, code snippets, related issues, etc.
