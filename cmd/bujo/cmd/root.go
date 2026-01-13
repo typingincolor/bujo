@@ -48,8 +48,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		backupDir := getDefaultBackupDir()
-		backupSvc := service.NewBackupService(db, backupDir)
-		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), 7)
+		backupRepo := sqlite.NewBackupRepository(db)
+		backupSvc := service.NewBackupService(backupRepo)
+		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), backupDir, 7)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to ensure backup: %v\n", err)
 		} else if created {

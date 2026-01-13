@@ -13,28 +13,30 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type BackupService struct {
-	db        *sql.DB
-	backupDir string
+type BackupRepository interface {
+	Backup(ctx context.Context, destPath string) error
 }
 
-func NewBackupService(db *sql.DB, backupDir string) *BackupService {
+type BackupService struct {
+	repo BackupRepository
+}
+
+func NewBackupService(repo BackupRepository) *BackupService {
 	return &BackupService{
-		db:        db,
-		backupDir: backupDir,
+		repo: repo,
 	}
 }
 
-func (s *BackupService) CreateBackup(ctx context.Context) (string, error) {
-	if err := os.MkdirAll(s.backupDir, 0755); err != nil {
+func (s *BackupService) CreateBackup(ctx context.Context, backupDir string) (string, error) {
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
 	timestamp := time.Now().Format("2006-01-02-150405.000000000")
 	filename := fmt.Sprintf("bujo-%s.db", timestamp)
-	destPath := filepath.Join(s.backupDir, filename)
+	destPath := filepath.Join(backupDir, filename)
 
-	_, err := s.db.ExecContext(ctx, "VACUUM INTO ?", destPath)
+	err := s.repo.Backup(ctx, destPath)
 	if err != nil {
 		return "", fmt.Errorf("backup failed: %w", err)
 	}
@@ -49,8 +51,8 @@ type BackupInfo struct {
 	Size      int64
 }
 
-func (s *BackupService) ListBackups(ctx context.Context) ([]BackupInfo, error) {
-	entries, err := os.ReadDir(s.backupDir)
+func (s *BackupService) ListBackups(ctx context.Context, backupDir string) ([]BackupInfo, error) {
+	entries, err := os.ReadDir(backupDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []BackupInfo{}, nil
@@ -70,7 +72,7 @@ func (s *BackupService) ListBackups(ctx context.Context) ([]BackupInfo, error) {
 		}
 
 		backups = append(backups, BackupInfo{
-			Path:      filepath.Join(s.backupDir, entry.Name()),
+			Path:      filepath.Join(backupDir, entry.Name()),
 			Filename:  entry.Name(),
 			CreatedAt: info.ModTime(),
 			Size:      info.Size(),
@@ -84,8 +86,8 @@ func (s *BackupService) ListBackups(ctx context.Context) ([]BackupInfo, error) {
 	return backups, nil
 }
 
-func (s *BackupService) EnsureRecentBackup(ctx context.Context, maxAgeDays int) (bool, string, error) {
-	backups, err := s.ListBackups(ctx)
+func (s *BackupService) EnsureRecentBackup(ctx context.Context, backupDir string, maxAgeDays int) (bool, string, error) {
+	backups, err := s.ListBackups(ctx, backupDir)
 	if err != nil {
 		return false, "", err
 	}
@@ -100,7 +102,7 @@ func (s *BackupService) EnsureRecentBackup(ctx context.Context, maxAgeDays int) 
 		}
 	}
 
-	path, err := s.CreateBackup(ctx)
+	path, err := s.CreateBackup(ctx, backupDir)
 	if err != nil {
 		return false, "", err
 	}

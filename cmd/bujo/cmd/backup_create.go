@@ -14,7 +14,7 @@ var backupCreateCmd = &cobra.Command{
 Backups use SQLite's VACUUM INTO for a consistent snapshot.
 The backup file is stored in ~/.bujo/backups/ with a timestamp.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		path, err := backupService.CreateBackup(cmd.Context())
+		path, err := backupService.CreateBackup(cmd.Context(), backupDir)
 		if err != nil {
 			return fmt.Errorf("failed to create backup: %w", err)
 		}
