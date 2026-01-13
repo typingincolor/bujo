@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -195,10 +196,10 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 			Date:    d,
 			Entries: entryMap[dateKey],
 		}
-		if ctx := contextMap[dateKey]; ctx != nil {
-			day.Location = ctx.Location
-			day.Mood = ctx.Mood
-			day.Weather = ctx.Weather
+		if dayCtx := contextMap[dateKey]; dayCtx != nil {
+			day.Location = dayCtx.Location
+			day.Mood = dayCtx.Mood
+			day.Weather = dayCtx.Weather
 		}
 		agenda.Days = append(agenda.Days, day)
 	}
@@ -850,23 +851,19 @@ func formatEntriesAsMarkdown(entries []domain.Entry) string {
 		}
 	}
 
-	var result string
-	result += formatEntryMarkdown(root, childrenMap, 0)
-	return result
+	return formatEntryMarkdown(root, childrenMap, 0)
 }
 
 func formatEntryMarkdown(entry domain.Entry, children map[int64][]domain.Entry, depth int) string {
-	indent := ""
-	for i := 0; i < depth; i++ {
-		indent += "  "
-	}
-
+	indent := strings.Repeat("  ", depth)
 	symbol := entry.Type.Symbol()
-	line := fmt.Sprintf("%s%s %s\n", indent, symbol, entry.Content)
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "%s%s %s\n", indent, symbol, entry.Content)
 
 	for _, child := range children[entry.ID] {
-		line += formatEntryMarkdown(child, children, depth+1)
+		sb.WriteString(formatEntryMarkdown(child, children, depth+1))
 	}
 
-	return line
+	return sb.String()
 }
