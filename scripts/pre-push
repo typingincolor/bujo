@@ -1,0 +1,55 @@
+#!/bin/sh
+
+# Pre-push hook for bujo
+# Runs quality checks before allowing push
+#
+# Installation:
+#   cp scripts/pre-push .git/hooks/pre-push
+#   chmod +x .git/hooks/pre-push
+
+set -e  # Exit on first error
+
+echo "🔍 Running pre-push checks..."
+
+# 1. Check formatting
+echo "Checking gofmt..."
+unformatted=$(gofmt -l .)
+if [ -n "$unformatted" ]; then
+    echo "❌ Files need formatting:"
+    echo "$unformatted"
+    echo ""
+    echo "Run: gofmt -w ."
+    exit 1
+fi
+echo "✅ gofmt passed"
+
+# 2. Run tests
+echo "Running tests..."
+if ! go test ./...; then
+    echo "❌ Tests failed. Push aborted."
+    exit 1
+fi
+echo "✅ Tests passed"
+
+# 3. Run go vet
+echo "Running go vet..."
+if ! go vet ./...; then
+    echo "❌ go vet failed. Push aborted."
+    exit 1
+fi
+echo "✅ go vet passed"
+
+# 4. Run golangci-lint
+echo "Running golangci-lint..."
+if ! command -v golangci-lint &> /dev/null; then
+    echo "⚠️  golangci-lint not found, skipping"
+else
+    if ! golangci-lint run; then
+        echo "❌ golangci-lint failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ golangci-lint passed"
+fi
+
+echo ""
+echo "✅ All pre-push checks passed. Proceeding with push."

@@ -33,10 +33,10 @@ type TaskCompletion struct {
 }
 
 type Productivity struct {
-	AveragePerDay  float64
-	MostProductive Weekday
+	AveragePerDay   float64
+	MostProductive  Weekday
 	LeastProductive Weekday
-	EntriesByDay   map[time.Weekday]int
+	EntriesByDay    map[time.Weekday]int
 }
 
 type Weekday struct {
@@ -45,10 +45,10 @@ type Weekday struct {
 }
 
 type HabitStats struct {
-	Active      int
-	BestStreak  HabitStreak
-	MostLogged  HabitLogCount
-	TotalLogs   int
+	Active     int
+	BestStreak HabitStreak
+	MostLogged HabitLogCount
+	TotalLogs  int
 }
 
 type HabitStreak struct {

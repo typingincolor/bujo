@@ -38,15 +38,15 @@ type KeyMap struct {
 	ViewGoals      key.Binding
 	ViewSettings   key.Binding
 	CommandPalette key.Binding
-	LogHabit        key.Binding
-	RemoveHabitLog  key.Binding
-	DayLeft         key.Binding
-	DayRight        key.Binding
-	PrevPeriod      key.Binding
-	NextPeriod      key.Binding
-	ExpandAll       key.Binding
-	CollapseAll     key.Binding
-	OpenURL         key.Binding
+	LogHabit       key.Binding
+	RemoveHabitLog key.Binding
+	DayLeft        key.Binding
+	DayRight       key.Binding
+	PrevPeriod     key.Binding
+	NextPeriod     key.Binding
+	ExpandAll      key.Binding
+	CollapseAll    key.Binding
+	OpenURL        key.Binding
 }
 
 func DefaultKeyMap() KeyMap {

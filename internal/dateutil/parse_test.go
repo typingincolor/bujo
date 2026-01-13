@@ -44,7 +44,7 @@ func TestParsePast_ISOFormat(t *testing.T) {
 
 func TestParsePast_NaturalLanguage(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
 	}{
 		{
@@ -134,7 +134,7 @@ func TestParseFuture_ISOFormat(t *testing.T) {
 
 func TestParseFuture_NaturalLanguage(t *testing.T) {
 	tests := []struct {
-		name string
+		name  string
 		input string
 	}{
 		{

@@ -289,14 +289,14 @@ func TestIsNaturalLanguageDate(t *testing.T) {
 		input    string
 		expected bool
 	}{
-		{"2026-01-05", false},         // ISO format
-		{"20260105", false},           // Compact format
-		{"yesterday", true},           // Natural language
-		{"last week", true},           // Natural language
-		{"next monday", true},         // Natural language
-		{"tomorrow", true},            // Natural language
-		{"2 days ago", true},          // Natural language
-		{"", false},                   // Empty string
+		{"2026-01-05", false}, // ISO format
+		{"20260105", false},   // Compact format
+		{"yesterday", true},   // Natural language
+		{"last week", true},   // Natural language
+		{"next monday", true}, // Natural language
+		{"tomorrow", true},    // Natural language
+		{"2 days ago", true},  // Natural language
+		{"", false},           // Empty string
 	}
 
 	for _, tt := range tests {

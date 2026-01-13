@@ -4588,4 +4588,3 @@ func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
 // =============================================================================
 // UAT Section: Markdown Rendering in AI Summaries (#132)
 // =============================================================================
-

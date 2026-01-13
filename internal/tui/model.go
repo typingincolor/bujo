@@ -222,7 +222,7 @@ type moveToListState struct {
 	selectedIdx  int
 }
 
-type goalState struct{
+type goalState struct {
 	goals       []domain.Goal
 	selectedIdx int
 	viewMonth   time.Time
@@ -1040,7 +1040,6 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 			parentMap[*e.ParentID] = append(parentMap[*e.ParentID], e)
 		}
 	}
-
 
 	var flatten func(entry domain.Entry, depth int, showHeader bool)
 	flatten = func(entry domain.Entry, depth int, showHeader bool) {

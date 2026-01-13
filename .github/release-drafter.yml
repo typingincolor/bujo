@@ -1,0 +1,93 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'enhancement'
+    collapse-after: 5
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+    collapse-after: 5
+  - title: '🔄 Refactoring'
+    labels:
+      - 'refactor'
+      - 'refactoring'
+    collapse-after: 5
+  - title: '📚 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+    collapse-after: 5
+  - title: '🧪 Testing'
+    labels:
+      - 'test'
+      - 'testing'
+    collapse-after: 5
+  - title: '⬆️ Dependencies'
+    labels:
+      - 'dependencies'
+      - 'deps'
+    collapse-after: 3
+  - title: '🔧 Maintenance'
+    labels:
+      - 'chore'
+      - 'ci'
+    collapse-after: 3
+
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking'
+  minor:
+    labels:
+      - 'minor'
+      - 'feature'
+  patch:
+    labels:
+      - 'patch'
+      - 'fix'
+      - 'bugfix'
+      - 'dependencies'
+  default: patch
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat(\(.*\))?:/i'
+  - label: 'fix'
+    title:
+      - '/^fix(\(.*\))?:/i'
+  - label: 'refactor'
+    title:
+      - '/^refactor(\(.*\))?:/i'
+  - label: 'documentation'
+    title:
+      - '/^docs(\(.*\))?:/i'
+  - label: 'test'
+    title:
+      - '/^test(\(.*\))?:/i'
+  - label: 'dependencies'
+    title:
+      - '/^deps(\(.*\))?:/i'
+  - label: 'chore'
+    title:
+      - '/^chore(\(.*\))?:/i'
+  - label: 'ci'
+    title:
+      - '/^ci(\(.*\))?:/i'
+
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION

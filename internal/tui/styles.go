@@ -70,5 +70,5 @@ var (
 				Foreground(lipgloss.Color("0"))
 
 	HabitSelectedStyle = lipgloss.NewStyle().
-			       Reverse(true)
+				Reverse(true)
 )

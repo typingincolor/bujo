@@ -15,13 +15,13 @@ func TestRenderSparkline_OrderMatchesLabels(t *testing.T) {
 	// History is ordered [0]=today, [1]=yesterday, etc.
 	// Visual should be: oldest (left) -> today (right)
 	history := []service.DayStatus{
-		{Date: time.Now(), Completed: true, Count: 1},                        // today - should be rightmost
-		{Date: time.Now().AddDate(0, 0, -1), Completed: false, Count: 0},     // yesterday
-		{Date: time.Now().AddDate(0, 0, -2), Completed: true, Count: 1},      // 2 days ago
-		{Date: time.Now().AddDate(0, 0, -3), Completed: false, Count: 0},     // 3 days ago
-		{Date: time.Now().AddDate(0, 0, -4), Completed: true, Count: 1},      // 4 days ago
-		{Date: time.Now().AddDate(0, 0, -5), Completed: false, Count: 0},     // 5 days ago
-		{Date: time.Now().AddDate(0, 0, -6), Completed: true, Count: 1},      // 6 days ago - should be leftmost
+		{Date: time.Now(), Completed: true, Count: 1},                    // today - should be rightmost
+		{Date: time.Now().AddDate(0, 0, -1), Completed: false, Count: 0}, // yesterday
+		{Date: time.Now().AddDate(0, 0, -2), Completed: true, Count: 1},  // 2 days ago
+		{Date: time.Now().AddDate(0, 0, -3), Completed: false, Count: 0}, // 3 days ago
+		{Date: time.Now().AddDate(0, 0, -4), Completed: true, Count: 1},  // 4 days ago
+		{Date: time.Now().AddDate(0, 0, -5), Completed: false, Count: 0}, // 5 days ago
+		{Date: time.Now().AddDate(0, 0, -6), Completed: true, Count: 1},  // 6 days ago - should be leftmost
 	}
 
 	m := Model{
