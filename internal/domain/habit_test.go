@@ -260,6 +260,24 @@ func TestCalculateCompletion(t *testing.T) {
 			today:    today,
 			expected: 14.285714285714285,
 		},
+		{
+			name: "zero days returns 0%",
+			logs: []HabitLog{
+				{LoggedAt: today},
+			},
+			days:     0,
+			today:    today,
+			expected: 0.0,
+		},
+		{
+			name: "negative days returns 0%",
+			logs: []HabitLog{
+				{LoggedAt: today},
+			},
+			days:     -1,
+			today:    today,
+			expected: 0.0,
+		},
 	}
 
 	for _, tt := range tests {
@@ -448,6 +466,24 @@ func TestCalculateWeeklyProgress(t *testing.T) {
 			weekEnd:     weekEnd,
 			expected:    200.0,
 		},
+		{
+			name: "zero goal returns 0%",
+			logs: []HabitLog{
+				{Count: 5, LoggedAt: weekEnd},
+			},
+			goalPerWeek: 0,
+			weekEnd:     weekEnd,
+			expected:    0.0,
+		},
+		{
+			name: "negative goal returns 0%",
+			logs: []HabitLog{
+				{Count: 5, LoggedAt: weekEnd},
+			},
+			goalPerWeek: -1,
+			weekEnd:     weekEnd,
+			expected:    0.0,
+		},
 	}
 
 	for _, tt := range tests {
@@ -493,6 +529,24 @@ func TestCalculateMonthlyProgress(t *testing.T) {
 			goalPerMonth: 20,
 			date:         monthDate,
 			expected:     25.0,
+		},
+		{
+			name: "zero goal returns 0%",
+			logs: []HabitLog{
+				{Count: 10, LoggedAt: monthDate},
+			},
+			goalPerMonth: 0,
+			date:         monthDate,
+			expected:     0.0,
+		},
+		{
+			name: "negative goal returns 0%",
+			logs: []HabitLog{
+				{Count: 10, LoggedAt: monthDate},
+			},
+			goalPerMonth: -1,
+			date:         monthDate,
+			expected:     0.0,
 		},
 	}
 

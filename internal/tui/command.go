@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -126,6 +127,25 @@ func DefaultCommands() *CommandRegistry {
 		Keybinding:  "/",
 		Action: func(m Model) (Model, tea.Cmd) {
 			m.gotoMode.active = true
+			return m, nil
+		},
+	})
+
+	registry.Register(Command{
+		Name:        "Set Location",
+		Description: "Set location for current day",
+		Keybinding:  "",
+		Action: func(m Model) (Model, tea.Cmd) {
+			ti := textinput.New()
+			ti.Placeholder = "Enter location..."
+			ti.Focus()
+			ti.CharLimit = 100
+			ti.Width = m.width - 10
+			m.setLocationMode = setLocationState{
+				active: true,
+				date:   m.viewDate,
+				input:  ti,
+			}
 			return m, nil
 		},
 	})

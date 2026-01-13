@@ -3,6 +3,8 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -73,8 +75,10 @@ type Model struct {
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
 	statsViewState         statsState
+	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
 	commandRegistry        *CommandRegistry
+	undoState              undoState
 	help                   help.Model
 	keyMap                 KeyMap
 	markdownRenderer       *glamour.TermRenderer
@@ -139,6 +143,12 @@ type gotoState struct {
 	input  textinput.Model
 }
 
+type setLocationState struct {
+	active bool
+	date   time.Time
+	input  textinput.Model
+}
+
 type retypeState struct {
 	active      bool
 	entryID     int64
@@ -168,7 +178,7 @@ type habitState struct {
 	selectedIdx    int
 	selectedDayIdx int
 	dayIdxInited   bool
-	monthView      bool
+	viewMode       HabitViewMode
 	weekOffset     int
 }
 
@@ -288,6 +298,35 @@ const (
 	ViewTypeGoals
 	ViewTypeSettings
 )
+
+type HabitViewMode int
+
+const (
+	HabitViewModeWeek HabitViewMode = iota
+	HabitViewModeMonth
+	HabitViewModeQuarter
+)
+
+const (
+	HabitDaysWeek    = 7
+	HabitDaysMonth   = 30
+	HabitDaysQuarter = 90
+)
+
+type UndoOperation int
+
+const (
+	UndoOpNone UndoOperation = iota
+	UndoOpMarkDone
+	UndoOpMarkUndone
+)
+
+type undoState struct {
+	operation UndoOperation
+	entryID   int64
+	entityID  domain.EntityID
+	oldEntry  *domain.Entry
+}
 
 type EntryItem struct {
 	Entry            domain.Entry
@@ -546,17 +585,23 @@ func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
 }
 
 func (m Model) getHabitReferenceDate() time.Time {
-	days := 7
-	if m.habitState.monthView {
-		days = 30
+	days := HabitDaysWeek
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
+		days = HabitDaysMonth
+	case HabitViewModeQuarter:
+		days = HabitDaysQuarter
 	}
 	return time.Now().AddDate(0, 0, -m.habitState.weekOffset*days)
 }
 
 func (m Model) loadHabitsCmd() tea.Cmd {
-	days := 7
-	if m.habitState.monthView {
-		days = 30
+	days := HabitDaysWeek
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
+		days = HabitDaysMonth
+	case HabitViewModeQuarter:
+		days = HabitDaysQuarter
 	}
 	referenceDate := m.getHabitReferenceDate()
 	return func() tea.Msg {
@@ -1126,4 +1171,61 @@ func (m Model) ensureSelectedAndAncestorsExpanded() Model {
 
 	m.entries = m.flattenAgenda(m.agenda)
 	return m
+}
+
+func (m Model) openURLCmd(content string) tea.Cmd {
+	return func() tea.Msg {
+		urls := domain.ExtractURLs(content)
+		if len(urls) == 0 {
+			return errMsg{err: fmt.Errorf("no URL found in entry")}
+		}
+
+		url := urls[0]
+		var cmd *exec.Cmd
+
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", url)
+		case "linux":
+			cmd = exec.Command("xdg-open", url)
+		case "windows":
+			cmd = exec.Command("cmd", "/c", "start", url)
+		default:
+			return errMsg{err: fmt.Errorf("unsupported platform: %s", runtime.GOOS)}
+		}
+
+		if err := cmd.Start(); err != nil {
+			return errMsg{err: fmt.Errorf("failed to open URL: %w", err)}
+		}
+
+		return nil
+	}
+}
+
+func (m Model) getAncestryChain(entryID int64) []domain.Entry {
+	var ancestors []domain.Entry
+	entryMap := make(map[int64]domain.Entry)
+
+	for _, item := range m.entries {
+		entryMap[item.Entry.ID] = item.Entry
+	}
+
+	currentID := entryID
+	for {
+		entry, exists := entryMap[currentID]
+		if !exists {
+			break
+		}
+		if entry.ParentID == nil {
+			break
+		}
+		parent, parentExists := entryMap[*entry.ParentID]
+		if !parentExists {
+			break
+		}
+		ancestors = append([]domain.Entry{parent}, ancestors...)
+		currentID = *entry.ParentID
+	}
+
+	return ancestors
 }

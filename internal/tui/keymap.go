@@ -27,6 +27,7 @@ type KeyMap struct {
 	Cancel         key.Binding
 	UncancelEntry  key.Binding
 	Retype         key.Binding
+	Undo           key.Binding
 	Quit           key.Binding
 	Help           key.Binding
 	ViewJournal    key.Binding
@@ -45,6 +46,7 @@ type KeyMap struct {
 	NextPeriod      key.Binding
 	ExpandAll       key.Binding
 	CollapseAll     key.Binding
+	OpenURL         key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -119,7 +121,7 @@ func DefaultKeyMap() KeyMap {
 		),
 		ToggleView: key.NewBinding(
 			key.WithKeys("w"),
-			key.WithHelp("w", "day/week"),
+			key.WithHelp("w", "view"),
 		),
 		GotoDate: key.NewBinding(
 			key.WithKeys("/"),
@@ -144,6 +146,10 @@ func DefaultKeyMap() KeyMap {
 		Retype: key.NewBinding(
 			key.WithKeys("t"),
 			key.WithHelp("t", "change type"),
+		),
+		Undo: key.NewBinding(
+			key.WithKeys("u"),
+			key.WithHelp("u", "undo"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q"),
@@ -216,6 +222,10 @@ func DefaultKeyMap() KeyMap {
 		CollapseAll: key.NewBinding(
 			key.WithKeys("ctrl+c"),
 			key.WithHelp("ctrl+c", "collapse all"),
+		),
+		OpenURL: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "open link"),
 		),
 	}
 }

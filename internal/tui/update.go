@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/tj/go-naturaldate"
+	"github.com/typingincolor/bujo/internal/dateutil"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -31,9 +31,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scrollOffset = 0
 
 		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
-			if m.viewMode == ViewModeDay {
+			switch m.viewMode {
+			case ViewModeDay:
 				m.summaryState.horizon = domain.SummaryHorizonDaily
-			} else if m.viewMode == ViewModeWeek {
+			case ViewModeWeek:
 				m.summaryState.horizon = domain.SummaryHorizonWeekly
 			}
 			m.summaryState.refDate = m.viewDate
@@ -50,9 +51,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case errMsg:
 		m.err = msg.err
+		m.undoState = undoState{}
 		return m, nil
 
-	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg:
+	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg, agendaReloadNeededMsg:
 		return m, m.loadAgendaCmd()
 
 	case gotoDateMsg:
@@ -74,9 +76,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.habitState.selectedIdx = 0
 		}
 		if !m.habitState.dayIdxInited {
-			days := 7
-			if m.habitState.monthView {
-				days = 30
+			days := HabitDaysWeek
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
+				days = HabitDaysMonth
+			case HabitViewModeQuarter:
+				days = HabitDaysQuarter
 			}
 			m.habitState.selectedDayIdx = days - 1
 			m.habitState.dayIdxInited = true
@@ -223,6 +228,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.searchMode.active {
 			return m.handleSearchMode(msg)
 		}
+		if m.setLocationMode.active {
+			return m.handleSetLocationMode(msg)
+		}
 		if m.commandPalette.active {
 			return m.handleCommandPaletteMode(msg)
 		}
@@ -343,6 +351,26 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Done):
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			oldEntry := entry
+			switch entry.Type {
+			case domain.EntryTypeDone:
+				m.undoState = undoState{
+					operation: UndoOpMarkDone,
+					entryID:   entry.ID,
+					entityID:  entry.EntityID,
+					oldEntry:  &oldEntry,
+				}
+			case domain.EntryTypeTask:
+				m.undoState = undoState{
+					operation: UndoOpMarkUndone,
+					entryID:   entry.ID,
+					entityID:  entry.EntityID,
+					oldEntry:  &oldEntry,
+				}
+			}
+		}
 		return m, m.toggleDoneCmd()
 
 	case key.Matches(msg, m.keyMap.Answer):
@@ -387,6 +415,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.Undo):
+		if m.undoState.operation != UndoOpNone {
+			cmd := m.undoCmd()
+			m.undoState = undoState{}
+			return m, cmd
+		}
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Delete):
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
@@ -411,6 +447,13 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			input:   ti,
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.OpenURL):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		return m, m.openURLCmd(entry.Content)
 
 	case key.Matches(msg, m.keyMap.Add):
 		ti := textinput.New()
@@ -1622,6 +1665,37 @@ func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
 	}
 }
 
+func (m Model) handleSetLocationMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.setLocationMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		location := m.setLocationMode.input.Value()
+		m.setLocationMode.active = false
+		if location == "" {
+			return m, nil
+		}
+		return m, m.setLocationCmd(m.setLocationMode.date, location)
+	}
+
+	var cmd tea.Cmd
+	m.setLocationMode.input, cmd = m.setLocationMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) setLocationCmd(date time.Time, location string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		err := m.bujoService.SetLocation(ctx, date, location)
+		if err != nil {
+			return errMsg{err}
+		}
+		return agendaReloadNeededMsg{}
+	}
+}
+
 func (m Model) handleRetypeMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	types := []domain.EntryType{domain.EntryTypeTask, domain.EntryTypeNote, domain.EntryTypeEvent}
 
@@ -1665,7 +1739,7 @@ func (m Model) handleRetypeMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) migrateEntryCmd(id int64, dateStr string, fromDate time.Time) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		toDate, err := parseDateFrom(dateStr, fromDate)
+		toDate, err := parseDate(dateStr)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -1778,20 +1852,7 @@ func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 }
 
 func parseDate(s string) (time.Time, error) {
-	return parseDateFrom(s, time.Now())
-}
-
-func parseDateFrom(s string, reference time.Time) (time.Time, error) {
-	if parsed, err := time.Parse("2006-01-02", s); err == nil {
-		return parsed, nil
-	}
-
-	parsed, err := naturaldate.Parse(s, reference, naturaldate.WithDirection(naturaldate.Future))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date: %s", s)
-	}
-
-	return parsed, nil
+	return dateutil.ParseFuture(s)
 }
 
 func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -1817,9 +1878,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Done):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
-			days := 7
-			if m.habitState.monthView {
-				days = 30
+			days := HabitDaysWeek
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
+				days = HabitDaysMonth
+			case HabitViewModeQuarter:
+				days = HabitDaysQuarter
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			logDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
@@ -1834,9 +1898,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.DayRight):
-		days := 7
-		if m.habitState.monthView {
-			days = 30
+		days := HabitDaysWeek
+		switch m.habitState.viewMode {
+		case HabitViewModeMonth:
+			days = HabitDaysMonth
+		case HabitViewModeQuarter:
+			days = HabitDaysQuarter
 		}
 		if m.habitState.selectedDayIdx < days-1 {
 			m.habitState.selectedDayIdx++
@@ -1845,9 +1912,12 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.RemoveHabitLog):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
-			days := 7
-			if m.habitState.monthView {
-				days = 30
+			days := HabitDaysWeek
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
+				days = HabitDaysMonth
+			case HabitViewModeQuarter:
+				days = HabitDaysQuarter
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			removeDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
@@ -1867,7 +1937,14 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.ToggleView):
-		m.habitState.monthView = !m.habitState.monthView
+		switch m.habitState.viewMode {
+		case HabitViewModeWeek:
+			m.habitState.viewMode = HabitViewModeMonth
+		case HabitViewModeMonth:
+			m.habitState.viewMode = HabitViewModeQuarter
+		case HabitViewModeQuarter:
+			m.habitState.viewMode = HabitViewModeWeek
+		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Add):
@@ -2413,23 +2490,6 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
-
-func (m Model) navigateSummaryPeriod(direction int) time.Time {
-	refDate := m.summaryState.refDate
-	switch m.summaryState.horizon {
-	case domain.SummaryHorizonDaily:
-		return refDate.AddDate(0, 0, direction)
-	case domain.SummaryHorizonWeekly:
-		return refDate.AddDate(0, 0, direction*7)
-	case domain.SummaryHorizonQuarterly:
-		return refDate.AddDate(0, direction*3, 0)
-	case domain.SummaryHorizonAnnual:
-		return refDate.AddDate(direction, 0, 0)
-	default:
-		return refDate.AddDate(0, 0, direction)
-	}
-}
-
 func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
 		return newModel, cmd
@@ -2577,4 +2637,23 @@ func (m Model) handleQuitConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m Model) undoCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		var err error
+
+		switch m.undoState.operation {
+		case UndoOpMarkDone:
+			err = m.bujoService.Undo(ctx, m.undoState.entryID)
+		case UndoOpMarkUndone:
+			err = m.bujoService.MarkDone(ctx, m.undoState.entryID)
+		}
+
+		if err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{m.undoState.entryID}
+	}
 }

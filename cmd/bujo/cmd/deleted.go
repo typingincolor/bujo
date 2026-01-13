@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -25,7 +24,7 @@ Examples:
 		}
 
 		if len(entries) == 0 {
-			fmt.Fprintln(os.Stderr, "No deleted entries found.")
+			fmt.Println("No deleted entries found.")
 			return nil
 		}
 

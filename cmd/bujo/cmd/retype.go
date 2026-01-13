@@ -49,16 +49,7 @@ Examples:
 }
 
 func parseEntryType(s string) (domain.EntryType, error) {
-	switch strings.ToLower(s) {
-	case "task", ".":
-		return domain.EntryTypeTask, nil
-	case "note", "-":
-		return domain.EntryTypeNote, nil
-	case "event", "o":
-		return domain.EntryTypeEvent, nil
-	default:
-		return "", fmt.Errorf("invalid type %q, must be task, note, or event", s)
-	}
+	return domain.ParseEntryTypeFromString(strings.ToLower(s))
 }
 
 func init() {

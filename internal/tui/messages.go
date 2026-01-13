@@ -143,3 +143,5 @@ type searchResultsMsg struct {
 type statsLoadedMsg struct {
 	stats *domain.Stats
 }
+
+type agendaReloadNeededMsg struct{}

@@ -164,6 +164,16 @@ func TestSummary_Validate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "zero end date",
+			summary: Summary{
+				Horizon:   SummaryHorizonWeekly,
+				Content:   "Content",
+				StartDate: validStart,
+				EndDate:   time.Time{},
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

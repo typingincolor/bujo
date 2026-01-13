@@ -863,7 +863,7 @@ func TestUAT_HabitsView_MonthlyHistoryShown(t *testing.T) {
 	})
 	model.width = 80
 	model.height = 24
-	model.habitState.monthView = true // Monthly view by default per UAT
+	model.habitState.viewMode = HabitViewModeMonth // Monthly view by default per UAT
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
 	newModel, cmd := model.Update(msg)
@@ -4545,7 +4545,7 @@ func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
 	model = newModel.(Model)
 
 	// Navigate to rightmost day (today) - selectedDayIdx should be days-1
-	days := 7
+	days := HabitDaysWeek
 	model.habitState.selectedDayIdx = days - 1
 
 	if len(model.habitState.habits) == 0 {
