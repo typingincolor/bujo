@@ -662,7 +662,6 @@ func (m Model) renderCaptureMode() string {
 	linesShown := 0
 	for i := scrollOffset; i < len(editorLines) && linesShown < editorHeight; i++ {
 		origLine := editorLines[i]
-		line := origLine
 
 		cursorCol := -1
 		if i == m.captureMode.cursorLine {
@@ -672,6 +671,7 @@ func (m Model) renderCaptureMode() string {
 			}
 		}
 
+		var line string
 		if m.captureMode.searchMode && searchQuery != "" {
 			line = highlightSearchMatches(origLine, searchQuery, cursorCol)
 		} else {
