@@ -106,6 +106,7 @@ func TestParseAddArgs(t *testing.T) {
 		wantLocation string
 		wantDate     string
 		wantFile     string
+		wantParent   string
 		wantHelp     bool
 		wantYes      bool
 	}{
@@ -215,12 +216,42 @@ func TestParseAddArgs(t *testing.T) {
 			wantEntries: []string{". Task"},
 			wantYes:     true,
 		},
+		{
+			name:        "with parent flag",
+			args:        []string{"--parent", "123", ". Child task"},
+			wantEntries: []string{". Child task"},
+			wantParent:  "123",
+		},
+		{
+			name:        "with short parent flag",
+			args:        []string{"-p", "456", "- Note under parent"},
+			wantEntries: []string{"- Note under parent"},
+			wantParent:  "456",
+		},
+		{
+			name:        "with parent flag equals syntax",
+			args:        []string{"--parent=789", ". Task"},
+			wantEntries: []string{". Task"},
+			wantParent:  "789",
+		},
+		{
+			name:        "with short parent flag equals syntax",
+			args:        []string{"-p=999", ". Task"},
+			wantEntries: []string{". Task"},
+			wantParent:  "999",
+		},
+		{
+			name:         "with parent and location flags",
+			args:         []string{"-p", "123", "--at", "Home", ". Child task"},
+			wantEntries:  []string{". Child task"},
+			wantParent:   "123",
+			wantLocation: "Home",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			entries, location, date, file, parent, help, yes := parseAddArgs(tt.args)
-		_ = parent // not tested yet
 
 			if help != tt.wantHelp {
 				t.Errorf("parseAddArgs() help = %v, want %v", help, tt.wantHelp)
@@ -236,6 +267,9 @@ func TestParseAddArgs(t *testing.T) {
 			}
 			if file != tt.wantFile {
 				t.Errorf("parseAddArgs() file = %q, want %q", file, tt.wantFile)
+			}
+			if parent != tt.wantParent {
+				t.Errorf("parseAddArgs() parent = %q, want %q", parent, tt.wantParent)
 			}
 			if len(entries) != len(tt.wantEntries) {
 				t.Errorf("parseAddArgs() entries = %v, want %v", entries, tt.wantEntries)
