@@ -29,6 +29,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
+
+		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
+			if m.viewMode == ViewModeDay {
+				m.summaryState.horizon = domain.SummaryHorizonDaily
+			} else if m.viewMode == ViewModeWeek {
+				m.summaryState.horizon = domain.SummaryHorizonWeekly
+			}
+			m.summaryState.refDate = m.viewDate
+			m.summaryState.loading = true
+			m.summaryState.error = nil
+			return m.ensuredVisible(), tea.Batch(m.loadJournalGoalsCmd(), m.loadSummaryCmd())
+		}
+
 		return m.ensuredVisible(), m.loadJournalGoalsCmd()
 
 	case journalGoalsLoadedMsg:
@@ -176,6 +189,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		if m.quitConfirmMode.active {
+			return m.handleQuitConfirmMode(msg)
+		}
 		if m.err != nil {
 			m.err = nil
 			return m, nil
@@ -283,7 +299,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
@@ -1785,7 +1801,7 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
@@ -1886,7 +1902,7 @@ func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.goalState.selectedIdx < len(m.goalState.goals)-1 {
@@ -2093,7 +2109,7 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
@@ -2139,7 +2155,7 @@ func (m Model) handleListItemsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case msg.Type == tea.KeyEscape:
 		m.currentView = ViewTypeLists
@@ -2388,45 +2404,7 @@ func (m Model) handleCommandPaletteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
-
-	case msg.String() == "r":
-		if m.summaryService != nil && !m.summaryState.loading {
-			m.summaryState.loading = true
-			m.summaryState.error = nil
-			return m, m.loadSummaryCmd()
-		}
-		return m, nil
-
-	case msg.String() == "1":
-		m.summaryState.horizon = "daily"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "2":
-		m.summaryState.horizon = "weekly"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "3":
-		m.summaryState.horizon = "quarterly"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "4":
-		m.summaryState.horizon = "annual"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "h":
-		m.summaryState.refDate = m.navigateSummaryPeriod(-1)
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "l":
-		m.summaryState.refDate = m.navigateSummaryPeriod(1)
-		m.summaryState.summary = nil
-		return m, nil
+		return m.handleQuit()
 	}
 
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
@@ -2459,7 +2437,7 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
-		return m, tea.Quit
+		return m.handleQuit()
 
 	case msg.String() == "enter":
 		if len(m.searchView.results) > 0 && m.searchView.selectedIdx < len(m.searchView.results) {
@@ -2511,37 +2489,92 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
+	var newView ViewType
+	var cmd tea.Cmd
+	switched := false
+
 	switch {
 	case key.Matches(msg, m.keyMap.ViewJournal):
-		m.currentView = ViewTypeJournal
-		return true, m, m.loadAgendaCmd()
+		newView = ViewTypeJournal
+		cmd = m.loadAgendaCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
-		m.currentView = ViewTypeHabits
-		return true, m, m.loadHabitsCmd()
+		newView = ViewTypeHabits
+		cmd = m.loadHabitsCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewLists):
-		m.currentView = ViewTypeLists
-		return true, m, m.loadListsCmd()
+		newView = ViewTypeLists
+		cmd = m.loadListsCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewSearch):
-		m.currentView = ViewTypeSearch
+		newView = ViewTypeSearch
 		m.searchView.input.Focus()
-		return true, m, m.searchView.input.Cursor.BlinkCmd()
+		cmd = m.searchView.input.Cursor.BlinkCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewStats):
-		m.currentView = ViewTypeStats
+		newView = ViewTypeStats
 		m.statsViewState.loading = true
-		return true, m, m.loadStatsCmd()
+		cmd = m.loadStatsCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewGoals):
-		m.currentView = ViewTypeGoals
-		return true, m, m.loadGoalsCmd()
+		newView = ViewTypeGoals
+		cmd = m.loadGoalsCmd()
+		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewSettings):
-		m.currentView = ViewTypeSettings
-		return true, m, nil
+		newView = ViewTypeSettings
+		switched = true
+	}
+
+	if switched && newView != m.currentView {
+		m.viewStack = append(m.viewStack, m.currentView)
+		m.currentView = newView
+		return true, m, cmd
 	}
 
 	return false, m, nil
+}
+
+func (m Model) handleQuit() (Model, tea.Cmd) {
+	if len(m.viewStack) > 0 {
+		m.currentView = m.viewStack[len(m.viewStack)-1]
+		m.viewStack = m.viewStack[:len(m.viewStack)-1]
+
+		var cmd tea.Cmd
+		switch m.currentView {
+		case ViewTypeJournal:
+			cmd = m.loadAgendaCmd()
+		case ViewTypeHabits:
+			cmd = m.loadHabitsCmd()
+		case ViewTypeLists:
+			cmd = m.loadListsCmd()
+		case ViewTypeGoals:
+			cmd = m.loadGoalsCmd()
+		case ViewTypeStats:
+			cmd = m.loadStatsCmd()
+		}
+		return m, cmd
+	}
+
+	m.quitConfirmMode.active = true
+	return m, nil
+}
+
+func (m Model) handleQuitConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "Y":
+		return m, tea.Quit
+	case "n", "N":
+		m.quitConfirmMode.active = false
+		return m, nil
+	case "esc":
+		m.quitConfirmMode.active = false
+		return m, nil
+	}
+	return m, nil
 }
