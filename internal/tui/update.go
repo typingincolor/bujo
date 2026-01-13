@@ -1806,7 +1806,7 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				days = 30
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
-			logDate := time.Now().AddDate(0, 0, -daysAgo)
+			logDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
 			return m, m.logHabitForDateCmd(m.habitState.habits[m.habitState.selectedIdx].ID, logDate)
 		}
 		return m, nil
@@ -1834,8 +1834,19 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				days = 30
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
-			removeDate := time.Now().AddDate(0, 0, -daysAgo)
+			removeDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
 			return m, m.removeHabitLogForDateCmd(m.habitState.habits[m.habitState.selectedIdx].ID, removeDate)
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.PrevPeriod):
+		m.habitState.weekOffset++
+		return m, m.loadHabitsCmd()
+
+	case key.Matches(msg, m.keyMap.NextPeriod):
+		if m.habitState.weekOffset > 0 {
+			m.habitState.weekOffset--
+			return m, m.loadHabitsCmd()
 		}
 		return m, nil
 

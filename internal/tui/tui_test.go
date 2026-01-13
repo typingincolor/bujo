@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -4319,5 +4320,86 @@ func TestStatsView_Pressing1_SelectsDailyHorizon_NotJournalView(t *testing.T) {
 	}
 	if m.summaryState.horizon != "daily" {
 		t.Errorf("pressing '1' in stats view should select daily horizon, got %s", m.summaryState.horizon)
+	}
+}
+
+func TestRemoveHabitLogForDateCmd_NoLogsToRemove_ShouldNotReturnError(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
+	ctx := context.Background()
+
+	today := time.Now()
+	err := habitSvc.LogHabitForDate(ctx, "Meditation", 1, today)
+	if err != nil {
+		t.Fatalf("failed to create habit: %v", err)
+	}
+
+	status, err := habitSvc.GetTrackerStatus(ctx, today, 7)
+	if err != nil {
+		t.Fatalf("failed to get tracker status: %v", err)
+	}
+	habitID := status.Habits[0].ID
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+		GoalService:  goalSvc,
+	})
+
+	twoDaysAgo := today.AddDate(0, 0, -2)
+	cmd := model.removeHabitLogForDateCmd(habitID, twoDaysAgo)
+	msg := cmd()
+
+	if _, isError := msg.(errMsg); isError {
+		t.Error("removeHabitLogForDateCmd should not return errMsg when no logs exist for the date")
+	}
+}
+
+func TestHabitView_WeekOffset_DefaultsToZero(t *testing.T) {
+	model := New(nil)
+	if model.habitState.weekOffset != 0 {
+		t.Errorf("weekOffset should default to 0, got %d", model.habitState.weekOffset)
+	}
+}
+
+func TestHabitView_PrevPeriod_IncrementsWeekOffset(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState.weekOffset = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'['}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.weekOffset != 1 {
+		t.Errorf("pressing '[' should increment weekOffset to 1, got %d", m.habitState.weekOffset)
+	}
+}
+
+func TestHabitView_NextPeriod_DecrementsWeekOffset(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState.weekOffset = 2
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{']'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.weekOffset != 1 {
+		t.Errorf("pressing ']' should decrement weekOffset to 1, got %d", m.habitState.weekOffset)
+	}
+}
+
+func TestHabitView_NextPeriod_CannotGoToFuture(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState.weekOffset = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{']'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.habitState.weekOffset != 0 {
+		t.Errorf("pressing ']' at weekOffset=0 should not go negative, got %d", m.habitState.weekOffset)
 	}
 }

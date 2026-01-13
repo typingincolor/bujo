@@ -331,9 +331,9 @@ func (m Model) renderDayLabels(days int) string {
 	dayNames := []string{"S", "M", "T", "W", "T", "F", "S"}
 	var labels []string
 
-	now := time.Now()
+	referenceDate := m.getHabitReferenceDate()
 	for i := days - 1; i >= 0; i-- {
-		date := now.AddDate(0, 0, -i)
+		date := referenceDate.AddDate(0, 0, -i)
 		dayOfWeek := int(date.Weekday())
 		labels = append(labels, dayNames[dayOfWeek])
 	}
