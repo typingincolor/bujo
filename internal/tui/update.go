@@ -1738,7 +1738,7 @@ func (m Model) handleRetypeMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) migrateEntryCmd(id int64, dateStr string, fromDate time.Time) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		toDate, err := parseDateFrom(dateStr, fromDate)
+		toDate, err := parseDate(dateStr)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -1851,10 +1851,6 @@ func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 }
 
 func parseDate(s string) (time.Time, error) {
-	return dateutil.ParseFuture(s)
-}
-
-func parseDateFrom(s string, reference time.Time) (time.Time, error) {
 	return dateutil.ParseFuture(s)
 }
 
