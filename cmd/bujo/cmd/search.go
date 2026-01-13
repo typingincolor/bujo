@@ -81,7 +81,6 @@ Examples:
 			return nil
 		}
 
-		// Batch fetch ancestors for all results to avoid N+1 queries
 		ids := make([]int64, len(results))
 		for i, entry := range results {
 			ids[i] = entry.ID

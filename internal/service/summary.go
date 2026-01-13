@@ -48,8 +48,6 @@ func (s *SummaryService) GetSummaryWithRefresh(ctx context.Context, horizon doma
 		}
 
 		if cached != nil {
-			// For completed periods (end date before today), always use cache
-			// For ongoing periods (end date >= today), always regenerate
 			if s.isPeriodComplete(endDate) {
 				return cached, nil
 			}

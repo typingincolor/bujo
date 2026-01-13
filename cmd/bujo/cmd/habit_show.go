@@ -52,7 +52,6 @@ Examples:
 
 		today := time.Now()
 
-		// Default: last 30 days
 		from := today.AddDate(0, 0, -30)
 		to := today
 

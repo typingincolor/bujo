@@ -38,7 +38,6 @@ func (r *HabitRepository) Insert(ctx context.Context, habit domain.Habit) (int64
 }
 
 func (r *HabitRepository) GetByID(ctx context.Context, id int64) (*domain.Habit, error) {
-	// First, get the entity_id for this ID (may be from a closed version)
 	var entityID string
 	err := r.db.QueryRowContext(ctx, `
 		SELECT entity_id FROM habits WHERE id = ?
@@ -50,7 +49,6 @@ func (r *HabitRepository) GetByID(ctx context.Context, id int64) (*domain.Habit,
 		return nil, err
 	}
 
-	// Then get the current version for that entity
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id
 		FROM habits WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
@@ -142,7 +140,6 @@ func (r *HabitRepository) Update(ctx context.Context, habit domain.Habit) error 
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE habits SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, current.EntityID.String())
@@ -150,7 +147,6 @@ func (r *HabitRepository) Update(ctx context.Context, habit domain.Habit) error 
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM habits WHERE entity_id = ?
@@ -159,7 +155,6 @@ func (r *HabitRepository) Update(ctx context.Context, habit domain.Habit) error 
 		return err
 	}
 
-	// Insert new version with UPDATE op_type
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -189,7 +184,6 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE habits SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, habit.EntityID.String())
@@ -197,7 +191,6 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM habits WHERE entity_id = ?
@@ -206,7 +199,6 @@ func (r *HabitRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -270,7 +262,6 @@ func (r *HabitRepository) GetDeleted(ctx context.Context) ([]domain.Habit, error
 func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID) (int64, error) {
 	now := time.Now().Format(time.RFC3339)
 
-	// Get the most recent version (which should be a DELETE marker)
 	var lastHabit struct {
 		Name         string
 		GoalPerDay   int
@@ -302,7 +293,6 @@ func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close the DELETE marker
 	_, err = tx.ExecContext(ctx, `
 		UPDATE habits SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entityID.String())
@@ -310,7 +300,6 @@ func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID)
 		return 0, err
 	}
 
-	// Insert a new version with INSERT op_type to restore
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO habits (name, goal_per_day, goal_per_week, goal_per_month, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

@@ -194,7 +194,6 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE goals SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, goal.EntityID.String())
@@ -202,7 +201,6 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM goals WHERE entity_id = ?
@@ -211,7 +209,6 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	monthKey := goal.Month.Format("2006-01")
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO goals (entity_id, content, month, status, created_at, version, valid_from, op_type)

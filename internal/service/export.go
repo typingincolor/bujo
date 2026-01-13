@@ -158,32 +158,36 @@ func (s *ImportService) Import(ctx context.Context, data *domain.ExportData, opt
 	}
 
 	for _, entry := range data.Entries {
+		shouldInsert := true
 		if opts.Mode == domain.ImportModeMerge {
 			existing, err := s.entryRepo.GetByEntityID(ctx, entry.EntityID)
 			if err != nil {
 				return err
 			}
-			if existing != nil {
-				continue
-			}
+			shouldInsert = existing == nil
 		}
-		if _, err := s.entryRepo.Insert(ctx, entry); err != nil {
-			return err
+
+		if shouldInsert {
+			if _, err := s.entryRepo.Insert(ctx, entry); err != nil {
+				return err
+			}
 		}
 	}
 
 	for _, habit := range data.Habits {
+		shouldInsert := true
 		if opts.Mode == domain.ImportModeMerge {
 			existing, err := s.habitRepo.GetByEntityID(ctx, habit.EntityID)
 			if err != nil {
 				return err
 			}
-			if existing != nil {
-				continue
-			}
+			shouldInsert = existing == nil
 		}
-		if _, err := s.habitRepo.Insert(ctx, habit); err != nil {
-			return err
+
+		if shouldInsert {
+			if _, err := s.habitRepo.Insert(ctx, habit); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -206,17 +210,19 @@ func (s *ImportService) Import(ctx context.Context, data *domain.ExportData, opt
 	}
 
 	for _, list := range data.Lists {
+		shouldInsert := true
 		if opts.Mode == domain.ImportModeMerge {
 			existing, err := s.listRepo.GetByEntityID(ctx, list.EntityID)
 			if err != nil {
 				return err
 			}
-			if existing != nil {
-				continue
-			}
+			shouldInsert = existing == nil
 		}
-		if _, err := s.listRepo.InsertWithEntityID(ctx, list); err != nil {
-			return err
+
+		if shouldInsert {
+			if _, err := s.listRepo.InsertWithEntityID(ctx, list); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -227,17 +233,19 @@ func (s *ImportService) Import(ctx context.Context, data *domain.ExportData, opt
 	}
 
 	for _, goal := range data.Goals {
+		shouldInsert := true
 		if opts.Mode == domain.ImportModeMerge {
 			existing, err := s.goalRepo.GetByEntityID(ctx, goal.EntityID)
 			if err != nil {
 				return err
 			}
-			if existing != nil {
-				continue
-			}
+			shouldInsert = existing == nil
 		}
-		if _, err := s.goalRepo.Insert(ctx, goal); err != nil {
-			return err
+
+		if shouldInsert {
+			if _, err := s.goalRepo.Insert(ctx, goal); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -280,10 +288,9 @@ func (s *ExportService) Export(ctx context.Context, opts domain.ExportOptions) (
 
 	var err error
 
+	data.Entries, err = s.entryRepo.GetAll(ctx)
 	if opts.DateFrom != nil && opts.DateTo != nil {
 		data.Entries, err = s.entryRepo.GetByDateRange(ctx, *opts.DateFrom, *opts.DateTo)
-	} else {
-		data.Entries, err = s.entryRepo.GetAll(ctx)
 	}
 	if err != nil {
 		return nil, err

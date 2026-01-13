@@ -48,7 +48,6 @@ func init() {
 func renderViewTree(entries []domain.Entry, highlightID int64) string {
 	var sb strings.Builder
 
-	// Build set of IDs in result and parent-child map
 	inResult := make(map[int64]bool)
 	for _, e := range entries {
 		inResult[e.ID] = true
@@ -58,7 +57,6 @@ func renderViewTree(entries []domain.Entry, highlightID int64) string {
 	var roots []domain.Entry
 
 	for _, e := range entries {
-		// Entry is a root if it has no parent OR its parent isn't in result set
 		if e.ParentID == nil || !inResult[*e.ParentID] {
 			roots = append(roots, e)
 		} else {
@@ -84,7 +82,6 @@ func renderViewEntry(sb *strings.Builder, entry domain.Entry, children map[int64
 	idStr := fmt.Sprintf("(%d)", entry.ID)
 	content := entry.Content
 
-	// Highlight the requested entry
 	if entry.ID == highlightID {
 		idStr = cli.Highlight(idStr)
 		content = cli.Highlight(content)

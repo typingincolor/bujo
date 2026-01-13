@@ -334,20 +334,17 @@ func (s *HabitService) InspectHabitByID(ctx context.Context, habitID int64, from
 }
 
 func (s *HabitService) inspectHabitByHabit(ctx context.Context, habit *domain.Habit, from, to, today time.Time) (*HabitDetails, error) {
-	// Get logs for the date range using entity_id (stable across versions)
 	logs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, from, to.Add(24*time.Hour))
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate streak using all recent logs (not just the range)
 	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	streakLogs, err := s.logRepo.GetRangeByEntityID(ctx, habit.EntityID, todayStart.AddDate(0, 0, -365), todayStart.Add(24*time.Hour))
 	if err != nil {
 		return nil, err
 	}
 
-	// Get logs for weekly/monthly progress calculation
 	year, month, _ := todayStart.Date()
 	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, todayStart.Location())
 	weekStart := todayStart.AddDate(0, 0, -6)
@@ -408,17 +405,14 @@ func (s *HabitService) GetTrackerStatus(ctx context.Context, today time.Time, da
 		Habits: make([]HabitStatus, 0, len(habits)),
 	}
 
-	// Normalize to start of day for consistent range queries
 	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	startDate := todayStart.AddDate(0, 0, -(days - 1))
 	endDate := todayStart.Add(24 * time.Hour)
 
-	// For weekly/monthly progress, we may need logs beyond the day range
 	weekStart := todayStart.AddDate(0, 0, -6)
 	year, month, _ := todayStart.Date()
 	monthStart := time.Date(year, month, 1, 0, 0, 0, 0, todayStart.Location())
 
-	// Use the earliest start date for log queries
 	logStartDate := startDate
 	if weekStart.Before(logStartDate) {
 		logStartDate = weekStart

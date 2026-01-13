@@ -26,7 +26,6 @@ const separator = "---------------------------------------------------------"
 func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	var sb strings.Builder
 
-	// Header line with date and location
 	dateStr := agenda.Date.Format("Monday, Jan 2, 2006")
 	if agenda.Location != nil {
 		sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", Cyan(Bold(dateStr)), Yellow(*agenda.Location)))
@@ -35,14 +34,12 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	}
 	sb.WriteString(Dimmed(separator) + "\n")
 
-	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
 		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, agenda.Date)
 		sb.WriteString("\n")
 	}
 
-	// Today section
 	if len(agenda.Today) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
 		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false, agenda.Date)
@@ -58,14 +55,12 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) string {
 	var sb strings.Builder
 
-	// Overdue section
 	if len(agenda.Overdue) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
 		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, today)
 		sb.WriteString("\n")
 	}
 
-	// Each day
 	for _, day := range agenda.Days {
 		dateStr := day.Date.Format("Monday, Jan 2")
 		if day.Location != nil {
@@ -75,7 +70,6 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) strin
 		}
 
 		if len(day.Entries) > 0 {
-			// For day sections, check per-entry overdue status
 			renderEntryTreeWithOverdue(&sb, day.Entries, 0, false, today)
 		} else {
 			sb.WriteString(Dimmed("  No entries\n"))
@@ -87,7 +81,6 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) strin
 }
 
 func renderEntryTreeWithOverdue(sb *strings.Builder, entries []domain.Entry, depth int, forceOverdue bool, today time.Time) {
-	// Build parent-child map
 	children := make(map[int64][]domain.Entry)
 	var roots []domain.Entry
 
@@ -120,14 +113,12 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 	content := entry.Content
 	idStr := fmt.Sprintf("(%d)", entry.ID)
 
-	// Color based on type
 	switch entry.Type {
 	case domain.EntryTypeDone, domain.EntryTypeAnswered:
 		content = Green(content)
 		symbol = Green(symbol)
 		idStr = Green(idStr)
 	case domain.EntryTypeAnswer:
-		// Answers are informational content, style subtly
 		symbol = Dimmed(symbol)
 	case domain.EntryTypeMigrated:
 		content = Dimmed(content)
@@ -139,14 +130,12 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 		idStr = Dimmed(idStr)
 	}
 
-	// Check if entry is overdue: either forced (in OVERDUE section) or per-entry check
 	isOverdue := forceOverdue || (!today.IsZero() && entry.IsOverdue(today))
 	if isOverdue {
 		content = Red(content)
 		idStr = Red(idStr)
 	}
 
-	// Format priority symbol if present
 	if prioritySymbol != "" {
 		return fmt.Sprintf("%s%s %s %s %s\n", indent, symbol, prioritySymbol, content, idStr)
 	}
@@ -164,7 +153,6 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 	}
 
 	for _, habit := range status.Habits {
-		// Habit name and streak
 		streakColor := Green
 		if habit.CurrentStreak == 0 {
 			streakColor = Red
@@ -172,7 +160,6 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 
 		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
 
-		// Sparkline for last 7 days
 		sparkline := renderSparkline(habit.DayHistory)
 		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
 
@@ -202,7 +189,6 @@ func renderHabitProgress(habit service.HabitStatus, suffix string) string {
 func renderSparkline(days []service.DayStatus) string {
 	var sb strings.Builder
 
-	// Reverse to show oldest first (only show last 7)
 	start := len(days) - 1
 	if start > 6 {
 		start = 6
@@ -217,7 +203,6 @@ func renderSparkline(days []service.DayStatus) string {
 		sb.WriteString(" ")
 	}
 
-	// Add day labels
 	sb.WriteString("\n  ")
 	for i := start; i >= 0; i-- {
 		day := days[i]
@@ -240,7 +225,6 @@ func RenderHabitMonth(status *service.TrackerStatus) string {
 	}
 
 	for _, habit := range status.Habits {
-		// Habit name and streak
 		streakColor := Green
 		if habit.CurrentStreak == 0 {
 			streakColor = Red
@@ -248,7 +232,6 @@ func RenderHabitMonth(status *service.TrackerStatus) string {
 
 		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
 
-		// Month calendar
 		sb.WriteString(renderMonthCalendar(habit.DayHistory))
 
 		sb.WriteString(renderHabitProgress(habit, " (last 30 days)"))
@@ -260,21 +243,18 @@ func RenderHabitMonth(status *service.TrackerStatus) string {
 func renderMonthCalendar(days []service.DayStatus) string {
 	var sb strings.Builder
 
-	// Header with week days
 	sb.WriteString("  ")
 	for _, d := range []string{"M", "T", "W", "T", "F", "S", "S"} {
 		sb.WriteString(Dimmed(d) + " ")
 	}
 	sb.WriteString("\n")
 
-	// Build a map of date -> completed
 	completed := make(map[string]bool)
 	for _, day := range days {
 		key := day.Date.Format("2006-01-02")
 		completed[key] = day.Completed
 	}
 
-	// Find the start of the calendar (go back to find a Monday)
 	if len(days) == 0 {
 		return sb.String()
 	}
@@ -282,13 +262,11 @@ func renderMonthCalendar(days []service.DayStatus) string {
 	oldest := days[len(days)-1].Date
 	newest := days[0].Date
 
-	// Start from oldest, find the Monday of that week
 	startDate := oldest
 	for startDate.Weekday() != time.Monday {
 		startDate = startDate.AddDate(0, 0, -1)
 	}
 
-	// Render weeks
 	sb.WriteString("  ")
 	current := startDate
 	for !current.After(newest) {
@@ -302,7 +280,6 @@ func renderMonthCalendar(days []service.DayStatus) string {
 			sb.WriteString(Dimmed("○") + " ")
 		}
 
-		// New line on Sunday
 		if current.Weekday() == time.Sunday {
 			sb.WriteString("\n  ")
 		}
@@ -321,17 +298,14 @@ func FormatDate(t time.Time) string {
 func RenderHabitInspect(details *service.HabitDetails) string {
 	var sb strings.Builder
 
-	// Header
 	sb.WriteString(fmt.Sprintf("%s\n", Cyan(Bold(details.Name))))
 
-	// Streak
 	streakColor := Green
 	if details.CurrentStreak == 0 {
 		streakColor = Red
 	}
 	sb.WriteString(fmt.Sprintf("Streak: %s\n", streakColor(fmt.Sprintf("%d days", details.CurrentStreak))))
 
-	// Goals section
 	sb.WriteString("\nGoals:\n")
 	if details.GoalPerDay > 0 {
 		sb.WriteString(fmt.Sprintf("  Daily:   %d/day\n", details.GoalPerDay))
@@ -350,7 +324,6 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 		sb.WriteString(Dimmed("  No goals set\n"))
 	}
 
-	// Logs table
 	sb.WriteString("\n")
 	if len(details.Logs) == 0 {
 		sb.WriteString(Dimmed("No logs in this period\n"))
