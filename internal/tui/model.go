@@ -3,6 +3,8 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -1126,4 +1128,33 @@ func (m Model) ensureSelectedAndAncestorsExpanded() Model {
 
 	m.entries = m.flattenAgenda(m.agenda)
 	return m
+}
+
+func (m Model) openURLCmd(content string) tea.Cmd {
+	return func() tea.Msg {
+		urls := domain.ExtractURLs(content)
+		if len(urls) == 0 {
+			return errMsg{err: fmt.Errorf("no URL found in entry")}
+		}
+
+		url := urls[0]
+		var cmd *exec.Cmd
+
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", url)
+		case "linux":
+			cmd = exec.Command("xdg-open", url)
+		case "windows":
+			cmd = exec.Command("cmd", "/c", "start", url)
+		default:
+			return errMsg{err: fmt.Errorf("unsupported platform: %s", runtime.GOOS)}
+		}
+
+		if err := cmd.Start(); err != nil {
+			return errMsg{err: fmt.Errorf("failed to open URL: %w", err)}
+		}
+
+		return nil
+	}
 }

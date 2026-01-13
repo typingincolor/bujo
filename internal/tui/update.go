@@ -412,6 +412,13 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.OpenURL):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		return m, m.openURLCmd(entry.Content)
+
 	case key.Matches(msg, m.keyMap.Add):
 		ti := textinput.New()
 		ti.Placeholder = ". task, - note, o event"

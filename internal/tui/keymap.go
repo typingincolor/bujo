@@ -45,6 +45,7 @@ type KeyMap struct {
 	NextPeriod      key.Binding
 	ExpandAll       key.Binding
 	CollapseAll     key.Binding
+	OpenURL         key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -216,6 +217,10 @@ func DefaultKeyMap() KeyMap {
 		CollapseAll: key.NewBinding(
 			key.WithKeys("ctrl+c"),
 			key.WithHelp("ctrl+c", "collapse all"),
+		),
+		OpenURL: key.NewBinding(
+			key.WithKeys("o"),
+			key.WithHelp("o", "open link"),
 		),
 	}
 }
