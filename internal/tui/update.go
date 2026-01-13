@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/tj/go-naturaldate"
+	"github.com/typingincolor/bujo/internal/dateutil"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -1850,20 +1850,11 @@ func (m Model) deleteWithChildrenCmd(id int64) tea.Cmd {
 }
 
 func parseDate(s string) (time.Time, error) {
-	return parseDateFrom(s, time.Now())
+	return dateutil.ParseFuture(s)
 }
 
 func parseDateFrom(s string, reference time.Time) (time.Time, error) {
-	if parsed, err := time.Parse("2006-01-02", s); err == nil {
-		return parsed, nil
-	}
-
-	parsed, err := naturaldate.Parse(s, reference, naturaldate.WithDirection(naturaldate.Future))
-	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid date: %s", s)
-	}
-
-	return parsed, nil
+	return dateutil.ParseFuture(s)
 }
 
 func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

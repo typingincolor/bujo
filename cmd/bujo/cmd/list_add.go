@@ -32,24 +32,11 @@ Examples:
 		}
 
 		content := strings.Join(args[1:], " ")
-		entryType := domain.EntryTypeTask
-
-		if len(content) >= 2 {
-			prefix := content[:2]
-			switch prefix {
-			case ". ":
-				entryType = domain.EntryTypeTask
-				content = content[2:]
-			case "- ":
-				entryType = domain.EntryTypeNote
-				content = content[2:]
-			case "o ":
-				entryType = domain.EntryTypeEvent
-				content = content[2:]
-			case "x ":
-				entryType = domain.EntryTypeDone
-				content = content[2:]
-			}
+		entryType := domain.ParseEntryType(content)
+		if entryType == "" {
+			entryType = domain.EntryTypeTask
+		} else if len(content) >= 2 && content[1] == ' ' {
+			content = content[2:]
 		}
 
 		id, err := listService.AddItem(ctx, listID, entryType, content)

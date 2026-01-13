@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -29,6 +30,31 @@ func ParseEntryType(line string) EntryType {
 		return symbolToType[r]
 	}
 	return ""
+}
+
+func ParseEntryTypeFromString(s string) (EntryType, error) {
+	switch s {
+	case "task", ".":
+		return EntryTypeTask, nil
+	case "note", "-":
+		return EntryTypeNote, nil
+	case "event", "o":
+		return EntryTypeEvent, nil
+	case "done", "x":
+		return EntryTypeDone, nil
+	case "migrated", ">":
+		return EntryTypeMigrated, nil
+	case "cancelled", "X":
+		return EntryTypeCancelled, nil
+	case "question", "?":
+		return EntryTypeQuestion, nil
+	case "answered", "!":
+		return EntryTypeAnswered, nil
+	case "answer", "A":
+		return EntryTypeAnswer, nil
+	default:
+		return "", fmt.Errorf("invalid entry type: %s", s)
+	}
 }
 
 func ParseIndentation(line string) (depth int, rest string) {
