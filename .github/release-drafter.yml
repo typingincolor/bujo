@@ -1,5 +1,7 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+name-template: 'v$RESOLVED_VERSION-alpha'
+tag-template: 'v$RESOLVED_VERSION-alpha'
+version-template: '$MAJOR.$MINOR.$PATCH'
+prerelease: true
 
 categories:
   - title: '🚀 Features'
