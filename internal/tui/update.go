@@ -31,9 +31,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scrollOffset = 0
 
 		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
-			if m.viewMode == ViewModeDay {
+			switch m.viewMode {
+			case ViewModeDay:
 				m.summaryState.horizon = domain.SummaryHorizonDaily
-			} else if m.viewMode == ViewModeWeek {
+			case ViewModeWeek:
 				m.summaryState.horizon = domain.SummaryHorizonWeekly
 			}
 			m.summaryState.refDate = m.viewDate
