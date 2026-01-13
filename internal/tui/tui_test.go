@@ -4509,3 +4509,35 @@ func TestQuitConfirmView_ShowsWhenActive(t *testing.T) {
 		t.Error("quit confirm view should ask 'Are you sure'")
 	}
 }
+
+func TestStatsView_ArrowLeftNavigatesPrevPeriod(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeStats
+	initialDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.Local)
+	model.summaryState.refDate = initialDate
+	model.summaryState.horizon = "daily"
+
+	msg := tea.KeyMsg{Type: tea.KeyLeft}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.summaryState.refDate.Before(initialDate) {
+		t.Error("left arrow should navigate to previous period")
+	}
+}
+
+func TestStatsView_ArrowRightNavigatesNextPeriod(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeStats
+	initialDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.Local)
+	model.summaryState.refDate = initialDate
+	model.summaryState.horizon = "daily"
+
+	msg := tea.KeyMsg{Type: tea.KeyRight}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.summaryState.refDate.After(initialDate) {
+		t.Error("right arrow should navigate to next period")
+	}
+}

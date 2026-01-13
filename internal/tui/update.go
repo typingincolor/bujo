@@ -2421,12 +2421,12 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.summaryState.summary = nil
 		return m, nil
 
-	case msg.String() == "h":
+	case key.Matches(msg, m.keyMap.DayLeft):
 		m.summaryState.refDate = m.navigateSummaryPeriod(-1)
 		m.summaryState.summary = nil
 		return m, nil
 
-	case msg.String() == "l":
+	case key.Matches(msg, m.keyMap.DayRight):
 		m.summaryState.refDate = m.navigateSummaryPeriod(1)
 		m.summaryState.summary = nil
 		return m, nil
