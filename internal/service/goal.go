@@ -70,8 +70,8 @@ func (s *GoalService) MarkDone(ctx context.Context, id int64) error {
 		return fmt.Errorf("goal not found: %d", id)
 	}
 
-	goal.MarkDone()
-	return s.goalRepo.Update(ctx, *goal)
+	updated := goal.MarkDone()
+	return s.goalRepo.Update(ctx, updated)
 }
 
 func (s *GoalService) MarkActive(ctx context.Context, id int64) error {
@@ -83,8 +83,8 @@ func (s *GoalService) MarkActive(ctx context.Context, id int64) error {
 		return fmt.Errorf("goal not found: %d", id)
 	}
 
-	goal.MarkActive()
-	return s.goalRepo.Update(ctx, *goal)
+	updated := goal.MarkActive()
+	return s.goalRepo.Update(ctx, updated)
 }
 
 func (s *GoalService) MoveToMonth(ctx context.Context, id int64, newMonth time.Time) error {

@@ -35,12 +35,14 @@ func (g Goal) IsDone() bool {
 	return g.Status == GoalStatusDone
 }
 
-func (g *Goal) MarkDone() {
+func (g Goal) MarkDone() Goal {
 	g.Status = GoalStatusDone
+	return g
 }
 
-func (g *Goal) MarkActive() {
+func (g Goal) MarkActive() Goal {
 	g.Status = GoalStatusActive
+	return g
 }
 
 func (g Goal) MonthKey() string {

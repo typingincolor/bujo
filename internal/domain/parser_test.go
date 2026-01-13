@@ -41,6 +41,8 @@ func TestParseIndentation(t *testing.T) {
 		{"one tab", "\t. Child task", 1, ". Child task"},
 		{"two tabs", "\t\t. Grandchild", 2, ". Grandchild"},
 		{"mixed spaces", "      . Third level", 3, ". Third level"},
+		{"empty string", "", 0, ""},
+		{"only spaces", "    ", 2, ""},
 	}
 
 	for _, tt := range tests {
@@ -62,6 +64,9 @@ func TestParseContent(t *testing.T) {
 		{"note content", "- Some note here", "Some note here"},
 		{"event content", "o Meeting @ 10am", "Meeting @ 10am"},
 		{"content with extra spaces", ".   Multiple spaces", "Multiple spaces"},
+		{"empty string", "", ""},
+		{"single character", ".", ""},
+		{"no content after symbol", "- ", ""},
 	}
 
 	for _, tt := range tests {
@@ -321,6 +326,9 @@ func TestParsePriorityAndContent(t *testing.T) {
 		{"exclamation in content", "Say hello!", "Say hello!", PriorityNone},
 		{"exclamation not at start", "Hello ! World", "Hello ! World", PriorityNone},
 		{"four exclamations treated as high", "!!!! Too many", "! Too many", PriorityHigh},
+		{"empty string", "", "", PriorityNone},
+		{"only exclamations", "!!!", "!!!", PriorityNone},
+		{"exclamation with only whitespace", "!   ", "!", PriorityNone},
 	}
 
 	for _, tt := range tests {
@@ -341,6 +349,46 @@ func TestParseEntryType_QuestionAndAnswered(t *testing.T) {
 		{"question from ?", "? What is the deadline", EntryTypeQuestion},
 		{"answered from star", "★ This is answered", EntryTypeAnswered},
 		{"answer from arrow", "↳ This is the answer", EntryTypeAnswer},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseEntryType(tt.line)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseEntryType_UnicodeSymbols(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected EntryType
+	}{
+		{"bullet task", "• Unicode task", EntryTypeTask},
+		{"en-dash note", "– Unicode note", EntryTypeNote},
+		{"circle event", "○ Unicode event", EntryTypeEvent},
+		{"checkmark done", "✓ Unicode done", EntryTypeDone},
+		{"arrow migrated", "→ Unicode migrated", EntryTypeMigrated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseEntryType(tt.line)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParseEntryType_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected EntryType
+	}{
+		{"empty string", "", EntryType("")},
+		{"unknown symbol", "@ Unknown", EntryType("")},
+		{"number", "1. Numbered item", EntryType("")},
 	}
 
 	for _, tt := range tests {

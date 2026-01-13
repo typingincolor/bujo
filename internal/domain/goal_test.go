@@ -67,25 +67,43 @@ func TestGoal_IsDone(t *testing.T) {
 }
 
 func TestGoal_MarkDone(t *testing.T) {
-	goal := Goal{
-		Content: "Learn Go",
-		Status:  GoalStatusActive,
+	entityID := NewEntityID()
+	original := Goal{
+		ID:       1,
+		EntityID: entityID,
+		Content:  "Learn Go",
+		Status:   GoalStatusActive,
+		Month:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	goal.MarkDone()
+	updated := original.MarkDone()
 
-	assert.Equal(t, GoalStatusDone, goal.Status)
+	assert.Equal(t, GoalStatusDone, updated.Status)
+	assert.Equal(t, GoalStatusActive, original.Status, "original should be unchanged")
+	assert.Equal(t, original.ID, updated.ID, "other fields should be copied")
+	assert.Equal(t, original.EntityID, updated.EntityID, "other fields should be copied")
+	assert.Equal(t, original.Content, updated.Content, "other fields should be copied")
+	assert.Equal(t, original.Month, updated.Month, "other fields should be copied")
 }
 
 func TestGoal_MarkActive(t *testing.T) {
-	goal := Goal{
-		Content: "Learn Go",
-		Status:  GoalStatusDone,
+	entityID := NewEntityID()
+	original := Goal{
+		ID:       1,
+		EntityID: entityID,
+		Content:  "Learn Go",
+		Status:   GoalStatusDone,
+		Month:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 
-	goal.MarkActive()
+	updated := original.MarkActive()
 
-	assert.Equal(t, GoalStatusActive, goal.Status)
+	assert.Equal(t, GoalStatusActive, updated.Status)
+	assert.Equal(t, GoalStatusDone, original.Status, "original should be unchanged")
+	assert.Equal(t, original.ID, updated.ID, "other fields should be copied")
+	assert.Equal(t, original.EntityID, updated.EntityID, "other fields should be copied")
+	assert.Equal(t, original.Content, updated.Content, "other fields should be copied")
+	assert.Equal(t, original.Month, updated.Month, "other fields should be copied")
 }
 
 func TestGoal_MonthKey(t *testing.T) {
