@@ -71,6 +71,10 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderGotoInput())
 		sb.WriteString("\n")
+	} else if m.setLocationMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSetLocationInput())
+		sb.WriteString("\n")
 	} else if m.searchMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderSearchInput())
@@ -544,6 +548,14 @@ func (m Model) renderGotoInput() string {
 	sb.WriteString("Go to date:\n")
 	sb.WriteString(m.gotoMode.input.View())
 	sb.WriteString("\n\nEnter to go, Esc to cancel")
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderSetLocationInput() string {
+	var sb strings.Builder
+	sb.WriteString("Set location:\n")
+	sb.WriteString(m.setLocationMode.input.View())
+	sb.WriteString("\n\nEnter to save, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }
 

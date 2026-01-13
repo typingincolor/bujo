@@ -75,6 +75,7 @@ type Model struct {
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
 	statsViewState         statsState
+	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
 	commandRegistry        *CommandRegistry
 	help                   help.Model
@@ -138,6 +139,12 @@ type migrateState struct {
 
 type gotoState struct {
 	active bool
+	input  textinput.Model
+}
+
+type setLocationState struct {
+	active bool
+	date   time.Time
 	input  textinput.Model
 }
 

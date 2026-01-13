@@ -52,7 +52,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg.err
 		return m, nil
 
-	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg:
+	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg, agendaReloadNeededMsg:
 		return m, m.loadAgendaCmd()
 
 	case gotoDateMsg:
@@ -222,6 +222,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.searchMode.active {
 			return m.handleSearchMode(msg)
+		}
+		if m.setLocationMode.active {
+			return m.handleSetLocationMode(msg)
 		}
 		if m.commandPalette.active {
 			return m.handleCommandPaletteMode(msg)
@@ -1626,6 +1629,37 @@ func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
 			return errMsg{err}
 		}
 		return gotoDateMsg{date: toDate}
+	}
+}
+
+func (m Model) handleSetLocationMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.setLocationMode.active = false
+		return m, nil
+
+	case tea.KeyEnter:
+		location := m.setLocationMode.input.Value()
+		m.setLocationMode.active = false
+		if location == "" {
+			return m, nil
+		}
+		return m, m.setLocationCmd(m.setLocationMode.date, location)
+	}
+
+	var cmd tea.Cmd
+	m.setLocationMode.input, cmd = m.setLocationMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) setLocationCmd(date time.Time, location string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		err := m.bujoService.SetLocation(ctx, date, location)
+		if err != nil {
+			return errMsg{err}
+		}
+		return agendaReloadNeededMsg{}
 	}
 }
 
