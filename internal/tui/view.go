@@ -1171,37 +1171,6 @@ func (m Model) renderMoveToListModal() string {
 	return ConfirmStyle.Render(sb.String())
 }
 
-func (m Model) formatSummaryPeriod() string {
-	refDate := m.summaryState.refDate
-	switch m.summaryState.horizon {
-	case domain.SummaryHorizonDaily:
-		today := time.Now()
-		if refDate.Year() == today.Year() && refDate.YearDay() == today.YearDay() {
-			return "Today"
-		}
-		yesterday := today.AddDate(0, 0, -1)
-		if refDate.Year() == yesterday.Year() && refDate.YearDay() == yesterday.YearDay() {
-			return "Yesterday"
-		}
-		return refDate.Format("Mon, Jan 2")
-	case domain.SummaryHorizonWeekly:
-		weekday := int(refDate.Weekday())
-		if weekday == 0 {
-			weekday = 7
-		}
-		monday := refDate.AddDate(0, 0, -(weekday - 1))
-		sunday := monday.AddDate(0, 0, 6)
-		return fmt.Sprintf("Week of %s - %s", monday.Format("Jan 2"), sunday.Format("Jan 2"))
-	case domain.SummaryHorizonQuarterly:
-		quarter := (refDate.Month()-1)/3 + 1
-		return fmt.Sprintf("Q%d %d", quarter, refDate.Year())
-	case domain.SummaryHorizonAnnual:
-		return fmt.Sprintf("Year %d", refDate.Year())
-	default:
-		return refDate.Format("Jan 2, 2006")
-	}
-}
-
 func (m Model) isViewingPast() bool {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())

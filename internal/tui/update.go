@@ -2455,23 +2455,6 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
-
-func (m Model) navigateSummaryPeriod(direction int) time.Time {
-	refDate := m.summaryState.refDate
-	switch m.summaryState.horizon {
-	case domain.SummaryHorizonDaily:
-		return refDate.AddDate(0, 0, direction)
-	case domain.SummaryHorizonWeekly:
-		return refDate.AddDate(0, 0, direction*7)
-	case domain.SummaryHorizonQuarterly:
-		return refDate.AddDate(0, direction*3, 0)
-	case domain.SummaryHorizonAnnual:
-		return refDate.AddDate(direction, 0, 0)
-	default:
-		return refDate.AddDate(0, 0, direction)
-	}
-}
-
 func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
 		return newModel, cmd
