@@ -27,11 +27,19 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	var sb strings.Builder
 
 	dateStr := agenda.Date.Format("Monday, Jan 2, 2006")
+	header := fmt.Sprintf("📅 %s", Cyan(Bold(dateStr)))
+
 	if agenda.Location != nil {
-		sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", Cyan(Bold(dateStr)), Yellow(*agenda.Location)))
-	} else {
-		sb.WriteString(fmt.Sprintf("📅 %s\n", Cyan(Bold(dateStr))))
+		header += fmt.Sprintf(" | 📍 %s", Yellow(*agenda.Location))
 	}
+	if agenda.Weather != nil {
+		header += fmt.Sprintf(" | ☀️  %s", Cyan(*agenda.Weather))
+	}
+	if agenda.Mood != nil {
+		header += fmt.Sprintf(" | 😊 %s", Yellow(*agenda.Mood))
+	}
+
+	sb.WriteString(header + "\n")
 	sb.WriteString(Dimmed(separator) + "\n")
 
 	if len(agenda.Overdue) > 0 {
@@ -63,11 +71,19 @@ func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) strin
 
 	for _, day := range agenda.Days {
 		dateStr := day.Date.Format("Monday, Jan 2")
+		header := fmt.Sprintf("📅 %s", Cyan(Bold(dateStr)))
+
 		if day.Location != nil {
-			sb.WriteString(fmt.Sprintf("📅 %s | 📍 %s\n", Cyan(Bold(dateStr)), Yellow(*day.Location)))
-		} else {
-			sb.WriteString(fmt.Sprintf("📅 %s\n", Cyan(Bold(dateStr))))
+			header += fmt.Sprintf(" | 📍 %s", Yellow(*day.Location))
 		}
+		if day.Weather != nil {
+			header += fmt.Sprintf(" | ☀️  %s", Cyan(*day.Weather))
+		}
+		if day.Mood != nil {
+			header += fmt.Sprintf(" | 😊 %s", Yellow(*day.Mood))
+		}
+
+		sb.WriteString(header + "\n")
 
 		if len(day.Entries) > 0 {
 			renderEntryTreeWithOverdue(&sb, day.Entries, 0, false, today)

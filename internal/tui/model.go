@@ -943,6 +943,12 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 		if day.Location != nil && *day.Location != "" {
 			dayHeader = fmt.Sprintf("%s | 📍 %s", dayHeader, *day.Location)
 		}
+		if day.Weather != nil && *day.Weather != "" {
+			dayHeader = fmt.Sprintf("%s | ☀️  %s", dayHeader, *day.Weather)
+		}
+		if day.Mood != nil && *day.Mood != "" {
+			dayHeader = fmt.Sprintf("%s | 😊 %s", dayHeader, *day.Mood)
+		}
 
 		items = append(items, m.flattenEntries(day.Entries, dayHeader, false, today)...)
 	}
