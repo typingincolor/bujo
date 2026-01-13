@@ -29,6 +29,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
+
+		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
+			if m.viewMode == ViewModeDay {
+				m.summaryState.horizon = domain.SummaryHorizonDaily
+			} else if m.viewMode == ViewModeWeek {
+				m.summaryState.horizon = domain.SummaryHorizonWeekly
+			}
+			m.summaryState.refDate = m.viewDate
+			m.summaryState.loading = true
+			m.summaryState.error = nil
+			return m.ensuredVisible(), tea.Batch(m.loadJournalGoalsCmd(), m.loadSummaryCmd())
+		}
+
 		return m.ensuredVisible(), m.loadJournalGoalsCmd()
 
 	case journalGoalsLoadedMsg:
@@ -2392,44 +2405,6 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
-
-	case msg.String() == "r":
-		if m.summaryService != nil && !m.summaryState.loading {
-			m.summaryState.loading = true
-			m.summaryState.error = nil
-			return m, m.loadSummaryCmd()
-		}
-		return m, nil
-
-	case msg.String() == "1":
-		m.summaryState.horizon = "daily"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "2":
-		m.summaryState.horizon = "weekly"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "3":
-		m.summaryState.horizon = "quarterly"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case msg.String() == "4":
-		m.summaryState.horizon = "annual"
-		m.summaryState.summary = nil
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.DayLeft):
-		m.summaryState.refDate = m.navigateSummaryPeriod(-1)
-		m.summaryState.summary = nil
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.DayRight):
-		m.summaryState.refDate = m.navigateSummaryPeriod(1)
-		m.summaryState.summary = nil
-		return m, nil
 	}
 
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {

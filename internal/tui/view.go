@@ -1008,48 +1008,6 @@ func (m Model) renderStatsContent() string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(strings.Repeat("─", 50))
-	sb.WriteString("\n\n")
-
-	horizonLabel := "Daily"
-	switch m.summaryState.horizon {
-	case "weekly":
-		horizonLabel = "Weekly"
-	case "quarterly":
-		horizonLabel = "Quarterly"
-	case "annual":
-		horizonLabel = "Annual"
-	}
-	sb.WriteString(fmt.Sprintf("AI Summary: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
-	sb.WriteString(fmt.Sprintf("Period: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
-
-	if m.summaryState.summary != nil {
-		sb.WriteString("🤖 AI Reflection:\n\n")
-		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
-		if err != nil {
-			sb.WriteString(m.summaryState.summary.Content)
-		} else {
-			sb.WriteString(rendered)
-		}
-		sb.WriteString("\n")
-		if m.summaryService != nil {
-			sb.WriteString(HelpStyle.Render("Press 'r' to refresh"))
-		}
-		sb.WriteString("\n\n")
-	} else if m.summaryService == nil {
-		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
-		sb.WriteString("\n\n")
-	} else if m.summaryState.loading {
-		sb.WriteString("⏳ Generating AI summary...\n\n")
-	} else if m.summaryState.error != nil {
-		sb.WriteString(fmt.Sprintf("❌ Error: %v\n\n", m.summaryState.error))
-		sb.WriteString(HelpStyle.Render("Press 'r' to retry"))
-		sb.WriteString("\n\n")
-	} else {
-		sb.WriteString(HelpStyle.Render("Press 'r' to generate AI summary"))
-		sb.WriteString("\n\n")
-	}
-
 	return sb.String()
 }
 
@@ -1241,12 +1199,39 @@ func (m Model) isViewingPast() bool {
 
 func (m Model) renderJournalAISummary() string {
 	var sb strings.Builder
-	sb.WriteString(HelpStyle.Render("📊 AI Summary"))
-	sb.WriteString("\n")
-	if m.summaryService == nil {
-		sb.WriteString(HelpStyle.Render("  (AI summary service not configured)"))
-	} else {
-		sb.WriteString(HelpStyle.Render("  Press '5' to view AI summary for this period"))
+
+	if m.summaryState.horizon == "quarterly" || m.summaryState.horizon == "annual" {
+		return ""
 	}
+
+	horizonLabel := "Daily"
+	if m.summaryState.horizon == "weekly" {
+		horizonLabel = "Weekly"
+	}
+
+	sb.WriteString(strings.Repeat("─", 50))
+	sb.WriteString("\n\n")
+	sb.WriteString(fmt.Sprintf("🤖 AI %s Summary\n\n", horizonLabel))
+
+	if m.summaryState.summary != nil {
+		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
+		if err != nil {
+			sb.WriteString(m.summaryState.summary.Content)
+		} else {
+			sb.WriteString(rendered)
+		}
+		sb.WriteString("\n")
+	} else if m.summaryService == nil {
+		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
+		sb.WriteString("\n")
+	} else if m.summaryState.loading {
+		sb.WriteString("⏳ Generating AI summary...\n")
+	} else if m.summaryState.error != nil {
+		sb.WriteString(fmt.Sprintf("❌ Error: %v\n", m.summaryState.error))
+	} else {
+		sb.WriteString(HelpStyle.Render("No summary generated for this period"))
+		sb.WriteString("\n")
+	}
+
 	return sb.String()
 }

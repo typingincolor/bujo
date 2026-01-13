@@ -4310,23 +4310,6 @@ func TestRenderEntry_UnselectedMigratedEntry_HasDimStyle(t *testing.T) {
 	}
 }
 
-func TestStatsView_Pressing1_SelectsDailyHorizon_NotJournalView(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeStats
-	model.summaryState.horizon = "weekly"
-
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-
-	if m.currentView != ViewTypeStats {
-		t.Error("pressing '1' in stats view should NOT switch to journal view")
-	}
-	if m.summaryState.horizon != "daily" {
-		t.Errorf("pressing '1' in stats view should select daily horizon, got %s", m.summaryState.horizon)
-	}
-}
-
 func TestRemoveHabitLogForDateCmd_NoLogsToRemove_ShouldNotReturnError(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
 	ctx := context.Background()
@@ -4510,34 +4493,98 @@ func TestQuitConfirmView_ShowsWhenActive(t *testing.T) {
 	}
 }
 
-func TestStatsView_ArrowLeftNavigatesPrevPeriod(t *testing.T) {
+func TestJournalView_ShowsDailySummary(t *testing.T) {
 	model := New(nil)
-	model.currentView = ViewTypeStats
-	initialDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.Local)
-	model.summaryState.refDate = initialDate
+	model.currentView = ViewTypeJournal
+	model.viewDate = time.Date(2026, 1, 10, 0, 0, 0, 0, time.Local)
+	model.summaryState.summary = &domain.Summary{
+		ID:      1,
+		Horizon: "daily",
+		Content: "Test daily summary content",
+	}
 	model.summaryState.horizon = "daily"
+	model.agenda = &service.MultiDayAgenda{}
 
-	msg := tea.KeyMsg{Type: tea.KeyLeft}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
+	output := model.View()
 
-	if !m.summaryState.refDate.Before(initialDate) {
-		t.Error("left arrow should navigate to previous period")
+	if !strings.Contains(output, "Test daily summary content") {
+		t.Error("journal view should display daily AI summary")
 	}
 }
 
-func TestStatsView_ArrowRightNavigatesNextPeriod(t *testing.T) {
+func TestJournalView_ShowsWeeklySummary(t *testing.T) {
 	model := New(nil)
-	model.currentView = ViewTypeStats
-	initialDate := time.Date(2026, 1, 15, 0, 0, 0, 0, time.Local)
-	model.summaryState.refDate = initialDate
-	model.summaryState.horizon = "daily"
+	model.currentView = ViewTypeJournal
+	model.viewDate = time.Date(2026, 1, 10, 0, 0, 0, 0, time.Local)
+	model.summaryState.summary = &domain.Summary{
+		ID:      1,
+		Horizon: "weekly",
+		Content: "Test weekly summary content",
+	}
+	model.summaryState.horizon = "weekly"
+	model.agenda = &service.MultiDayAgenda{}
 
-	msg := tea.KeyMsg{Type: tea.KeyRight}
+	output := model.View()
+
+	if !strings.Contains(output, "Test weekly summary content") {
+		t.Error("journal view should display weekly AI summary")
+	}
+}
+
+func TestJournalView_DoesNotShowQuarterlySummary(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.viewDate = time.Date(2026, 1, 10, 0, 0, 0, 0, time.Local)
+	model.summaryState.summary = &domain.Summary{
+		ID:      1,
+		Horizon: "quarterly",
+		Content: "Test quarterly summary content",
+	}
+	model.summaryState.horizon = "quarterly"
+	model.agenda = &service.MultiDayAgenda{}
+
+	output := model.View()
+
+	if strings.Contains(output, "Test quarterly summary content") {
+		t.Error("journal view should NOT display quarterly AI summary")
+	}
+}
+
+func TestJournalView_DoesNotLoadSummaryWithoutService(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.viewDate = time.Date(2026, 1, 10, 0, 0, 0, 0, time.Local)
+	model.viewMode = ViewModeDay
+	initialHorizon := model.summaryState.horizon
+
+	msg := agendaLoadedMsg{agenda: &service.MultiDayAgenda{}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
-	if !m.summaryState.refDate.After(initialDate) {
-		t.Error("right arrow should navigate to next period")
+	if m.summaryState.loading {
+		t.Error("summary should not be loading without service")
+	}
+
+	if m.summaryState.horizon != initialHorizon {
+		t.Error("summary horizon should not change without service")
+	}
+}
+
+func TestStatsView_DoesNotShowAISummary(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeStats
+	model.summaryState.summary = &domain.Summary{
+		ID:      1,
+		Horizon: "daily",
+		Content: "Test summary content",
+	}
+
+	output := model.View()
+
+	if strings.Contains(output, "Test summary content") {
+		t.Error("stats view should NOT display AI summaries")
+	}
+	if strings.Contains(output, "AI Summary:") {
+		t.Error("stats view should NOT show AI summary section")
 	}
 }
