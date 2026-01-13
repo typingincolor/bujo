@@ -141,7 +141,6 @@ func (s *StatsService) calculateProductivity(entries []domain.Entry) domain.Prod
 		_ = dayKey
 	}
 
-	// Calculate unique days per weekday
 	uniqueDays := make(map[time.Weekday]map[string]bool)
 	for _, e := range entries {
 		if e.ScheduledDate == nil {
@@ -154,7 +153,6 @@ func (s *StatsService) calculateProductivity(entries []domain.Entry) domain.Prod
 		uniqueDays[day][e.ScheduledDate.Format("2006-01-02")] = true
 	}
 
-	// Calculate averages
 	var totalEntries, totalDays int
 	var maxAvg, minAvg float64 = -1, -1
 	var mostDay, leastDay time.Weekday
@@ -202,13 +200,11 @@ func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.
 		return stats
 	}
 
-	// Calculate log counts per habit
 	logCounts := make(map[int64]int)
 	for _, l := range logs {
 		logCounts[l.HabitID] += l.Count
 	}
 
-	// Find most logged and best streak
 	var maxCount int
 	var maxStreak int
 
@@ -222,7 +218,6 @@ func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.
 			}
 		}
 
-		// Get all logs for this habit to calculate streak
 		habitLogs, err := s.habitLogRepo.GetByHabitID(ctx, h.ID)
 		if err != nil {
 			continue

@@ -178,7 +178,6 @@ func (r *HabitLogRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE habit_logs SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, log.EntityID.String())
@@ -186,7 +185,6 @@ func (r *HabitLogRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM habit_logs WHERE entity_id = ?
@@ -195,7 +193,6 @@ func (r *HabitLogRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO habit_logs (habit_id, count, logged_at, entity_id, habit_entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -259,7 +256,6 @@ func (r *HabitLogRepository) GetDeleted(ctx context.Context) ([]domain.HabitLog,
 func (r *HabitLogRepository) Restore(ctx context.Context, entityID domain.EntityID) (int64, error) {
 	now := time.Now().Format(time.RFC3339)
 
-	// Get the most recent version (which should be a DELETE marker)
 	var lastLog struct {
 		HabitID       int64
 		Count         int
@@ -290,7 +286,6 @@ func (r *HabitLogRepository) Restore(ctx context.Context, entityID domain.Entity
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close the DELETE marker
 	_, err = tx.ExecContext(ctx, `
 		UPDATE habit_logs SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entityID.String())
@@ -298,7 +293,6 @@ func (r *HabitLogRepository) Restore(ctx context.Context, entityID domain.Entity
 		return 0, err
 	}
 
-	// Insert a new version with INSERT op_type to restore
 	var habitEntityID *string
 	if lastLog.HabitEntityID.Valid {
 		habitEntityID = &lastLog.HabitEntityID.String

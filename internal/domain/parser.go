@@ -6,14 +6,12 @@ import (
 )
 
 var symbolToType = map[rune]EntryType{
-	// ASCII input symbols
 	'.': EntryTypeTask,
 	'-': EntryTypeNote,
 	'o': EntryTypeEvent,
 	'x': EntryTypeDone,
 	'>': EntryTypeMigrated,
 	'?': EntryTypeQuestion,
-	// Unicode display symbols (also accepted as input)
 	'•': EntryTypeTask,
 	'–': EntryTypeNote,
 	'○': EntryTypeEvent,
@@ -135,17 +133,18 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 
 		if depth == 0 {
 			parentStack = []int{len(entries)}
-		} else {
-			if depth > len(parentStack) {
-				return nil, errors.New("invalid indentation: child without parent at correct depth")
-			}
-
-			parentStack = parentStack[:depth]
-			parentIdx := int64(parentStack[len(parentStack)-1])
-			entry.ParentID = &parentIdx
-			parentStack = append(parentStack, len(entries))
+			entries = append(entries, entry)
+			continue
 		}
 
+		if depth > len(parentStack) {
+			return nil, errors.New("invalid indentation: child without parent at correct depth")
+		}
+
+		parentStack = parentStack[:depth]
+		parentIdx := int64(parentStack[len(parentStack)-1])
+		entry.ParentID = &parentIdx
+		parentStack = append(parentStack, len(entries))
 		entries = append(entries, entry)
 	}
 

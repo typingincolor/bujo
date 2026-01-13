@@ -33,7 +33,6 @@ func (r *ListItemRepository) Insert(ctx context.Context, item domain.ListItem) (
 }
 
 func (r *ListItemRepository) GetByID(ctx context.Context, id int64) (*domain.ListItem, error) {
-	// First try to find by row_id directly (current version)
 	row := r.db.QueryRowContext(ctx, `
 		SELECT row_id, entity_id, version, valid_from, valid_to, op_type, list_entity_id, type, content, created_at
 		FROM list_items
@@ -48,14 +47,12 @@ func (r *ListItemRepository) GetByID(ctx context.Context, id int64) (*domain.Lis
 		return item, nil
 	}
 
-	// If not found, the row_id might be an old version. Find the entity_id and get current version.
 	var entityID string
 	err = r.db.QueryRowContext(ctx, `SELECT entity_id FROM list_items WHERE row_id = ?`, id).Scan(&entityID)
 	if err != nil {
 		return nil, nil // Row doesn't exist at all
 	}
 
-	// Now get the current version of this entity
 	return r.GetByEntityID(ctx, domain.EntityID(entityID))
 }
 
@@ -124,7 +121,6 @@ func (r *ListItemRepository) Update(ctx context.Context, item domain.ListItem) e
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE list_items SET valid_to = ? WHERE entity_id = ? AND valid_to IS NULL
 	`, now, item.EntityID.String())
@@ -132,7 +128,6 @@ func (r *ListItemRepository) Update(ctx context.Context, item domain.ListItem) e
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM list_items WHERE entity_id = ?
@@ -141,7 +136,6 @@ func (r *ListItemRepository) Update(ctx context.Context, item domain.ListItem) e
 		return err
 	}
 
-	// Insert new version
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO list_items (entity_id, version, valid_from, op_type, list_entity_id, type, content, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -157,7 +151,6 @@ func (r *ListItemRepository) Update(ctx context.Context, item domain.ListItem) e
 func (r *ListItemRepository) Delete(ctx context.Context, id int64) error {
 	now := time.Now().Format(time.RFC3339)
 
-	// First get the item to get its entity_id
 	item, err := r.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -172,7 +165,6 @@ func (r *ListItemRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE list_items SET valid_to = ? WHERE entity_id = ? AND valid_to IS NULL
 	`, now, item.EntityID.String())
@@ -180,7 +172,6 @@ func (r *ListItemRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM list_items WHERE entity_id = ?
@@ -189,7 +180,6 @@ func (r *ListItemRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO list_items (entity_id, version, valid_from, op_type, list_entity_id, type, content, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)

@@ -98,7 +98,6 @@ func CalculateCompletion(logs []HabitLog, days int, today time.Time) float64 {
 		return 0.0
 	}
 
-	// Normalize to start of day for consistent date comparisons
 	todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	todayEnd := todayStart.AddDate(0, 0, 1)
 	startDate := todayStart.AddDate(0, 0, -(days - 1))

@@ -49,7 +49,6 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 }
 
 func (r *EntryRepository) GetByID(ctx context.Context, id int64) (*domain.Entry, error) {
-	// First, get the entity_id for this ID (may be from a closed version)
 	var entityID string
 	err := r.db.QueryRowContext(ctx, `
 		SELECT entity_id FROM entries WHERE id = ?
@@ -61,7 +60,6 @@ func (r *EntryRepository) GetByID(ctx context.Context, id int64) (*domain.Entry,
 		return nil, err
 	}
 
-	// Then get the current version for that entity
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
@@ -181,7 +179,6 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE entries SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, current.EntityID.String())
@@ -189,7 +186,6 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM entries WHERE entity_id = ?
@@ -198,7 +194,6 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		return err
 	}
 
-	// Prepare values
 	var scheduledDate *string
 	if entry.ScheduledDate != nil {
 		s := entry.ScheduledDate.Format("2006-01-02")
@@ -210,7 +205,6 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		priority = domain.PriorityNone
 	}
 
-	// Insert new version with UPDATE op_type
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -220,13 +214,11 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		return err
 	}
 
-	// Get the new row ID
 	newID, err := result.LastInsertId()
 	if err != nil {
 		return err
 	}
 
-	// Cascade update: update children's parent_id to point to the new row ID
 	if newID != current.ID {
 		_, err = tx.ExecContext(ctx, `
 			UPDATE entries SET parent_id = ?
@@ -257,7 +249,6 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE entries SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entry.EntityID.String())
@@ -265,7 +256,6 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM entries WHERE entity_id = ?
@@ -274,7 +264,6 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	var scheduledDate *string
 	if entry.ScheduledDate != nil {
 		s := entry.ScheduledDate.Format("2006-01-02")
@@ -318,7 +307,6 @@ func (r *EntryRepository) GetChildren(ctx context.Context, parentID int64) ([]do
 }
 
 func (r *EntryRepository) DeleteWithChildren(ctx context.Context, id int64) error {
-	// Get all entries in the tree
 	entries, err := r.GetWithChildren(ctx, id)
 	if err != nil {
 		return err
@@ -327,7 +315,6 @@ func (r *EntryRepository) DeleteWithChildren(ctx context.Context, id int64) erro
 		return nil
 	}
 
-	// Soft delete each entry
 	for _, entry := range entries {
 		if err := r.Delete(ctx, entry.ID); err != nil {
 			return err
@@ -356,7 +343,6 @@ func (r *EntryRepository) GetDeleted(ctx context.Context) ([]domain.Entry, error
 func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID) (int64, error) {
 	now := time.Now().Format(time.RFC3339)
 
-	// Get the most recent version (which should be a DELETE marker)
 	var lastEntry struct {
 		Type          string
 		Content       string
@@ -391,7 +377,6 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close the DELETE marker
 	_, err = tx.ExecContext(ctx, `
 		UPDATE entries SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entityID.String())
@@ -399,7 +384,6 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 		return 0, err
 	}
 
-	// Insert a new version with INSERT op_type to restore
 	var parentID *int64
 	if lastEntry.ParentID.Valid {
 		parentID = &lastEntry.ParentID.Int64

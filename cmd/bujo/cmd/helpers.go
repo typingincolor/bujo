@@ -151,9 +151,7 @@ func parseAddArgs(args []string) (entries []string, location, date, file, parent
 				i++
 			}
 		case strings.HasPrefix(arg, "--db-path="):
-			// skip
 		case arg == "-v" || arg == "--verbose":
-			// skip
 		default:
 			entries = append(entries, arg)
 		}
@@ -165,15 +163,12 @@ func isNaturalLanguageDate(s string) bool {
 	if s == "" {
 		return false
 	}
-	// Check if it's ISO format (2006-01-02)
 	if _, err := time.Parse("2006-01-02", s); err == nil {
 		return false
 	}
-	// Check if it's compact format (20060102)
 	if _, err := time.Parse("20060102", s); err == nil {
 		return false
 	}
-	// If not a recognized date format, it's natural language
 	return true
 }
 

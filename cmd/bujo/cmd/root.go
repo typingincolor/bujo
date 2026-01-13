@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	// Version info set by goreleaser via ldflags
 	version = "dev"
 	commit  = "none"
 	date    = "unknown"
@@ -38,7 +37,6 @@ var rootCmd = &cobra.Command{
 	Long:             `bujo is a CLI-based Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.`,
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Skip DB initialization for help commands
 		if cmd.Name() == "help" || cmd.Name() == "completion" {
 			return nil
 		}
@@ -49,7 +47,6 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to open database: %w", err)
 		}
 
-		// Ensure recent backup exists (create if none or older than 7 days)
 		backupDir := getDefaultBackupDir()
 		backupSvc := service.NewBackupService(db, backupDir)
 		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), 7)
@@ -59,7 +56,6 @@ var rootCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Creating backup... %s\n", path)
 		}
 
-		// Initialize repositories
 		entryRepo := sqlite.NewEntryRepository(db)
 		dayCtxRepo := sqlite.NewDayContextRepository(db)
 		habitRepo := sqlite.NewHabitRepository(db)
@@ -69,14 +65,12 @@ var rootCmd = &cobra.Command{
 		goalRepo := sqlite.NewGoalRepository(db)
 		parser := domain.NewTreeParser()
 
-		// Initialize services
 		bujoService = service.NewBujoService(entryRepo, dayCtxRepo, parser)
 		habitService = service.NewHabitService(habitRepo, habitLogRepo)
 		listService = service.NewListService(listRepo, listItemRepo)
 		goalService = service.NewGoalService(goalRepo)
 		statsService = service.NewStatsService(entryRepo, habitRepo, habitLogRepo)
 
-		// Initialize summary service if API key is available
 		summaryRepo := sqlite.NewSummaryRepository(db)
 		if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
 			geminiClient, err := ai.NewGeminiClient(cmd.Context(), apiKey)
@@ -102,8 +96,6 @@ func Execute() error {
 }
 
 func init() {
-	// Load .env files (errors are ignored - .env is optional)
-	// Priority: current dir .env, then ~/.bujo/.env
 	_ = godotenv.Load() // .env in current directory
 	if home, err := os.UserHomeDir(); err == nil {
 		_ = godotenv.Load(filepath.Join(home, ".bujo", ".env"))

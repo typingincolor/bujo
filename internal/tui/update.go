@@ -25,7 +25,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case agendaLoadedMsg:
 		m.agenda = msg.agenda
 		m.entries = m.flattenAgenda(msg.agenda)
-		// Keep selection if valid, otherwise reset to start
 		if m.selectedIdx >= len(m.entries) {
 			m.selectedIdx = 0
 		}
@@ -61,7 +60,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.habitState.selectedIdx >= len(m.habitState.habits) {
 			m.habitState.selectedIdx = 0
 		}
-		// Initialize selected day to today only on first load
 		if !m.habitState.dayIdxInited {
 			days := 7
 			if m.habitState.monthView {
@@ -243,7 +241,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleMoveToListMode(msg)
 		}
 
-		// Check for command palette activation
 		if key.Matches(msg, m.keyMap.CommandPalette) {
 			m.commandPalette.active = true
 			m.commandPalette.query = ""
@@ -252,7 +249,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-		// View-specific handling
 		switch m.currentView {
 		case ViewTypeHabits:
 			return m.handleHabitsMode(msg)
@@ -309,7 +305,6 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Bottom):
 		if len(m.entries) > 0 {
 			m.selectedIdx = len(m.entries) - 1
-			// Scroll to show the bottom entry
 			m = m.scrollToBottom()
 		}
 		return m, nil
@@ -465,7 +460,6 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		ti.Focus()
 		ti.CharLimit = 64
 		ti.Width = m.width - 10
-		// Use entry's scheduled date as reference for natural date parsing
 		fromDate := m.viewDate
 		if entry.ScheduledDate != nil {
 			fromDate = *entry.ScheduledDate
@@ -568,7 +562,6 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Search mode triggers (not in keyMap to avoid conflicts)
 	switch msg.Type {
 	case tea.KeyCtrlS:
 		m.searchMode = searchState{active: true, forward: true}
@@ -630,8 +623,6 @@ func (m Model) searchEntries() Model {
 
 	query := strings.ToLower(m.searchMode.query)
 
-	// For incremental search, start from current position (include current)
-	// Check current entry first
 	if strings.Contains(strings.ToLower(m.entries[m.selectedIdx].Entry.Content), query) {
 		return m
 	}
@@ -639,7 +630,6 @@ func (m Model) searchEntries() Model {
 	start := m.selectedIdx
 
 	if m.searchMode.forward {
-		// Search forward
 		for i := 1; i < len(m.entries); i++ {
 			idx := (start + i) % len(m.entries)
 			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
@@ -648,7 +638,6 @@ func (m Model) searchEntries() Model {
 			}
 		}
 	} else {
-		// Search backward
 		for i := 1; i < len(m.entries); i++ {
 			idx := (start - i + len(m.entries)) % len(m.entries)
 			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
@@ -670,7 +659,6 @@ func (m Model) searchEntriesNext() Model {
 	start := m.selectedIdx
 
 	if m.searchMode.forward {
-		// Search forward from next position
 		for i := 1; i <= len(m.entries); i++ {
 			idx := (start + i) % len(m.entries)
 			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
@@ -679,7 +667,6 @@ func (m Model) searchEntriesNext() Model {
 			}
 		}
 	} else {
-		// Search backward from prev position
 		for i := 1; i <= len(m.entries); i++ {
 			idx := (start - i + len(m.entries)) % len(m.entries)
 			if strings.Contains(strings.ToLower(m.entries[idx].Entry.Content), query) {
@@ -728,9 +715,7 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleCaptureSearchMode(msg)
 	}
 
-	// Handle paste events first (bracketed paste)
 	if msg.Paste && len(msg.Runes) > 0 {
-		// Convert \r to \n for cross-platform paste compatibility
 		pasteContent := strings.ReplaceAll(string(msg.Runes), "\r\n", "\n")
 		pasteContent = strings.ReplaceAll(pasteContent, "\r", "\n")
 		m = m.captureInsertRunes([]rune(pasteContent))
@@ -814,7 +799,6 @@ func (m Model) handleCaptureMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m = m.captureReparse()
 		return m, nil
 
-	// Emacs navigation
 	case tea.KeyCtrlA:
 		m = m.captureBeginningOfLine()
 		return m, nil
@@ -944,7 +928,6 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 
 	toInsert := string(runes)
 
-	// Auto-convert ASCII entry symbols to Unicode and add space at line start
 	if len(runes) == 1 && m.isAtLineStart() {
 		if unicode := asciiToUnicodeSymbol(runes[0]); unicode != "" {
 			toInsert = unicode + " "
@@ -955,11 +938,9 @@ func (m Model) captureInsertRunes(runes []rune) Model {
 	m.captureMode.content = newContent
 	m.captureMode.cursorPos = pos + len(toInsert)
 
-	// Recalculate cursor line and column for multi-line pastes
 	newlineCount := strings.Count(toInsert, "\n")
 	if newlineCount > 0 {
 		m.captureMode.cursorLine += newlineCount
-		// Find column position on the last line
 		lastNewline := strings.LastIndex(toInsert, "\n")
 		m.captureMode.cursorCol = len(toInsert) - lastNewline - 1
 	} else {
@@ -989,13 +970,11 @@ func (m Model) isAtLineStart() bool {
 	content := m.captureMode.content
 	pos := m.captureMode.cursorPos
 
-	// Find start of current line
 	lineStart := pos
 	for lineStart > 0 && content[lineStart-1] != '\n' {
 		lineStart--
 	}
 
-	// Check if only whitespace between line start and cursor
 	for i := lineStart; i < pos; i++ {
 		if content[i] != ' ' && content[i] != '\t' {
 			return false
@@ -1035,20 +1014,12 @@ func (m Model) captureInsertNewline() Model {
 		pos = len(content)
 	}
 
-	// Get current line's indentation
 	lines := strings.Split(content[:pos], "\n")
 	currentLine := ""
 	if len(lines) > 0 {
 		currentLine = lines[len(lines)-1]
 	}
-	indent := ""
-	for _, ch := range currentLine {
-		if ch == ' ' {
-			indent += " "
-		} else {
-			break
-		}
-	}
+	indent := detectLineIndentation(currentLine)
 
 	newContent := content[:pos] + "\n" + indent + content[pos:]
 	m.captureMode.content = newContent
@@ -1059,24 +1030,20 @@ func (m Model) captureInsertNewline() Model {
 }
 
 func (m Model) captureEnsureCursorVisible() Model {
-	// Calculate editor height (same as in view)
 	editorHeight := m.height - 8
 	if editorHeight < 5 {
 		editorHeight = 5
 	}
 
-	// Account for scroll indicators taking up lines
 	effectiveHeight := editorHeight
 	if m.captureMode.scrollOffset > 0 {
 		effectiveHeight-- // "more above" indicator
 	}
-	// Reserve space for "more below" indicator
 	lines := strings.Split(m.captureMode.content, "\n")
 	if m.captureMode.scrollOffset+effectiveHeight < len(lines) {
 		effectiveHeight--
 	}
 
-	// Adjust scroll offset to keep cursor visible
 	if m.captureMode.cursorLine < m.captureMode.scrollOffset {
 		m.captureMode.scrollOffset = m.captureMode.cursorLine
 	}
@@ -1136,10 +1103,8 @@ func (m Model) captureMoveUp() Model {
 
 	lines := strings.Split(m.captureMode.content, "\n")
 
-	// Move to previous line
 	m.captureMode.cursorLine--
 
-	// Adjust column if new line is shorter
 	if m.captureMode.cursorLine < len(lines) {
 		lineLen := len(lines[m.captureMode.cursorLine])
 		if m.captureMode.cursorCol > lineLen {
@@ -1147,7 +1112,6 @@ func (m Model) captureMoveUp() Model {
 		}
 	}
 
-	// Recalculate absolute position
 	pos := 0
 	for i := 0; i < m.captureMode.cursorLine; i++ {
 		pos += len(lines[i]) + 1
@@ -1155,7 +1119,6 @@ func (m Model) captureMoveUp() Model {
 	pos += m.captureMode.cursorCol
 	m.captureMode.cursorPos = pos
 
-	// Adjust scroll offset
 	if m.captureMode.cursorLine < m.captureMode.scrollOffset {
 		m.captureMode.scrollOffset = m.captureMode.cursorLine
 	}
@@ -1170,10 +1133,8 @@ func (m Model) captureMoveDown() Model {
 		return m
 	}
 
-	// Move to next line
 	m.captureMode.cursorLine++
 
-	// Adjust column if new line is shorter
 	if m.captureMode.cursorLine < len(lines) {
 		lineLen := len(lines[m.captureMode.cursorLine])
 		if m.captureMode.cursorCol > lineLen {
@@ -1181,7 +1142,6 @@ func (m Model) captureMoveDown() Model {
 		}
 	}
 
-	// Recalculate absolute position
 	pos := 0
 	for i := 0; i < m.captureMode.cursorLine; i++ {
 		pos += len(lines[i]) + 1
@@ -1189,7 +1149,6 @@ func (m Model) captureMoveDown() Model {
 	pos += m.captureMode.cursorCol
 	m.captureMode.cursorPos = pos
 
-	// Scroll is adjusted in view rendering based on cursor position
 	return m
 }
 
@@ -1200,7 +1159,6 @@ func (m Model) captureBeginningOfLine() Model {
 		return m
 	}
 
-	// Calculate position at beginning of current line
 	pos := 0
 	for i := 0; i < lineIdx; i++ {
 		pos += len(lines[i]) + 1 // +1 for newline
@@ -1218,7 +1176,6 @@ func (m Model) captureEndOfLine() Model {
 		return m
 	}
 
-	// Calculate position at end of current line
 	pos := 0
 	for i := 0; i < lineIdx; i++ {
 		pos += len(lines[i]) + 1
@@ -1300,7 +1257,6 @@ func (m Model) captureKillToEndOfLine() Model {
 		pos = len(content)
 	}
 
-	// Find end of current line
 	endPos := pos
 	for endPos < len(content) && content[endPos] != '\n' {
 		endPos++
@@ -1317,7 +1273,6 @@ func (m Model) captureKillToBeginningOfLine() Model {
 		return m
 	}
 
-	// Find start of current line
 	startPos := pos
 	for startPos > 0 && content[startPos-1] != '\n' {
 		startPos--
@@ -1353,7 +1308,6 @@ func (m Model) captureSearchNext() Model {
 		return m
 	}
 
-	// Start from next position
 	startPos := m.captureMode.cursorPos + 1
 	if !m.captureMode.searchForward {
 		startPos = m.captureMode.cursorPos - 1
@@ -1368,51 +1322,15 @@ func (m Model) captureSearchFrom(pos int) Model {
 		return m
 	}
 
-	foundPos := -1
-
+	var foundPos int
 	if m.captureMode.searchForward {
-		// Search forward from position
-		searchStart := pos
-		if searchStart < 0 {
-			searchStart = 0
-		}
-		if searchStart >= len(content) {
-			searchStart = 0
-		}
-		idx := strings.Index(content[searchStart:], query)
-		if idx >= 0 {
-			foundPos = searchStart + idx
-		} else if searchStart > 0 {
-			// Wrap around
-			idx = strings.Index(content[:searchStart], query)
-			if idx >= 0 {
-				foundPos = idx
-			}
-		}
+		foundPos = searchForward(content, query, pos)
 	} else {
-		// Search backward from position
-		searchEnd := pos
-		if searchEnd < 0 {
-			searchEnd = len(content)
-		}
-		if searchEnd > len(content) {
-			searchEnd = len(content)
-		}
-		idx := strings.LastIndex(content[:searchEnd], query)
-		if idx >= 0 {
-			foundPos = idx
-		} else if searchEnd < len(content) {
-			// Wrap around
-			idx = strings.LastIndex(content[searchEnd:], query)
-			if idx >= 0 {
-				foundPos = searchEnd + idx
-			}
-		}
+		foundPos = searchBackward(content, query, pos)
 	}
 
 	if foundPos >= 0 {
 		m.captureMode.cursorPos = foundPos
-		// Update cursor line and column
 		lines := strings.Split(content[:foundPos], "\n")
 		m.captureMode.cursorLine = len(lines) - 1
 		if len(lines) > 0 {
@@ -1435,13 +1353,11 @@ func (m Model) captureDeleteWordBackward() Model {
 		pos = len(content)
 	}
 
-	// Skip any trailing spaces
 	startPos := pos
 	for startPos > 0 && content[startPos-1] == ' ' {
 		startPos--
 	}
 
-	// Skip word characters
 	for startPos > 0 && content[startPos-1] != ' ' && content[startPos-1] != '\n' {
 		startPos--
 	}
@@ -1474,7 +1390,6 @@ func (m Model) handleConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		entryID := m.confirmMode.entryID
 		m.confirmMode.active = false
 
-		// Handle list items differently
 		if m.currentView == ViewTypeListItems {
 			return m, m.deleteListItemCmd(entryID)
 		}
@@ -1565,7 +1480,6 @@ func (m Model) handleAddMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.addMode.active = false
 
-		// Handle list items differently
 		if m.currentView == ViewTypeListItems {
 			return m, m.addListItemCmd(content)
 		}
@@ -1753,9 +1667,6 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 	entry := m.entries[m.selectedIdx].Entry
 
-	// Tasks and done entries can be toggled
-	// Answered questions can be reopened, but questions cannot be answered here
-	// (use 'bujo answer' CLI command to mark questions as answered with answer text)
 	validTypes := entry.Type == domain.EntryTypeTask ||
 		entry.Type == domain.EntryTypeDone ||
 		entry.Type == domain.EntryTypeAnswered
@@ -2161,7 +2072,6 @@ func (m Model) handleMigrateToGoalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// Handle ViewTypeListItems separately
 	if m.currentView == ViewTypeListItems {
 		return m.handleListItemsMode(msg)
 	}
@@ -2170,7 +2080,6 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return newModel, cmd
 	}
 
-	// ViewTypeLists handling
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m, tea.Quit

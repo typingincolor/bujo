@@ -63,7 +63,6 @@ func runStats(cmd *cobra.Command, args []string) error {
 	fmt.Printf("%s Statistics (%s to %s)\n", cli.Bold("📊"), from.Format("Jan 2"), to.Format("Jan 2, 2006"))
 	fmt.Println(cli.Dimmed("───────────────────────────────"))
 
-	// Entry counts
 	fmt.Printf("\n%s %d total\n", cli.Bold("Entries:"), stats.EntryCounts.Total)
 	if stats.EntryCounts.Tasks > 0 {
 		pct := float64(stats.EntryCounts.Tasks) / float64(stats.EntryCounts.Total) * 100
@@ -86,7 +85,6 @@ func runStats(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  → Migrated:  %d (%.0f%%)\n", stats.EntryCounts.Migrated, pct)
 	}
 
-	// Task completion
 	if stats.TaskCompletion.Total > 0 {
 		fmt.Printf("\n%s %.0f%% (%d/%d)\n",
 			cli.Bold("Task completion:"),
@@ -96,7 +94,6 @@ func runStats(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	// Productivity
 	if stats.Productivity.AveragePerDay > 0 {
 		fmt.Printf("%s %.1f\n", cli.Bold("Average entries/day:"), stats.Productivity.AveragePerDay)
 	}
@@ -116,7 +113,6 @@ func runStats(cmd *cobra.Command, args []string) error {
 		)
 	}
 
-	// Habits
 	if stats.HabitStats.Active > 0 {
 		fmt.Printf("\n%s %d active\n", cli.Bold("Habits:"), stats.HabitStats.Active)
 		if stats.HabitStats.BestStreak.Days > 0 {

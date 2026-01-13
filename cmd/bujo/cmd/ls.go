@@ -29,7 +29,6 @@ Examples:
 		today := time.Now()
 		todayStart := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 
-		// Default: last 7 days
 		from := todayStart.AddDate(0, 0, -6)
 		to := todayStart
 

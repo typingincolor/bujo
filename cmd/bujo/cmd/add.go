@@ -44,7 +44,6 @@ Examples:
 
 		var input string
 
-		// Priority: file > args > stdin
 		if addFile != "" {
 			content, err := os.ReadFile(addFile)
 			if err != nil {
@@ -54,10 +53,8 @@ Examples:
 		} else if len(entries) > 0 {
 			input = strings.Join(entries, "\n")
 		} else {
-			// Check if input is piped
 			stat, _ := os.Stdin.Stat()
 			if (stat.Mode() & os.ModeCharDevice) == 0 {
-				// Reading from pipe
 				scanner := bufio.NewScanner(os.Stdin)
 				var lines []string
 				for scanner.Scan() {
@@ -104,7 +101,6 @@ Examples:
 			return fmt.Errorf("failed to add entries: %w", err)
 		}
 
-		// Print IDs to stdout for scripting
 		for _, id := range ids {
 			fmt.Println(id)
 		}
@@ -115,7 +111,6 @@ Examples:
 }
 
 func init() {
-	// Flags defined for help text only - actual parsing done by parseAddArgs
 	addCmd.Flags().StringP("at", "a", "", "Set location for entries")
 	addCmd.Flags().StringP("date", "d", "", "Date to add entries (e.g., 'yesterday', '2026-01-01')")
 	addCmd.Flags().StringP("file", "f", "", "Read entries from file")

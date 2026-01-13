@@ -322,8 +322,6 @@ func NewWithConfig(cfg Config) Model {
 	statsFrom := now.AddDate(0, 0, -29)
 	statsTo := now
 
-	// Create markdown renderer once for reuse (performance optimization)
-	// We use a default width of 80; it will be adjusted based on terminal width during rendering
 	mdRenderer, _ := glamour.NewTermRenderer(
 		glamour.WithAutoStyle(),
 		glamour.WithWordWrap(80),
@@ -407,24 +405,20 @@ func (m Model) ensuredVisible() Model {
 
 	available := m.availableLines()
 
-	// If selected is above visible area, scroll up
 	if m.selectedIdx < m.scrollOffset {
 		m.scrollOffset = m.selectedIdx
 		return m
 	}
 
-	// Calculate lines used from scrollOffset to selectedIdx (inclusive)
 	linesUsed := 0
 	for i := m.scrollOffset; i <= m.selectedIdx; i++ {
 		entryLines := m.linesForEntry(i)
-		// First visible entry doesn't get blank line before header
 		if i == m.scrollOffset && m.entries[i].DayHeader != "" {
 			entryLines = 2 // just header + entry, no blank line
 		}
 		linesUsed += entryLines
 	}
 
-	// Account for scroll indicators
 	if m.scrollOffset > 0 {
 		linesUsed++ // "more above" indicator
 	}
@@ -432,9 +426,7 @@ func (m Model) ensuredVisible() Model {
 		linesUsed++ // reserve for "more below" indicator
 	}
 
-	// If selected is below visible area, scroll down
 	for linesUsed > available && m.scrollOffset < m.selectedIdx {
-		// Remove lines for the entry we're scrolling past
 		entryLines := m.linesForEntry(m.scrollOffset)
 		if m.scrollOffset == 0 && m.entries[0].DayHeader != "" {
 			entryLines = 2
@@ -453,13 +445,11 @@ func (m Model) scrollToBottom() Model {
 
 	available := m.availableLines()
 
-	// Start from the end and work backwards to find the right scroll offset
 	linesNeeded := 0
 	startIdx := len(m.entries) - 1
 
 	for i := len(m.entries) - 1; i >= 0; i-- {
 		entryLines := m.linesForEntry(i)
-		// Account for headers properly
 		if m.entries[i].DayHeader != "" && i > 0 {
 			entryLines = 3 // blank + header + entry
 		} else if m.entries[i].DayHeader != "" {
@@ -933,7 +923,6 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 		return nil
 	}
 
-	// Calculate today for per-entry overdue checks
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	viewDateNormalized := time.Date(m.viewDate.Year(), m.viewDate.Month(), m.viewDate.Day(), 0, 0, 0, 0, m.viewDate.Location())
@@ -941,7 +930,6 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 
 	var items []EntryItem
 
-	// Only show overdue section when viewing today or future
 	if len(agenda.Overdue) > 0 && !isViewingPast {
 		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true, today)...)
 	}
@@ -983,15 +971,6 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 		}
 	}
 
-	var countDescendants func(entryID int64) int
-	countDescendants = func(entryID int64) int {
-		children := parentMap[entryID]
-		count := len(children)
-		for _, child := range children {
-			count += countDescendants(child.ID)
-		}
-		return count
-	}
 
 	var flatten func(entry domain.Entry, depth int, showHeader bool)
 	flatten = func(entry domain.Entry, depth int, showHeader bool) {
@@ -1000,7 +979,6 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 
 		isCollapsed, hasCollapseState := m.collapsed[entry.EntityID]
 		if !hasCollapseState && hasChildren {
-			// Auto-expand answered questions to show the answer
 			if entry.Type == domain.EntryTypeAnswered {
 				isCollapsed = false
 			} else {
@@ -1010,7 +988,7 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 
 		hiddenCount := 0
 		if isCollapsed && hasChildren {
-			hiddenCount = countDescendants(entry.ID)
+			hiddenCount = countEntryDescendants(entry.ID, parentMap)
 		}
 
 		entryIsOverdue := forceOverdue || entry.IsOverdue(today)

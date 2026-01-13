@@ -20,14 +20,12 @@ func (r *DayContextRepository) Upsert(ctx context.Context, dayCtx domain.DayCont
 	dateStr := dayCtx.Date.Format("2006-01-02")
 	now := time.Now().Format(time.RFC3339)
 
-	// Check if there's an existing entry for this date
 	existing, err := r.GetByDate(ctx, dayCtx.Date)
 	if err != nil {
 		return err
 	}
 
 	if existing == nil {
-		// New entry - insert with entity_id
 		entityID := dayCtx.EntityID
 		if entityID.IsEmpty() {
 			entityID = domain.NewEntityID()
@@ -41,14 +39,12 @@ func (r *DayContextRepository) Upsert(ctx context.Context, dayCtx domain.DayCont
 		return err
 	}
 
-	// Existing entry - create new version
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE day_context SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, existing.EntityID.String())
@@ -56,7 +52,6 @@ func (r *DayContextRepository) Upsert(ctx context.Context, dayCtx domain.DayCont
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM day_context WHERE entity_id = ?
@@ -65,7 +60,6 @@ func (r *DayContextRepository) Upsert(ctx context.Context, dayCtx domain.DayCont
 		return err
 	}
 
-	// Insert new version
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO day_context (date, location, mood, weather, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -107,7 +101,6 @@ func (r *DayContextRepository) Delete(ctx context.Context, date time.Time) error
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE day_context SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, dayCtx.EntityID.String())
@@ -115,7 +108,6 @@ func (r *DayContextRepository) Delete(ctx context.Context, date time.Time) error
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM day_context WHERE entity_id = ?
@@ -124,7 +116,6 @@ func (r *DayContextRepository) Delete(ctx context.Context, date time.Time) error
 		return err
 	}
 
-	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO day_context (date, location, mood, weather, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -309,7 +300,6 @@ func (r *DayContextRepository) GetDeleted(ctx context.Context) ([]domain.DayCont
 func (r *DayContextRepository) Restore(ctx context.Context, entityID domain.EntityID) error {
 	now := time.Now().Format(time.RFC3339)
 
-	// Get the most recent version (which should be a DELETE marker)
 	var lastCtx struct {
 		Date     string
 		Location sql.NullString
@@ -340,7 +330,6 @@ func (r *DayContextRepository) Restore(ctx context.Context, entityID domain.Enti
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close the DELETE marker
 	_, err = tx.ExecContext(ctx, `
 		UPDATE day_context SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entityID.String())
@@ -348,7 +337,6 @@ func (r *DayContextRepository) Restore(ctx context.Context, entityID domain.Enti
 		return err
 	}
 
-	// Insert a new version with INSERT op_type to restore
 	var location, mood, weather *string
 	if lastCtx.Location.Valid {
 		location = &lastCtx.Location.String

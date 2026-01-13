@@ -69,7 +69,6 @@ Examples:
 		fmt.Printf("%s\n", bold("Outstanding Tasks"))
 		fmt.Println(dimmed(strings.Repeat("-", 50)))
 
-		// Group by date
 		byDate := make(map[string][]struct {
 			Content string
 			ID      int64

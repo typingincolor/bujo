@@ -93,19 +93,22 @@ func (s *ListService) DeleteList(ctx context.Context, id int64, force bool) erro
 		return err
 	}
 
-	if count > 0 && !force {
+	if count == 0 {
+		return s.listRepo.Delete(ctx, id)
+	}
+
+	if !force {
 		return fmt.Errorf("list has items (%d); use force to delete anyway", count)
 	}
 
-	if count > 0 {
-		items, err := s.listItemRepo.GetByListID(ctx, id)
-		if err != nil {
+	items, err := s.listItemRepo.GetByListID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if err := s.listItemRepo.Delete(ctx, item.RowID); err != nil {
 			return err
-		}
-		for _, item := range items {
-			if err := s.listItemRepo.Delete(ctx, item.RowID); err != nil {
-				return err
-			}
 		}
 	}
 

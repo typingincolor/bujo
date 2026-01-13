@@ -31,21 +31,17 @@ Examples:
   bujo questions --limit 50`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Build search options based on flags
 		opts := domain.NewSearchOptions("").WithLimit(questionsLimit)
 
 		if !questionsAll {
-			// Show only unanswered questions
 			opts = opts.WithType(domain.EntryTypeQuestion)
 		}
-		// If --all is set, we don't filter by type, which includes both question and answered
 
 		results, err := bujoService.SearchEntries(cmd.Context(), opts)
 		if err != nil {
 			return fmt.Errorf("failed to list questions: %w", err)
 		}
 
-		// Filter to only question and answered types when --all is set
 		if questionsAll {
 			filtered := make([]domain.Entry, 0)
 			for _, entry := range results {

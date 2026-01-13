@@ -20,14 +20,12 @@ func (m Model) View() string {
 
 	var sb strings.Builder
 
-	// Toolbar
 	toolbar := m.renderToolbar()
 	sb.WriteString(toolbar)
 	sb.WriteString("\n")
 	sb.WriteString(strings.Repeat("─", min(m.width, 60)))
 	sb.WriteString("\n")
 
-	// View-specific content
 	switch m.currentView {
 	case ViewTypeHabits:
 		sb.WriteString(m.renderHabitsContent())
@@ -45,7 +43,6 @@ func (m Model) View() string {
 		sb.WriteString(m.renderJournalContent())
 	}
 
-	// Modal overlays (shared across all views)
 	if m.editMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderEditInput())
@@ -150,7 +147,6 @@ func (m Model) renderJournalContent() string {
 
 	var sb strings.Builder
 
-	// Show AI summary section for past dates
 	if m.isViewingPast() {
 		sb.WriteString(m.renderJournalAISummary())
 		sb.WriteString("\n")
@@ -160,23 +156,19 @@ func (m Model) renderJournalContent() string {
 		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
 		sb.WriteString("\n\n")
 	} else {
-		// Calculate available lines (reserve for toolbar, help bar and padding)
 		availableLines := m.height - 6 // 2 for toolbar, 2 for help, 2 for padding
 		if availableLines < 5 {
 			availableLines = 5
 		}
 
-		// Show scroll indicator if there's content above
 		if m.scrollOffset > 0 {
 			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↑ %d more above", m.scrollOffset)))
 			sb.WriteString("\n")
 			availableLines--
 		}
 
-		// Reserve line for "more below" indicator
 		reserveForBelow := 1
 
-		// Render entries, counting lines used
 		linesUsed := 0
 		endIdx := m.scrollOffset
 		for i := m.scrollOffset; i < len(m.entries); i++ {
@@ -189,7 +181,6 @@ func (m Model) renderJournalContent() string {
 				}
 			}
 
-			// Check if we have room (leave space for "more below" if not at end)
 			spaceNeeded := linesNeeded
 			if i < len(m.entries)-1 {
 				spaceNeeded += reserveForBelow
@@ -198,7 +189,6 @@ func (m Model) renderJournalContent() string {
 				break
 			}
 
-			// Render this entry
 			if item.DayHeader != "" {
 				if i > m.scrollOffset {
 					sb.WriteString("\n")
@@ -214,7 +204,6 @@ func (m Model) renderJournalContent() string {
 			}
 
 			line := m.renderEntry(item, i == m.selectedIdx)
-			// Highlight search matches
 			if m.searchMode.active && m.searchMode.query != "" {
 				line = m.highlightSearchTerm(line)
 			}
@@ -224,14 +213,12 @@ func (m Model) renderJournalContent() string {
 			endIdx = i + 1
 		}
 
-		// Show scroll indicator if there's content below
 		if endIdx < len(m.entries) {
 			sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↓ %d more below", len(m.entries)-endIdx)))
 			sb.WriteString("\n")
 		}
 	}
 
-	// Goals section
 	if len(m.journalGoals) > 0 {
 		sb.WriteString("\n")
 		now := time.Now()
@@ -276,7 +263,6 @@ func (m Model) renderHabitsContent() string {
 	}
 
 	for i, habit := range m.habitState.habits {
-		// Line 1: Habit name with streak (CLI style)
 		streakText := "day"
 		if habit.CurrentStreak != 1 {
 			streakText = "days"
@@ -288,22 +274,18 @@ func (m Model) renderHabitsContent() string {
 		sb.WriteString(nameLine)
 		sb.WriteString("\n")
 
-		// Line 2: Sparkline with circles (CLI style)
 		sparkline := m.renderSparkline(habit.DayHistory, i == m.habitState.selectedIdx)
 		sb.WriteString("  " + sparkline)
 		sb.WriteString("\n")
 
-		// Line 3: Day labels
 		dayLabels := m.renderDayLabels(days)
 		sb.WriteString("  " + HelpStyle.Render(dayLabels))
 		sb.WriteString("\n")
 
-		// Line 4: Today count and completion
 		todayInfo := fmt.Sprintf("  %d/%d today | %.0f%% completion", habit.TodayCount, habit.GoalPerDay, habit.CompletionPercent)
 		sb.WriteString(HelpStyle.Render(todayInfo))
 		sb.WriteString("\n")
 
-		// Show weekly/monthly progress if goals are set
 		if habit.GoalPerWeek > 0 || habit.GoalPerMonth > 0 {
 			var progressParts []string
 			if habit.GoalPerWeek > 0 {
@@ -327,12 +309,8 @@ func (m Model) renderSparkline(history []service.DayStatus, isSelected bool) str
 	var parts []string
 	days := len(history)
 
-	// History is ordered [0]=today, [1]=yesterday, etc.
-	// Display oldest (left) to today (right) to match day labels
-	// Loop from oldest to today for correct visual order
 	for i := days - 1; i >= 0; i-- {
 		day := history[i]
-		// displayPos is 0 for leftmost (oldest), days-1 for rightmost (today)
 		displayPos := days - 1 - i
 		selected := isSelected && displayPos == m.habitState.selectedDayIdx
 
@@ -582,7 +560,6 @@ func (m Model) highlightSearchTerm(line string) string {
 		return line
 	}
 
-	// Case-insensitive search and highlight
 	lowerLine := strings.ToLower(line)
 	lowerQuery := strings.ToLower(query)
 
@@ -641,7 +618,6 @@ func (m Model) renderToolbar() string {
 func (m Model) renderCaptureMode() string {
 	var sb strings.Builder
 
-	// Header
 	header := "CAPTURE MODE"
 	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
 	sb.WriteString(ToolbarStyle.Render(fmt.Sprintf("📝 %s | %s", header, dateStr)))
@@ -658,7 +634,6 @@ func (m Model) renderCaptureMode() string {
 	sb.WriteString(strings.Repeat("─", maxWidth))
 	sb.WriteString("\n")
 
-	// Calculate editor height
 	editorHeight := m.height - 8 // Reserve for header, status, help
 	if editorHeight < 5 {
 		editorHeight = 5
@@ -669,7 +644,6 @@ func (m Model) renderCaptureMode() string {
 		editorLines = []string{""}
 	}
 
-	// Calculate scroll offset to keep cursor visible
 	scrollOffset := m.captureMode.scrollOffset
 	if m.captureMode.cursorLine < scrollOffset {
 		scrollOffset = m.captureMode.cursorLine
@@ -678,21 +652,17 @@ func (m Model) renderCaptureMode() string {
 		scrollOffset = m.captureMode.cursorLine - editorHeight + 1
 	}
 
-	// Show scroll indicator if needed
 	if scrollOffset > 0 {
 		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↑ %d more lines above", scrollOffset)))
 		sb.WriteString("\n")
 		editorHeight--
 	}
 
-	// Show editor lines with cursor and search highlighting
 	searchQuery := m.captureMode.searchQuery
 	linesShown := 0
 	for i := scrollOffset; i < len(editorLines) && linesShown < editorHeight; i++ {
 		origLine := editorLines[i]
-		line := origLine
 
-		// Insert cursor on current line first (before highlighting)
 		cursorCol := -1
 		if i == m.captureMode.cursorLine {
 			cursorCol = m.captureMode.cursorCol
@@ -701,66 +671,11 @@ func (m Model) renderCaptureMode() string {
 			}
 		}
 
-		// Apply search highlighting to the original line content
-		if m.captureMode.searchMode && searchQuery != "" && strings.Contains(origLine, searchQuery) {
-			var highlighted strings.Builder
-			pos := 0
-			remaining := origLine
-			for {
-				idx := strings.Index(remaining, searchQuery)
-				if idx < 0 {
-					// No more matches - add remaining content with cursor if needed
-					if cursorCol >= 0 && cursorCol >= pos {
-						relCol := cursorCol - pos
-						if relCol < len(remaining) {
-							highlighted.WriteString(remaining[:relCol])
-							highlighted.WriteString("█")
-							highlighted.WriteString(remaining[relCol+1:])
-						} else {
-							highlighted.WriteString(remaining)
-							highlighted.WriteString("█")
-						}
-					} else {
-						highlighted.WriteString(remaining)
-					}
-					break
-				}
-
-				matchStart := pos + idx
-				matchEnd := matchStart + len(searchQuery)
-
-				// Add text before match, possibly with cursor
-				if cursorCol >= 0 && cursorCol >= pos && cursorCol < matchStart {
-					relCol := cursorCol - pos
-					highlighted.WriteString(remaining[:relCol])
-					highlighted.WriteString("█")
-					highlighted.WriteString(remaining[relCol+1 : idx])
-					cursorCol = -1
-				} else {
-					highlighted.WriteString(remaining[:idx])
-				}
-
-				// Add highlighted match, possibly with cursor inside
-				if cursorCol >= 0 && cursorCol >= matchStart && cursorCol < matchEnd {
-					relCol := cursorCol - matchStart
-					matchText := searchQuery[:relCol] + "█" + searchQuery[relCol+1:]
-					highlighted.WriteString(SearchHighlightStyle.Render(matchText))
-					cursorCol = -1
-				} else {
-					highlighted.WriteString(SearchHighlightStyle.Render(searchQuery))
-				}
-
-				pos = matchEnd
-				remaining = remaining[idx+len(searchQuery):]
-			}
-			line = highlighted.String()
-		} else if cursorCol >= 0 {
-			// No search highlighting, just add cursor
-			if cursorCol < len(origLine) {
-				line = origLine[:cursorCol] + "█" + origLine[cursorCol+1:]
-			} else {
-				line = origLine + "█"
-			}
+		var line string
+		if m.captureMode.searchMode && searchQuery != "" {
+			line = highlightSearchMatches(origLine, searchQuery, cursorCol)
+		} else {
+			line = insertCursorInLine(origLine, cursorCol)
 		}
 
 		sb.WriteString("  ")
@@ -769,13 +684,11 @@ func (m Model) renderCaptureMode() string {
 		linesShown++
 	}
 
-	// Pad remaining lines
 	for linesShown < editorHeight {
 		sb.WriteString("\n")
 		linesShown++
 	}
 
-	// Show scroll indicator if more below
 	if scrollOffset+editorHeight < len(editorLines) {
 		sb.WriteString(HelpStyle.Render(fmt.Sprintf("  ↓ %d more lines below", len(editorLines)-scrollOffset-editorHeight)))
 		sb.WriteString("\n")
@@ -783,7 +696,6 @@ func (m Model) renderCaptureMode() string {
 
 	sb.WriteString("\n")
 
-	// Status bar with error or entry count
 	if m.captureMode.draftExists {
 		sb.WriteString(ErrorStyle.Render("Restore previous draft? (y/n)"))
 	} else if m.captureMode.searchMode {
@@ -809,14 +721,12 @@ func (m Model) renderCaptureMode() string {
 	}
 	sb.WriteString("\n\n")
 
-	// Help
 	if m.captureMode.searchMode {
 		sb.WriteString(HelpStyle.Render("Enter/Ctrl+S: next | Ctrl+R: prev | ESC: exit search"))
 	} else {
 		sb.WriteString(HelpStyle.Render("Ctrl+X: save | ESC: cancel | Tab: indent | F1: help"))
 	}
 
-	// Help overlay
 	if m.captureMode.showHelp {
 		return m.renderCaptureHelp()
 	}
@@ -878,13 +788,11 @@ func (m Model) renderErrorPopup() string {
 	message := fmt.Sprintf("%v", m.err)
 	footer := "Press any key to dismiss"
 
-	// Find the longest line
 	maxLen := len(footer)
 	if len(message) > maxLen {
 		maxLen = len(message)
 	}
 
-	// Pad header to match longest line
 	headerPad := maxLen - len(headerText)
 	if headerPad < 0 {
 		headerPad = 0
@@ -1006,7 +914,6 @@ func (m Model) renderSearchResultLine(entry domain.Entry, selected bool) string 
 func (m Model) renderStatsContent() string {
 	var sb strings.Builder
 
-	// Header with period
 	if m.statsViewState.stats != nil {
 		sb.WriteString(fmt.Sprintf("📊 Statistics (%s to %s)\n",
 			m.statsViewState.from.Format("Jan 2"),
@@ -1027,7 +934,6 @@ func (m Model) renderStatsContent() string {
 		sb.WriteString(HelpStyle.Render("No statistics available"))
 		sb.WriteString("\n\n")
 	} else {
-		// Entry counts
 		sb.WriteString(fmt.Sprintf("Entries: %d total\n", stats.EntryCounts.Total))
 		if stats.EntryCounts.Tasks > 0 {
 			pct := float64(stats.EntryCounts.Tasks) / float64(stats.EntryCounts.Total) * 100
@@ -1047,7 +953,6 @@ func (m Model) renderStatsContent() string {
 		}
 		sb.WriteString("\n")
 
-		// Task completion
 		if stats.TaskCompletion.Total > 0 {
 			sb.WriteString(fmt.Sprintf("Task completion: %.0f%% (%d/%d)\n",
 				stats.TaskCompletion.Rate,
@@ -1055,7 +960,6 @@ func (m Model) renderStatsContent() string {
 				stats.TaskCompletion.Total))
 		}
 
-		// Productivity
 		if stats.Productivity.AveragePerDay > 0 {
 			sb.WriteString(fmt.Sprintf("Average entries/day: %.1f\n", stats.Productivity.AveragePerDay))
 		}
@@ -1070,7 +974,6 @@ func (m Model) renderStatsContent() string {
 				stats.Productivity.LeastProductive.Average))
 		}
 
-		// Habits
 		if stats.HabitStats.Active > 0 {
 			sb.WriteString(fmt.Sprintf("\nHabits: %d active\n", stats.HabitStats.Active))
 			if stats.HabitStats.BestStreak.Days > 0 {
@@ -1087,7 +990,6 @@ func (m Model) renderStatsContent() string {
 		sb.WriteString("\n")
 	}
 
-	// AI Summary section
 	sb.WriteString(strings.Repeat("─", 50))
 	sb.WriteString("\n\n")
 
@@ -1103,7 +1005,6 @@ func (m Model) renderStatsContent() string {
 	sb.WriteString(fmt.Sprintf("AI Summary: %s (1=daily 2=weekly 3=quarterly 4=annual)\n", horizonLabel))
 	sb.WriteString(fmt.Sprintf("Period: %s (h/l to navigate)\n\n", m.formatSummaryPeriod()))
 
-	// Check for summary first (even if service is nil) to allow testing with mock summaries
 	if m.summaryState.summary != nil {
 		sb.WriteString("🤖 AI Reflection:\n\n")
 		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)

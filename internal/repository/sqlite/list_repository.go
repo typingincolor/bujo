@@ -57,7 +57,6 @@ func (r *ListRepository) InsertWithEntityID(ctx context.Context, list domain.Lis
 }
 
 func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, error) {
-	// First, get the entity_id for this ID (may be from a closed version)
 	var entityID string
 	err := r.db.QueryRowContext(ctx,
 		"SELECT entity_id FROM lists WHERE id = ?", id,
@@ -69,7 +68,6 @@ func (r *ListRepository) GetByID(ctx context.Context, id int64) (*domain.List, e
 		return nil, err
 	}
 
-	// Then get the current version for that entity
 	var list domain.List
 	var eid sql.NullString
 	var createdAt string
@@ -183,7 +181,6 @@ func (r *ListRepository) Rename(ctx context.Context, id int64, newName string) e
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, current.EntityID.String())
@@ -191,7 +188,6 @@ func (r *ListRepository) Rename(ctx context.Context, id int64, newName string) e
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM lists WHERE entity_id = ?
@@ -200,7 +196,6 @@ func (r *ListRepository) Rename(ctx context.Context, id int64, newName string) e
 		return err
 	}
 
-	// Insert new version with UPDATE op_type
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -230,7 +225,6 @@ func (r *ListRepository) Delete(ctx context.Context, id int64) error {
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close current version
 	_, err = tx.ExecContext(ctx, `
 		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, list.EntityID.String())
@@ -238,7 +232,6 @@ func (r *ListRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Get next version number
 	var maxVersion int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COALESCE(MAX(version), 0) FROM lists WHERE entity_id = ?
@@ -247,7 +240,6 @@ func (r *ListRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	// Insert delete marker
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?)
@@ -299,7 +291,6 @@ func (r *ListRepository) GetDeleted(ctx context.Context) ([]domain.List, error) 
 func (r *ListRepository) Restore(ctx context.Context, entityID domain.EntityID) (int64, error) {
 	now := time.Now().Format(time.RFC3339)
 
-	// Get the most recent version (which should be a DELETE marker)
 	var lastList struct {
 		Name      string
 		CreatedAt string
@@ -327,7 +318,6 @@ func (r *ListRepository) Restore(ctx context.Context, entityID domain.EntityID) 
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// Close the DELETE marker
 	_, err = tx.ExecContext(ctx, `
 		UPDATE lists SET valid_to = ? WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '')
 	`, now, entityID.String())
@@ -335,7 +325,6 @@ func (r *ListRepository) Restore(ctx context.Context, entityID domain.EntityID) 
 		return 0, err
 	}
 
-	// Insert a new version with INSERT op_type to restore
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO lists (name, entity_id, created_at, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?)

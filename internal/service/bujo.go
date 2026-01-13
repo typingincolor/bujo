@@ -78,19 +78,17 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 		entry.Location = opts.Location
 		entry.CreatedAt = time.Now()
 
-		// Handle parent ID - either from opts or from parsed hierarchy
 		if entry.ParentID != nil {
-			// Entry has a parent from parsed input (indentation)
 			parentIdx := int(*entry.ParentID)
 			if dbID, ok := idMap[parentIdx]; ok {
 				entry.ParentID = &dbID
 			}
-		} else if opts.ParentID != nil && entry.Depth == 0 {
-			// Root-level entry should become child of opts.ParentID
+		}
+
+		if entry.ParentID == nil && opts.ParentID != nil && entry.Depth == 0 {
 			entry.ParentID = opts.ParentID
 		}
 
-		// Adjust depth when adding to a parent
 		if opts.ParentID != nil {
 			entry.Depth += parentDepth
 		}
@@ -130,7 +128,6 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 		Date: date,
 	}
 
-	// Get location for the day
 	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
 	if err != nil {
 		return nil, err
@@ -139,14 +136,12 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 		agenda.Location = dayCtx.Location
 	}
 
-	// Get overdue entries
 	overdue, err := s.entryRepo.GetOverdue(ctx, date)
 	if err != nil {
 		return nil, err
 	}
 	agenda.Overdue = overdue
 
-	// Get today's entries
 	today, err := s.entryRepo.GetByDate(ctx, date)
 	if err != nil {
 		return nil, err
@@ -159,20 +154,17 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time) (*MultiDayAgenda, error) {
 	agenda := &MultiDayAgenda{}
 
-	// Get overdue entries (before the from date)
 	overdue, err := s.entryRepo.GetOverdue(ctx, from)
 	if err != nil {
 		return nil, err
 	}
 	agenda.Overdue = overdue
 
-	// Get all entries in the range
 	entries, err := s.entryRepo.GetByDateRange(ctx, from, to)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get locations for the range
 	locations, err := s.dayCtxRepo.GetRange(ctx, from, to)
 	if err != nil {
 		return nil, err
@@ -183,7 +175,6 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 		locationMap[dateKey] = loc.Location
 	}
 
-	// Group entries by date
 	entryMap := make(map[string][]domain.Entry)
 	for _, entry := range entries {
 		if entry.ScheduledDate != nil {
@@ -192,7 +183,6 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 		}
 	}
 
-	// Build days array from from to to (inclusive)
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
 		dateKey := d.Format("2006-01-02")
 		day := DayEntries{
@@ -418,13 +408,11 @@ func (s *BujoService) DeleteEntryAndReparent(ctx context.Context, id int64) erro
 		return err
 	}
 
-	// Get children of this entry
 	children, err := s.entryRepo.GetChildren(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	// Reparent children to this entry's parent (may be nil for root)
 	for _, child := range children {
 		child.ParentID = entry.ParentID
 		if entry.ParentID == nil {
@@ -437,7 +425,6 @@ func (s *BujoService) DeleteEntryAndReparent(ctx context.Context, id int64) erro
 		}
 	}
 
-	// Now delete just the entry (not children)
 	return s.entryRepo.Delete(ctx, id)
 }
 
@@ -455,12 +442,10 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		return 0, err
 	}
 
-	// Only tasks can be migrated
 	if entry.Type != domain.EntryTypeTask {
 		return 0, fmt.Errorf("only tasks can be migrated, this is a %s", entry.Type)
 	}
 
-	// Get all children and save their original types before marking as migrated
 	children, err := s.entryRepo.GetChildren(ctx, id)
 	if err != nil {
 		return 0, err
@@ -471,13 +456,11 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		originalChildTypes[i] = child.Type
 	}
 
-	// Mark old entry as migrated
 	entry.Type = domain.EntryTypeMigrated
 	if err := s.entryRepo.Update(ctx, *entry); err != nil {
 		return 0, err
 	}
 
-	// Mark all children as migrated
 	for i := range children {
 		children[i].Type = domain.EntryTypeMigrated
 		if err := s.entryRepo.Update(ctx, children[i]); err != nil {
@@ -485,7 +468,6 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		}
 	}
 
-	// Create new task on target date
 	newEntry := domain.Entry{
 		Type:          domain.EntryTypeTask,
 		Content:       entry.Content,
@@ -498,7 +480,6 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		return 0, err
 	}
 
-	// Create new children linked to new parent with original types
 	for i, child := range children {
 		newChild := domain.Entry{
 			Type:          originalChildTypes[i],
@@ -530,11 +511,13 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 	oldDepth := entry.Depth
 	entityID := entry.EntityID
 
-	// Handle parent change
-	if opts.MoveToRoot != nil && *opts.MoveToRoot {
+	moveToRoot := opts.MoveToRoot != nil && *opts.MoveToRoot
+	if moveToRoot {
 		entry.ParentID = nil
 		entry.Depth = 0
-	} else if opts.NewParentID != nil {
+	}
+
+	if !moveToRoot && opts.NewParentID != nil {
 		parent, err := s.entryRepo.GetByID(ctx, *opts.NewParentID)
 		if err != nil {
 			return err
@@ -546,24 +529,20 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 		entry.Depth = parent.Depth + 1
 	}
 
-	// Handle logged date change
 	if opts.NewLoggedDate != nil {
 		entry.ScheduledDate = opts.NewLoggedDate
 	}
 
-	// Update the entry
 	if err := s.entryRepo.Update(ctx, *entry); err != nil {
 		return err
 	}
 
-	// Get the updated entry to get its new row ID (event sourcing creates new rows)
 	updatedEntry, err := s.entryRepo.GetByEntityID(ctx, entityID)
 	if err != nil {
 		return err
 	}
 	newID := updatedEntry.ID
 
-	// Update children depths if parent changed
 	depthDelta := entry.Depth - oldDepth
 	if depthDelta != 0 {
 		if err := s.updateChildrenDepths(ctx, newID, depthDelta); err != nil {
@@ -571,7 +550,6 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 		}
 	}
 
-	// Update children dates if logged date changed
 	if opts.NewLoggedDate != nil {
 		if err := s.updateChildrenDates(ctx, newID, *opts.NewLoggedDate); err != nil {
 			return err
@@ -593,12 +571,10 @@ func (s *BujoService) updateChildrenDepths(ctx context.Context, parentID int64, 
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
-		// Get new row ID after update (event sourcing creates new rows)
 		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
 		if err != nil {
 			return err
 		}
-		// Recursively update grandchildren
 		if err := s.updateChildrenDepths(ctx, updatedChild.ID, depthDelta); err != nil {
 			return err
 		}
@@ -619,7 +595,6 @@ func (s *BujoService) updateChildrenDates(ctx context.Context, parentID int64, n
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
-		// Get new row ID after update (event sourcing creates new rows)
 		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
 		if err != nil {
 			return err
@@ -654,11 +629,9 @@ func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLev
 		return nil, err
 	}
 
-	// Walk up to find the root of the context we want to show
 	rootID := id
 	current := entry
 
-	// Default behavior: go up to parent (if exists)
 	if current.ParentID != nil {
 		rootID = *current.ParentID
 		parent, err := s.entryRepo.GetByID(ctx, rootID)
@@ -668,7 +641,6 @@ func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLev
 		current = parent
 	}
 
-	// Go up additional ancestor levels
 	for i := 0; i < ancestorLevels && current.ParentID != nil; i++ {
 		rootID = *current.ParentID
 		parent, err := s.entryRepo.GetByID(ctx, rootID)
@@ -678,7 +650,6 @@ func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLev
 		current = parent
 	}
 
-	// Get the root and all its children
 	return s.entryRepo.GetWithChildren(ctx, rootID)
 }
 
@@ -729,7 +700,6 @@ func (s *BujoService) GetEntriesAncestorsMap(ctx context.Context, ids []int64) (
 
 	result := make(map[int64][]domain.Entry)
 
-	// Get all entries once
 	entriesMap := make(map[int64]*domain.Entry)
 	for _, id := range ids {
 		entry, err := s.entryRepo.GetByID(ctx, id)
@@ -741,7 +711,6 @@ func (s *BujoService) GetEntriesAncestorsMap(ctx context.Context, ids []int64) (
 		}
 	}
 
-	// Collect all parent IDs we need to fetch
 	parentIDsSet := make(map[int64]bool)
 	for _, entry := range entriesMap {
 		current := entry
@@ -754,7 +723,6 @@ func (s *BujoService) GetEntriesAncestorsMap(ctx context.Context, ids []int64) (
 		}
 	}
 
-	// Fetch all parent entries in one go
 	for parentID := range parentIDsSet {
 		if _, exists := entriesMap[parentID]; !exists {
 			parent, err := s.entryRepo.GetByID(ctx, parentID)
@@ -767,7 +735,6 @@ func (s *BujoService) GetEntriesAncestorsMap(ctx context.Context, ids []int64) (
 		}
 	}
 
-	// Build ancestor chains for each entry
 	for _, id := range ids {
 		entry := entriesMap[id]
 		if entry == nil {
@@ -810,13 +777,11 @@ func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText str
 		return fmt.Errorf("answer text too long (max 512 characters, got %d)", len(answerText))
 	}
 
-	// First update the question to mark it as answered
 	entry.Type = domain.EntryTypeAnswered
 	if err := s.entryRepo.Update(ctx, *entry); err != nil {
 		return err
 	}
 
-	// Get the updated question entry to get its new ID after the update
 	updated, err := s.entryRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -825,7 +790,6 @@ func (s *BujoService) MarkAnswered(ctx context.Context, id int64, answerText str
 		return fmt.Errorf("question entry not found after update")
 	}
 
-	// Now insert the answer as a child of the updated question
 	answerEntry := domain.Entry{
 		Type:          domain.EntryTypeAnswer,
 		Content:       answerText,

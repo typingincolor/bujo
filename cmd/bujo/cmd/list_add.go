@@ -34,7 +34,6 @@ Examples:
 		content := strings.Join(args[1:], " ")
 		entryType := domain.EntryTypeTask
 
-		// Check for entry type prefix
 		if len(content) >= 2 {
 			prefix := content[:2]
 			switch prefix {
