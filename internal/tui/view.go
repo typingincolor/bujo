@@ -10,6 +10,10 @@ import (
 )
 
 func (m Model) View() string {
+	if m.quitConfirmMode.active {
+		return m.renderQuitConfirm()
+	}
+
 	if m.err != nil {
 		return m.renderErrorPopup()
 	}
@@ -779,6 +783,20 @@ func (m Model) renderCaptureHelp() string {
 
 	sb.WriteString("\n")
 	sb.WriteString(HelpStyle.Render("Press F1 or Esc to close"))
+
+	return sb.String()
+}
+
+func (m Model) renderQuitConfirm() string {
+	var sb strings.Builder
+
+	sb.WriteString("\n\n")
+	sb.WriteString(TitleStyle.Render("Quit Confirmation"))
+	sb.WriteString("\n\n")
+	sb.WriteString("Are you sure you want to quit?")
+	sb.WriteString("\n\n")
+	sb.WriteString(HelpStyle.Render("y = yes, n = no, esc = cancel"))
+	sb.WriteString("\n")
 
 	return sb.String()
 }

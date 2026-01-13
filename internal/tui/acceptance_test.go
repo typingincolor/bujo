@@ -163,17 +163,25 @@ func TestUAT_Navigation_Quit(t *testing.T) {
 	model.height = 24
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
-	_, cmd := model.Update(msg)
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
 
-	// Quit should return tea.Quit command
-	if cmd == nil {
-		t.Fatal("quit should return a command")
+	if cmd != nil {
+		t.Error("pressing q at root should not immediately quit")
+	}
+	if !m.quitConfirmMode.active {
+		t.Fatal("quit confirm mode should be active")
 	}
 
-	// Execute the command and check if it's a quit message
-	result := cmd()
+	msgYes := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	_, cmdQuit := m.Update(msgYes)
+	if cmdQuit == nil {
+		t.Fatal("confirming with 'y' should return quit command")
+	}
+
+	result := cmdQuit()
 	if _, ok := result.(tea.QuitMsg); !ok {
-		t.Error("'q' should trigger quit")
+		t.Error("confirming should trigger quit")
 	}
 }
 

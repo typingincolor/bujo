@@ -46,7 +46,9 @@ type Model struct {
 	viewMode               ViewMode
 	viewDate               time.Time
 	currentView            ViewType
+	viewStack              []ViewType
 	confirmMode            confirmState
+	quitConfirmMode        confirmQuitState
 	editMode               editState
 	answerMode             answerState
 	addMode                addState
@@ -100,6 +102,10 @@ type confirmState struct {
 	active      bool
 	entryID     int64
 	hasChildren bool
+}
+
+type confirmQuitState struct {
+	active bool
 }
 
 type editState struct {

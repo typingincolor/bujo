@@ -169,10 +169,14 @@ func TestModel_Update_QuitReturnsQuitCmd(t *testing.T) {
 	model.agenda = &service.MultiDayAgenda{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
-	_, cmd := model.Update(msg)
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
 
-	if cmd == nil {
-		t.Error("pressing q should return a quit command")
+	if cmd != nil {
+		t.Error("pressing q at root should not immediately quit")
+	}
+	if !m.quitConfirmMode.active {
+		t.Error("quit confirm mode should be active")
 	}
 }
 
@@ -4401,5 +4405,107 @@ func TestHabitView_NextPeriod_CannotGoToFuture(t *testing.T) {
 
 	if m.habitState.weekOffset != 0 {
 		t.Errorf("pressing ']' at weekOffset=0 should not go negative, got %d", m.habitState.weekOffset)
+	}
+}
+
+func TestNavigationStack_InitiallyEmpty(t *testing.T) {
+	model := New(nil)
+
+	if len(model.viewStack) != 0 {
+		t.Errorf("viewStack should be empty initially, got %d items", len(model.viewStack))
+	}
+}
+
+func TestNavigationStack_PushWhenSwitchingViews(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected ViewTypeHabits, got %v", m.currentView)
+	}
+	if len(m.viewStack) != 1 {
+		t.Errorf("viewStack should have 1 item after switching views, got %d", len(m.viewStack))
+	}
+	if len(m.viewStack) > 0 && m.viewStack[0] != ViewTypeJournal {
+		t.Errorf("viewStack[0] should be ViewTypeJournal, got %v", m.viewStack[0])
+	}
+}
+
+func TestNavigationStack_PopWhenPressingQ(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.viewStack = []ViewType{ViewTypeJournal}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeJournal {
+		t.Errorf("should navigate back to ViewTypeJournal, got %v", m.currentView)
+	}
+	if len(m.viewStack) != 0 {
+		t.Errorf("viewStack should be empty after pop, got %d items", len(m.viewStack))
+	}
+}
+
+func TestNavigationStack_ShowConfirmWhenEmptyStack(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.viewStack = []ViewType{}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.quitConfirmMode.active {
+		t.Error("should show quit confirmation when at root view")
+	}
+	if m.currentView != ViewTypeJournal {
+		t.Error("should stay on journal view while confirming")
+	}
+}
+
+func TestNavigationStack_ConfirmYes_Quits(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.quitConfirmMode.active = true
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'y'}}
+	_, cmd := model.Update(msg)
+
+	if cmd == nil {
+		t.Error("confirming quit with 'y' should return a command")
+	}
+}
+
+func TestNavigationStack_ConfirmNo_CancelsQuit(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.quitConfirmMode.active = true
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.quitConfirmMode.active {
+		t.Error("quit confirm mode should be deactivated after pressing 'n'")
+	}
+}
+
+func TestQuitConfirmView_ShowsWhenActive(t *testing.T) {
+	model := New(nil)
+	model.quitConfirmMode.active = true
+
+	view := model.View()
+
+	if !strings.Contains(view, "Quit") {
+		t.Error("quit confirm view should contain 'Quit'")
+	}
+	if !strings.Contains(view, "Are you sure") {
+		t.Error("quit confirm view should ask 'Are you sure'")
 	}
 }
