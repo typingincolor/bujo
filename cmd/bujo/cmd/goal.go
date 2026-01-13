@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -36,7 +35,7 @@ Examples:
 		}
 
 		if len(goals) == 0 {
-			fmt.Fprintf(os.Stderr, "No goals for %s\n", month.Format("January 2006"))
+			fmt.Printf("No goals for %s\n", month.Format("January 2006"))
 			return nil
 		}
 
