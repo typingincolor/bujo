@@ -204,6 +204,110 @@ Never skip tests because:
 
 For detailed specifications, see `spec.md`.
 
+## Recent Architectural Patterns
+
+### Immutability in Domain Layer
+Domain objects should use value receivers and return new instances rather than mutating state:
+
+```go
+// ✓ Correct: Returns new instance
+func (g Goal) MarkDone() Goal {
+    g.Status = GoalStatusDone
+    return g
+}
+
+// ✗ Incorrect: Mutates receiver
+func (g *Goal) MarkDone() {
+    g.Status = GoalStatusDone
+}
+```
+
+**Rationale:** Immutability prevents subtle bugs, makes code easier to reason about, and aligns with functional programming principles.
+
+### Stateless Services
+Services should accept configuration as method parameters rather than storing as state:
+
+```go
+// ✓ Correct: Stateless
+func (s *BackupService) CreateBackup(ctx context.Context, backupDir string) (string, error)
+
+// ✗ Incorrect: Stateful
+type BackupService struct {
+    backupDir string  // Configuration stored as state
+}
+```
+
+**Rationale:** Stateless services are more testable, composable, and align with functional programming principles.
+
+### Magic Numbers as Named Constants
+Extract repeated numeric literals as named constants for clarity:
+
+```go
+// ✓ Correct: Named constants
+const (
+    HabitDaysWeek    = 7
+    HabitDaysMonth   = 30
+    HabitDaysQuarter = 90
+)
+
+// ✗ Incorrect: Magic numbers
+days := 7
+if viewMode == Month {
+    days = 30
+}
+```
+
+**Rationale:** Named constants improve code readability, reduce errors, and make future changes easier.
+
+### Enum Pattern for State Machines
+Use iota-based enums for multi-state cycles:
+
+```go
+type HabitViewMode int
+
+const (
+    HabitViewModeWeek HabitViewMode = iota  // 0
+    HabitViewModeMonth                       // 1
+    HabitViewModeQuarter                     // 2
+)
+```
+
+**Rationale:** Enums are type-safe, self-documenting, and extensible compared to booleans.
+
+### UI Truncation for Long Content
+Implement truncation with clear indicators for user-facing display:
+
+```go
+const maxAncestors = 3
+const maxContentLen = 40
+
+if len(ancestors) > maxAncestors {
+    prefix = "... > "
+}
+if len(content) > maxContentLen {
+    content = content[:maxContentLen] + "..."
+}
+```
+
+**Rationale:** Prevents UI overflow while maintaining usability. Magic numbers here are acceptable as UI constraints.
+
+### Repository Pattern for Infrastructure
+Services depend on repository interfaces, not concrete implementations:
+
+```go
+// Service layer defines interface
+type BackupRepository interface {
+    Backup(ctx context.Context, destPath string) error
+}
+
+// Infrastructure provides implementation
+type SQLiteBackupRepository struct {
+    db *sql.DB
+}
+```
+
+**Rationale:** Enables testing with mocks, supports multiple backends, follows hexagonal architecture.
+
 <claude-mem-context>
 # Recent Activity
 

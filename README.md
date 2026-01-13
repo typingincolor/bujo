@@ -13,9 +13,10 @@ A command-line Bullet Journal for rapid task capture, habit tracking, and daily 
 
 - **Rapid Entry** - Add tasks, notes, and events with simple symbols
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
-- **Habit Tracking** - Track daily habits with streaks and completion rates
+- **Habit Tracking** - Track daily habits with streaks and completion rates (7, 30, or 90-day views)
 - **List Management** - Organize items in separate lists (shopping, projects, etc.)
-- **Location Context** - Set your work location for the day
+- **Location Context** - Set your work location for the day via CLI or command palette
+- **URL Detection** - Automatically open URLs from entries with a keypress
 - **Mood Tracking** - Track your daily mood with history
 - **Weather Tracking** - Record daily weather conditions
 - **Weekly View** - See entries from the last 7 days at a glance
@@ -337,11 +338,12 @@ bujo weather clear --date yesterday
 
 #### `bujo habit`
 
-Display habit tracker with streaks and completion rates.
+Display habit tracker with streaks and completion rates in multiple views.
 
 ```bash
-bujo habit          # 7-day sparkline view
-bujo habit --month  # 30-day calendar view
+bujo habit             # 7-day sparkline view
+bujo habit --month     # 30-day calendar view
+bujo habit --quarter   # 90-day quarterly view
 ```
 
 ```
@@ -352,6 +354,8 @@ Gym (3 day streak)
   W T F S S M T
   1/1 today | 43% completion
 ```
+
+**Note:** In the TUI, press `w` to cycle through Week → Month → Quarter views.
 
 #### `bujo habit log <name|#id> [count]`
 
@@ -619,12 +623,32 @@ j/k: move  space: done  x: cancel  d: delete  q: quit  ?: help
 | `c` | Enter capture mode (multi-entry) |
 | `m` | Migrate task to future date |
 | `d` | Delete entry |
-| `w` | Toggle day/week view |
+| `u` | Undo last mark done/undone operation |
+| `o` | Open URL from selected entry |
+| `w` | Toggle day/week view (habits: cycle week/month/quarter) |
 | `/` | Go to date |
+| `Ctrl+P` | Open command palette |
 | `Ctrl+S` | Search forward |
 | `Ctrl+R` | Search reverse |
 | `?` | Toggle help |
 | `q` | Quit |
+
+**Habits View shortcuts:**
+
+Press `2` to view habit tracker:
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down (select habit) |
+| `k` / `↑` | Move up (select habit) |
+| `h` / `←` | Move left (select earlier day) |
+| `l` / `→` | Move right (select later day) |
+| `Space` | Log habit for selected day |
+| `w` | Cycle view mode (Week → Month → Quarter) |
+| `a` | Add new habit |
+| `d` | Delete selected habit |
+| `h` / `←` | Navigate to previous week/month/quarter |
+| `l` / `→` | Navigate to next week/month/quarter |
 
 **List Items View shortcuts:**
 
@@ -685,9 +709,28 @@ o Event happening
 
 **Draft persistence:** If you exit the app unexpectedly while in capture mode, your draft is saved to `~/.bujo/capture_draft.txt`. On re-entering capture mode, you'll be prompted to restore or discard the draft.
 
+#### Undo
+
+Press `u` to undo the last mark done/undone operation. This allows you to quickly revert an accidental toggle. Currently supports one level of undo for marking tasks complete or incomplete.
+
+#### URL Opening
+
+When an entry contains a URL, press `o` to automatically open it in your default browser. Works across platforms (macOS, Linux, Windows) and extracts the first URL found in the selected entry's content.
+
 #### Search
 
 Press `Ctrl+S` for forward search or `Ctrl+R` for reverse search. Type your query to incrementally search through entries. Press `Enter` to jump to the match, or `Esc` to cancel. Search is case-insensitive and highlights matches in the view.
+
+**Ancestry Context:** When a search result is selected, the UI displays the parent hierarchy (e.g., "↳ Project A > Phase 1") to provide context. Deep hierarchies are automatically truncated for readability.
+
+#### Command Palette
+
+Press `Ctrl+P` to open the command palette for quick access to actions like:
+- Set Location: Change your work location for the current day
+- Quit: Exit the application
+- Other commands accessible from the main view
+
+Type to filter commands and press `Enter` to execute, or `Esc` to cancel.
 
 ### Other
 
