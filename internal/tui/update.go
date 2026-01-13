@@ -76,8 +76,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if !m.habitState.dayIdxInited {
 			days := 7
-			if m.habitState.monthView {
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
 				days = 30
+			case HabitViewModeQuarter:
+				days = 90
 			}
 			m.habitState.selectedDayIdx = days - 1
 			m.habitState.dayIdxInited = true
@@ -347,6 +350,25 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Done):
+		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			oldEntry := entry
+			if entry.Type == domain.EntryTypeDone {
+				m.undoState = undoState{
+					operation: UndoOpMarkDone,
+					entryID:   entry.ID,
+					entityID:  entry.EntityID,
+					oldEntry:  &oldEntry,
+				}
+			} else if entry.Type == domain.EntryTypeTask {
+				m.undoState = undoState{
+					operation: UndoOpMarkUndone,
+					entryID:   entry.ID,
+					entityID:  entry.EntityID,
+					oldEntry:  &oldEntry,
+				}
+			}
+		}
 		return m, m.toggleDoneCmd()
 
 	case key.Matches(msg, m.keyMap.Answer):
@@ -388,6 +410,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				entryID:     entry.ID,
 				selectedIdx: 0,
 			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Undo):
+		if m.undoState.operation != UndoOpNone {
+			cmd := m.undoCmd()
+			m.undoState = undoState{}
+			return m, cmd
 		}
 		return m, nil
 
@@ -1860,8 +1890,11 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Done):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
 			days := 7
-			if m.habitState.monthView {
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
 				days = 30
+			case HabitViewModeQuarter:
+				days = 90
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			logDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
@@ -1877,8 +1910,11 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.DayRight):
 		days := 7
-		if m.habitState.monthView {
+		switch m.habitState.viewMode {
+		case HabitViewModeMonth:
 			days = 30
+		case HabitViewModeQuarter:
+			days = 90
 		}
 		if m.habitState.selectedDayIdx < days-1 {
 			m.habitState.selectedDayIdx++
@@ -1888,8 +1924,11 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.RemoveHabitLog):
 		if len(m.habitState.habits) > 0 && m.habitState.selectedIdx < len(m.habitState.habits) {
 			days := 7
-			if m.habitState.monthView {
+			switch m.habitState.viewMode {
+			case HabitViewModeMonth:
 				days = 30
+			case HabitViewModeQuarter:
+				days = 90
 			}
 			daysAgo := days - 1 - m.habitState.selectedDayIdx
 			removeDate := m.getHabitReferenceDate().AddDate(0, 0, -daysAgo)
@@ -1909,7 +1948,14 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.ToggleView):
-		m.habitState.monthView = !m.habitState.monthView
+		switch m.habitState.viewMode {
+		case HabitViewModeWeek:
+			m.habitState.viewMode = HabitViewModeMonth
+		case HabitViewModeMonth:
+			m.habitState.viewMode = HabitViewModeQuarter
+		case HabitViewModeQuarter:
+			m.habitState.viewMode = HabitViewModeWeek
+		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.Add):
@@ -2602,4 +2648,23 @@ func (m Model) handleQuitConfirmMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, nil
+}
+
+func (m Model) undoCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		var err error
+
+		switch m.undoState.operation {
+		case UndoOpMarkDone:
+			err = m.bujoService.Undo(ctx, m.undoState.entryID)
+		case UndoOpMarkUndone:
+			err = m.bujoService.MarkDone(ctx, m.undoState.entryID)
+		}
+
+		if err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{m.undoState.entryID}
+	}
 }

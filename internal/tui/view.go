@@ -266,8 +266,11 @@ func (m Model) renderHabitsContent() string {
 	}
 
 	days := 7
-	if m.habitState.monthView {
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
 		days = 30
+	case HabitViewModeQuarter:
+		days = 90
 	}
 
 	for i, habit := range m.habitState.habits {
@@ -567,6 +570,20 @@ func (m Model) renderSearchInput() string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Search (%s): %s█", direction, m.searchMode.query))
 	sb.WriteString("\n\nEnter to find, Ctrl+S/R to find next/prev, Esc to cancel")
+
+	if m.selectedIdx >= 0 && m.selectedIdx < len(m.entries) {
+		selectedEntry := m.entries[m.selectedIdx].Entry
+		ancestors := m.getAncestryChain(selectedEntry.ID)
+		if len(ancestors) > 0 {
+			var ancestorNames []string
+			for _, a := range ancestors {
+				ancestorNames = append(ancestorNames, a.Content)
+			}
+			sb.WriteString("\n\n")
+			sb.WriteString(HelpStyle.Render("↳ " + strings.Join(ancestorNames, " > ")))
+		}
+	}
+
 	return ConfirmStyle.Render(sb.String())
 }
 

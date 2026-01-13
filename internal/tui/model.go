@@ -78,6 +78,7 @@ type Model struct {
 	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
 	commandRegistry        *CommandRegistry
+	undoState              undoState
 	help                   help.Model
 	keyMap                 KeyMap
 	markdownRenderer       *glamour.TermRenderer
@@ -177,7 +178,7 @@ type habitState struct {
 	selectedIdx    int
 	selectedDayIdx int
 	dayIdxInited   bool
-	monthView      bool
+	viewMode       HabitViewMode
 	weekOffset     int
 }
 
@@ -297,6 +298,32 @@ const (
 	ViewTypeGoals
 	ViewTypeSettings
 )
+
+type HabitViewMode int
+
+const (
+	HabitViewModeWeek HabitViewMode = iota
+	HabitViewModeMonth
+	HabitViewModeQuarter
+)
+
+type UndoOperation int
+
+const (
+	UndoOpNone UndoOperation = iota
+	UndoOpMarkDone
+	UndoOpMarkUndone
+	UndoOpDelete
+	UndoOpEdit
+	UndoOpAdd
+)
+
+type undoState struct {
+	operation UndoOperation
+	entryID   int64
+	entityID  domain.EntityID
+	oldEntry  *domain.Entry
+}
 
 type EntryItem struct {
 	Entry            domain.Entry
@@ -556,16 +583,22 @@ func (m Model) removeHabitLogForDateCmd(habitID int64, date time.Time) tea.Cmd {
 
 func (m Model) getHabitReferenceDate() time.Time {
 	days := 7
-	if m.habitState.monthView {
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
 		days = 30
+	case HabitViewModeQuarter:
+		days = 90
 	}
 	return time.Now().AddDate(0, 0, -m.habitState.weekOffset*days)
 }
 
 func (m Model) loadHabitsCmd() tea.Cmd {
 	days := 7
-	if m.habitState.monthView {
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
 		days = 30
+	case HabitViewModeQuarter:
+		days = 90
 	}
 	referenceDate := m.getHabitReferenceDate()
 	return func() tea.Msg {
@@ -1164,4 +1197,32 @@ func (m Model) openURLCmd(content string) tea.Cmd {
 
 		return nil
 	}
+}
+
+func (m Model) getAncestryChain(entryID int64) []domain.Entry {
+	var ancestors []domain.Entry
+	entryMap := make(map[int64]domain.Entry)
+
+	for _, item := range m.entries {
+		entryMap[item.Entry.ID] = item.Entry
+	}
+
+	currentID := entryID
+	for {
+		entry, exists := entryMap[currentID]
+		if !exists {
+			break
+		}
+		if entry.ParentID == nil {
+			break
+		}
+		parent, parentExists := entryMap[*entry.ParentID]
+		if !parentExists {
+			break
+		}
+		ancestors = append([]domain.Entry{parent}, ancestors...)
+		currentID = *entry.ParentID
+	}
+
+	return ancestors
 }

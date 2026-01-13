@@ -3312,6 +3312,29 @@ func TestModel_HighlightSearchTerm_PartialWord(t *testing.T) {
 	}
 }
 
+func TestModel_SearchMode_ShowsAncestryForSelectedEntry(t *testing.T) {
+	parent1ID := int64(1)
+	parent2ID := int64(2)
+	childID := int64(3)
+
+	model := New(nil)
+	model.width = 80
+	model.height = 24
+	model.entries = []EntryItem{
+		{Entry: domain.Entry{ID: parent1ID, Content: "Project A", ParentID: nil}},
+		{Entry: domain.Entry{ID: parent2ID, Content: "Phase 1", ParentID: &parent1ID}},
+		{Entry: domain.Entry{ID: childID, Content: "Task detail", ParentID: &parent2ID}},
+	}
+	model.searchMode = searchState{active: true, forward: true, query: "detail"}
+	model.selectedIdx = 2
+
+	view := model.View()
+
+	if !strings.Contains(view, "Project A") || !strings.Contains(view, "Phase 1") {
+		t.Error("expected ancestry chain to be shown when in search mode")
+	}
+}
+
 // ============================================================================
 // Phase 4: Multi-View Architecture Tests
 // ============================================================================
@@ -3482,24 +3505,31 @@ func TestModel_HabitsView_ToggleMonthView_W(t *testing.T) {
 	model := New(nil)
 	model.currentView = ViewTypeHabits
 	model.habitState = habitState{
-		habits:    []service.HabitStatus{{Name: "Exercise"}},
-		monthView: false, // Start with week view (7 days)
+		habits:   []service.HabitStatus{{Name: "Exercise"}},
+		viewMode: HabitViewModeWeek,
 	}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}}
+
+	// First press: Week -> Month
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
-
-	if !m.habitState.monthView {
-		t.Error("expected monthView to be true after pressing 'w'")
+	if m.habitState.viewMode != HabitViewModeMonth {
+		t.Errorf("expected HabitViewModeMonth after first 'w', got %v", m.habitState.viewMode)
 	}
 
-	// Press again to toggle back
+	// Second press: Month -> Quarter
 	newModel, _ = m.Update(msg)
 	m = newModel.(Model)
+	if m.habitState.viewMode != HabitViewModeQuarter {
+		t.Errorf("expected HabitViewModeQuarter after second 'w', got %v", m.habitState.viewMode)
+	}
 
-	if m.habitState.monthView {
-		t.Error("expected monthView to be false after pressing 'w' again")
+	// Third press: Quarter -> Week (cycle back)
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+	if m.habitState.viewMode != HabitViewModeWeek {
+		t.Errorf("expected HabitViewModeWeek after third 'w', got %v", m.habitState.viewMode)
 	}
 }
 
@@ -4586,5 +4616,38 @@ func TestStatsView_DoesNotShowAISummary(t *testing.T) {
 	}
 	if strings.Contains(output, "AI Summary:") {
 		t.Error("stats view should NOT show AI summary section")
+	}
+}
+
+// ============================================================================
+// Undo Functionality Tests
+// ============================================================================
+
+func TestModel_UndoMarkDone(t *testing.T) {
+	model := New(nil)
+	taskEntry := domain.Entry{
+		ID:      1,
+		Type:    domain.EntryTypeTask,
+		Content: "Test task",
+	}
+	model.entries = []EntryItem{
+		{Entry: taskEntry},
+	}
+	model.selectedIdx = 0
+
+	msgSpace := tea.KeyMsg{Type: tea.KeySpace}
+	newModel, _ := model.Update(msgSpace)
+	m := newModel.(Model)
+
+	if m.undoState.operation == UndoOpNone {
+		t.Error("expected undo state to be set after marking done")
+	}
+
+	msgUndo := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'u'}}
+	newModel, _ = m.Update(msgUndo)
+	m = newModel.(Model)
+
+	if m.undoState.operation != UndoOpNone {
+		t.Error("expected undo state to be cleared after undo")
 	}
 }
