@@ -1,0 +1,229 @@
+name: Smart PR Description
+
+on:
+  pull_request:
+    types: [opened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    if: |
+      github.actor != 'dependabot[bot]' &&
+      (github.event.pull_request.body == null ||
+       length(github.event.pull_request.body) < 50)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Analyze PR changes
+        id: analyze
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Get commits
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const commitMessages = commits.map(c => c.commit.message).join('\n\n');
+
+            // Get file changes
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            // Categorize files
+            const categories = {
+              domain: [],
+              service: [],
+              repository: [],
+              tui: [],
+              cli: [],
+              tests: [],
+              docs: [],
+              other: []
+            };
+
+            files.forEach(f => {
+              if (f.filename.includes('internal/domain')) categories.domain.push(f);
+              else if (f.filename.includes('internal/service')) categories.service.push(f);
+              else if (f.filename.includes('internal/repository')) categories.repository.push(f);
+              else if (f.filename.includes('internal/tui')) categories.tui.push(f);
+              else if (f.filename.includes('cmd/bujo')) categories.cli.push(f);
+              else if (f.filename.includes('_test.go')) categories.tests.push(f);
+              else if (f.filename.match(/\.(md|txt)$/)) categories.docs.push(f);
+              else categories.other.push(f);
+            });
+
+            // Calculate statistics
+            const stats = {
+              totalFiles: files.length,
+              additions: files.reduce((sum, f) => sum + f.additions, 0),
+              deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+              testFiles: categories.tests.length
+            };
+
+            core.setOutput('commit_messages', commitMessages);
+            core.setOutput('stats', JSON.stringify(stats));
+            core.setOutput('categories', JSON.stringify(categories));
+
+            // Check for TDD compliance
+            const hasTests = categories.tests.length > 0;
+            const hasProduction = categories.domain.length > 0 ||
+                                  categories.service.length > 0 ||
+                                  categories.repository.length > 0;
+
+            core.setOutput('has_tests', hasTests.toString());
+            core.setOutput('has_production', hasProduction.toString());
+
+      - name: Generate PR description
+        uses: actions/github-script@v7
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COMMIT_MESSAGES: ${{ steps.analyze.outputs.commit_messages }}
+          STATS: ${{ steps.analyze.outputs.stats }}
+          CATEGORIES: ${{ steps.analyze.outputs.categories }}
+          HAS_TESTS: ${{ steps.analyze.outputs.has_tests }}
+          HAS_PRODUCTION: ${{ steps.analyze.outputs.has_production }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        with:
+          script: |
+            const https = require('https');
+
+            const stats = JSON.parse(process.env.STATS);
+            const categories = JSON.parse(process.env.CATEGORIES);
+
+            // Build file summary
+            let fileSummary = '';
+            Object.entries(categories).forEach(([cat, files]) => {
+              if (files.length > 0) {
+                fileSummary += `${cat}: ${files.length} files\n`;
+                files.slice(0, 3).forEach(f => {
+                  fileSummary += `  - ${f.filename} (+${f.additions} -${f.deletions})\n`;
+                });
+              }
+            });
+
+            const prompt = `Generate a concise PR description for the following changes:
+
+            PR Title: ${process.env.PR_TITLE}
+
+            Commit Messages:
+            ${process.env.COMMIT_MESSAGES}
+
+            File Changes:
+            ${fileSummary}
+
+            Statistics:
+            - ${stats.totalFiles} files changed
+            - ${stats.additions} additions, ${stats.deletions} deletions
+            - ${stats.testFiles} test files
+
+            TDD Status:
+            - Has tests: ${process.env.HAS_TESTS}
+            - Has production code: ${process.env.HAS_PRODUCTION}
+
+            Generate a PR description in this format:
+
+            ## Summary
+            [1-2 sentence summary of what this PR does]
+
+            ## Changes
+            - [Bullet point list of key changes]
+
+            ## Architecture
+            - **Layers affected:** [domain/service/repository/tui/cli]
+            - **Pattern:** [e.g., "Event sourcing", "Immutability", "Repository pattern"]
+
+            ## Testing
+            - [List test files added/modified]
+            ${process.env.HAS_PRODUCTION === 'true' && process.env.HAS_TESTS === 'false' ? '⚠️ **Production code added without tests**' : ''}
+
+            ## Related Issues
+            [Extract issue numbers from commit messages if any, format as "Closes #123"]
+
+            Keep it concise and focused on what changed, not how it was implemented.`;
+
+            const apiKey = process.env.ANTHROPIC_API_KEY;
+            if (!apiKey) {
+              console.log('⚠️ ANTHROPIC_API_KEY not set, using template description');
+
+              // Fallback template
+              let description = `## Summary\n\nThis PR modifies ${stats.totalFiles} files with ${stats.additions} additions and ${stats.deletions} deletions.\n\n`;
+              description += `## Changes\n\n`;
+
+              Object.entries(categories).forEach(([cat, files]) => {
+                if (files.length > 0) {
+                  description += `- **${cat.charAt(0).toUpperCase() + cat.slice(1)}**: ${files.length} files\n`;
+                }
+              });
+
+              description += `\n## Commits\n\n`;
+              description += process.env.COMMIT_MESSAGES.split('\n').slice(0, 5).join('\n');
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+                body: description
+              });
+
+              return;
+            }
+
+            // Call Anthropic API
+            const requestData = JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 1500,
+              messages: [{
+                role: 'user',
+                content: prompt
+              }]
+            });
+
+            const options = {
+              hostname: 'api.anthropic.com',
+              path: '/v1/messages',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Length': Buffer.byteLength(requestData)
+              }
+            };
+
+            const response = await new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve(JSON.parse(data)));
+              });
+              req.on('error', reject);
+              req.write(requestData);
+              req.end();
+            });
+
+            const description = response.content[0].text;
+
+            // Update PR description
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              body: description + '\n\n---\n*This description was automatically generated. Feel free to edit.*'
+            });
+
+            console.log('✅ PR description updated');

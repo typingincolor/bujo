@@ -1,0 +1,139 @@
+name: Performance Benchmarking
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run benchmarks on PR
+        run: |
+          # Run benchmarks and save results
+          go test -bench=. -benchmem -run=^$ ./... > /tmp/pr-bench.txt 2>&1 || true
+          cat /tmp/pr-bench.txt
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Run benchmarks on base
+        run: |
+          # Run benchmarks on base branch
+          go test -bench=. -benchmem -run=^$ ./... > /tmp/base-bench.txt 2>&1 || true
+          cat /tmp/base-bench.txt
+
+      - name: Install benchstat
+        run: go install golang.org/x/perf/cmd/benchstat@latest
+
+      - name: Compare benchmarks
+        id: compare
+        run: |
+          # Compare benchmarks
+          if ! benchstat /tmp/base-bench.txt /tmp/pr-bench.txt > /tmp/comparison.txt 2>&1; then
+            echo "⚠️ Benchstat comparison failed, will show raw results"
+            echo "has_comparison=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_comparison=true" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for regressions
+          if grep -q "~" /tmp/comparison.txt 2>/dev/null; then
+            # Has statistical significance markers
+            if grep "~.*slower" /tmp/comparison.txt; then
+              echo "has_regression=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_regression=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_regression=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post benchmark results
+        uses: actions/github-script@v7
+        env:
+          HAS_COMPARISON: ${{ steps.compare.outputs.has_comparison }}
+          HAS_REGRESSION: ${{ steps.compare.outputs.has_regression }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            let body = '## ⚡ Performance Benchmark Results\n\n';
+
+            if (process.env.HAS_COMPARISON === 'true') {
+              const comparison = fs.readFileSync('/tmp/comparison.txt', 'utf8');
+
+              body += '### Comparison vs Base Branch\n\n';
+              body += '```\n' + comparison + '\n```\n\n';
+
+              if (process.env.HAS_REGRESSION === 'true') {
+                body += '⚠️ **Performance regression detected!**\n\n';
+                body += 'Some benchmarks show statistically significant slowdowns. Please review the changes.\n\n';
+              } else {
+                body += '✅ No significant performance regressions detected.\n\n';
+              }
+            } else {
+              // Fallback: show both results separately
+              const prBench = fs.readFileSync('/tmp/pr-bench.txt', 'utf8');
+              const baseBench = fs.readFileSync('/tmp/base-bench.txt', 'utf8');
+
+              body += '### PR Benchmarks\n\n```\n' + prBench.substring(0, 2000) + '\n```\n\n';
+              body += '### Base Benchmarks\n\n```\n' + baseBench.substring(0, 2000) + '\n```\n\n';
+            }
+
+            body += '---\n';
+            body += '*Benchmarks run with `go test -bench=. -benchmem`. Regression threshold: statistically significant slowdowns.*\n';
+
+            // Check if already posted
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('⚡ Performance Benchmark Results')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Check for critical regressions
+        if: steps.compare.outputs.has_regression == 'true'
+        run: |
+          echo "⚠️ Performance regression detected, but not blocking merge"
+          echo "Review the benchmark results and consider if the regression is acceptable"

@@ -1,0 +1,237 @@
+name: Auto-Generate ADR
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  generate-adr:
+    runs-on: ubuntu-latest
+    if: |
+      github.event.pull_request.merged == true &&
+      (contains(github.event.pull_request.title, 'refactor') ||
+       contains(github.event.pull_request.labels.*.name, 'architecture') ||
+       contains(github.event.pull_request.labels.*.name, 'breaking'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Get PR Details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            // Get PR diff
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            // Focus on architectural changes
+            const archFiles = files.filter(f =>
+              f.filename.includes('internal/domain') ||
+              f.filename.includes('internal/service') ||
+              f.filename.includes('internal/repository') ||
+              f.filename.includes('internal/adapter')
+            );
+
+            if (archFiles.length === 0) {
+              console.log('No architectural changes detected, skipping ADR');
+              core.setOutput('should_create_adr', 'false');
+              return;
+            }
+
+            core.setOutput('should_create_adr', 'true');
+            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_body', pr.body || '');
+
+            // Get commit messages
+            const { data: commits } = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            const commitMessages = commits.map(c => c.commit.message).join('\n\n');
+            core.setOutput('commits', commitMessages);
+
+            // Create summary of changes
+            const summary = archFiles.map(f =>
+              `- ${f.filename}: +${f.additions} -${f.deletions}`
+            ).join('\n');
+            core.setOutput('file_summary', summary);
+
+      - name: Generate ADR
+        if: steps.pr.outputs.should_create_adr == 'true'
+        uses: actions/github-script@v7
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PR_TITLE: ${{ steps.pr.outputs.pr_title }}
+          PR_BODY: ${{ steps.pr.outputs.pr_body }}
+          COMMITS: ${{ steps.pr.outputs.commits }}
+          FILE_SUMMARY: ${{ steps.pr.outputs.file_summary }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const https = require('https');
+            const { execSync } = require('child_process');
+
+            const prompt = `You are creating an Architecture Decision Record (ADR) for a merged PR.
+
+            PR Title: ${process.env.PR_TITLE}
+
+            PR Description:
+            ${process.env.PR_BODY}
+
+            Commit Messages:
+            ${process.env.COMMITS}
+
+            File Changes:
+            ${process.env.FILE_SUMMARY}
+
+            Generate an ADR in the following format:
+
+            # [Number will be auto-assigned]. [Decision Title]
+
+            **Date:** [Today's date]
+
+            **Status:** Accepted
+
+            ## Context
+
+            [What is the issue that we're seeing that is motivating this decision or change?]
+
+            ## Decision
+
+            [What is the change that we're actually proposing or have agreed to?]
+
+            ## Consequences
+
+            ### Positive
+            - [List positive consequences]
+
+            ### Negative
+            - [List negative consequences or tradeoffs]
+
+            ### Neutral
+            - [List neutral consequences]
+
+            ## Related
+            - PR #${process.env.PR_NUMBER}
+
+            Keep it concise and focused on the architectural decision, not implementation details.`;
+
+            const apiKey = process.env.ANTHROPIC_API_KEY;
+            if (!apiKey) {
+              console.log('⚠️ ANTHROPIC_API_KEY not set, skipping ADR generation');
+              core.setOutput('adr_created', 'false');
+              return;
+            }
+
+            const requestData = JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              max_tokens: 2000,
+              messages: [{
+                role: 'user',
+                content: prompt
+              }]
+            });
+
+            const options = {
+              hostname: 'api.anthropic.com',
+              path: '/v1/messages',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Length': Buffer.byteLength(requestData)
+              }
+            };
+
+            const response = await new Promise((resolve, reject) => {
+              const req = https.request(options, (res) => {
+                let data = '';
+                res.on('data', chunk => data += chunk);
+                res.on('end', () => resolve(JSON.parse(data)));
+              });
+              req.on('error', reject);
+              req.write(requestData);
+              req.end();
+            });
+
+            const adrContent = response.content[0].text;
+
+            // Create ADR directory if needed
+            execSync('mkdir -p docs/adr');
+
+            // Find next ADR number
+            const existingADRs = execSync('ls -1 docs/adr/*.md 2>/dev/null || echo ""', { encoding: 'utf8' })
+              .split('\n')
+              .filter(Boolean);
+
+            const numbers = existingADRs.map(f => {
+              const match = f.match(/(\d+)-/);
+              return match ? parseInt(match[1]) : 0;
+            });
+
+            const nextNumber = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+            const paddedNumber = String(nextNumber).padStart(4, '0');
+
+            // Create filename from title
+            const titleMatch = adrContent.match(/^#\s+\d*\.?\s*(.+)$/m);
+            const title = titleMatch ? titleMatch[1] : process.env.PR_TITLE;
+            const slug = title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '')
+              .substring(0, 60);
+
+            const filename = `docs/adr/${paddedNumber}-${slug}.md`;
+
+            // Replace number placeholder in content
+            const finalContent = adrContent.replace(/^#\s+\d*\.?\s*/, `# ${nextNumber}. `);
+
+            // Write ADR
+            fs.writeFileSync(filename, finalContent);
+
+            console.log(`✅ ADR created: ${filename}`);
+
+            // Commit ADR
+            try {
+              execSync('git config user.name "github-actions[bot]"');
+              execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+              execSync(`git add ${filename}`);
+              execSync(`git commit -m "docs: Add ADR ${nextNumber} from PR #${process.env.PR_NUMBER} [skip ci]"`);
+              execSync('git push');
+              console.log('✅ ADR committed to repository');
+              core.setOutput('adr_created', 'true');
+              core.setOutput('adr_file', filename);
+            } catch (e) {
+              console.log('Failed to commit ADR:', e.message);
+              core.setOutput('adr_created', 'false');
+            }
+
+      - name: Comment on PR
+        if: steps.pr.outputs.should_create_adr == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: '📝 An Architecture Decision Record has been automatically generated for this PR and committed to the repository.'
+            });

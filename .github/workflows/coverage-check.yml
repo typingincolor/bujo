@@ -1,0 +1,196 @@
+name: Coverage Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '**.go'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests with coverage on PR
+        run: |
+          go test -coverprofile=/tmp/pr-coverage.out ./...
+          go tool cover -func=/tmp/pr-coverage.out > /tmp/pr-coverage.txt
+          cat /tmp/pr-coverage.txt
+
+          # Extract total coverage
+          PR_COV=$(grep "total:" /tmp/pr-coverage.txt | awk '{print $3}' | sed 's/%//')
+          echo "PR_COVERAGE=$PR_COV" >> $GITHUB_ENV
+          echo "PR Coverage: $PR_COV%"
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Run tests with coverage on base
+        run: |
+          go test -coverprofile=/tmp/base-coverage.out ./... || true
+          go tool cover -func=/tmp/base-coverage.out > /tmp/base-coverage.txt 2>/dev/null || echo "total: 0.0%" > /tmp/base-coverage.txt
+          cat /tmp/base-coverage.txt
+
+          # Extract total coverage
+          BASE_COV=$(grep "total:" /tmp/base-coverage.txt | awk '{print $3}' | sed 's/%//')
+          echo "BASE_COVERAGE=$BASE_COV" >> $GITHUB_ENV
+          echo "Base Coverage: $BASE_COV%"
+
+      - name: Calculate coverage diff
+        id: diff
+        run: |
+          PR_COV=${{ env.PR_COVERAGE }}
+          BASE_COV=${{ env.BASE_COVERAGE }}
+
+          # Calculate difference
+          DIFF=$(echo "$PR_COV - $BASE_COV" | bc)
+          echo "COVERAGE_DIFF=$DIFF" >> $GITHUB_ENV
+          echo "Coverage diff: $DIFF%"
+
+          # Set status based on diff
+          if (( $(echo "$DIFF < -1.0" | bc -l) )); then
+            echo "status=decreased" >> $GITHUB_OUTPUT
+            echo "❌ Coverage decreased by more than 1%"
+          elif (( $(echo "$DIFF < 0" | bc -l) )); then
+            echo "status=slightly_decreased" >> $GITHUB_OUTPUT
+            echo "⚠️ Coverage slightly decreased"
+          elif (( $(echo "$DIFF > 1.0" | bc -l) )); then
+            echo "status=increased" >> $GITHUB_OUTPUT
+            echo "✅ Coverage increased by more than 1%"
+          else
+            echo "status=unchanged" >> $GITHUB_OUTPUT
+            echo "✅ Coverage unchanged"
+          fi
+
+      - name: Get coverage by package
+        run: |
+          # Get per-package coverage for PR
+          go test -coverprofile=/tmp/pr-coverage.out ./... 2>/dev/null || true
+          go tool cover -func=/tmp/pr-coverage.out | grep -v "total:" | awk '{print $1,$3}' | sort > /tmp/pr-packages.txt
+
+          # Checkout PR again to post comment
+          git checkout ${{ github.event.pull_request.head.sha }}
+
+      - name: Post coverage report
+        uses: actions/github-script@v7
+        env:
+          PR_COVERAGE: ${{ env.PR_COVERAGE }}
+          BASE_COVERAGE: ${{ env.BASE_COVERAGE }}
+          COVERAGE_DIFF: ${{ env.COVERAGE_DIFF }}
+          STATUS: ${{ steps.diff.outputs.status }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            const prCov = parseFloat(process.env.PR_COVERAGE);
+            const baseCov = parseFloat(process.env.BASE_COVERAGE);
+            const diff = parseFloat(process.env.COVERAGE_DIFF);
+            const status = process.env.STATUS;
+
+            let emoji = '📊';
+            let statusText = 'unchanged';
+
+            if (status === 'increased') {
+              emoji = '📈';
+              statusText = 'increased';
+            } else if (status === 'decreased') {
+              emoji = '📉';
+              statusText = 'decreased';
+            } else if (status === 'slightly_decreased') {
+              emoji = '⚠️';
+              statusText = 'slightly decreased';
+            }
+
+            let body = `## ${emoji} Test Coverage Report\n\n`;
+            body += `| Metric | Value |\n`;
+            body += `|--------|-------|\n`;
+            body += `| **Base Coverage** | ${baseCov.toFixed(1)}% |\n`;
+            body += `| **PR Coverage** | ${prCov.toFixed(1)}% |\n`;
+            body += `| **Difference** | ${diff > 0 ? '+' : ''}${diff.toFixed(1)}% |\n`;
+            body += `| **Status** | ${statusText} |\n\n`;
+
+            // Per-package breakdown
+            const prPackages = fs.readFileSync('/tmp/pr-packages.txt', 'utf8')
+              .split('\n')
+              .filter(Boolean)
+              .slice(0, 10);
+
+            if (prPackages.length > 0) {
+              body += `### Top Packages by Coverage\n\n`;
+              body += `| Package | Coverage |\n`;
+              body += `|---------|----------|\n`;
+
+              prPackages.forEach(line => {
+                const [pkg, cov] = line.split(' ');
+                const shortPkg = pkg.replace('github.com/typingincolor/bujo/', '');
+                body += `| \`${shortPkg}\` | ${cov} |\n`;
+              });
+              body += '\n';
+            }
+
+            // Recommendations
+            if (status === 'decreased') {
+              body += `### ⚠️ Action Required\n\n`;
+              body += `Coverage has decreased by more than 1%. Please add tests for new code.\n\n`;
+              body += `**Target**: Maintain or improve coverage with every PR.\n`;
+            } else if (status === 'increased') {
+              body += `### ✅ Great Job!\n\n`;
+              body += `Coverage improved! This PR adds valuable test coverage.\n`;
+            }
+
+            body += '\n---\n';
+            body += '*Coverage threshold: -1% triggers warning. Goal: 100% domain layer coverage.*\n';
+
+            // Check if already posted
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Test Coverage Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Fail if coverage decreased significantly
+        if: steps.diff.outputs.status == 'decreased'
+        run: |
+          echo "❌ Coverage decreased by more than 1%"
+          echo "Current: ${{ env.PR_COVERAGE }}%"
+          echo "Previous: ${{ env.BASE_COVERAGE }}%"
+          echo "Diff: ${{ env.COVERAGE_DIFF }}%"
+          echo ""
+          echo "Please add tests to maintain or improve coverage."
+          exit 1

@@ -1,0 +1,226 @@
+name: Batch Analytics
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Generate Analytics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            // Fetch all merged PRs
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              per_page: 100,
+              sort: 'updated',
+              direction: 'desc'
+            });
+
+            const mergedPRs = prs.filter(pr => pr.merged_at);
+
+            // Analyze batch patterns
+            const batchPattern = /[Bb]atch\s+([A-Z]|[A-Z]\+[A-Z]|[A-Z]\/[A-Z])/;
+            const batches = {};
+            let totalPRs = mergedPRs.length;
+            let batchPRs = 0;
+
+            mergedPRs.forEach(pr => {
+              const match = pr.title.match(batchPattern);
+              if (match) {
+                const batchName = match[1];
+                if (!batches[batchName]) {
+                  batches[batchName] = {
+                    name: batchName,
+                    prs: [],
+                    mergedAt: []
+                  };
+                }
+                batches[batchName].prs.push(pr);
+                batches[batchName].mergedAt.push(new Date(pr.merged_at));
+                batchPRs++;
+              }
+            });
+
+            // Calculate batch statistics
+            const batchStats = Object.values(batches).map(batch => {
+              const dates = batch.mergedAt.sort((a, b) => a - b);
+              const duration = dates.length > 1
+                ? (dates[dates.length - 1] - dates[0]) / (1000 * 60 * 60 * 24)
+                : 0;
+
+              return {
+                name: batch.name,
+                prCount: batch.prs.length,
+                durationDays: Math.round(duration * 10) / 10,
+                issues: batch.prs.flatMap(pr =>
+                  (pr.body || '').match(/#\d+/g) || []
+                ).filter((v, i, a) => a.indexOf(v) === i).length
+              };
+            });
+
+            batchStats.sort((a, b) => b.prCount - a.prCount);
+
+            // Analyze file changes
+            const fileChanges = {};
+            for (const pr of mergedPRs.slice(0, 50)) {
+              try {
+                const { data: files } = await github.rest.pulls.listFiles({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number
+                });
+
+                files.forEach(file => {
+                  if (!fileChanges[file.filename]) {
+                    fileChanges[file.filename] = 0;
+                  }
+                  fileChanges[file.filename]++;
+                });
+              } catch (e) {
+                console.log(`Error fetching files for PR #${pr.number}`);
+              }
+            }
+
+            const topFiles = Object.entries(fileChanges)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10);
+
+            // Analyze commit patterns
+            const commits = execSync('git log --oneline --since="3 months ago"', { encoding: 'utf8' })
+              .split('\n')
+              .filter(Boolean);
+
+            const commitTypes = {
+              feat: 0,
+              fix: 0,
+              refactor: 0,
+              test: 0,
+              docs: 0,
+              ci: 0,
+              chore: 0,
+              deps: 0
+            };
+
+            commits.forEach(commit => {
+              const match = commit.match(/^[a-f0-9]+\s+(\w+):/);
+              if (match && commitTypes.hasOwnProperty(match[1])) {
+                commitTypes[match[1]]++;
+              }
+            });
+
+            // Generate report
+            const avgBatchSize = batchStats.length > 0
+              ? (batchStats.reduce((sum, b) => sum + b.prCount, 0) / batchStats.length).toFixed(1)
+              : 'N/A';
+
+            const avgBatchDuration = batchStats.length > 0
+              ? (batchStats.reduce((sum, b) => sum + b.durationDays, 0) / batchStats.length).toFixed(1)
+              : 'N/A';
+
+            let report = `# 📊 Batch Analytics Report
+
+            **Generated:** ${new Date().toISOString().split('T')[0]}
+            **Period:** Last ${mergedPRs.length} merged PRs
+
+            ## Batch Workflow Statistics
+
+            - **Total Batches:** ${batchStats.length}
+            - **Total PRs:** ${totalPRs}
+            - **Batch PRs:** ${batchPRs} (${Math.round(batchPRs/totalPRs*100)}%)
+            - **Average PRs per Batch:** ${avgBatchSize}
+            - **Average Batch Duration:** ${avgBatchDuration} days
+
+            ## Recent Batches
+
+            | Batch | PRs | Issues | Duration |
+            |-------|-----|--------|----------|
+            `;
+
+            batchStats.slice(0, 10).forEach(batch => {
+              report += `| ${batch.name} | ${batch.prCount} | ${batch.issues} | ${batch.durationDays}d |\n`;
+            });
+
+            report += `
+            ## Most Changed Files (Last 50 PRs)
+
+            | File | Changes |
+            |------|---------|
+            `;
+
+            topFiles.forEach(([file, count]) => {
+              report += `| \`${file}\` | ${count} |\n`;
+            });
+
+            report += `
+            ## Commit Type Distribution (Last 3 Months)
+
+            | Type | Count | % |
+            |------|-------|---|
+            `;
+
+            const totalCommits = commits.length;
+            Object.entries(commitTypes)
+              .sort((a, b) => b[1] - a[1])
+              .forEach(([type, count]) => {
+                const pct = Math.round(count / totalCommits * 100);
+                report += `| ${type} | ${count} | ${pct}% |\n`;
+              });
+
+            report += `
+            ## Insights
+
+            ${batchStats.length > 0 ? `
+            - **Most Active Batch:** ${batchStats[0].name} with ${batchStats[0].prCount} PRs
+            - **Batch Velocity:** Completing ~${avgBatchSize} PRs per batch
+            ` : '- No batch pattern detected yet'}
+
+            ${topFiles.length > 0 ? `
+            - **Hottest Files:** \`${topFiles[0][0]}\` changed ${topFiles[0][1]} times
+            ` : ''}
+
+            ---
+            *This report is automatically generated weekly. To generate manually, run the "Batch Analytics" workflow.*
+            `;
+
+            // Save report
+            const fs = require('fs');
+            const path = 'docs/analytics/batch-report.md';
+
+            // Create directory if needed
+            execSync('mkdir -p docs/analytics');
+
+            // Write report
+            fs.writeFileSync(path, report);
+
+            console.log('✅ Report generated:', path);
+            console.log(report);
+
+            // Commit if changes
+            try {
+              execSync('git config user.name "github-actions[bot]"');
+              execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
+              execSync(`git add ${path}`);
+              execSync(`git commit -m "docs: Update batch analytics report [skip ci]"`);
+              execSync('git push');
+              console.log('✅ Report committed to repository');
+            } catch (e) {
+              console.log('No changes to commit or push failed');
+            }
