@@ -241,3 +241,71 @@ func TestRenderGoalsSection_ShowsCheckmarkForDoneGoals(t *testing.T) {
 	assert.Contains(t, stripped, "Completed goal")
 	assert.Contains(t, stripped, "100%")
 }
+
+func TestRenderDailyAgenda_WithMoodAndWeather(t *testing.T) {
+	today := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	location := "Home Office"
+	mood := "Focused"
+	weather := "Sunny"
+
+	agenda := &service.DailyAgenda{
+		Date:     today,
+		Location: &location,
+		Mood:     &mood,
+		Weather:  &weather,
+		Overdue:  []domain.Entry{},
+		Today:    []domain.Entry{},
+	}
+
+	result := RenderDailyAgenda(agenda)
+	stripped := stripANSI(result)
+
+	assert.Contains(t, stripped, "Home Office")
+	assert.Contains(t, stripped, "Focused")
+	assert.Contains(t, stripped, "Sunny")
+}
+
+func TestRenderMultiDayAgenda_WithMoodAndWeather(t *testing.T) {
+	day1 := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 14, 0, 0, 0, 0, time.UTC)
+	today := day1
+
+	location1 := "Home"
+	mood1 := "Energetic"
+	weather1 := "Cloudy"
+
+	location2 := "Office"
+	mood2 := "Calm"
+	weather2 := "Rainy"
+
+	agenda := &service.MultiDayAgenda{
+		Overdue: []domain.Entry{},
+		Days: []service.DayEntries{
+			{
+				Date:     day1,
+				Location: &location1,
+				Mood:     &mood1,
+				Weather:  &weather1,
+				Entries:  []domain.Entry{},
+			},
+			{
+				Date:     day2,
+				Location: &location2,
+				Mood:     &mood2,
+				Weather:  &weather2,
+				Entries:  []domain.Entry{},
+			},
+		},
+	}
+
+	result := RenderMultiDayAgenda(agenda, today)
+	stripped := stripANSI(result)
+
+	assert.Contains(t, stripped, "Home")
+	assert.Contains(t, stripped, "Energetic")
+	assert.Contains(t, stripped, "Cloudy")
+
+	assert.Contains(t, stripped, "Office")
+	assert.Contains(t, stripped, "Calm")
+	assert.Contains(t, stripped, "Rainy")
+}

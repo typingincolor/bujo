@@ -1736,3 +1736,106 @@ func TestBujoService_ReopenQuestion_NotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestBujoService_GetDailyAgenda_WithMoodAndWeather(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, today, "Home Office")
+	require.NoError(t, err)
+
+	err = service.SetMood(ctx, today, "Focused")
+	require.NoError(t, err)
+
+	err = service.SetWeather(ctx, today, "Sunny")
+	require.NoError(t, err)
+
+	agenda, err := service.GetDailyAgenda(ctx, today)
+
+	require.NoError(t, err)
+	require.NotNil(t, agenda.Location)
+	assert.Equal(t, "Home Office", *agenda.Location)
+	require.NotNil(t, agenda.Mood)
+	assert.Equal(t, "Focused", *agenda.Mood)
+	require.NotNil(t, agenda.Weather)
+	assert.Equal(t, "Sunny", *agenda.Weather)
+}
+
+func TestBujoService_GetMultiDayAgenda_WithMoodAndWeather(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	day1 := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 1, 14, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetLocation(ctx, day1, "Home")
+	require.NoError(t, err)
+	err = service.SetMood(ctx, day1, "Energetic")
+	require.NoError(t, err)
+	err = service.SetWeather(ctx, day1, "Cloudy")
+	require.NoError(t, err)
+
+	err = service.SetLocation(ctx, day2, "Office")
+	require.NoError(t, err)
+	err = service.SetMood(ctx, day2, "Calm")
+	require.NoError(t, err)
+	err = service.SetWeather(ctx, day2, "Rainy")
+	require.NoError(t, err)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, day1, day2)
+
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 2)
+
+	assert.NotNil(t, agenda.Days[0].Location)
+	assert.Equal(t, "Home", *agenda.Days[0].Location)
+	assert.NotNil(t, agenda.Days[0].Mood)
+	assert.Equal(t, "Energetic", *agenda.Days[0].Mood)
+	assert.NotNil(t, agenda.Days[0].Weather)
+	assert.Equal(t, "Cloudy", *agenda.Days[0].Weather)
+
+	assert.NotNil(t, agenda.Days[1].Location)
+	assert.Equal(t, "Office", *agenda.Days[1].Location)
+	assert.NotNil(t, agenda.Days[1].Mood)
+	assert.Equal(t, "Calm", *agenda.Days[1].Mood)
+	assert.NotNil(t, agenda.Days[1].Weather)
+	assert.Equal(t, "Rainy", *agenda.Days[1].Weather)
+}
+
+func TestBujoService_ExportEntryMarkdown_SingleEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Test task", LogEntriesOptions{Date: date})
+	require.NoError(t, err)
+
+	markdown, err := service.ExportEntryMarkdown(ctx, ids[0])
+
+	require.NoError(t, err)
+	assert.Contains(t, markdown, "Test task")
+	assert.Contains(t, markdown, "•")
+}
+
+func TestBujoService_ExportEntryMarkdown_WithChildren(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	input := `. Parent task
+  - Child note
+  . Child task`
+	ids, err := service.LogEntries(ctx, input, LogEntriesOptions{Date: date})
+	require.NoError(t, err)
+
+	markdown, err := service.ExportEntryMarkdown(ctx, ids[0])
+
+	require.NoError(t, err)
+	assert.Contains(t, markdown, "Parent task")
+	assert.Contains(t, markdown, "Child note")
+	assert.Contains(t, markdown, "Child task")
+	assert.Contains(t, markdown, "  –")
+	assert.Contains(t, markdown, "  •")
+}

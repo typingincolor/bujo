@@ -108,6 +108,8 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 type DailyAgenda struct {
 	Date     time.Time
 	Location *string
+	Mood     *string
+	Weather  *string
 	Overdue  []domain.Entry
 	Today    []domain.Entry
 }
@@ -115,6 +117,8 @@ type DailyAgenda struct {
 type DayEntries struct {
 	Date     time.Time
 	Location *string
+	Mood     *string
+	Weather  *string
 	Entries  []domain.Entry
 }
 
@@ -134,6 +138,8 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 	}
 	if dayCtx != nil {
 		agenda.Location = dayCtx.Location
+		agenda.Mood = dayCtx.Mood
+		agenda.Weather = dayCtx.Weather
 	}
 
 	overdue, err := s.entryRepo.GetOverdue(ctx, date)
@@ -165,14 +171,14 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 		return nil, err
 	}
 
-	locations, err := s.dayCtxRepo.GetRange(ctx, from, to)
+	dayContexts, err := s.dayCtxRepo.GetRange(ctx, from, to)
 	if err != nil {
 		return nil, err
 	}
-	locationMap := make(map[string]*string)
-	for _, loc := range locations {
-		dateKey := loc.Date.Format("2006-01-02")
-		locationMap[dateKey] = loc.Location
+	contextMap := make(map[string]*domain.DayContext)
+	for i := range dayContexts {
+		dateKey := dayContexts[i].Date.Format("2006-01-02")
+		contextMap[dateKey] = &dayContexts[i]
 	}
 
 	entryMap := make(map[string][]domain.Entry)
@@ -186,9 +192,13 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
 		dateKey := d.Format("2006-01-02")
 		day := DayEntries{
-			Date:     d,
-			Location: locationMap[dateKey],
-			Entries:  entryMap[dateKey],
+			Date:    d,
+			Entries: entryMap[dateKey],
+		}
+		if ctx := contextMap[dateKey]; ctx != nil {
+			day.Location = ctx.Location
+			day.Mood = ctx.Mood
+			day.Weather = ctx.Weather
 		}
 		agenda.Days = append(agenda.Days, day)
 	}
@@ -814,4 +824,49 @@ func (s *BujoService) ReopenQuestion(ctx context.Context, id int64) error {
 
 	entry.Type = domain.EntryTypeQuestion
 	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) ExportEntryMarkdown(ctx context.Context, id int64) (string, error) {
+	entries, err := s.entryRepo.GetWithChildren(ctx, id)
+	if err != nil {
+		return "", fmt.Errorf("failed to get entry: %w", err)
+	}
+	if len(entries) == 0 {
+		return "", fmt.Errorf("entry %d not found", id)
+	}
+
+	return formatEntriesAsMarkdown(entries), nil
+}
+
+func formatEntriesAsMarkdown(entries []domain.Entry) string {
+	childrenMap := make(map[int64][]domain.Entry)
+	var root domain.Entry
+
+	for _, entry := range entries {
+		if entry.ParentID == nil {
+			root = entry
+		} else {
+			childrenMap[*entry.ParentID] = append(childrenMap[*entry.ParentID], entry)
+		}
+	}
+
+	var result string
+	result += formatEntryMarkdown(root, childrenMap, 0)
+	return result
+}
+
+func formatEntryMarkdown(entry domain.Entry, children map[int64][]domain.Entry, depth int) string {
+	indent := ""
+	for i := 0; i < depth; i++ {
+		indent += "  "
+	}
+
+	symbol := entry.Type.Symbol()
+	line := fmt.Sprintf("%s%s %s\n", indent, symbol, entry.Content)
+
+	for _, child := range children[entry.ID] {
+		line += formatEntryMarkdown(child, children, depth+1)
+	}
+
+	return line
 }

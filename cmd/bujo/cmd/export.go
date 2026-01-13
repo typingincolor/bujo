@@ -13,14 +13,17 @@ import (
 )
 
 var exportCmd = &cobra.Command{
-	Use:   "export",
-	Short: "Export all data to JSON",
-	Long: `Export all bujo data to JSON format for backup or migration.
+	Use:   "export [entry-id]",
+	Short: "Export data to JSON or markdown",
+	Long: `Export bujo data to JSON format for backup or migration, or export a specific entry tree to markdown.
 
 Examples:
   bujo export > backup.json              # Export all data
   bujo export --from 2026-01-01          # Export from date
-  bujo export --from 2026-01-01 --to 2026-01-31  # Export date range`,
+  bujo export --from 2026-01-01 --to 2026-01-31  # Export date range
+  bujo export 42                         # Export entry 42 and children as markdown
+  bujo export 42 -o entry.md             # Export entry 42 to file`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: runExport,
 }
 
@@ -28,6 +31,7 @@ var (
 	exportFrom   string
 	exportTo     string
 	exportFormat string
+	exportOutput string
 )
 
 func init() {
@@ -35,9 +39,14 @@ func init() {
 	exportCmd.Flags().StringVar(&exportFrom, "from", "", "Start date for export (YYYY-MM-DD)")
 	exportCmd.Flags().StringVar(&exportTo, "to", "", "End date for export (YYYY-MM-DD)")
 	exportCmd.Flags().StringVar(&exportFormat, "format", "json", "Export format (json or csv)")
+	exportCmd.Flags().StringVarP(&exportOutput, "output", "o", "", "Output file (for markdown export)")
 }
 
 func runExport(cmd *cobra.Command, args []string) error {
+	if len(args) == 1 {
+		return runMarkdownExport(cmd, args[0])
+	}
+
 	entryRepo := sqlite.NewEntryRepository(db)
 	habitRepo := sqlite.NewHabitRepository(db)
 	habitLogRepo := sqlite.NewHabitLogRepository(db)
@@ -81,6 +90,29 @@ func runExport(cmd *cobra.Command, args []string) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(data)
+}
+
+func runMarkdownExport(cmd *cobra.Command, entryIDStr string) error {
+	entryID, err := parseEntryID(entryIDStr)
+	if err != nil {
+		return err
+	}
+
+	markdown, err := bujoService.ExportEntryMarkdown(cmd.Context(), entryID)
+	if err != nil {
+		return fmt.Errorf("failed to export entry: %w", err)
+	}
+
+	if exportOutput != "" {
+		if err := os.WriteFile(exportOutput, []byte(markdown), 0644); err != nil {
+			return fmt.Errorf("failed to write file: %w", err)
+		}
+		fmt.Fprintf(os.Stderr, "Exported to %s\n", exportOutput)
+		return nil
+	}
+
+	fmt.Print(markdown)
+	return nil
 }
 
 func exportCSV(data *domain.ExportData) error {
