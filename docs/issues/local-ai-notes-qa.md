@@ -475,11 +475,203 @@ Windows users can still use Gemini for AI features.
 | phi-3-mini | 2.3 GB | Microsoft, good reasoning |
 | mistral:7b | 4.1 GB | High quality, needs more RAM |
 
+## Additional Considerations
+
+### Context Window Management
+
+LLMs have token limits. Strategy for handling large entry sets:
+
+```go
+const (
+    MaxContextTokens = 4096  // Conservative limit for small models
+    TokensPerEntry   = ~50   // Average estimate
+    MaxEntries       = 80    // Safe default
+)
+```
+
+**When entries exceed limit:**
+1. Prioritize recent entries
+2. Summarize older entries into bullet points
+3. Show warning: "Analyzing 80 of 250 entries (most recent)"
+
+```bash
+$ bujo ask "What did I work on this year?" --from "jan 1"
+⚠️ 1,247 entries found. Analyzing most recent 80 entries.
+   Use --limit to adjust, or narrow date range with --from/--to.
+```
+
+### Memory Requirements
+
+Different models need different RAM. Show requirements and warn:
+
+| Model | RAM Required | GPU VRAM |
+|-------|--------------|----------|
+| tinyllama | 1 GB | 512 MB |
+| llama3.2:1b | 2 GB | 1 GB |
+| llama3.2:3b | 4 GB | 2 GB |
+| mistral:7b | 8 GB | 4 GB |
+
+```bash
+$ bujo model pull mistral:7b
+⚠️ mistral:7b requires 8 GB RAM. Your system has 8 GB.
+   This may cause slowdowns. Continue? [y/N]
+```
+
+### Model Integrity (Checksums)
+
+Verify downloads haven't been tampered with:
+
+```json
+// manifest.json
+{
+  "models": {
+    "llama3.2:3b": {
+      "sha256": "a1b2c3d4...",
+      "verified": true
+    }
+  }
+}
+```
+
+```bash
+$ bujo model pull llama3.2:3b
+Downloading llama3.2:3b... 2.0 GB [================] 100%
+Verifying checksum... ✓ OK
+
+$ bujo model verify
+llama3.2:3b    ✓ OK
+tinyllama      ✓ OK
+```
+
+### Disk Space Management
+
+Warn before downloads and provide cleanup:
+
+```bash
+$ bujo model pull mistral:7b
+⚠️ This download requires 4.1 GB. You have 3.2 GB free.
+   Free up space or remove unused models with 'bujo model rm'.
+
+$ bujo model status
+Models directory: ~/.bujo/models/
+Total size: 2.6 GB
+Available: 3.2 GB
+
+Downloaded models:
+  llama3.2:3b    2.0 GB    (last used: 2 hours ago)
+  tinyllama      637 MB    (last used: 3 days ago)
+```
+
+### Error Handling & Fallback
+
+What happens when local inference fails:
+
+```go
+type AIError struct {
+    Code    AIErrorCode
+    Message string
+    Model   string
+}
+
+const (
+    ErrNoModel       AIErrorCode = "NO_MODEL"
+    ErrModelCorrupt  AIErrorCode = "MODEL_CORRUPT"
+    ErrOutOfMemory   AIErrorCode = "OUT_OF_MEMORY"
+    ErrInferenceFail AIErrorCode = "INFERENCE_FAIL"
+)
+```
+
+**Fallback behavior:**
+```bash
+$ bujo ask "question"
+Error: Model inference failed (out of memory)
+
+Options:
+  1. Try a smaller model: bujo ask "question" --model tinyllama
+  2. Use cloud AI: bujo ask "question" --provider gemini
+  3. Reduce context: bujo ask "question" --limit 20
+```
+
+### Testing Strategy
+
+How to test AI features without real models:
+
+```go
+// internal/adapter/ai/local/mock.go
+type MockLLMClient struct {
+    responses map[string]string
+}
+
+func (m *MockLLMClient) Generate(ctx context.Context, prompt string) (string, error) {
+    // Return canned responses based on prompt keywords
+    if strings.Contains(prompt, "habits") {
+        return "You logged exercise 5 times this week.", nil
+    }
+    return "Mock AI response", nil
+}
+```
+
+**Test categories:**
+1. **Unit tests** - Mock the `GenAIClient` interface
+2. **Integration tests** - Use tinyllama with `--short` flag in CI (slow, optional)
+3. **Prompt tests** - Verify prompt construction without inference
+
+### Migration from Gemini
+
+For users with `GEMINI_API_KEY` set:
+
+```bash
+$ bujo summary weekly
+Note: Using Gemini API. To switch to local AI:
+  1. bujo model pull llama3.2:3b
+  2. unset GEMINI_API_KEY (or set BUJO_AI_PROVIDER=local)
+```
+
+**Config precedence:**
+1. `--provider` flag (highest)
+2. `BUJO_AI_PROVIDER` env var
+3. If `GEMINI_API_KEY` set and no local model → use Gemini
+4. If local model exists → use local (default)
+
+### Response Streaming (Future)
+
+Show AI output as it generates (better UX for slow models):
+
+```bash
+$ bujo ask "What patterns do you see?"
+Thinking...
+Based on your entries, I notice several patterns:
+- You tend to log more tasks on Mondays...  # streams in real-time
+```
+
+**Implementation:** Requires callback-based API from llama.cpp bindings.
+Mark as future enhancement - initial version can buffer full response.
+
+### Prompt Templates
+
+The `ask` command needs well-crafted prompts:
+
+```go
+var askPromptTemplate = `You are a helpful assistant analyzing a personal bullet journal.
+
+Here are the journal entries:
+{{range .Entries}}
+{{.Type.Symbol}} {{.Content}} ({{.CreatedAt.Format "Jan 2"}})
+{{end}}
+
+User question: {{.Question}}
+
+Provide a helpful, concise answer based only on the entries above.
+If the entries don't contain relevant information, say so.`
+```
+
 ## Open Questions
 
 1. Should we keep Gemini as a fallback option or remove entirely?
 2. Default model for first-time users - auto-download tinyllama or prompt?
 3. GPU acceleration (Metal on macOS) - worth the complexity?
+4. Response streaming - implement in v1 or defer?
+5. Should `bujo model` be a separate binary to keep core bujo pure Go?
 
 ## Related Files
 
