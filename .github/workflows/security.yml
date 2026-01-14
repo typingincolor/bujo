@@ -36,6 +36,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Tidy modules
+        run: go mod tidy
+
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
