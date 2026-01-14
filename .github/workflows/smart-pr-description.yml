@@ -14,7 +14,7 @@ jobs:
     if: |
       github.actor != 'dependabot[bot]' &&
       (github.event.pull_request.body == null ||
-       length(github.event.pull_request.body) < 50)
+       github.event.pull_request.body == '')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
