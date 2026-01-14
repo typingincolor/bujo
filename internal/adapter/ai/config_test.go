@@ -10,12 +10,12 @@ func TestNewAIClient_Gemini(t *testing.T) {
 	originalKey := os.Getenv("GEMINI_API_KEY")
 	originalProvider := os.Getenv("BUJO_AI_PROVIDER")
 	defer func() {
-		os.Setenv("GEMINI_API_KEY", originalKey)
-		os.Setenv("BUJO_AI_PROVIDER", originalProvider)
+		_ = os.Setenv("GEMINI_API_KEY", originalKey)
+		_ = os.Setenv("BUJO_AI_PROVIDER", originalProvider)
 	}()
 
-	os.Setenv("GEMINI_API_KEY", "test-key")
-	os.Setenv("BUJO_AI_PROVIDER", "gemini")
+	_ = os.Setenv("GEMINI_API_KEY", "test-key")
+	_ = os.Setenv("BUJO_AI_PROVIDER", "gemini")
 
 	ctx := context.Background()
 	client, err := NewAIClient(ctx)
@@ -33,13 +33,13 @@ func TestNewAIClient_Local(t *testing.T) {
 	originalModel := os.Getenv("BUJO_MODEL")
 	originalModelDir := os.Getenv("BUJO_MODEL_DIR")
 	defer func() {
-		os.Setenv("BUJO_AI_PROVIDER", originalProvider)
-		os.Setenv("BUJO_MODEL", originalModel)
-		os.Setenv("BUJO_MODEL_DIR", originalModelDir)
+		_ = os.Setenv("BUJO_AI_PROVIDER", originalProvider)
+		_ = os.Setenv("BUJO_MODEL", originalModel)
+		_ = os.Setenv("BUJO_MODEL_DIR", originalModelDir)
 	}()
 
-	os.Setenv("BUJO_AI_PROVIDER", "local")
-	os.Setenv("BUJO_MODEL", "tinyllama")
+	_ = os.Setenv("BUJO_AI_PROVIDER", "local")
+	_ = os.Setenv("BUJO_MODEL", "tinyllama")
 
 	ctx := context.Background()
 	_, err := NewAIClient(ctx)
@@ -75,8 +75,8 @@ func TestNewAIClient_DefaultToLocal(t *testing.T) {
 		os.Setenv("BUJO_AI_PROVIDER", originalProvider)
 	}()
 
-	os.Unsetenv("GEMINI_API_KEY")
-	os.Unsetenv("BUJO_AI_PROVIDER")
+	_ = os.Unsetenv("GEMINI_API_KEY")
+	_ = os.Unsetenv("BUJO_AI_PROVIDER")
 
 	ctx := context.Background()
 	_, err := NewAIClient(ctx)
@@ -90,12 +90,12 @@ func TestNewAIClient_GeminiFallback(t *testing.T) {
 	originalGeminiKey := os.Getenv("GEMINI_API_KEY")
 	originalProvider := os.Getenv("BUJO_AI_PROVIDER")
 	defer func() {
-		os.Setenv("GEMINI_API_KEY", originalGeminiKey)
-		os.Setenv("BUJO_AI_PROVIDER", originalProvider)
+		_ = os.Setenv("GEMINI_API_KEY", originalGeminiKey)
+		_ = os.Setenv("BUJO_AI_PROVIDER", originalProvider)
 	}()
 
-	os.Setenv("GEMINI_API_KEY", "test-key")
-	os.Unsetenv("BUJO_AI_PROVIDER")
+	_ = os.Setenv("GEMINI_API_KEY", "test-key")
+	_ = os.Unsetenv("BUJO_AI_PROVIDER")
 
 	ctx := context.Background()
 	client, err := NewAIClient(ctx)

@@ -8,9 +8,7 @@ import (
 	"errors"
 )
 
-type LocalClient struct {
-	modelPath string
-}
+type LocalClient struct{}
 
 func NewLocalClient(modelPath string) (*LocalClient, error) {
 	return nil, errors.New("local AI not available: bujo was built without CGO support. Use BUJO_AI_PROVIDER=gemini or rebuild with CGO_ENABLED=1")
