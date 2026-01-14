@@ -79,3 +79,29 @@ func TestModelService_GetDefaultModel(t *testing.T) {
 		t.Errorf("GetDefaultModel() = %v, want %v", model.Spec, expected)
 	}
 }
+
+func TestModelService_FindModel(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := NewModelService(tmpDir)
+
+	spec := domain.ModelSpec{Name: "tinyllama", Variant: ""}
+	model, err := svc.FindModel(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("FindModel() error = %v", err)
+	}
+
+	if model.Spec.String() != spec.String() {
+		t.Errorf("FindModel() = %v, want %v", model.Spec, spec)
+	}
+}
+
+func TestModelService_FindModel_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	svc := NewModelService(tmpDir)
+
+	spec := domain.ModelSpec{Name: "nonexistent", Variant: ""}
+	_, err := svc.FindModel(context.Background(), spec)
+	if err == nil {
+		t.Error("FindModel() expected error for nonexistent model, got nil")
+	}
+}

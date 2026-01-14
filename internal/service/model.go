@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -48,18 +49,39 @@ func (s *ModelService) List(ctx context.Context) ([]domain.ModelInfo, error) {
 }
 
 func (s *ModelService) GetDefaultModel(ctx context.Context) (domain.ModelInfo, error) {
+	defaultSpec := domain.ModelSpec{Name: "llama3.2", Variant: "1b"}
+	return s.FindModel(ctx, defaultSpec)
+}
+
+func (s *ModelService) FindModel(ctx context.Context, spec domain.ModelSpec) (domain.ModelInfo, error) {
 	models, err := s.List(ctx)
 	if err != nil {
 		return domain.ModelInfo{}, err
 	}
 
-	defaultSpec := domain.ModelSpec{Name: "llama3.2", Variant: "1b"}
-
 	for _, model := range models {
-		if model.Spec.String() == defaultSpec.String() {
+		if model.Spec.String() == spec.String() {
 			return model, nil
 		}
 	}
 
-	return domain.ModelInfo{}, fmt.Errorf("default model not found: %s", defaultSpec)
+	return domain.ModelInfo{}, fmt.Errorf("model not found: %s", spec)
+}
+
+func (s *ModelService) Remove(ctx context.Context, spec domain.ModelSpec) error {
+	record, err := s.manifest.GetModel(ctx, spec)
+	if err != nil {
+		return fmt.Errorf("model not found in manifest: %w", err)
+	}
+
+	modelPath := filepath.Join(s.modelsDir, record.File)
+	if err := os.Remove(modelPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove model file: %w", err)
+	}
+
+	if err := s.manifest.RemoveModel(ctx, spec); err != nil {
+		return fmt.Errorf("failed to update manifest: %w", err)
+	}
+
+	return nil
 }
