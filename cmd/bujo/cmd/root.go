@@ -78,7 +78,12 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
 			} else {
-				generator := ai.NewGeminiGenerator(geminiClient)
+				promptsDir := getDefaultPromptsDir()
+				promptLoader := ai.NewPromptLoader(promptsDir)
+				if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to create default prompts: %v\n", err)
+				}
+				generator := ai.NewGeminiGeneratorWithLoader(geminiClient, promptLoader)
 				summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
 			}
 		}
@@ -120,4 +125,13 @@ func getDefaultDBPath() string {
 	}
 
 	return filepath.Join(bujoDir, "bujo.db")
+}
+
+func getDefaultPromptsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(home, ".bujo", "prompts")
 }

@@ -122,3 +122,60 @@ bujo uses `gemini-2.0-flash` by default, which provides:
 - Fast response times
 - Good quality summaries
 - Cost-effective for frequent use
+
+## Customizing Prompts
+
+bujo uses customizable prompt templates for AI-generated summaries. On first run, default templates are automatically created in `~/.bujo/prompts/`:
+
+```bash
+~/.bujo/prompts/
+├── summary-daily.txt
+├── summary-weekly.txt
+├── summary-quarterly.txt
+├── summary-annual.txt
+└── ask.txt
+```
+
+### Editing Prompts
+
+You can customize any template by editing the files:
+
+```bash
+# Edit daily summary prompt
+vim ~/.bujo/prompts/summary-daily.txt
+
+# Or use your preferred editor
+code ~/.bujo/prompts/summary-weekly.txt
+```
+
+### Template Variables
+
+Prompts use Go template syntax with these variables:
+
+- `{{.Entries}}` - Your journal entries for the period
+- `{{.Horizon}}` - Summary type (daily/weekly/quarterly/annual)
+- `{{.StartDate}}` - Period start date
+- `{{.EndDate}}` - Period end date
+- `{{.Question}}` - User's question (for ask command, future feature)
+
+### Example Custom Prompt
+
+```
+You are analyzing my {{.Horizon}} journal.
+
+Entries:
+{{range .Entries}}
+- {{.Content}}
+{{end}}
+
+Focus on what I accomplished and what needs attention next.
+```
+
+### Resetting to Defaults
+
+To restore default prompts, simply delete the files and they'll be recreated on next run:
+
+```bash
+rm ~/.bujo/prompts/summary-daily.txt
+bujo summary  # Recreates default daily prompt
+```

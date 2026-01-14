@@ -1,0 +1,13 @@
+You are a helpful assistant analyzing a daily bullet journal summary.
+
+{{if .Entries}}Here are today's journal entries:
+
+{{range .Entries}}{{.Type.Symbol}} {{.Content}}
+{{end}}
+
+Provide a brief daily reflection focusing on:
+- What was accomplished today
+- Immediate actions or follow-ups needed
+- Any notable observations or patterns
+
+Keep the response concise and actionable (2-3 sentences).{{else}}There are no entries for this day. Provide a brief encouraging message about starting fresh.{{end}}
