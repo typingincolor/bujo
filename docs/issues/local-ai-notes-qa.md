@@ -459,11 +459,12 @@ Windows users can still use Gemini for AI features.
 2. **Model service** (`internal/service/model.go`) - list, pull, rm, check, update operations
 3. **Downloader** (`internal/adapter/ai/local/download.go`) - Hugging Face fetcher with progress
 4. **Version checker** (`internal/adapter/ai/local/version.go`) - HF API client for commit comparison
-5. **Local client** (`internal/adapter/ai/local/client.go`) - llama.cpp wrapper implementing GenAIClient
-6. **CLI: model commands** - `bujo model list|pull|rm|check|update`
-7. **CLI: ask command** - `bujo ask "question"`
+5. **Local client** (`internal/adapter/ai/local/client.go`) - llama.cpp wrapper with streaming support
+6. **CLI: model commands** - `bujo model list|pull|rm|check|update|status|verify`
+7. **CLI: ask command** - `bujo ask "question"` with streaming output
 8. **Wire up summary** - Update summary command to use local by default
-9. **Configuration** - Environment variables, defaults
+9. **CI/CD updates** - Platform-specific builds, Homebrew formula
+10. **Configuration** - Environment variables, defaults
 
 ## Suggested Models (Curated List)
 
@@ -633,19 +634,40 @@ Note: Using Gemini API. To switch to local AI:
 3. If `GEMINI_API_KEY` set and no local model → use Gemini
 4. If local model exists → use local (default)
 
-### Response Streaming (Future)
+### Response Streaming (v1)
 
-Show AI output as it generates (better UX for slow models):
+Show AI output as it generates (essential for slow local models):
 
 ```bash
 $ bujo ask "What patterns do you see?"
-Thinking...
-Based on your entries, I notice several patterns:
-- You tend to log more tasks on Mondays...  # streams in real-time
+Based on your ▌                    # appears immediately
+Based on your entries, I notice ▌   # builds up in real-time
+Based on your entries, I notice you exercise more on weekends...
 ```
 
-**Implementation:** Requires callback-based API from llama.cpp bindings.
-Mark as future enhancement - initial version can buffer full response.
+**Why required for v1:**
+- Local models can take 10-60 seconds for longer responses
+- Without streaming, users may think it's frozen
+- Allows early cancellation (Ctrl+C) if response is wrong direction
+
+**Implementation:**
+
+```go
+// GenAIClient interface extended for streaming
+type GenAIClient interface {
+    Generate(ctx context.Context, prompt string) (string, error)
+    GenerateStream(ctx context.Context, prompt string, callback func(token string)) error
+}
+
+// CLI usage
+func (c *AskCmd) Run() error {
+    return c.client.GenerateStream(ctx, prompt, func(token string) {
+        fmt.Print(token)  // Print each token as it arrives
+    })
+}
+```
+
+**llama.cpp support:** The `go-llama.cpp` bindings support token callbacks via `llama.SetCallback()`.
 
 ### Prompt Templates
 
@@ -670,8 +692,7 @@ If the entries don't contain relevant information, say so.`
 1. Should we keep Gemini as a fallback option or remove entirely?
 2. Default model for first-time users - auto-download tinyllama or prompt?
 3. GPU acceleration (Metal on macOS) - worth the complexity?
-4. Response streaming - implement in v1 or defer?
-5. Should `bujo model` be a separate binary to keep core bujo pure Go?
+4. Should `bujo model` be a separate binary to keep core bujo pure Go?
 
 ## Related Files
 
