@@ -29,6 +29,20 @@ bujo model list
 # Download a model
 bujo model pull llama3.2:3b
 
+# Check for updates
+bujo model check
+
+# Output:
+# Updates available:
+#   llama3.2:3b      v1.0.0 → v1.1.0  (2.1 GB)
+#   tinyllama        (up to date)
+
+# Update a specific model
+bujo model update llama3.2:3b
+
+# Update all downloaded models
+bujo model update --all
+
 # Remove a model
 bujo model rm mistral:7b
 ```
@@ -82,16 +96,28 @@ type ModelSpec struct {
     Variant string // e.g., "3b" (optional)
 }
 
-type ModelInfo struct {
-    Spec        ModelSpec
-    Size        int64   // bytes
-    Description string
-    HFRepo      string  // Hugging Face repo path
-    HFFile      string  // GGUF filename
-    LocalPath   string  // empty if not downloaded
+type ModelVersion struct {
+    Major int
+    Minor int
+    Patch int
 }
 
-func AvailableModels() []ModelInfo // curated list
+type ModelInfo struct {
+    Spec           ModelSpec
+    Version        ModelVersion // latest available version
+    Size           int64        // bytes
+    Description    string
+    HFRepo         string       // Hugging Face repo path
+    HFFile         string       // GGUF filename
+    LocalPath      string       // empty if not downloaded
+    LocalVersion   *ModelVersion // nil if not downloaded
+}
+
+func (m ModelInfo) HasUpdate() bool {
+    return m.LocalVersion != nil && m.Version.NewerThan(*m.LocalVersion)
+}
+
+func AvailableModels() []ModelInfo // curated list, fetches latest versions
 func ParseModelName(s string) (ModelSpec, error)
 ```
 
@@ -119,6 +145,10 @@ export BUJO_MODEL_DIR=~/.bujo/models
 
 # Gemini (optional fallback)
 export GEMINI_API_KEY=...
+
+# Update notifications
+export BUJO_UPDATE_CHECK=true           # enable/disable (default: true)
+export BUJO_UPDATE_CHECK_INTERVAL=24h   # how often to check (default: 24h)
 ```
 
 ### Model Storage
@@ -129,8 +159,59 @@ Models downloaded to `~/.bujo/models/` (configurable via `BUJO_MODEL_DIR`):
 ~/.bujo/models/
 ├── llama3.2-3b-q4.gguf
 ├── tinyllama-q4.gguf
-└── manifest.json  # tracks downloaded models
+└── manifest.json  # tracks downloaded models and versions
 ```
+
+**manifest.json structure:**
+
+```json
+{
+  "models": {
+    "llama3.2:3b": {
+      "version": "1.0.0",
+      "file": "llama3.2-3b-q4.gguf",
+      "size": 2147483648,
+      "downloaded_at": "2025-01-14T10:30:00Z",
+      "hf_repo": "TheBloke/Llama-3.2-3B-GGUF",
+      "hf_commit": "abc123"
+    }
+  },
+  "version_cache": {
+    "llama3.2:3b": {
+      "latest_commit": "def456",
+      "checked_at": "2025-01-14T12:00:00Z"
+    }
+  },
+  "notified_updates": ["llama3.2:3b"]
+}
+```
+
+### Version Resolution
+
+Models are versioned by tracking Hugging Face commit SHAs:
+
+1. **On `model pull`**: Store the HF commit SHA in manifest
+2. **On `model check`**: Query HF API for latest commit, compare with stored
+3. **On `model update`**: Download new file, update manifest, remove old file
+
+### Update Notifications
+
+Users are automatically notified of available updates when using AI features:
+
+```bash
+$ bujo ask "What did I work on today?"
+
+💡 Update available: llama3.2:3b v1.0.0 → v1.1.0
+   Run 'bujo model update llama3.2:3b' to update
+
+Based on your entries today, you focused on...
+```
+
+**Notification behavior:**
+- Checks for updates in background (cached for 24 hours)
+- Shows notification once per session per model
+- Can be disabled with `--quiet` flag or `BUJO_UPDATE_CHECK=false`
+- Never blocks on network - uses cached version info if offline
 
 ### CGO Dependency
 
@@ -142,14 +223,15 @@ Uses `github.com/go-skynet/go-llama.cpp` or similar for inference:
 
 ## Implementation Order
 
-1. **Domain types** (`internal/domain/model.go`) - ModelSpec, ModelInfo, AvailableModels
-2. **Model service** (`internal/service/model.go`) - list, pull, rm operations
+1. **Domain types** (`internal/domain/model.go`) - ModelSpec, ModelVersion, ModelInfo
+2. **Model service** (`internal/service/model.go`) - list, pull, rm, check, update operations
 3. **Downloader** (`internal/adapter/ai/local/download.go`) - Hugging Face fetcher with progress
-4. **Local client** (`internal/adapter/ai/local/client.go`) - llama.cpp wrapper implementing GenAIClient
-5. **CLI: model commands** - `bujo model list|pull|rm`
-6. **CLI: ask command** - `bujo ask "question"`
-7. **Wire up summary** - Update summary command to use local by default
-8. **Configuration** - Environment variables, defaults
+4. **Version checker** (`internal/adapter/ai/local/version.go`) - HF API client for commit comparison
+5. **Local client** (`internal/adapter/ai/local/client.go`) - llama.cpp wrapper implementing GenAIClient
+6. **CLI: model commands** - `bujo model list|pull|rm|check|update`
+7. **CLI: ask command** - `bujo ask "question"`
+8. **Wire up summary** - Update summary command to use local by default
+9. **Configuration** - Environment variables, defaults
 
 ## Suggested Models (Curated List)
 
