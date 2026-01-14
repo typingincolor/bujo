@@ -31,7 +31,7 @@ func (h *HTTPClient) Fetch(ctx context.Context, url string, progress func(int64,
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, 0, fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
 	}
 

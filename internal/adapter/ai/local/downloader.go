@@ -53,7 +53,7 @@ func (d *ModelDownloader) Download(ctx context.Context, model domain.ModelInfo, 
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("failed to fetch model: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	destPath := filepath.Join(d.destDir, model.HFFile)
 	tempPath := destPath + ".tmp"
@@ -62,24 +62,24 @@ func (d *ModelDownloader) Download(ctx context.Context, model domain.ModelInfo, 
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	hash := sha256.New()
 	writer := io.MultiWriter(outFile, hash)
 
 	written, err := io.Copy(writer, reader)
 	if err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return DownloadResult{}, fmt.Errorf("failed to write model data: %w", err)
 	}
 
 	if err := outFile.Close(); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return DownloadResult{}, fmt.Errorf("failed to close output file: %w", err)
 	}
 
 	if err := os.Rename(tempPath, destPath); err != nil {
-		os.Remove(tempPath)
+		_ = os.Remove(tempPath)
 		return DownloadResult{}, fmt.Errorf("failed to finalize download: %w", err)
 	}
 
