@@ -71,8 +71,8 @@ func TestNewAIClient_DefaultToLocal(t *testing.T) {
 	originalGeminiKey := os.Getenv("GEMINI_API_KEY")
 	originalProvider := os.Getenv("BUJO_AI_PROVIDER")
 	defer func() {
-		os.Setenv("GEMINI_API_KEY", originalGeminiKey)
-		os.Setenv("BUJO_AI_PROVIDER", originalProvider)
+		_ = os.Setenv("GEMINI_API_KEY", originalGeminiKey)
+		_ = os.Setenv("BUJO_AI_PROVIDER", originalProvider)
 	}()
 
 	_ = os.Unsetenv("GEMINI_API_KEY")
