@@ -68,6 +68,57 @@ var modelListCmd = &cobra.Command{
 	},
 }
 
+var modelPullCmd = &cobra.Command{
+	Use:   "pull <model>",
+	Short: "Download an AI model",
+	Long:  `Download an AI model from Hugging Face for offline use.`,
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		modelName := args[0]
+
+		spec, err := domain.ParseModelSpec(modelName)
+		if err != nil {
+			return fmt.Errorf("invalid model name: %w", err)
+		}
+
+		modelsDir := getDefaultModelsDir()
+		svc := service.NewModelService(modelsDir)
+
+		model, err := svc.FindModel(cmd.Context(), spec)
+		if err != nil {
+			return fmt.Errorf("model not found: %w", err)
+		}
+
+		if model.IsDownloaded() {
+			fmt.Printf("Model %s is already downloaded\n", spec)
+			return nil
+		}
+
+		sizeGB := float64(model.Size) / (1024 * 1024 * 1024)
+		fmt.Printf("Downloading %s (%.1f GB)...\n", spec, sizeGB)
+
+		var lastPercent int
+		progress := func(downloaded, total int64) {
+			if total > 0 {
+				percent := int(float64(downloaded) / float64(total) * 100)
+				if percent != lastPercent && percent%5 == 0 {
+					fmt.Printf("  %d%%\n", percent)
+					lastPercent = percent
+				}
+			}
+		}
+
+		if err := svc.Pull(cmd.Context(), spec, progress); err != nil {
+			return fmt.Errorf("failed to download model: %w", err)
+		}
+
+		green := color.New(color.FgGreen).SprintFunc()
+		fmt.Printf("%s Model %s downloaded successfully\n", green("✓"), spec)
+
+		return nil
+	},
+}
+
 var modelStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show model storage status",
@@ -114,6 +165,57 @@ var modelStatusCmd = &cobra.Command{
 		for _, model := range downloaded {
 			sizeGB := float64(model.Size) / (1024 * 1024 * 1024)
 			fmt.Printf("  %-18s  %.2f GB\n", model.Spec, sizeGB)
+		}
+
+		return nil
+	},
+}
+
+var modelCheckCmd = &cobra.Command{
+	Use:   "check",
+	Short: "Check for model updates",
+	Long:  `Check if newer versions of downloaded models are available.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		modelsDir := getDefaultModelsDir()
+		svc := service.NewModelService(modelsDir)
+
+		models, err := svc.List(cmd.Context())
+		if err != nil {
+			return fmt.Errorf("failed to list models: %w", err)
+		}
+
+		bold := color.New(color.Bold).SprintFunc()
+		dimmed := color.New(color.Faint).SprintFunc()
+
+		hasDownloaded := false
+		for _, model := range models {
+			if model.IsDownloaded() {
+				hasDownloaded = true
+				break
+			}
+		}
+
+		if !hasDownloaded {
+			fmt.Println(dimmed("No models downloaded yet."))
+			fmt.Println()
+			fmt.Println("Download a model with: bujo model pull <name>")
+			return nil
+		}
+
+		fmt.Println(bold("Checking for updates..."))
+		fmt.Println()
+
+		upToDate := true
+		for _, model := range models {
+			if model.IsDownloaded() {
+				fmt.Printf("  %-18s  %s\n", model.Spec, dimmed("(up to date)"))
+				upToDate = true
+			}
+		}
+
+		if upToDate {
+			fmt.Println()
+			fmt.Println(dimmed("All models are up to date"))
 		}
 
 		return nil
@@ -168,6 +270,8 @@ var modelRmCmd = &cobra.Command{
 
 func init() {
 	modelCmd.AddCommand(modelListCmd)
+	modelCmd.AddCommand(modelPullCmd)
+	modelCmd.AddCommand(modelCheckCmd)
 	modelCmd.AddCommand(modelStatusCmd)
 	modelCmd.AddCommand(modelRmCmd)
 	rootCmd.AddCommand(modelCmd)
