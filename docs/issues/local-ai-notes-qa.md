@@ -221,6 +221,238 @@ Uses `github.com/go-skynet/go-llama.cpp` or similar for inference:
 - Models in GGUF format from Hugging Face
 - First-run downloads model if not present
 
+## CI/CD and Distribution Changes
+
+### Current State (Pure Go)
+
+```yaml
+# .goreleaser.yaml - simple cross-compilation
+builds:
+  - env:
+      - CGO_ENABLED=0  # No C dependencies
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+```
+
+- Single `go build` works everywhere
+- Cross-compilation from any platform
+- `brew install typingincolor/tap/bujo` downloads pre-built binary
+
+### With CGO: Build Strategy Options
+
+#### Option A: Platform-Specific Builds (Recommended)
+
+Build natively on each platform instead of cross-compiling:
+
+```yaml
+# .github/workflows/release.yml
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - run: |
+          brew install llama.cpp
+          CGO_ENABLED=1 GOARCH=${{ matrix.arch }} go build -o bujo-darwin-${{ matrix.arch }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - run: |
+          sudo apt-get install -y build-essential
+          # Build llama.cpp from source or use pre-built
+          CGO_ENABLED=1 go build -o bujo-linux-${{ matrix.arch }}
+```
+
+**Pros:** Native builds, optimal performance, Metal acceleration on macOS
+**Cons:** Slower CI (4 separate jobs), more complex workflow
+
+#### Option B: Two Binary Variants
+
+Ship both `bujo` (pure Go, no AI) and `bujo-ai` (with CGO):
+
+```yaml
+builds:
+  - id: bujo-core
+    env: [CGO_ENABLED=0]
+    # ... cross-compile all platforms
+
+  - id: bujo-ai
+    env: [CGO_ENABLED=1]
+    # ... native builds only
+```
+
+**Pros:** Users choose complexity level
+**Cons:** Two binaries to maintain, confusing UX
+
+#### Option C: Runtime Plugin
+
+Keep bujo pure Go, download AI engine as separate binary on first use:
+
+```bash
+$ bujo ask "question"
+# AI engine not found. Downloading bujo-ai-engine for darwin-arm64...
+# Downloaded to ~/.bujo/bin/bujo-ai-engine
+```
+
+**Pros:** Simple main binary, optional AI
+**Cons:** Complex architecture, two binaries anyway
+
+### Recommended: Option A with Homebrew Changes
+
+#### Updated GoReleaser Config
+
+```yaml
+# .goreleaser.yaml
+version: 2
+
+builds:
+  - id: bujo-darwin-amd64
+    main: ./cmd/bujo
+    binary: bujo
+    goos: [darwin]
+    goarch: [amd64]
+    env: [CGO_ENABLED=1]
+    flags: [-tags=cgo]
+
+  - id: bujo-darwin-arm64
+    main: ./cmd/bujo
+    binary: bujo
+    goos: [darwin]
+    goarch: [arm64]
+    env: [CGO_ENABLED=1]
+    flags: [-tags=cgo]
+
+  - id: bujo-linux-amd64
+    main: ./cmd/bujo
+    binary: bujo
+    goos: [linux]
+    goarch: [amd64]
+    env: [CGO_ENABLED=1]
+
+  # Windows: CGO_ENABLED=0 fallback (no local AI, Gemini only)
+  - id: bujo-windows
+    main: ./cmd/bujo
+    binary: bujo
+    goos: [windows]
+    goarch: [amd64, arm64]
+    env: [CGO_ENABLED=0]
+    flags: [-tags=noai]
+```
+
+#### Updated CI Workflow
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            cgo: "1"
+          - os: ubuntu-latest
+            cgo: "1"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+      - name: Install llama.cpp (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llama.cpp
+      - name: Install llama.cpp (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          git clone https://github.com/ggerganov/llama.cpp
+          cd llama.cpp && make && sudo make install
+      - run: CGO_ENABLED=${{ matrix.cgo }} go test -v ./...
+```
+
+#### Updated Homebrew Formula
+
+```ruby
+# Formula/bujo.rb
+class Bujo < Formula
+  desc "Command-line Bullet Journal with local AI"
+  homepage "https://github.com/typingincolor/bujo"
+  license "MIT"
+
+  depends_on "llama.cpp"  # NEW: runtime dependency
+
+  # Pre-built bottles for common platforms
+  bottle do
+    root_url "https://github.com/typingincolor/bujo/releases/download/v#{version}"
+    sha256 cellar: :any, arm64_sonoma: "..."
+    sha256 cellar: :any, ventura: "..."
+  end
+
+  def install
+    bin.install "bujo"
+  end
+
+  def caveats
+    <<~EOS
+      To use local AI features, download a model:
+        bujo model pull tinyllama
+
+      Models are stored in ~/.bujo/models/
+    EOS
+  end
+end
+```
+
+### Homebrew: Will It Still Work?
+
+**Yes**, but with changes:
+
+| Aspect | Before | After |
+|--------|--------|-------|
+| Install command | `brew install typingincolor/tap/bujo` | Same |
+| Dependencies | None | `llama.cpp` |
+| Binary type | Static | Dynamic (links llama.cpp) |
+| First run | Works immediately | Needs `bujo model pull` |
+| Binary size | ~15 MB | ~20-25 MB |
+
+### User Experience
+
+```bash
+# Install (same as before)
+$ brew install typingincolor/tap/bujo
+
+# First AI command prompts for model
+$ bujo ask "What did I do today?"
+No AI model found. Available models:
+  tinyllama     (637 MB)  - Fast, good for testing
+  llama3.2:1b   (1.3 GB)  - Recommended
+
+Download tinyllama? [Y/n] y
+Downloading tinyllama... 637 MB / 637 MB [================] 100%
+Model ready!
+
+Based on your entries today...
+```
+
+### Windows Considerations
+
+Windows builds will use `CGO_ENABLED=0` with a `noai` build tag:
+
+```go
+// +build noai
+
+package ai
+
+func NewLocalClient() (GenAIClient, error) {
+    return nil, errors.New("local AI not available on this platform, use BUJO_AI_PROVIDER=gemini")
+}
+```
+
+Windows users can still use Gemini for AI features.
+
 ## Implementation Order
 
 1. **Domain types** (`internal/domain/model.go`) - ModelSpec, ModelVersion, ModelInfo
