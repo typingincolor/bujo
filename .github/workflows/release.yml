@@ -28,6 +28,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Tidy modules
+        run: go mod tidy
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:

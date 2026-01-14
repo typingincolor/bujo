@@ -25,6 +25,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Tidy modules
+        run: go mod tidy
+
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 

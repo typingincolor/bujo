@@ -27,6 +27,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Tidy modules
+        run: go mod tidy
+
       - name: Run benchmarks on PR
         run: |
           # Run benchmarks and save results

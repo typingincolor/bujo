@@ -25,6 +25,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Tidy modules
+        run: go mod tidy
+
       - name: Run tests with coverage on PR
         run: |
           go test -coverprofile=/tmp/pr-coverage.out ./...
