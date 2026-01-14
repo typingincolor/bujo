@@ -1,8 +1,44 @@
-# AI Summary Setup Guide
+# AI Setup Guide
 
-This guide explains how to set up Google Gemini API for AI-powered summaries in bujo.
+This guide explains how to set up AI-powered summaries in bujo. You can choose between:
 
-## Prerequisites
+- **Local AI** (Recommended): Run AI models locally for complete privacy and offline use
+- **Google Gemini API**: Cloud-based AI with fast response times
+
+## Quick Start: Local AI (Recommended)
+
+Local AI runs entirely on your machine - no data leaves your computer, works offline, and has no API costs.
+
+### 1. Download a Model
+
+```bash
+# List available models
+bujo model list
+
+# Download the recommended model (1.3 GB)
+bujo model pull llama3.2:1b
+
+# Or try the smallest model for testing (637 MB)
+bujo model pull tinyllama
+```
+
+### 2. Use AI Features
+
+```bash
+# Generate summaries
+bujo summary daily
+bujo summary weekly
+
+# The local model is used automatically
+```
+
+That's it! Your AI runs locally with complete privacy.
+
+## Alternative: Google Gemini API
+
+If you prefer cloud-based AI, you can use Google's Gemini API instead.
+
+### Prerequisites
 
 - A Google account
 - bujo installed and working
@@ -82,11 +118,83 @@ bujo summary
 
 If configured correctly, you'll see an AI-generated summary of your journal entries.
 
+## AI Provider Configuration
+
+### Choosing a Provider
+
+bujo automatically selects the AI provider based on your configuration:
+
+1. **If `BUJO_AI_PROVIDER` is set**: Uses the specified provider (`local` or `gemini`)
+2. **If `GEMINI_API_KEY` is set**: Falls back to Gemini
+3. **Otherwise**: Tries to use local AI (requires downloaded model)
+
+### Explicit Provider Selection
+
+Force a specific provider:
+
+```bash
+# Always use local AI
+export BUJO_AI_PROVIDER=local
+
+# Always use Gemini
+export BUJO_AI_PROVIDER=gemini
+```
+
+### Local Model Configuration
+
+```bash
+# Specify which model to use (default: llama3.2:1b)
+export BUJO_MODEL=tinyllama
+
+# Change models directory (default: ~/.bujo/models)
+export BUJO_MODEL_DIR=/path/to/models
+```
+
+### Example Configurations
+
+**Local AI only:**
+```bash
+export BUJO_AI_PROVIDER=local
+export BUJO_MODEL=llama3.2:1b
+```
+
+**Gemini only:**
+```bash
+export BUJO_AI_PROVIDER=gemini
+export GEMINI_API_KEY=your-api-key-here
+```
+
+**Auto-select (Gemini with local fallback):**
+```bash
+export GEMINI_API_KEY=your-api-key-here
+# Automatically uses Gemini when online, local when GEMINI_API_KEY is unset
+```
+
 ## Troubleshooting
+
+### "model not downloaded"
+
+You're trying to use local AI but haven't downloaded a model yet:
+
+```bash
+# See available models
+bujo model list
+
+# Download one
+bujo model pull tinyllama
+```
+
+### "local AI not available: bujo was built without CGO support"
+
+Your bujo binary was compiled without CGO, which is required for local AI. Options:
+
+1. **Homebrew users**: `brew upgrade bujo` to get a CGO-enabled version
+2. **Manual install**: Rebuild with `CGO_ENABLED=1 go build ./cmd/bujo`
+3. **Use Gemini instead**: Set `BUJO_AI_PROVIDER=gemini` and configure API key
 
 ### "GEMINI_API_KEY environment variable is required"
 
-The API key is not set. Check:
+You're trying to use Gemini but the API key isn't set. Check:
 - `.env` file exists and contains `GEMINI_API_KEY=...`
 - No typos in the variable name
 - File permissions allow reading
@@ -103,24 +211,56 @@ The API key is not set. Check:
 - Try again - this can be a transient issue
 - Check if you have API quota remaining
 
-## Security Notes
+## Security and Privacy
 
-- Never commit `.env` files to version control
-- Add `.env` to your `.gitignore`
-- Use restrictive file permissions: `chmod 600 ~/.bujo/.env`
-- Consider using Google Cloud's API key restrictions to limit usage
+### Local AI
 
-## API Costs
+- **Complete privacy**: Your journal data never leaves your computer
+- **Offline use**: Works without internet connection
+- **No API keys**: No credentials to manage or leak
+- **No data retention**: No third-party stores your data
+
+### Gemini API
+
+- **Cloud processing**: Journal entries are sent to Google's servers
+- **API key security**: Never commit `.env` files to version control
+- **File permissions**: Use `chmod 600 ~/.bujo/.env`
+- **API restrictions**: Consider using Google Cloud's API key restrictions
+
+## Costs
+
+### Local AI
+
+- **Free**: No API costs
+- **Disk space**: Models require 0.6-4 GB storage
+- **One-time download**: No ongoing costs
+- **Hardware**: Runs on any modern computer
+
+### Gemini API
 
 As of 2025, Gemini API has a generous free tier:
 - Gemini 2.0 Flash: Free for most personal use
 - Check [Google AI pricing](https://ai.google.dev/pricing) for current rates
 
-## Model Used
+## Model Information
+
+### Local Models
+
+bujo supports several curated models optimized for journal summaries:
+
+| Model | Size | Quality | Speed | Memory |
+|-------|------|---------|-------|--------|
+| tinyllama | 637 MB | Good | Fast | 1 GB RAM |
+| llama3.2:1b | 1.3 GB | Better | Fast | 2 GB RAM |
+| llama3.2:3b | 2.0 GB | Best | Medium | 4 GB RAM |
+| phi-3-mini | 2.3 GB | Better | Fast | 3 GB RAM |
+| mistral:7b | 4.1 GB | Excellent | Slow | 8 GB RAM |
+
+### Gemini Model
 
 bujo uses `gemini-2.0-flash` by default, which provides:
-- Fast response times
-- Good quality summaries
+- Fast response times (~1-2 seconds)
+- High quality summaries
 - Cost-effective for frequent use
 
 ## Customizing Prompts
