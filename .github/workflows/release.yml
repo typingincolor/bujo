@@ -28,6 +28,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Install llama.cpp
+        run: brew install llama.cpp
+
       - name: Tidy modules
         run: go mod tidy
 
