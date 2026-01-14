@@ -38,8 +38,12 @@ jobs:
 
       - name: Checkout base branch
         run: |
+          git checkout -- go.mod go.sum
           git fetch origin ${{ github.base_ref }}
           git checkout origin/${{ github.base_ref }}
+
+      - name: Tidy modules (base)
+        run: go mod tidy
 
       - name: Run benchmarks on base
         run: |
