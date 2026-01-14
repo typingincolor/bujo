@@ -692,7 +692,17 @@ If the entries don't contain relevant information, say so.`
 1. Should we keep Gemini as a fallback option or remove entirely?
 2. Default model for first-time users - auto-download tinyllama or prompt?
 3. GPU acceleration (Metal on macOS) - worth the complexity?
-4. Should `bujo model` be a separate binary to keep core bujo pure Go?
+
+## Decision: Single Binary with CGO
+
+A separate binary was considered to keep core bujo pure Go, but rejected due to TUI requirements:
+
+- **Streaming responses** need direct integration with bubbletea models
+- **Progress bars** for downloads require native TUI rendering
+- **Interactive prompts** ("Download model?") are simpler without IPC
+- **Error handling** is cleaner within single process
+
+The CGO build complexity is acceptable given the TUI integration benefits.
 
 ## Related Files
 
