@@ -51,12 +51,23 @@ Windows builds do not support local AI. Use Gemini API instead by setting `GEMIN
 git clone https://github.com/typingincolor/bujo.git
 cd bujo
 
+# Initialize llama.cpp submodule (required for go-llama.cpp bindings)
+LLAMA_GO_PATH=$(go env GOPATH)/pkg/mod/github.com/go-skynet/go-llama.cpp@v0.0.0-20240314183750-6a8041ef6b46
+if [ -d "$LLAMA_GO_PATH" ] && [ ! -d "$LLAMA_GO_PATH/llama.cpp" ]; then
+  cd "$LLAMA_GO_PATH"
+  chmod -R u+w .
+  git clone --depth 1 https://github.com/ggerganov/llama.cpp llama.cpp
+  cd -
+fi
+
 # Build with CGO
 CGO_ENABLED=1 go build -tags=cgo -o bujo ./cmd/bujo
 
 # Install to GOPATH/bin
 CGO_ENABLED=1 go install -tags=cgo ./cmd/bujo
 ```
+
+**Note**: The go-llama.cpp library expects llama.cpp source code as a git submodule, but `go get` doesn't clone submodules. The commands above manually clone llama.cpp into the correct location.
 
 ### Without Local AI (CGO Disabled)
 
