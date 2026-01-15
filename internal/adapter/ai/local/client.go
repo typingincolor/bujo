@@ -1,61 +1,51 @@
-//go:build cgo
-// +build cgo
-
 package local
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
-	llama "github.com/go-skynet/go-llama.cpp"
+	"github.com/ollama/ollama/api"
 )
 
 type LocalClient struct {
-	model     *llama.LLama
-	modelPath string
-	closed    bool
+	client    *api.Client
+	modelName string
 }
 
-func NewLocalClient(modelPath string) (*LocalClient, error) {
-	if modelPath == "" {
-		return nil, errors.New("model path cannot be empty")
+func NewLocalClient(modelName string) (*LocalClient, error) {
+	if modelName == "" {
+		return nil, errors.New("model name cannot be empty")
 	}
 
-	if _, err := os.Stat(modelPath); err != nil {
-		return nil, fmt.Errorf("model file not found: %w", err)
-	}
-
-	model, err := llama.New(modelPath, llama.EnableF16Memory, llama.SetContext(2048))
+	client, err := api.ClientFromEnvironment()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load model: %w", err)
+		return nil, fmt.Errorf("failed to create Ollama client: %w (is Ollama running?)", err)
 	}
 
 	return &LocalClient{
-		model:     model,
-		modelPath: modelPath,
-		closed:    false,
+		client:    client,
+		modelName: modelName,
 	}, nil
 }
 
 func (c *LocalClient) Generate(ctx context.Context, prompt string) (string, error) {
-	if c.closed {
-		return "", errors.New("client is closed")
+	var result string
+	req := &api.GenerateRequest{
+		Model:  c.modelName,
+		Prompt: prompt,
+		Stream: new(bool),
+		Options: map[string]interface{}{
+			"temperature": 0.7,
+			"top_p":       0.9,
+		},
 	}
 
-	select {
-	case <-ctx.Done():
-		return "", ctx.Err()
-	default:
-	}
+	err := c.client.Generate(ctx, req, func(resp api.GenerateResponse) error {
+		result += resp.Response
+		return nil
+	})
 
-	result, err := c.model.Predict(
-		prompt,
-		llama.SetTemperature(0.7),
-		llama.SetTopP(0.9),
-		llama.SetTokens(512),
-	)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate response: %w", err)
 	}
@@ -64,33 +54,19 @@ func (c *LocalClient) Generate(ctx context.Context, prompt string) (string, erro
 }
 
 func (c *LocalClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
-	if c.closed {
-		return errors.New("client is closed")
+	req := &api.GenerateRequest{
+		Model:  c.modelName,
+		Prompt: prompt,
+		Options: map[string]interface{}{
+			"temperature": 0.7,
+			"top_p":       0.9,
+		},
 	}
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
-	tokenCallback := func(token string) bool {
-		select {
-		case <-ctx.Done():
-			return false
-		default:
-			callback(token)
-			return true
-		}
-	}
-
-	_, err := c.model.Predict(
-		prompt,
-		llama.SetTemperature(0.7),
-		llama.SetTopP(0.9),
-		llama.SetTokens(512),
-		llama.SetTokenCallback(tokenCallback),
-	)
+	err := c.client.Generate(ctx, req, func(resp api.GenerateResponse) error {
+		callback(resp.Response)
+		return nil
+	})
 
 	if err != nil {
 		return fmt.Errorf("failed to generate streaming response: %w", err)
@@ -100,11 +76,5 @@ func (c *LocalClient) GenerateStream(ctx context.Context, prompt string, callbac
 }
 
 func (c *LocalClient) Close() error {
-	if c.closed {
-		return nil
-	}
-
-	c.closed = true
-	c.model.Free()
 	return nil
 }

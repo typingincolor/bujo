@@ -5,11 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/typingincolor/bujo/internal/adapter/ai/local"
-	"github.com/typingincolor/bujo/internal/domain"
-	"github.com/typingincolor/bujo/internal/service"
 )
 
 func NewAIClient(ctx context.Context) (GenAIClient, error) {
@@ -40,34 +37,10 @@ func NewAIClient(ctx context.Context) (GenAIClient, error) {
 }
 
 func newLocalClient(ctx context.Context) (GenAIClient, error) {
-	modelSpec := os.Getenv("BUJO_MODEL")
-	if modelSpec == "" {
-		modelSpec = "llama3.2:1b"
+	modelName := os.Getenv("BUJO_MODEL")
+	if modelName == "" {
+		modelName = "llama3.2:1b"
 	}
 
-	modelsDir := os.Getenv("BUJO_MODEL_DIR")
-	if modelsDir == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get home directory: %w", err)
-		}
-		modelsDir = filepath.Join(home, ".bujo", "models")
-	}
-
-	spec, err := domain.ParseModelSpec(modelSpec)
-	if err != nil {
-		return nil, fmt.Errorf("invalid BUJO_MODEL: %w", err)
-	}
-
-	modelService := service.NewModelService(modelsDir)
-	model, err := modelService.FindModel(ctx, spec)
-	if err != nil {
-		return nil, fmt.Errorf("model not found: %w. Download with: bujo model pull %s", err, spec)
-	}
-
-	if !model.IsDownloaded() {
-		return nil, fmt.Errorf("model %s not downloaded. Download with: bujo model pull %s", spec, spec)
-	}
-
-	return local.NewLocalClient(model.LocalPath)
+	return local.NewLocalClient(modelName)
 }

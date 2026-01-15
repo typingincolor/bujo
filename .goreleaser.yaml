@@ -6,80 +6,14 @@ before:
     - go generate ./...
 
 builds:
-  - id: bujo-darwin-amd64
-    main: ./cmd/bujo
-    binary: bujo
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-    goarch:
-      - amd64
-    flags:
-      - -tags=cgo
-    ldflags:
-      - -s -w
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit={{.Commit}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.date={{.Date}}
-
-  - id: bujo-darwin-arm64
-    main: ./cmd/bujo
-    binary: bujo
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-    goarch:
-      - arm64
-    flags:
-      - -tags=cgo
-    ldflags:
-      - -s -w
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit={{.Commit}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.date={{.Date}}
-
-  - id: bujo-linux-amd64
-    main: ./cmd/bujo
-    binary: bujo
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
-    goarch:
-      - amd64
-    flags:
-      - -tags=cgo
-    ldflags:
-      - -s -w
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit={{.Commit}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.date={{.Date}}
-
-  - id: bujo-linux-arm64
-    main: ./cmd/bujo
-    binary: bujo
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
-    goarch:
-      - arm64
-    flags:
-      - -tags=cgo
-    ldflags:
-      - -s -w
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit={{.Commit}}
-      - -X github.com/typingincolor/bujo/cmd/bujo/cmd.date={{.Date}}
-
-  - id: bujo-windows
+  - id: bujo
     main: ./cmd/bujo
     binary: bujo
     env:
       - CGO_ENABLED=0
     goos:
+      - darwin
+      - linux
       - windows
     goarch:
       - amd64
@@ -136,18 +70,15 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/typingincolor/bujo"
-    description: "A command-line Bullet Journal with local AI-powered summaries"
+    description: "A command-line Bullet Journal with AI-powered summaries"
     license: "MIT"
-    dependencies:
-      - name: llama.cpp
     install: |
       bin.install "bujo"
     test: |
       system "#{bin}/bujo", "version"
     caveats: |
-      To use local AI features, download a model:
-        bujo model pull tinyllama
-
-      Models are stored in ~/.bujo/models/
+      For local AI, install and run Ollama:
+        brew install ollama
+        ollama pull llama3.2:1b
 
       For cloud AI, set GEMINI_API_KEY instead.
