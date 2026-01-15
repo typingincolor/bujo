@@ -34,6 +34,16 @@ jobs:
       - name: Tidy modules
         run: go mod tidy
 
+      - name: Initialize llama.cpp submodule for go-llama.cpp bindings
+        run: |
+          # go-llama.cpp expects llama.cpp source as a submodule
+          LLAMA_GO_PATH=$(go env GOPATH)/pkg/mod/github.com/go-skynet/go-llama.cpp@v0.0.0-20240314183750-6a8041ef6b46
+          if [ -d "$LLAMA_GO_PATH" ] && [ ! -d "$LLAMA_GO_PATH/llama.cpp" ]; then
+            cd "$LLAMA_GO_PATH"
+            chmod -R u+w .
+            git clone --depth 1 https://github.com/ggerganov/llama.cpp llama.cpp
+          fi
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
