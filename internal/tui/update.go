@@ -173,7 +173,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case summaryTokenMsg:
 		m.summaryState.streaming = true
 		m.summaryState.accumulatedText += msg.token
-		return m, m.pollStreamCmd()
+		return m, nil
 
 	case summaryLoadedMsg:
 		m.summaryState.loading = false

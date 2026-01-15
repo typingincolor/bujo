@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -101,14 +102,15 @@ func (s *SummaryService) CheckCacheOrGenerate(ctx context.Context, horizon domai
 		return nil, err
 	}
 
-	var content string
+	var contentBuilder strings.Builder
 	err = s.generator.GenerateSummaryStream(ctx, entries, horizon, func(token string) {
-		content += token
+		contentBuilder.WriteString(token)
 		tokenCallback(token)
 	})
 	if err != nil {
 		return nil, err
 	}
+	content := contentBuilder.String()
 
 	summary := domain.Summary{
 		EntityID:  domain.NewEntityID(),

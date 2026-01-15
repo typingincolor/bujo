@@ -941,17 +941,25 @@ type streamChannels struct {
 	done    chan bool
 }
 
-var activeStreamChans *streamChannels
+func (s *streamChannels) cleanup() {
+	if s != nil {
+		close(s.tokens)
+		close(s.err)
+		close(s.summary)
+		close(s.done)
+	}
+}
 
 func (m Model) loadSummaryCmd() tea.Cmd {
 	horizon := m.summaryState.horizon
 	refDate := m.summaryState.refDate
+
 	return func() tea.Msg {
 		if m.summaryService == nil {
 			return summaryErrorMsg{fmt.Errorf("AI not configured. Set BUJO_MODEL or GEMINI_API_KEY")}
 		}
 
-		activeStreamChans = &streamChannels{
+		chans := &streamChannels{
 			tokens:  make(chan string, 100),
 			err:     make(chan error, 1),
 			summary: make(chan *domain.Summary, 1),
@@ -961,47 +969,50 @@ func (m Model) loadSummaryCmd() tea.Cmd {
 		go func() {
 			ctx := context.Background()
 			summary, err := m.summaryService.CheckCacheOrGenerate(ctx, horizon, refDate, func(token string) {
-				if activeStreamChans != nil {
-					activeStreamChans.tokens <- token
+				select {
+				case chans.tokens <- token:
+				case <-chans.done:
+					return
 				}
 			})
 
-			if activeStreamChans != nil {
-				if err != nil {
-					activeStreamChans.err <- err
-				} else {
-					activeStreamChans.summary <- summary
-				}
-				activeStreamChans.done <- true
+			if err != nil {
+				chans.err <- err
+			} else {
+				chans.summary <- summary
 			}
+			chans.done <- true
 		}()
 
-		return m.pollStreamCmd()()
+		return m.pollStreamCmdWithChans(chans)()
 	}
 }
 
-func (m Model) pollStreamCmd() tea.Cmd {
+func (m Model) pollStreamCmdWithChans(chans *streamChannels) tea.Cmd {
 	return func() tea.Msg {
-		if activeStreamChans == nil {
+		if chans == nil {
 			return nil
 		}
 
 		select {
-		case token := <-activeStreamChans.tokens:
+		case token, ok := <-chans.tokens:
+			if !ok {
+				return nil
+			}
 			return summaryTokenMsg{token: token}
-		case err := <-activeStreamChans.err:
-			activeStreamChans = nil
+		case err := <-chans.err:
+			chans.cleanup()
 			return summaryErrorMsg{err: err}
-		case summary := <-activeStreamChans.summary:
-			activeStreamChans = nil
+		case summary := <-chans.summary:
+			chans.cleanup()
 			return summaryLoadedMsg{summary: summary}
 		case <-time.After(50 * time.Millisecond):
 			select {
-			case <-activeStreamChans.done:
+			case <-chans.done:
 				return nil
 			default:
 				return tea.Tick(50*time.Millisecond, func(time.Time) tea.Msg {
-					return m.pollStreamCmd()()
+					return m.pollStreamCmdWithChans(chans)()
 				})()
 			}
 		}
