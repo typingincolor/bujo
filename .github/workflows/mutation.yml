@@ -32,7 +32,7 @@ jobs:
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 
       - name: Run mutation testing on domain
-        run: CGO_ENABLED=0 gremlins unleash ./internal/domain
+        run: gremlins unleash ./internal/domain
 
       - name: Run mutation testing on service
-        run: CGO_ENABLED=0 gremlins unleash ./internal/service
+        run: gremlins unleash ./internal/service

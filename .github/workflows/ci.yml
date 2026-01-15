@@ -38,8 +38,8 @@ jobs:
       - name: Download dependencies
         run: go mod tidy
 
-      - name: Run tests (CGO disabled for compatibility)
-        run: CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
+      - name: Run tests
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -62,14 +62,12 @@ jobs:
         run: go mod tidy
 
       - name: Run go vet
-        run: CGO_ENABLED=0 go vet ./...
+        run: go vet ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-        env:
-          CGO_ENABLED: 0
 
   build:
     name: Build
@@ -90,7 +88,5 @@ jobs:
       - name: Tidy modules
         run: go mod tidy
 
-      - name: Build (verify compilation)
-        run: CGO_ENABLED=0 go build -v ./cmd/bujo
-        # Note: CGO builds with local AI support are tested in the release workflow
-        # where llama.cpp is properly installed. This build verifies basic compilation.
+      - name: Build
+        run: go build -v ./cmd/bujo
