@@ -91,6 +91,9 @@ jobs:
           CGO_ENABLED=0 go test -coverprofile=/tmp/pr-coverage.out ./... 2>/dev/null || true
           go tool cover -func=/tmp/pr-coverage.out | grep -v "total:" | awk '{print $1,$3}' | sort > /tmp/pr-packages.txt
 
+          # Stash any changes from go mod tidy before checking out
+          git stash --include-untracked || true
+
           # Checkout PR again to post comment
           git checkout ${{ github.event.pull_request.head.sha }}
 
