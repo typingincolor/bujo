@@ -46,14 +46,16 @@ Examples:
 
 		fmt.Printf("%s\n", bold(fmt.Sprintf("Generating %s summary...", horizon)))
 		fmt.Println(dimmed(strings.Repeat("-", 50)))
+		fmt.Println()
 
-		summary, err := summaryService.GetSummaryWithRefresh(cmd.Context(), horizon, refDate, summaryRefresh)
+		summary, err := summaryService.CheckCacheOrGenerate(cmd.Context(), horizon, refDate, func(token string) {
+			fmt.Print(token)
+		})
 		if err != nil {
 			return fmt.Errorf("failed to generate summary: %w", err)
 		}
 
 		fmt.Println()
-		fmt.Println(summary.Content)
 		fmt.Println()
 		fmt.Printf("%s %s to %s\n",
 			dimmed("Period:"),
