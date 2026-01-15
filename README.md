@@ -7,10 +7,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/v/release/typingincolor/bujo)](https://github.com/typingincolor/bujo/releases/latest)
 
-A command-line Bullet Journal for rapid task capture, habit tracking, and daily planning.
+A command-line Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.
 
 ## Features
 
+- **Local AI Summaries** - Generate journal summaries with complete privacy (runs offline on your machine)
 - **Rapid Entry** - Add tasks, notes, and events with simple symbols
 - **Hierarchical Notes** - Indent entries to create parent-child relationships
 - **Habit Tracking** - Track daily habits with streaks and completion rates (7, 30, or 90-day views)
@@ -45,9 +46,55 @@ go install github.com/typingincolor/bujo/cmd/bujo@latest
 Download the latest release for your platform from [GitHub Releases](https://github.com/typingincolor/bujo/releases).
 
 Available platforms:
-- macOS (Intel and Apple Silicon)
-- Linux (amd64 and arm64)
-- Windows (amd64)
+- macOS (Intel and Apple Silicon) - includes local AI support
+- Linux (amd64 and arm64) - includes local AI support
+- Windows (amd64) - cloud AI only (Gemini API required)
+
+### Building from Source
+
+See [BUILD.md](BUILD.md) for detailed build instructions, including local AI setup.
+
+## AI Setup
+
+bujo supports two AI backends for generating journal summaries:
+
+### Local AI (Recommended)
+
+Run AI models entirely on your machine - complete privacy, works offline, no API costs:
+
+```bash
+# Download a model (one-time setup)
+ollama pull llama3.2:1b
+
+# Generate summaries
+bujo summary daily
+bujo summary weekly
+```
+
+**Available Models:**
+- `tinyllama` (637 MB) - Fast, good for testing
+- `llama3.2:1b` (1.3 GB) - Recommended for most users
+- `llama3.2:3b` (2.0 GB) - Higher quality summaries
+- `mistral:7b` (4.1 GB) - Best quality, needs more RAM
+
+### Cloud AI (Gemini)
+
+Use Google's Gemini API for fast cloud-based summaries:
+
+```bash
+# Set API key (see docs/AI_SETUP.md for details)
+export GEMINI_API_KEY="your-key-here"
+
+# Generate summaries
+bujo summary daily
+```
+
+**Configuration:**
+- Local AI is used by default if a model is downloaded
+- Set `BUJO_AI_PROVIDER=gemini` to force Gemini
+- Set `BUJO_AI_PROVIDER=local` to force local AI
+
+See [docs/AI_SETUP.md](docs/AI_SETUP.md) for complete configuration details.
 
 ## Quick Start
 

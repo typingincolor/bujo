@@ -73,14 +73,17 @@ var rootCmd = &cobra.Command{
 		statsService = service.NewStatsService(entryRepo, habitRepo, habitLogRepo)
 
 		summaryRepo := sqlite.NewSummaryRepository(db)
-		if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
-			geminiClient, err := ai.NewGeminiClient(cmd.Context(), apiKey)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
-			} else {
-				generator := ai.NewGeminiGenerator(geminiClient)
-				summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
+		aiClient, err := ai.NewAIClient(cmd.Context())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
+		} else {
+			promptsDir := getDefaultPromptsDir()
+			promptLoader := ai.NewPromptLoader(promptsDir)
+			if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to create default prompts: %v\n", err)
 			}
+			generator := ai.NewGeminiGeneratorWithLoader(aiClient, promptLoader)
+			summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
 		}
 
 		return nil
@@ -120,4 +123,13 @@ func getDefaultDBPath() string {
 	}
 
 	return filepath.Join(bujoDir, "bujo.db")
+}
+
+func getDefaultPromptsDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	return filepath.Join(home, ".bujo", "prompts")
 }

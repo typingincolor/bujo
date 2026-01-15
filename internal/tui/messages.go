@@ -135,6 +135,10 @@ type summaryErrorMsg struct {
 	err error
 }
 
+type summaryTokenMsg struct {
+	token string
+}
+
 type searchResultsMsg struct {
 	results []domain.Entry
 	query   string

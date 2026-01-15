@@ -15,10 +15,10 @@ func TestSummaryHorizon_IsValid(t *testing.T) {
 	}{
 		{"daily is valid", SummaryHorizonDaily, true},
 		{"weekly is valid", SummaryHorizonWeekly, true},
-		{"quarterly is valid", SummaryHorizonQuarterly, true},
-		{"annual is valid", SummaryHorizonAnnual, true},
 		{"empty is invalid", SummaryHorizon(""), false},
 		{"unknown is invalid", SummaryHorizon("monthly"), false},
+		{"quarterly no longer supported", SummaryHorizon("quarterly"), false},
+		{"annual no longer supported", SummaryHorizon("annual"), false},
 	}
 
 	for _, tt := range tests {

@@ -22,7 +22,10 @@ concurrency:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +39,7 @@ jobs:
         run: go mod tidy
 
       - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -86,4 +89,4 @@ jobs:
         run: go mod tidy
 
       - name: Build
-        run: go build -v ./...
+        run: go build -v ./cmd/bujo

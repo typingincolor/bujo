@@ -1,51 +1,85 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"strings"
+	"text/template"
+	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
 )
 
 type GenAIClient interface {
 	Generate(ctx context.Context, prompt string) (string, error)
+	GenerateStream(ctx context.Context, prompt string, callback func(token string)) error
 }
 
 type GeminiGenerator struct {
 	client GenAIClient
+	loader *PromptLoader
 }
 
 func NewGeminiGenerator(client GenAIClient) *GeminiGenerator {
-	return &GeminiGenerator{client: client}
+	return &GeminiGenerator{
+		client: client,
+		loader: NewPromptLoader(""),
+	}
+}
+
+func NewGeminiGeneratorWithLoader(client GenAIClient, loader *PromptLoader) *GeminiGenerator {
+	return &GeminiGenerator{
+		client: client,
+		loader: loader,
+	}
 }
 
 func (g *GeminiGenerator) GenerateSummary(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error) {
-	prompt := g.buildPrompt(entries, horizon)
+	prompt, err := g.buildPrompt(ctx, entries, horizon)
+	if err != nil {
+		return "", fmt.Errorf("failed to build prompt: %w", err)
+	}
 	return g.client.Generate(ctx, prompt)
 }
 
-func (g *GeminiGenerator) buildPrompt(entries []domain.Entry, horizon domain.SummaryHorizon) string {
-	var sb strings.Builder
+func (g *GeminiGenerator) GenerateSummaryStream(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon, callback func(token string)) error {
+	prompt, err := g.buildPrompt(ctx, entries, horizon)
+	if err != nil {
+		return fmt.Errorf("failed to build prompt: %w", err)
+	}
+	return g.client.GenerateStream(ctx, prompt, callback)
+}
 
-	sb.WriteString(fmt.Sprintf("You are a helpful assistant analyzing a %s bullet journal summary.\n\n", horizon))
-
-	if len(entries) == 0 {
-		sb.WriteString("There are no entries for this period. Provide a brief encouraging message.\n")
-		return sb.String()
+func (g *GeminiGenerator) buildPrompt(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error) {
+	promptType := domain.PromptTypeFromHorizon(horizon)
+	tmpl, err := g.loader.Load(ctx, promptType)
+	if err != nil {
+		return "", fmt.Errorf("failed to load prompt template: %w", err)
 	}
 
-	sb.WriteString("Here are the journal entries:\n\n")
-
-	for _, entry := range entries {
-		symbol := entry.Type.Symbol()
-		sb.WriteString(fmt.Sprintf("%s %s\n", symbol, entry.Content))
+	t, err := template.New("prompt").Parse(tmpl.Content)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	sb.WriteString("\n")
-	sb.WriteString("Please provide a thoughtful reflection on these entries. ")
-	sb.WriteString("Highlight accomplishments, note patterns, and offer constructive insights. ")
-	sb.WriteString("Keep the response concise and actionable.")
+	startDate := time.Now()
+	endDate := time.Now()
+	if len(entries) > 0 {
+		startDate = entries[0].CreatedAt
+		endDate = entries[len(entries)-1].CreatedAt
+	}
 
-	return sb.String()
+	data := map[string]interface{}{
+		"Entries":   entries,
+		"Horizon":   horizon,
+		"StartDate": startDate,
+		"EndDate":   endDate,
+	}
+
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.String(), nil
 }

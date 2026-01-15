@@ -258,11 +258,13 @@ type migrateToGoalState struct {
 }
 
 type summaryState struct {
-	summary *domain.Summary
-	loading bool
-	error   error
-	horizon domain.SummaryHorizon
-	refDate time.Time
+	summary         *domain.Summary
+	loading         bool
+	streaming       bool
+	accumulatedText string
+	error           error
+	horizon         domain.SummaryHorizon
+	refDate         time.Time
 }
 
 type statsState struct {
@@ -932,19 +934,88 @@ func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.
 	}
 }
 
+type streamChannels struct {
+	tokens  chan string
+	err     chan error
+	summary chan *domain.Summary
+	done    chan bool
+}
+
+func (s *streamChannels) cleanup() {
+	if s != nil {
+		close(s.tokens)
+		close(s.err)
+		close(s.summary)
+		close(s.done)
+	}
+}
+
 func (m Model) loadSummaryCmd() tea.Cmd {
 	horizon := m.summaryState.horizon
 	refDate := m.summaryState.refDate
+
 	return func() tea.Msg {
 		if m.summaryService == nil {
-			return summaryErrorMsg{fmt.Errorf("AI summaries require GEMINI_API_KEY")}
+			return summaryErrorMsg{fmt.Errorf("AI not configured. Set BUJO_MODEL or GEMINI_API_KEY")}
 		}
-		ctx := context.Background()
-		summary, err := m.summaryService.GetSummary(ctx, horizon, refDate)
-		if err != nil {
-			return summaryErrorMsg{err}
+
+		chans := &streamChannels{
+			tokens:  make(chan string, 100),
+			err:     make(chan error, 1),
+			summary: make(chan *domain.Summary, 1),
+			done:    make(chan bool, 1),
 		}
-		return summaryLoadedMsg{summary}
+
+		go func() {
+			ctx := context.Background()
+			summary, err := m.summaryService.CheckCacheOrGenerate(ctx, horizon, refDate, func(token string) {
+				select {
+				case chans.tokens <- token:
+				case <-chans.done:
+					return
+				}
+			})
+
+			if err != nil {
+				chans.err <- err
+			} else {
+				chans.summary <- summary
+			}
+			chans.done <- true
+		}()
+
+		return m.pollStreamCmdWithChans(chans)()
+	}
+}
+
+func (m Model) pollStreamCmdWithChans(chans *streamChannels) tea.Cmd {
+	return func() tea.Msg {
+		if chans == nil {
+			return nil
+		}
+
+		select {
+		case token, ok := <-chans.tokens:
+			if !ok {
+				return nil
+			}
+			return summaryTokenMsg{token: token}
+		case err := <-chans.err:
+			chans.cleanup()
+			return summaryErrorMsg{err: err}
+		case summary := <-chans.summary:
+			chans.cleanup()
+			return summaryLoadedMsg{summary: summary}
+		case <-time.After(50 * time.Millisecond):
+			select {
+			case <-chans.done:
+				return nil
+			default:
+				return tea.Tick(50*time.Millisecond, func(time.Time) tea.Msg {
+					return m.pollStreamCmdWithChans(chans)()
+				})()
+			}
+		}
 	}
 }
 

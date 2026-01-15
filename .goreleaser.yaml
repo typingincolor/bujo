@@ -18,9 +18,6 @@ builds:
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: windows
-        goarch: arm64
     ldflags:
       - -s -w
       - -X github.com/typingincolor/bujo/cmd/bujo/cmd.version={{.Version}}
@@ -73,9 +70,15 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/typingincolor/bujo"
-    description: "A command-line Bullet Journal for rapid task capture and habit tracking"
+    description: "A command-line Bullet Journal with AI-powered summaries"
     license: "MIT"
     install: |
       bin.install "bujo"
     test: |
       system "#{bin}/bujo", "version"
+    caveats: |
+      For local AI, install and run Ollama:
+        brew install ollama
+        ollama pull llama3.2:1b
+
+      For cloud AI, set GEMINI_API_KEY instead.

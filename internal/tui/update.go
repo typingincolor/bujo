@@ -170,15 +170,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case entryMigratedToGoalMsg:
 		return m, m.loadAgendaCmd()
 
+	case summaryTokenMsg:
+		m.summaryState.streaming = true
+		m.summaryState.accumulatedText += msg.token
+		return m, nil
+
 	case summaryLoadedMsg:
 		m.summaryState.loading = false
+		m.summaryState.streaming = false
 		m.summaryState.error = nil
 		m.summaryState.summary = msg.summary
+		m.summaryState.accumulatedText = ""
 		return m, nil
 
 	case summaryErrorMsg:
 		m.summaryState.loading = false
+		m.summaryState.streaming = false
 		m.summaryState.error = msg.err
+		m.summaryState.accumulatedText = ""
 		return m, nil
 
 	case statsLoadedMsg:

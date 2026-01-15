@@ -4561,25 +4561,6 @@ func TestJournalView_ShowsWeeklySummary(t *testing.T) {
 	}
 }
 
-func TestJournalView_DoesNotShowQuarterlySummary(t *testing.T) {
-	model := New(nil)
-	model.currentView = ViewTypeJournal
-	model.viewDate = time.Date(2026, 1, 10, 0, 0, 0, 0, time.Local)
-	model.summaryState.summary = &domain.Summary{
-		ID:      1,
-		Horizon: "quarterly",
-		Content: "Test quarterly summary content",
-	}
-	model.summaryState.horizon = "quarterly"
-	model.agenda = &service.MultiDayAgenda{}
-
-	output := model.View()
-
-	if strings.Contains(output, "Test quarterly summary content") {
-		t.Error("journal view should NOT display quarterly AI summary")
-	}
-}
-
 func TestJournalView_DoesNotLoadSummaryWithoutService(t *testing.T) {
 	model := New(nil)
 	model.currentView = ViewTypeJournal
