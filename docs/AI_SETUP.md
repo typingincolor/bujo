@@ -9,7 +9,29 @@ This guide explains how to set up AI-powered summaries in bujo. You can choose b
 
 Local AI runs entirely on your machine - no data leaves your computer, works offline, and has no API costs.
 
-### 1. Download a Model
+### 1. Install Ollama
+
+```bash
+brew install ollama
+```
+
+### 2. Start Ollama Service
+
+```bash
+# Run without auto-restart on reboot (recommended)
+brew services run ollama
+
+# Or run with auto-restart on reboot
+brew services start ollama
+
+# Check status
+brew services info ollama
+
+# Stop the service
+brew services stop ollama
+```
+
+### 3. Download a Model
 
 ```bash
 # List available models
@@ -22,7 +44,7 @@ ollama pull llama3.2:1b
 ollama pull tinyllama
 ```
 
-### 2. Use AI Features
+### 4. Use AI Features
 
 ```bash
 # Generate summaries
@@ -145,10 +167,9 @@ export BUJO_AI_PROVIDER=gemini
 ```bash
 # Specify which model to use (default: llama3.2:1b)
 export BUJO_MODEL=tinyllama
-
-# Change models directory (default: ~/.bujo/models)
-export BUJO_MODEL_DIR=/path/to/models
 ```
+
+Ollama manages model storage automatically in `~/.ollama/models/`.
 
 ### Example Configurations
 
@@ -184,13 +205,21 @@ ollama list
 ollama pull tinyllama
 ```
 
-### "local AI not available: bujo was built without CGO support"
+### "pull model manifest: 500: internal error"
 
-Your bujo binary was compiled without CGO, which is required for local AI. Options:
+Ollama's registry servers are temporarily unavailable. This is a server-side issue. Wait a few minutes and retry:
 
-1. **Homebrew users**: `brew upgrade bujo` to get a CGO-enabled version
-2. **Manual install**: Rebuild with `CGO_ENABLED=1 go build ./cmd/bujo`
-3. **Use Gemini instead**: Set `BUJO_AI_PROVIDER=gemini` and configure API key
+```bash
+ollama pull llama3.2:1b
+```
+
+### "failed to create Ollama client: ... (is Ollama running?)"
+
+Ollama service isn't running. Start it with:
+
+```bash
+brew services run ollama
+```
 
 ### "GEMINI_API_KEY environment variable is required"
 
