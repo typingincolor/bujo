@@ -63,6 +63,42 @@ func (c *LocalClient) Generate(ctx context.Context, prompt string) (string, erro
 	return result, nil
 }
 
+func (c *LocalClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
+	if c.closed {
+		return errors.New("client is closed")
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	tokenCallback := func(token string) bool {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+			callback(token)
+			return true
+		}
+	}
+
+	_, err := c.model.Predict(
+		prompt,
+		llama.SetTemperature(0.7),
+		llama.SetTopP(0.9),
+		llama.SetTokens(512),
+		llama.SetTokenCallback(tokenCallback),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to generate streaming response: %w", err)
+	}
+
+	return nil
+}
+
 func (c *LocalClient) Close() error {
 	if c.closed {
 		return nil

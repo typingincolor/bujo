@@ -51,3 +51,29 @@ func (m *MockLLMClient) SetError(shouldError bool) {
 func (m *MockLLMClient) CallCount() int {
 	return m.generateCalled
 }
+
+func (m *MockLLMClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
+	m.generateCalled++
+
+	if m.shouldError {
+		return errors.New("mock error")
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	response, err := m.Generate(ctx, prompt)
+	if err != nil {
+		return err
+	}
+
+	words := strings.Fields(response)
+	for _, word := range words {
+		callback(word + " ")
+	}
+
+	return nil
+}

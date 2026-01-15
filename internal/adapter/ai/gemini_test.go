@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -95,4 +96,18 @@ type mockGenAIClient struct {
 
 func (m *mockGenAIClient) Generate(ctx context.Context, prompt string) (string, error) {
 	return m.generateFunc(ctx, prompt)
+}
+
+func (m *mockGenAIClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
+	response, err := m.generateFunc(ctx, prompt)
+	if err != nil {
+		return err
+	}
+
+	words := strings.Fields(response)
+	for _, word := range words {
+		callback(word + " ")
+	}
+
+	return nil
 }

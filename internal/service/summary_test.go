@@ -248,3 +248,12 @@ type mockSummaryGenerator struct {
 func (m *mockSummaryGenerator) GenerateSummary(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error) {
 	return m.generateFunc(ctx, entries, horizon)
 }
+
+func (m *mockSummaryGenerator) GenerateSummaryStream(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon, callback func(token string)) error {
+	response, err := m.generateFunc(ctx, entries, horizon)
+	if err != nil {
+		return err
+	}
+	callback(response)
+	return nil
+}

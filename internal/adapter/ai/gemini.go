@@ -12,6 +12,7 @@ import (
 
 type GenAIClient interface {
 	Generate(ctx context.Context, prompt string) (string, error)
+	GenerateStream(ctx context.Context, prompt string, callback func(token string)) error
 }
 
 type GeminiGenerator struct {
@@ -39,6 +40,14 @@ func (g *GeminiGenerator) GenerateSummary(ctx context.Context, entries []domain.
 		return "", fmt.Errorf("failed to build prompt: %w", err)
 	}
 	return g.client.Generate(ctx, prompt)
+}
+
+func (g *GeminiGenerator) GenerateSummaryStream(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon, callback func(token string)) error {
+	prompt, err := g.buildPrompt(ctx, entries, horizon)
+	if err != nil {
+		return fmt.Errorf("failed to build prompt: %w", err)
+	}
+	return g.client.GenerateStream(ctx, prompt, callback)
 }
 
 func (g *GeminiGenerator) buildPrompt(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error) {

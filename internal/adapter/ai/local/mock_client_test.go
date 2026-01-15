@@ -63,3 +63,55 @@ func TestMockLLMClient_Error(t *testing.T) {
 		t.Error("Generate() expected error, got nil")
 	}
 }
+
+func TestMockLLMClient_GenerateStream(t *testing.T) {
+	mock := NewMockLLMClient()
+	mock.AddResponse("test", "Hello world from AI")
+
+	ctx := context.Background()
+	var tokens []string
+
+	err := mock.GenerateStream(ctx, "test prompt", func(token string) {
+		tokens = append(tokens, token)
+	})
+
+	if err != nil {
+		t.Fatalf("GenerateStream() unexpected error: %v", err)
+	}
+
+	expected := []string{"Hello ", "world ", "from ", "AI "}
+	if len(tokens) != len(expected) {
+		t.Errorf("GenerateStream() got %d tokens, want %d", len(tokens), len(expected))
+	}
+
+	for i, token := range tokens {
+		if i >= len(expected) {
+			break
+		}
+		if token != expected[i] {
+			t.Errorf("GenerateStream() token[%d] = %q, want %q", i, token, expected[i])
+		}
+	}
+}
+
+func TestMockLLMClient_GenerateStream_ContextCancellation(t *testing.T) {
+	mock := NewMockLLMClient()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := mock.GenerateStream(ctx, "test prompt", func(token string) {})
+	if err == nil {
+		t.Error("GenerateStream() expected error with canceled context, got nil")
+	}
+}
+
+func TestMockLLMClient_GenerateStream_Error(t *testing.T) {
+	mock := NewMockLLMClient()
+	mock.SetError(true)
+
+	err := mock.GenerateStream(context.Background(), "test prompt", func(token string) {})
+	if err == nil {
+		t.Error("GenerateStream() expected error, got nil")
+	}
+}

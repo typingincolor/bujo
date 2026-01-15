@@ -18,6 +18,10 @@ func (c *LocalClient) Generate(ctx context.Context, prompt string) (string, erro
 	return "", errors.New("local AI not available")
 }
 
+func (c *LocalClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
+	return errors.New("local AI not available")
+}
+
 func (c *LocalClient) Close() error {
 	return nil
 }

@@ -18,6 +18,7 @@ type SummaryRepository interface {
 
 type SummaryGenerator interface {
 	GenerateSummary(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error)
+	GenerateSummaryStream(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon, callback func(token string)) error
 }
 
 type SummaryService struct {

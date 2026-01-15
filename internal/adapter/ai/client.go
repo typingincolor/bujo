@@ -44,3 +44,24 @@ func (c *GeminiClient) Generate(ctx context.Context, prompt string) (string, err
 
 	return result.Text(), nil
 }
+
+func (c *GeminiClient) GenerateStream(ctx context.Context, prompt string, callback func(token string)) error {
+	iter := c.client.Models.GenerateContentStream(ctx, c.model, genai.Text(prompt), nil)
+
+	for chunk, err := range iter {
+		if err != nil {
+			return fmt.Errorf("failed to stream content: %w", err)
+		}
+
+		if chunk == nil {
+			continue
+		}
+
+		text := chunk.Text()
+		if text != "" {
+			callback(text)
+		}
+	}
+
+	return nil
+}
