@@ -139,8 +139,6 @@ type summaryTokenMsg struct {
 	token string
 }
 
-type summaryStreamDoneMsg struct{}
-
 type searchResultsMsg struct {
 	results []domain.Entry
 	query   string
