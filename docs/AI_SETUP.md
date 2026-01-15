@@ -37,11 +37,11 @@ brew services stop ollama
 # List available models
 ollama list
 
-# Download the recommended model (1.3 GB)
-ollama pull llama3.2:1b
+# Download the recommended model (2.0 GB) - good balance of quality and speed
+ollama pull llama3.2:3b
 
-# Or try the smallest model for testing (637 MB)
-ollama pull tinyllama
+# Or try the smaller model if low on disk space (1.3 GB) - lower quality
+ollama pull llama3.2:1b
 ```
 
 ### 4. Use AI Features
@@ -165,8 +165,8 @@ export BUJO_AI_PROVIDER=gemini
 ### Local Model Configuration
 
 ```bash
-# Specify which model to use (default: llama3.2:1b)
-export BUJO_MODEL=tinyllama
+# Specify which model to use (default: llama3.2:3b)
+export BUJO_MODEL=llama3.2:3b
 ```
 
 Ollama manages model storage automatically in `~/.ollama/models/`.
@@ -176,7 +176,7 @@ Ollama manages model storage automatically in `~/.ollama/models/`.
 **Local AI only:**
 ```bash
 export BUJO_AI_PROVIDER=local
-export BUJO_MODEL=llama3.2:1b
+export BUJO_MODEL=llama3.2:3b
 ```
 
 **Gemini only:**
@@ -210,7 +210,7 @@ ollama pull tinyllama
 Ollama's registry servers are temporarily unavailable. This is a server-side issue. Wait a few minutes and retry:
 
 ```bash
-ollama pull llama3.2:1b
+ollama pull llama3.2:3b
 ```
 
 ### "failed to create Ollama client: ... (is Ollama running?)"
@@ -279,10 +279,10 @@ bujo supports several curated models optimized for journal summaries:
 
 | Model | Size | Quality | Speed | Memory |
 |-------|------|---------|-------|--------|
-| tinyllama | 637 MB | Good | Fast | 1 GB RAM |
-| llama3.2:1b | 1.3 GB | Better | Fast | 2 GB RAM |
-| llama3.2:3b | 2.0 GB | Best | Medium | 4 GB RAM |
-| phi-3-mini | 2.3 GB | Better | Fast | 3 GB RAM |
+| tinyllama | 637 MB | Poor | Fast | 1 GB RAM |
+| llama3.2:1b | 1.3 GB | Fair | Fast | 2 GB RAM |
+| llama3.2:3b | 2.0 GB | Good (Recommended) | Medium | 4 GB RAM |
+| phi-3-mini | 2.3 GB | Good | Fast | 3 GB RAM |
 | mistral:7b | 4.1 GB | Excellent | Slow | 8 GB RAM |
 
 ### Gemini Model

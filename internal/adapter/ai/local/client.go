@@ -36,7 +36,7 @@ func (c *LocalClient) Generate(ctx context.Context, prompt string) (string, erro
 		Prompt: prompt,
 		Stream: new(bool),
 		Options: map[string]interface{}{
-			"temperature": 0.7,
+			"temperature": 0.4,
 			"top_p":       0.9,
 		},
 	}
@@ -58,7 +58,7 @@ func (c *LocalClient) GenerateStream(ctx context.Context, prompt string, callbac
 		Model:  c.modelName,
 		Prompt: prompt,
 		Options: map[string]interface{}{
-			"temperature": 0.7,
+			"temperature": 0.4,
 			"top_p":       0.9,
 		},
 	}

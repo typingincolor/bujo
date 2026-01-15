@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -52,6 +53,10 @@ Examples:
 			fmt.Print(token)
 		})
 		if err != nil {
+			if errors.Is(err, domain.ErrNoEntries) {
+				fmt.Println("No entries to summarize for this period.")
+				return nil
+			}
 			return fmt.Errorf("failed to generate summary: %w", err)
 		}
 

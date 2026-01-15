@@ -61,6 +61,10 @@ func (s *SummaryService) GetSummaryWithRefresh(ctx context.Context, horizon doma
 		return nil, err
 	}
 
+	if len(entries) == 0 {
+		return nil, domain.ErrNoEntries
+	}
+
 	content, err := s.generator.GenerateSummary(ctx, entries, horizon)
 	if err != nil {
 		return nil, err
@@ -100,6 +104,10 @@ func (s *SummaryService) CheckCacheOrGenerate(ctx context.Context, horizon domai
 	entries, err := s.entryRepo.GetByDateRange(ctx, startDate, endDate)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(entries) == 0 {
+		return nil, domain.ErrNoEntries
 	}
 
 	var contentBuilder strings.Builder
