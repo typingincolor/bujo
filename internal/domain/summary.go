@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+var ErrNoEntries = errors.New("no entries to summarize")
+
 type SummaryHorizon string
 
 const (

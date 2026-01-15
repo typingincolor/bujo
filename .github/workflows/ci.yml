@@ -20,32 +20,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Download dependencies
-        run: go mod tidy
-
-      - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
+  # Fast feedback: lint runs in parallel with tests
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -58,9 +33,6 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Tidy modules
-        run: go mod tidy
-
       - name: Run go vet
         run: go vet ./...
 
@@ -69,13 +41,10 @@ jobs:
         with:
           version: latest
 
-  build:
-    name: Build
-    needs: [test, lint]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+  # Primary test job - ubuntu only for PRs (fast), both OS for main
+  test:
+    name: Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -85,8 +54,62 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Tidy modules
-        run: go mod tidy
+      - name: Run tests
+        run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # macOS test - only on main branch pushes and tags
+  test-macos:
+    name: Test (macOS)
+    if: github.event_name == 'push'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test -v ./...
+
+  # Build verification - only needs lint to pass (tests run in parallel)
+  build:
+    name: Build
+    needs: [lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build
+        run: go build -v ./cmd/bujo
+
+  # macOS build - only on main branch
+  build-macos:
+    name: Build (macOS)
+    if: github.event_name == 'push'
+    needs: [lint]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
       - name: Build
         run: go build -v ./cmd/bujo

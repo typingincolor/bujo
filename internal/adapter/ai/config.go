@@ -39,7 +39,7 @@ func NewAIClient(ctx context.Context) (GenAIClient, error) {
 func newLocalClient(ctx context.Context) (GenAIClient, error) {
 	modelName := os.Getenv("BUJO_MODEL")
 	if modelName == "" {
-		modelName = "llama3.2:1b"
+		modelName = "llama3.2:3b"
 	}
 
 	return local.NewLocalClient(modelName)

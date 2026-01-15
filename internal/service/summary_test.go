@@ -11,6 +11,66 @@ import (
 )
 
 func TestSummaryService_GetSummary(t *testing.T) {
+	t.Run("returns ErrNoEntries when no entries exist", func(t *testing.T) {
+		today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+
+		entryRepo := &mockEntryRepoForSummary{
+			getByDateRangeFunc: func(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+				return []domain.Entry{}, nil // empty entries
+			},
+		}
+
+		summaryRepo := &mockSummaryRepo{
+			getFunc: func(ctx context.Context, horizon domain.SummaryHorizon, start, end time.Time) (*domain.Summary, error) {
+				return nil, nil // no cached summary
+			},
+		}
+
+		generator := &mockSummaryGenerator{
+			generateFunc: func(ctx context.Context, e []domain.Entry, h domain.SummaryHorizon) (string, error) {
+				t.Fatal("should not call generator when no entries")
+				return "", nil
+			},
+		}
+
+		svc := NewSummaryService(entryRepo, summaryRepo, generator)
+
+		_, err := svc.GetSummary(context.Background(), domain.SummaryHorizonDaily, today)
+
+		assert.ErrorIs(t, err, domain.ErrNoEntries)
+	})
+
+	t.Run("streaming returns ErrNoEntries when no entries exist", func(t *testing.T) {
+		today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+
+		entryRepo := &mockEntryRepoForSummary{
+			getByDateRangeFunc: func(ctx context.Context, from, to time.Time) ([]domain.Entry, error) {
+				return []domain.Entry{}, nil
+			},
+		}
+
+		summaryRepo := &mockSummaryRepo{
+			getFunc: func(ctx context.Context, horizon domain.SummaryHorizon, start, end time.Time) (*domain.Summary, error) {
+				return nil, nil
+			},
+		}
+
+		generator := &mockSummaryGenerator{
+			generateFunc: func(ctx context.Context, e []domain.Entry, h domain.SummaryHorizon) (string, error) {
+				t.Fatal("should not call generator when no entries")
+				return "", nil
+			},
+		}
+
+		svc := NewSummaryService(entryRepo, summaryRepo, generator)
+
+		_, err := svc.CheckCacheOrGenerate(context.Background(), domain.SummaryHorizonDaily, today, func(token string) {
+			t.Fatal("should not stream tokens when no entries")
+		})
+
+		assert.ErrorIs(t, err, domain.ErrNoEntries)
+	})
+
 	t.Run("generates and caches daily summary", func(t *testing.T) {
 		today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
 		entries := []domain.Entry{
@@ -193,7 +253,7 @@ func TestSummaryService_GetSummary(t *testing.T) {
 				// Week should be Mon Jan 5 to Sun Jan 11
 				assert.Equal(t, time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC), from)
 				assert.Equal(t, time.Date(2026, 1, 11, 0, 0, 0, 0, time.UTC), to)
-				return []domain.Entry{}, nil
+				return []domain.Entry{{ID: 1, Content: "Entry"}}, nil
 			},
 		}
 

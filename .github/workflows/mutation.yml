@@ -13,8 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mutate:
-    name: Mutation Testing
+  mutate-domain:
+    name: Mutate Domain
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,14 +25,26 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Tidy modules
-        run: go mod tidy
-
       - name: Install gremlins
         run: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 
       - name: Run mutation testing on domain
         run: gremlins unleash ./internal/domain
+
+  mutate-service:
+    name: Mutate Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest
 
       - name: Run mutation testing on service
         run: gremlins unleash ./internal/service

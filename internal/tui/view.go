@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -1244,7 +1245,12 @@ func (m Model) renderJournalAISummary() string {
 	} else if m.summaryState.loading {
 		sb.WriteString("⏳ Generating AI summary...\n")
 	} else if m.summaryState.error != nil {
-		sb.WriteString(fmt.Sprintf("❌ Error: %v\n", m.summaryState.error))
+		if errors.Is(m.summaryState.error, domain.ErrNoEntries) {
+			sb.WriteString(HelpStyle.Render("No entries to summarize for this period"))
+			sb.WriteString("\n")
+		} else {
+			sb.WriteString(fmt.Sprintf("❌ Error: %v\n", m.summaryState.error))
+		}
 	} else {
 		sb.WriteString(HelpStyle.Render("No summary generated for this period"))
 		sb.WriteString("\n")
