@@ -13,13 +13,13 @@ Local AI runs entirely on your machine - no data leaves your computer, works off
 
 ```bash
 # List available models
-bujo model list
+ollama list
 
 # Download the recommended model (1.3 GB)
-bujo model pull llama3.2:1b
+ollama pull llama3.2:1b
 
 # Or try the smallest model for testing (637 MB)
-bujo model pull tinyllama
+ollama pull tinyllama
 ```
 
 ### 2. Use AI Features
@@ -178,10 +178,10 @@ You're trying to use local AI but haven't downloaded a model yet:
 
 ```bash
 # See available models
-bujo model list
+ollama list
 
 # Download one
-bujo model pull tinyllama
+ollama pull tinyllama
 ```
 
 ### "local AI not available: bujo was built without CGO support"

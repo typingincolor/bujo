@@ -64,7 +64,7 @@ Run AI models entirely on your machine - complete privacy, works offline, no API
 
 ```bash
 # Download a model (one-time setup)
-bujo model pull llama3.2:1b
+ollama pull llama3.2:1b
 
 # Generate summaries
 bujo summary daily
