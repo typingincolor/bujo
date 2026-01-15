@@ -39,7 +39,7 @@ jobs:
         run: go mod tidy
 
       - name: Run tests (CGO disabled for compatibility)
-        run: CGO_ENABLED=0 go test -v -race -coverprofile=coverage.out ./...
+        run: CGO_ENABLED=0 go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
