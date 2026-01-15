@@ -8,17 +8,13 @@ import (
 type SummaryHorizon string
 
 const (
-	SummaryHorizonDaily     SummaryHorizon = "daily"
-	SummaryHorizonWeekly    SummaryHorizon = "weekly"
-	SummaryHorizonQuarterly SummaryHorizon = "quarterly"
-	SummaryHorizonAnnual    SummaryHorizon = "annual"
+	SummaryHorizonDaily  SummaryHorizon = "daily"
+	SummaryHorizonWeekly SummaryHorizon = "weekly"
 )
 
 var validHorizons = map[SummaryHorizon]bool{
-	SummaryHorizonDaily:     true,
-	SummaryHorizonWeekly:    true,
-	SummaryHorizonQuarterly: true,
-	SummaryHorizonAnnual:    true,
+	SummaryHorizonDaily:  true,
+	SummaryHorizonWeekly: true,
 }
 
 func (h SummaryHorizon) IsValid() bool {

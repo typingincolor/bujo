@@ -25,14 +25,6 @@ func TestPromptLoader_Load_EmbeddedDefaults(t *testing.T) {
 			promptType: domain.PromptTypeSummaryWeekly,
 		},
 		{
-			name:       "summary quarterly",
-			promptType: domain.PromptTypeSummaryQuarterly,
-		},
-		{
-			name:       "summary annual",
-			promptType: domain.PromptTypeSummaryAnnual,
-		},
-		{
 			name:       "ask",
 			promptType: domain.PromptTypeAsk,
 		},
@@ -100,8 +92,6 @@ func TestPromptLoader_EnsureDefaults(t *testing.T) {
 	expectedFiles := []string{
 		"summary-daily.txt",
 		"summary-weekly.txt",
-		"summary-quarterly.txt",
-		"summary-annual.txt",
 		"ask.txt",
 	}
 

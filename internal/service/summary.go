@@ -83,6 +83,51 @@ func (s *SummaryService) GetSummaryWithRefresh(ctx context.Context, horizon doma
 	return &summary, nil
 }
 
+func (s *SummaryService) CheckCacheOrGenerate(ctx context.Context, horizon domain.SummaryHorizon, refDate time.Time, tokenCallback func(token string)) (*domain.Summary, error) {
+	startDate, endDate := s.calculateDateRange(horizon, refDate)
+
+	cached, err := s.summaryRepo.Get(ctx, horizon, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	if cached != nil && s.isPeriodComplete(endDate) {
+		tokenCallback(cached.Content)
+		return cached, nil
+	}
+
+	entries, err := s.entryRepo.GetByDateRange(ctx, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	var content string
+	err = s.generator.GenerateSummaryStream(ctx, entries, horizon, func(token string) {
+		content += token
+		tokenCallback(token)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	summary := domain.Summary{
+		EntityID:  domain.NewEntityID(),
+		Horizon:   horizon,
+		Content:   content,
+		StartDate: startDate,
+		EndDate:   endDate,
+		CreatedAt: time.Now(),
+	}
+
+	id, err := s.summaryRepo.Insert(ctx, summary)
+	if err != nil {
+		return nil, err
+	}
+
+	summary.ID = id
+	return &summary, nil
+}
+
 func (s *SummaryService) calculateDateRange(horizon domain.SummaryHorizon, refDate time.Time) (time.Time, time.Time) {
 	refDate = time.Date(refDate.Year(), refDate.Month(), refDate.Day(), 0, 0, 0, 0, refDate.Location())
 
@@ -98,18 +143,6 @@ func (s *SummaryService) calculateDateRange(horizon domain.SummaryHorizon, refDa
 		monday := refDate.AddDate(0, 0, -(weekday - 1))
 		sunday := monday.AddDate(0, 0, 6)
 		return monday, sunday
-
-	case domain.SummaryHorizonQuarterly:
-		quarter := (refDate.Month()-1)/3 + 1
-		startMonth := time.Month((quarter-1)*3 + 1)
-		start := time.Date(refDate.Year(), startMonth, 1, 0, 0, 0, 0, refDate.Location())
-		end := start.AddDate(0, 3, -1)
-		return start, end
-
-	case domain.SummaryHorizonAnnual:
-		start := time.Date(refDate.Year(), 1, 1, 0, 0, 0, 0, refDate.Location())
-		end := time.Date(refDate.Year(), 12, 31, 0, 0, 0, 0, refDate.Location())
-		return start, end
 
 	default:
 		return refDate, refDate

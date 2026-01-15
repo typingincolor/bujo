@@ -1212,10 +1212,6 @@ func (m Model) isViewingPast() bool {
 func (m Model) renderJournalAISummary() string {
 	var sb strings.Builder
 
-	if m.summaryState.horizon == "quarterly" || m.summaryState.horizon == "annual" {
-		return ""
-	}
-
 	horizonLabel := "Daily"
 	if m.summaryState.horizon == "weekly" {
 		horizonLabel = "Weekly"
@@ -1225,7 +1221,16 @@ func (m Model) renderJournalAISummary() string {
 	sb.WriteString("\n\n")
 	sb.WriteString(fmt.Sprintf("🤖 AI %s Summary\n\n", horizonLabel))
 
-	if m.summaryState.summary != nil {
+	if m.summaryState.streaming && m.summaryState.accumulatedText != "" {
+		sb.WriteString("⏳ Generating...\n\n")
+		rendered, err := m.renderMarkdown(m.summaryState.accumulatedText)
+		if err != nil {
+			sb.WriteString(m.summaryState.accumulatedText)
+		} else {
+			sb.WriteString(rendered)
+		}
+		sb.WriteString("\n")
+	} else if m.summaryState.summary != nil {
 		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
 		if err != nil {
 			sb.WriteString(m.summaryState.summary.Content)
@@ -1234,7 +1239,7 @@ func (m Model) renderJournalAISummary() string {
 		}
 		sb.WriteString("\n")
 	} else if m.summaryService == nil {
-		sb.WriteString(HelpStyle.Render("AI summaries unavailable - set GEMINI_API_KEY"))
+		sb.WriteString(HelpStyle.Render("AI summaries unavailable - configure BUJO_MODEL or GEMINI_API_KEY"))
 		sb.WriteString("\n")
 	} else if m.summaryState.loading {
 		sb.WriteString("⏳ Generating AI summary...\n")

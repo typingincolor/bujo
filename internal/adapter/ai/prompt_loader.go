@@ -77,8 +77,6 @@ func (l *PromptLoader) EnsureDefaults(ctx context.Context) error {
 	promptTypes := []domain.PromptType{
 		domain.PromptTypeSummaryDaily,
 		domain.PromptTypeSummaryWeekly,
-		domain.PromptTypeSummaryQuarterly,
-		domain.PromptTypeSummaryAnnual,
 		domain.PromptTypeAsk,
 	}
 

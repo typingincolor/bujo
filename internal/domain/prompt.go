@@ -8,19 +8,15 @@ import (
 type PromptType string
 
 const (
-	PromptTypeSummaryDaily     PromptType = "summary-daily"
-	PromptTypeSummaryWeekly    PromptType = "summary-weekly"
-	PromptTypeSummaryQuarterly PromptType = "summary-quarterly"
-	PromptTypeSummaryAnnual    PromptType = "summary-annual"
-	PromptTypeAsk              PromptType = "ask"
+	PromptTypeSummaryDaily  PromptType = "summary-daily"
+	PromptTypeSummaryWeekly PromptType = "summary-weekly"
+	PromptTypeAsk           PromptType = "ask"
 )
 
 var validPromptTypes = map[PromptType]bool{
-	PromptTypeSummaryDaily:     true,
-	PromptTypeSummaryWeekly:    true,
-	PromptTypeSummaryQuarterly: true,
-	PromptTypeSummaryAnnual:    true,
-	PromptTypeAsk:              true,
+	PromptTypeSummaryDaily:  true,
+	PromptTypeSummaryWeekly: true,
+	PromptTypeAsk:           true,
 }
 
 func (pt PromptType) String() string {
@@ -53,10 +49,6 @@ func PromptTypeFromHorizon(horizon SummaryHorizon) PromptType {
 		return PromptTypeSummaryDaily
 	case SummaryHorizonWeekly:
 		return PromptTypeSummaryWeekly
-	case SummaryHorizonQuarterly:
-		return PromptTypeSummaryQuarterly
-	case SummaryHorizonAnnual:
-		return PromptTypeSummaryAnnual
 	default:
 		return PromptTypeSummaryDaily
 	}

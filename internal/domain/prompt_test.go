@@ -21,16 +21,6 @@ func TestPromptType_String(t *testing.T) {
 			expected: "summary-weekly",
 		},
 		{
-			name:     "summary quarterly",
-			pt:       PromptTypeSummaryQuarterly,
-			expected: "summary-quarterly",
-		},
-		{
-			name:     "summary annual",
-			pt:       PromptTypeSummaryAnnual,
-			expected: "summary-annual",
-		},
-		{
 			name:     "ask",
 			pt:       PromptTypeAsk,
 			expected: "ask",
@@ -174,16 +164,6 @@ func TestPromptTypeFromHorizon(t *testing.T) {
 			name:     "weekly",
 			horizon:  SummaryHorizonWeekly,
 			expected: PromptTypeSummaryWeekly,
-		},
-		{
-			name:     "quarterly",
-			horizon:  SummaryHorizonQuarterly,
-			expected: PromptTypeSummaryQuarterly,
-		},
-		{
-			name:     "annual",
-			horizon:  SummaryHorizonAnnual,
-			expected: PromptTypeSummaryAnnual,
 		},
 	}
 
