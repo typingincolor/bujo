@@ -117,6 +117,17 @@ jobs:
               req.end();
             });
 
+            // Handle API errors
+            if (!response || response.error) {
+              console.log('⚠️ API error:', response?.error || 'Unknown error');
+              return;
+            }
+
+            if (!response.content || response.content.length === 0) {
+              console.log('⚠️ API returned empty content:', JSON.stringify(response).substring(0, 200));
+              return;
+            }
+
             const review = response.content[0].text;
 
             // Check if already reviewed
