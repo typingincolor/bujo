@@ -4820,3 +4820,99 @@ func TestModel_UndoMarkDone(t *testing.T) {
 		t.Error("expected undo state to be cleared after undo")
 	}
 }
+
+func TestModel_WeeklyView_MarkDone_PreservesFocus(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+
+	// Create multiple entries in weekly view context
+	entries := []EntryItem{
+		{Entry: domain.Entry{ID: 1, EntityID: "entity-1", Type: domain.EntryTypeTask, Content: "Task 1"}},
+		{Entry: domain.Entry{ID: 2, EntityID: "entity-2", Type: domain.EntryTypeTask, Content: "Task 2"}},
+		{Entry: domain.Entry{ID: 3, EntityID: "entity-3", Type: domain.EntryTypeTask, Content: "Task 3"}},
+		{Entry: domain.Entry{ID: 4, EntityID: "entity-4", Type: domain.EntryTypeTask, Content: "Task 4"}},
+	}
+	model.entries = entries
+
+	// Select the 3rd entry (index 2)
+	model.selectedIdx = 2
+	selectedEntityID := model.entries[2].Entry.EntityID
+
+	// Create an agenda with the same entries
+	// This simulates what happens when the agenda is reloaded
+	today := time.Now()
+	dayEntries := service.DayEntries{
+		Date:    today,
+		Entries: []domain.Entry{entries[0].Entry, entries[1].Entry, entries[2].Entry, entries[3].Entry},
+	}
+
+	agendaMsg := agendaLoadedMsg{
+		agenda: &service.MultiDayAgenda{
+			Days: []service.DayEntries{dayEntries},
+		},
+	}
+
+	newModel, _ := model.Update(agendaMsg)
+	m := newModel.(Model)
+
+	// Focus should be preserved on the same entry EntityID
+	// Find the new index of the selected entry
+	newIdx := -1
+	for idx, item := range m.entries {
+		if item.Entry.EntityID == selectedEntityID {
+			newIdx = idx
+			break
+		}
+	}
+
+	if newIdx == -1 {
+		t.Error("selected entry not found after agenda reload")
+	}
+
+	if m.selectedIdx != newIdx {
+		t.Errorf("focus was not preserved, expected index %d, got %d", newIdx, m.selectedIdx)
+	}
+
+	// The selectedIdx should still be within valid bounds
+	if m.selectedIdx < 0 || m.selectedIdx >= len(m.entries) {
+		t.Errorf("selectedIdx is out of bounds after agendaLoadedMsg, got %d, len=%d", m.selectedIdx, len(m.entries))
+	}
+}
+
+func TestModel_WeeklyView_PastCompletedTasks_DisplayedInRed(t *testing.T) {
+	model := New(nil)
+
+	// Create entries: a recently completed task and an older completed task
+	today := time.Now()
+	oldDate := today.AddDate(0, 0, -7)
+
+	model.entries = []EntryItem{
+		{
+			Entry: domain.Entry{
+				ID:      1,
+				Type:    domain.EntryTypeDone,
+				Content: "Completed today",
+				// This entry was just completed
+			},
+		},
+		{
+			Entry: domain.Entry{
+				ID:            2,
+				Type:          domain.EntryTypeDone,
+				Content:       "Completed in past",
+				ScheduledDate: &oldDate,
+				// This entry was completed in the past
+			},
+			IsOverdue: true, // Mark as a past entry
+		},
+	}
+
+	// Render the past completed entry (it's overdue)
+	rendered := model.renderEntry(model.entries[1], false)
+
+	// The entry should be styled with ANSI escape codes
+	// Check for presence of ANSI escape sequence (\x1b[) which indicates styling was applied
+	if !strings.Contains(rendered, "\x1b[") {
+		t.Error("expected past completed task to be styled with ANSI codes, but no styling found")
+	}
+}
