@@ -4422,6 +4422,37 @@ func TestHabitView_NextPeriod_CannotGoToFuture(t *testing.T) {
 	}
 }
 
+func TestHabitView_ToggleView_ResetsWeekOffsetToAvoidFuture(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.habitState.viewMode = HabitViewModeWeek
+	model.habitState.weekOffset = 0
+
+	// Navigate back 2 weeks in week mode
+	model.habitState.weekOffset = 2
+
+	// Now press 'w' to toggle to month mode
+	// This should reset weekOffset to 0
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	// After toggle, weekOffset should be 0
+	if m.habitState.weekOffset != 0 {
+		t.Errorf("after toggling view mode, weekOffset should be reset to 0, got %d", m.habitState.weekOffset)
+	}
+
+	// Reference date should be current day or recent
+	refDateMonth := m.getHabitReferenceDate()
+	todayNormalized := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Now().Location())
+	refDateNormalized := time.Date(refDateMonth.Year(), refDateMonth.Month(), refDateMonth.Day(), 0, 0, 0, 0, refDateMonth.Location())
+	daysOffset := todayNormalized.Sub(refDateNormalized).Hours() / 24
+
+	if daysOffset > 35 {
+		t.Errorf("after toggling to month mode, reference date should be recent (within ~30 days), but is %d days in past", int(daysOffset))
+	}
+}
+
 func TestNavigationStack_InitiallyEmpty(t *testing.T) {
 	model := New(nil)
 

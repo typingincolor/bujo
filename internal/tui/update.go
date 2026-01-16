@@ -2004,7 +2004,9 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case HabitViewModeQuarter:
 			m.habitState.viewMode = HabitViewModeWeek
 		}
-		return m, nil
+		// Reset weekOffset when switching view modes to show current period
+		m.habitState.weekOffset = 0
+		return m, m.loadHabitsCmd()
 
 	case key.Matches(msg, m.keyMap.Add):
 		ti := textinput.New()
