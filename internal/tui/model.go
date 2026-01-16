@@ -57,7 +57,6 @@ type Model struct {
 	addMode                  addState
 	migrateMode              migrateState
 	gotoMode                 gotoState
-	captureMode              captureState
 	searchMode               searchState
 	searchView               searchViewState
 	retypeMode               retypeState
@@ -159,24 +158,6 @@ type retypeState struct {
 	active      bool
 	entryID     int64
 	selectedIdx int
-}
-
-type captureState struct {
-	active        bool
-	content       string
-	cursorPos     int
-	cursorLine    int
-	cursorCol     int
-	scrollOffset  int
-	parsedEntries []domain.Entry
-	parseError    error
-	confirmCancel bool
-	searchMode    bool
-	searchForward bool
-	searchQuery   string
-	draftExists   bool
-	draftContent  string
-	showHelp      bool
 }
 
 type habitState struct {
@@ -1098,13 +1079,6 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	return items
 }
 
-func (m Model) parseCapture(content string) ([]domain.Entry, error) {
-	if m.bujoService == nil {
-		return nil, fmt.Errorf("bujo service not configured")
-	}
-	return m.bujoService.ParseEntries(content)
-}
-
 func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdue bool, today time.Time) []EntryItem {
 	var items []EntryItem
 
@@ -1422,4 +1396,30 @@ func (m Model) getAncestryChain(entryID int64) []domain.Entry {
 	}
 
 	return ancestors
+}
+
+func (m Model) launchExternalEditorCmd() tea.Cmd {
+	tempFile := CaptureTempFilePath()
+	draftContent := ""
+	if content, exists := LoadDraft(m.draftPath); exists {
+		draftContent = content
+	}
+
+	if err := PrepareEditorFile(tempFile, draftContent); err != nil {
+		return func() tea.Msg {
+			return errMsg{err: fmt.Errorf("failed to prepare editor file: %w", err)}
+		}
+	}
+
+	editorCmd := GetEditorCommand()
+	cmd := BuildEditorCmd(editorCmd, tempFile)
+	cmd.Stdin = nil
+
+	return tea.ExecProcess(cmd, func(err error) tea.Msg {
+		if err != nil {
+			return editorFinishedMsg{content: "", err: err}
+		}
+		content, readErr := ReadEditorResult(tempFile)
+		return editorFinishedMsg{content: content, err: readErr}
+	})
 }

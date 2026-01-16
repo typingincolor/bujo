@@ -112,12 +112,11 @@ func DefaultCommands() *CommandRegistry {
 	})
 
 	registry.Register(Command{
-		Name:        "Capture Mode",
-		Description: "Enter capture mode for quick entry",
+		Name:        "Capture",
+		Description: "Open external editor for entry capture",
 		Keybinding:  "c",
 		Action: func(m Model) (Model, tea.Cmd) {
-			m.captureMode.active = true
-			return m, nil
+			return m, m.launchExternalEditorCmd()
 		},
 	})
 

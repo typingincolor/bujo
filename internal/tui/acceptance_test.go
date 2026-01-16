@@ -829,7 +829,7 @@ func TestUAT_JournalView_MarkDone(t *testing.T) {
 	}
 }
 
-func TestUAT_JournalView_CaptureMode_Available(t *testing.T) {
+func TestUAT_JournalView_CaptureMode_LaunchesExternalEditor(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 
 	model := NewWithConfig(Config{
@@ -841,13 +841,13 @@ func TestUAT_JournalView_CaptureMode_Available(t *testing.T) {
 	model.height = 24
 	model.currentView = ViewTypeJournal
 
-	// Press 'c' to enter capture mode
+	// Press 'c' to launch external editor
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
+	_, cmd := model.Update(msg)
 
-	if !m.captureMode.active {
-		t.Error("'c' in journal view should activate capture mode")
+	// Should return a command to launch external editor
+	if cmd == nil {
+		t.Error("'c' in journal view should return a command to launch external editor")
 	}
 }
 
@@ -865,20 +865,18 @@ func TestUAT_JournalView_CaptureMode_NotInOtherViews(t *testing.T) {
 	// Test that capture mode doesn't activate in habits view
 	model.currentView = ViewTypeHabits
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
+	_, cmd := model.Update(msg)
 
-	if m.captureMode.active {
-		t.Error("capture mode should NOT activate in habits view")
+	if cmd != nil {
+		t.Error("capture should NOT be available in habits view")
 	}
 
 	// Test that capture mode doesn't activate in lists view
 	model.currentView = ViewTypeLists
-	newModel, _ = model.Update(msg)
-	m = newModel.(Model)
+	_, cmd = model.Update(msg)
 
-	if m.captureMode.active {
-		t.Error("capture mode should NOT activate in lists view")
+	if cmd != nil {
+		t.Error("capture should NOT be available in lists view")
 	}
 }
 
