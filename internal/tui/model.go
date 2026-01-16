@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	toolbarHeight     = 2
-	helpBarHeight     = 2
-	verticalPadding   = 2
-	minAvailableLines = 5
+	toolbarHeight         = 2
+	helpBarHeight         = 2
+	verticalPadding       = 2
+	minAvailableLines     = 5
+	locationHistoryMonths = 6
 )
 
 type Config struct {
@@ -1284,17 +1285,17 @@ func (m Model) loadLocationsCmd() tea.Cmd {
 		}
 		ctx := context.Background()
 		now := time.Now()
-		from := now.AddDate(0, -6, 0)
+		from := now.AddDate(0, -locationHistoryMonths, 0)
 		history, err := m.bujoService.GetLocationHistory(ctx, from, now)
 		if err != nil {
 			return locationsLoadedMsg{locations: nil}
 		}
 		seen := make(map[string]bool)
 		var locations []string
-		for _, ctx := range history {
-			if ctx.Location != nil && *ctx.Location != "" && !seen[*ctx.Location] {
-				seen[*ctx.Location] = true
-				locations = append(locations, *ctx.Location)
+		for _, dayCtx := range history {
+			if dayCtx.Location != nil && *dayCtx.Location != "" && !seen[*dayCtx.Location] {
+				seen[*dayCtx.Location] = true
+				locations = append(locations, *dayCtx.Location)
 			}
 		}
 		return locationsLoadedMsg{locations: locations}
