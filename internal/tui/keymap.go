@@ -49,6 +49,7 @@ type KeyMap struct {
 	CollapseAll    key.Binding
 	OpenURL        key.Binding
 	ToggleSummary  key.Binding
+	SetLocation    key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -236,6 +237,10 @@ func DefaultKeyMap() KeyMap {
 		ToggleSummary: key.NewBinding(
 			key.WithKeys("s"),
 			key.WithHelp("s", "toggle summary"),
+		),
+		SetLocation: key.NewBinding(
+			key.WithKeys("@"),
+			key.WithHelp("@", "set location"),
 		),
 	}
 }

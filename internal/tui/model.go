@@ -145,9 +145,12 @@ type gotoState struct {
 }
 
 type setLocationState struct {
-	active bool
-	date   time.Time
-	input  textinput.Model
+	active      bool
+	pickerMode  bool
+	date        time.Time
+	input       textinput.Model
+	locations   []string
+	selectedIdx int
 }
 
 type retypeState struct {
@@ -1271,6 +1274,30 @@ func (m Model) openURLCmd(content string) tea.Cmd {
 		}
 
 		return nil
+	}
+}
+
+func (m Model) loadLocationsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return locationsLoadedMsg{locations: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		from := now.AddDate(0, -6, 0)
+		history, err := m.bujoService.GetLocationHistory(ctx, from, now)
+		if err != nil {
+			return locationsLoadedMsg{locations: nil}
+		}
+		seen := make(map[string]bool)
+		var locations []string
+		for _, ctx := range history {
+			if ctx.Location != nil && *ctx.Location != "" && !seen[*ctx.Location] {
+				seen[*ctx.Location] = true
+				locations = append(locations, *ctx.Location)
+			}
+		}
+		return locationsLoadedMsg{locations: locations}
 	}
 }
 

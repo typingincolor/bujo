@@ -559,7 +559,21 @@ func (m Model) renderSetLocationInput() string {
 	var sb strings.Builder
 	sb.WriteString("Set location:\n")
 	sb.WriteString(m.setLocationMode.input.View())
-	sb.WriteString("\n\nEnter to save, Esc to cancel")
+
+	if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
+		sb.WriteString("\n\nPrevious locations:\n")
+		for i, loc := range m.setLocationMode.locations {
+			if i == m.setLocationMode.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", loc)))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s", loc))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
+	} else {
+		sb.WriteString("\n\nEnter to save, Esc to cancel")
+	}
 	return ConfirmStyle.Render(sb.String())
 }
 

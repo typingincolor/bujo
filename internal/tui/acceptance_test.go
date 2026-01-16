@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
@@ -222,6 +223,132 @@ func TestUAT_Navigation_Esc_GoesBackFromNestedView(t *testing.T) {
 	}
 	if len(m2.viewStack) != 0 {
 		t.Errorf("expected empty view stack after going back, got %v", m2.viewStack)
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_OpensWithAt(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Press '@' to open location picker
+	msgAt := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'@'}}
+	newModel, _ := model.Update(msgAt)
+	m := newModel.(Model)
+
+	if !m.setLocationMode.active {
+		t.Error("pressing @ should open location picker")
+	}
+	if !m.setLocationMode.pickerMode {
+		t.Error("location mode should be in picker mode")
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_SelectsPreviousLocation(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Simulate having previous locations loaded
+	model.setLocationMode = setLocationState{
+		active:      true,
+		pickerMode:  true,
+		date:        model.viewDate,
+		locations:   []string{"Home", "Office", "Coffee Shop"},
+		selectedIdx: 0,
+	}
+
+	// Navigate down
+	msgDown := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msgDown)
+	m := newModel.(Model)
+
+	if m.setLocationMode.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.setLocationMode.selectedIdx)
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_ClosesOnEsc(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Open location picker
+	model.setLocationMode = setLocationState{
+		active:     true,
+		pickerMode: true,
+		date:       model.viewDate,
+		locations:  []string{"Home", "Office"},
+	}
+
+	// Press ESC to close
+	msgEsc := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msgEsc)
+	m := newModel.(Model)
+
+	if m.setLocationMode.active {
+		t.Error("ESC should close the location picker")
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_EnterSelectsFromList(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Open location picker with locations
+	ti := textinput.New()
+	model.setLocationMode = setLocationState{
+		active:      true,
+		pickerMode:  true,
+		date:        model.viewDate,
+		input:       ti,
+		locations:   []string{"Home", "Office", "Coffee Shop"},
+		selectedIdx: 1, // "Office" selected
+	}
+
+	// Press Enter to select
+	msgEnter := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd := model.Update(msgEnter)
+	m := newModel.(Model)
+
+	if m.setLocationMode.active {
+		t.Error("Enter should close the location picker")
+	}
+	if cmd == nil {
+		t.Error("Enter should return a command to set location")
 	}
 }
 

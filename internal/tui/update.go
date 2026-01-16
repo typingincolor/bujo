@@ -202,6 +202,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchView.selectedIdx = 0
 		return m, nil
 
+	case locationsLoadedMsg:
+		m.setLocationMode.locations = msg.locations
+		return m, nil
+
 	case tea.KeyMsg:
 		if m.quitConfirmMode.active {
 			return m.handleQuitConfirmMode(msg)
@@ -627,6 +631,20 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Help):
 		m.help.ShowAll = !m.help.ShowAll
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.SetLocation):
+		input := textinput.New()
+		input.Placeholder = "Enter location..."
+		input.Focus()
+		m.setLocationMode = setLocationState{
+			active:      true,
+			pickerMode:  true,
+			date:        m.viewDate,
+			input:       input,
+			locations:   nil,
+			selectedIdx: 0,
+		}
+		return m, m.loadLocationsCmd()
 
 	case key.Matches(msg, m.keyMap.Capture):
 		m.captureMode = captureState{active: true}
@@ -1687,8 +1705,30 @@ func (m Model) handleSetLocationMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.setLocationMode.active = false
 		return m, nil
 
+	case tea.KeyUp:
+		if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
+			if m.setLocationMode.selectedIdx > 0 {
+				m.setLocationMode.selectedIdx--
+			}
+			return m, nil
+		}
+
+	case tea.KeyDown:
+		if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
+			if m.setLocationMode.selectedIdx < len(m.setLocationMode.locations)-1 {
+				m.setLocationMode.selectedIdx++
+			}
+			return m, nil
+		}
+
 	case tea.KeyEnter:
-		location := m.setLocationMode.input.Value()
+		var location string
+		inputValue := m.setLocationMode.input.Value()
+		if inputValue != "" {
+			location = inputValue
+		} else if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
+			location = m.setLocationMode.locations[m.setLocationMode.selectedIdx]
+		}
 		m.setLocationMode.active = false
 		if location == "" {
 			return m, nil
