@@ -29,6 +29,7 @@ type KeyMap struct {
 	Retype         key.Binding
 	Undo           key.Binding
 	Quit           key.Binding
+	Back           key.Binding
 	Help           key.Binding
 	ViewJournal    key.Binding
 	ViewHabits     key.Binding
@@ -47,6 +48,8 @@ type KeyMap struct {
 	ExpandAll      key.Binding
 	CollapseAll    key.Binding
 	OpenURL        key.Binding
+	ToggleSummary  key.Binding
+	SetLocation    key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -155,6 +158,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("q"),
 			key.WithHelp("q", "quit"),
 		),
+		Back: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "back"),
+		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
@@ -226,6 +233,14 @@ func DefaultKeyMap() KeyMap {
 		OpenURL: key.NewBinding(
 			key.WithKeys("o"),
 			key.WithHelp("o", "open link"),
+		),
+		ToggleSummary: key.NewBinding(
+			key.WithKeys("s"),
+			key.WithHelp("s", "toggle summary"),
+		),
+		SetLocation: key.NewBinding(
+			key.WithKeys("@"),
+			key.WithHelp("@", "set location"),
 		),
 	}
 }

@@ -339,6 +339,7 @@ func TestKeyMap_KeyBindings(t *testing.T) {
 		{"done", km.Done, []string{" "}},
 		{"delete", km.Delete, []string{"d"}},
 		{"quit", km.Quit, []string{"q"}},
+		{"back", km.Back, []string{"esc"}},
 		{"help", km.Help, []string{"?"}},
 	}
 
@@ -4448,12 +4449,12 @@ func TestNavigationStack_PushWhenSwitchingViews(t *testing.T) {
 	}
 }
 
-func TestNavigationStack_PopWhenPressingQ(t *testing.T) {
+func TestNavigationStack_PopWhenPressingEsc(t *testing.T) {
 	model := New(nil)
 	model.currentView = ViewTypeHabits
 	model.viewStack = []ViewType{ViewTypeJournal}
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	msg := tea.KeyMsg{Type: tea.KeyEsc}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
@@ -4462,6 +4463,23 @@ func TestNavigationStack_PopWhenPressingQ(t *testing.T) {
 	}
 	if len(m.viewStack) != 0 {
 		t.Errorf("viewStack should be empty after pop, got %d items", len(m.viewStack))
+	}
+}
+
+func TestNavigationStack_QShowsConfirmEvenWithStack(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeHabits
+	model.viewStack = []ViewType{ViewTypeJournal}
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if !m.quitConfirmMode.active {
+		t.Error("pressing q should show quit confirmation, even with views in stack")
+	}
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("should still be in ViewTypeHabits, got %v", m.currentView)
 	}
 }
 
@@ -4533,6 +4551,7 @@ func TestJournalView_ShowsDailySummary(t *testing.T) {
 		Content: "Test daily summary content",
 	}
 	model.summaryState.horizon = "daily"
+	model.summaryCollapsed = false // Expand summary to see content
 	model.agenda = &service.MultiDayAgenda{}
 
 	output := model.View()
@@ -4552,6 +4571,7 @@ func TestJournalView_ShowsWeeklySummary(t *testing.T) {
 		Content: "Test weekly summary content",
 	}
 	model.summaryState.horizon = "weekly"
+	model.summaryCollapsed = false // Expand summary to see content
 	model.agenda = &service.MultiDayAgenda{}
 
 	output := model.View()

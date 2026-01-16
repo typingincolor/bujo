@@ -16,10 +16,11 @@ import (
 )
 
 const (
-	toolbarHeight     = 2
-	helpBarHeight     = 2
-	verticalPadding   = 2
-	minAvailableLines = 5
+	toolbarHeight         = 2
+	helpBarHeight         = 2
+	verticalPadding       = 2
+	minAvailableLines     = 5
+	locationHistoryMonths = 6
 )
 
 type Config struct {
@@ -74,6 +75,7 @@ type Model struct {
 	moveGoalMode           moveGoalState
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
+	summaryCollapsed       bool
 	statsViewState         statsState
 	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
@@ -144,9 +146,12 @@ type gotoState struct {
 }
 
 type setLocationState struct {
-	active bool
-	date   time.Time
-	input  textinput.Model
+	active      bool
+	pickerMode  bool
+	date        time.Time
+	input       textinput.Model
+	locations   []string
+	selectedIdx int
 }
 
 type retypeState struct {
@@ -398,6 +403,7 @@ func NewWithConfig(cfg Config) Model {
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
+		summaryCollapsed:  true,
 		searchView:        searchViewState{input: searchInput},
 		statsViewState:    statsState{from: statsFrom, to: statsTo},
 	}
@@ -1269,6 +1275,30 @@ func (m Model) openURLCmd(content string) tea.Cmd {
 		}
 
 		return nil
+	}
+}
+
+func (m Model) loadLocationsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return locationsLoadedMsg{locations: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		from := now.AddDate(0, -locationHistoryMonths, 0)
+		history, err := m.bujoService.GetLocationHistory(ctx, from, now)
+		if err != nil {
+			return locationsLoadedMsg{locations: nil}
+		}
+		seen := make(map[string]bool)
+		var locations []string
+		for _, dayCtx := range history {
+			if dayCtx.Location != nil && *dayCtx.Location != "" && !seen[*dayCtx.Location] {
+				seen[*dayCtx.Location] = true
+				locations = append(locations, *dayCtx.Location)
+			}
+		}
+		return locationsLoadedMsg{locations: locations}
 	}
 }
 

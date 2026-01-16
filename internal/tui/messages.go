@@ -149,3 +149,7 @@ type statsLoadedMsg struct {
 }
 
 type agendaReloadNeededMsg struct{}
+
+type locationsLoadedMsg struct {
+	locations []string
+}

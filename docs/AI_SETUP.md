@@ -5,6 +5,22 @@ This guide explains how to set up AI-powered summaries in bujo. You can choose b
 - **Local AI** (Recommended): Run AI models locally for complete privacy and offline use
 - **Google Gemini API**: Cloud-based AI with fast response times
 
+## Enabling AI Features
+
+**AI features are disabled by default.** To enable AI functionality, you must set:
+
+```bash
+export BUJO_AI_ENABLED=true
+```
+
+Add this to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.) or to `~/.bujo/.env`:
+
+```bash
+echo "BUJO_AI_ENABLED=true" >> ~/.bujo/.env
+```
+
+Once enabled, configure either Local AI or Gemini as described below.
+
 ## Quick Start: Local AI (Recommended)
 
 Local AI runs entirely on your machine - no data leaves your computer, works offline, and has no API costs.
@@ -192,6 +208,20 @@ export GEMINI_API_KEY=your-api-key-here
 ```
 
 ## Troubleshooting
+
+### "AI features are disabled"
+
+AI features are disabled by default. To enable them:
+
+```bash
+export BUJO_AI_ENABLED=true
+```
+
+Or add to `~/.bujo/.env`:
+
+```bash
+echo "BUJO_AI_ENABLED=true" >> ~/.bujo/.env
+```
 
 ### "model not downloaded"
 

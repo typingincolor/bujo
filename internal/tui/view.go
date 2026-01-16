@@ -135,15 +135,15 @@ func (m Model) View() string {
 func (m Model) renderContextHelp() string {
 	switch m.currentView {
 	case ViewTypeHabits:
-		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  q: quit"
+		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  esc: back  q: quit"
 	case ViewTypeLists, ViewTypeListItems:
-		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  esc: back  q: quit"
 	case ViewTypeGoals:
-		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  m: move  esc: back  q: quit"
 	case ViewTypeSearch:
-		return "j/k: navigate  /: search  q: quit"
+		return "j/k: navigate  /: search  esc: back  q: quit"
 	case ViewTypeStats:
-		return "q: quit"
+		return "esc: back  q: quit"
 	default:
 		return m.help.View(m.keyMap)
 	}
@@ -559,7 +559,21 @@ func (m Model) renderSetLocationInput() string {
 	var sb strings.Builder
 	sb.WriteString("Set location:\n")
 	sb.WriteString(m.setLocationMode.input.View())
-	sb.WriteString("\n\nEnter to save, Esc to cancel")
+
+	if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
+		sb.WriteString("\n\nPrevious locations:\n")
+		for i, loc := range m.setLocationMode.locations {
+			if i == m.setLocationMode.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", loc)))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s", loc))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
+	} else {
+		sb.WriteString("\n\nEnter to save, Esc to cancel")
+	}
 	return ConfirmStyle.Render(sb.String())
 }
 
@@ -1087,9 +1101,6 @@ func (m Model) renderGoalsContent() string {
 		sb.WriteString("\n")
 	}
 
-	sb.WriteString(HelpStyle.Render("h/l: month • a: add • e: edit • d: delete • m: move • space: toggle"))
-	sb.WriteString("\n\n")
-
 	return sb.String()
 }
 
@@ -1220,7 +1231,21 @@ func (m Model) renderJournalAISummary() string {
 
 	sb.WriteString(strings.Repeat("─", 50))
 	sb.WriteString("\n\n")
-	sb.WriteString(fmt.Sprintf("🤖 AI %s Summary\n\n", horizonLabel))
+
+	collapseIndicator := "▼"
+	if m.summaryCollapsed {
+		collapseIndicator = "▶"
+	}
+
+	sb.WriteString(fmt.Sprintf("%s 🤖 AI %s Summary", collapseIndicator, horizonLabel))
+
+	if m.summaryCollapsed {
+		sb.WriteString(HelpStyle.Render("  (press 's' to expand)"))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString("\n\n")
 
 	if m.summaryState.streaming && m.summaryState.accumulatedText != "" {
 		sb.WriteString("⏳ Generating...\n\n")

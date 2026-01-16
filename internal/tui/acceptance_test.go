@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
@@ -182,6 +183,254 @@ func TestUAT_Navigation_Quit(t *testing.T) {
 	result := cmdQuit()
 	if _, ok := result.(tea.QuitMsg); !ok {
 		t.Error("confirming should trigger quit")
+	}
+}
+
+func TestUAT_Navigation_Esc_GoesBackFromNestedView(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Start in journal, navigate to habits (adds to view stack)
+	model.currentView = ViewTypeJournal
+	model.viewStack = []ViewType{} // empty stack
+
+	// Navigate to habits (simulates pressing 2)
+	msg2 := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, _ := model.Update(msg2)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeHabits {
+		t.Fatalf("expected habits view, got %v", m.currentView)
+	}
+	if len(m.viewStack) != 1 || m.viewStack[0] != ViewTypeJournal {
+		t.Fatalf("expected journal in view stack, got %v", m.viewStack)
+	}
+
+	// Press ESC - should go back to journal
+	msgEsc := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel2, _ := m.Update(msgEsc)
+	m2 := newModel2.(Model)
+
+	if m2.currentView != ViewTypeJournal {
+		t.Errorf("expected ESC to go back to journal, got %v", m2.currentView)
+	}
+	if len(m2.viewStack) != 0 {
+		t.Errorf("expected empty view stack after going back, got %v", m2.viewStack)
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_OpensWithAt(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Press '@' to open location picker
+	msgAt := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'@'}}
+	newModel, _ := model.Update(msgAt)
+	m := newModel.(Model)
+
+	if !m.setLocationMode.active {
+		t.Error("pressing @ should open location picker")
+	}
+	if !m.setLocationMode.pickerMode {
+		t.Error("location mode should be in picker mode")
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_SelectsPreviousLocation(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Simulate having previous locations loaded
+	model.setLocationMode = setLocationState{
+		active:      true,
+		pickerMode:  true,
+		date:        model.viewDate,
+		locations:   []string{"Home", "Office", "Coffee Shop"},
+		selectedIdx: 0,
+	}
+
+	// Navigate down
+	msgDown := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msgDown)
+	m := newModel.(Model)
+
+	if m.setLocationMode.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.setLocationMode.selectedIdx)
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_ClosesOnEsc(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Open location picker
+	model.setLocationMode = setLocationState{
+		active:     true,
+		pickerMode: true,
+		date:       model.viewDate,
+		locations:  []string{"Home", "Office"},
+	}
+
+	// Press ESC to close
+	msgEsc := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel, _ := model.Update(msgEsc)
+	m := newModel.(Model)
+
+	if m.setLocationMode.active {
+		t.Error("ESC should close the location picker")
+	}
+}
+
+func TestUAT_JournalView_LocationPicker_EnterSelectsFromList(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Open location picker with locations
+	ti := textinput.New()
+	model.setLocationMode = setLocationState{
+		active:      true,
+		pickerMode:  true,
+		date:        model.viewDate,
+		input:       ti,
+		locations:   []string{"Home", "Office", "Coffee Shop"},
+		selectedIdx: 1, // "Office" selected
+	}
+
+	// Press Enter to select
+	msgEnter := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, cmd := model.Update(msgEnter)
+	m := newModel.(Model)
+
+	if m.setLocationMode.active {
+		t.Error("Enter should close the location picker")
+	}
+	if cmd == nil {
+		t.Error("Enter should return a command to set location")
+	}
+}
+
+func TestUAT_JournalView_AISummary_CollapsedByDefault(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Summary should be collapsed by default
+	if !model.summaryCollapsed {
+		t.Error("AI summary should be collapsed by default")
+	}
+}
+
+func TestUAT_JournalView_AISummary_ToggleWithS(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Initially collapsed
+	if !model.summaryCollapsed {
+		t.Fatal("AI summary should be collapsed by default")
+	}
+
+	// Press 's' to toggle
+	msgS := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	newModel, _ := model.Update(msgS)
+	m := newModel.(Model)
+
+	if m.summaryCollapsed {
+		t.Error("AI summary should be expanded after pressing 's'")
+	}
+
+	// Press 's' again to collapse
+	newModel2, _ := m.Update(msgS)
+	m2 := newModel2.(Model)
+
+	if !m2.summaryCollapsed {
+		t.Error("AI summary should be collapsed after pressing 's' again")
+	}
+}
+
+func TestUAT_Navigation_Q_AlwaysShowsQuitConfirm(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to habits first (to have something in the stack)
+	model.currentView = ViewTypeHabits
+	model.viewStack = []ViewType{ViewTypeJournal}
+
+	// Press Q - should show quit confirmation (not go back)
+	msgQ := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	newModel, _ := model.Update(msgQ)
+	m := newModel.(Model)
+
+	if !m.quitConfirmMode.active {
+		t.Error("pressing q should show quit confirmation, even with views in stack")
+	}
+	// View should not have changed - still in habits
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected to still be in habits view, got %v", m.currentView)
 	}
 }
 

@@ -9,7 +9,14 @@ import (
 	"github.com/typingincolor/bujo/internal/adapter/ai/local"
 )
 
+var ErrAIDisabled = errors.New("AI features are disabled (set BUJO_AI_ENABLED=true to enable)")
+
 func NewAIClient(ctx context.Context) (GenAIClient, error) {
+	enabled := os.Getenv("BUJO_AI_ENABLED")
+	if enabled != "true" {
+		return nil, ErrAIDisabled
+	}
+
 	provider := os.Getenv("BUJO_AI_PROVIDER")
 	geminiKey := os.Getenv("GEMINI_API_KEY")
 
