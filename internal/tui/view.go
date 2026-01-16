@@ -135,15 +135,15 @@ func (m Model) View() string {
 func (m Model) renderContextHelp() string {
 	switch m.currentView {
 	case ViewTypeHabits:
-		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  q: quit"
+		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  esc: back  q: quit"
 	case ViewTypeLists, ViewTypeListItems:
-		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  esc: back  q: quit"
 	case ViewTypeGoals:
-		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  m: move  q: quit"
+		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  m: move  esc: back  q: quit"
 	case ViewTypeSearch:
-		return "j/k: navigate  /: search  q: quit"
+		return "j/k: navigate  /: search  esc: back  q: quit"
 	case ViewTypeStats:
-		return "q: quit"
+		return "esc: back  q: quit"
 	default:
 		return m.help.View(m.keyMap)
 	}

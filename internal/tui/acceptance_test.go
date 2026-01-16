@@ -185,6 +185,75 @@ func TestUAT_Navigation_Quit(t *testing.T) {
 	}
 }
 
+func TestUAT_Navigation_Esc_GoesBackFromNestedView(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Start in journal, navigate to habits (adds to view stack)
+	model.currentView = ViewTypeJournal
+	model.viewStack = []ViewType{} // empty stack
+
+	// Navigate to habits (simulates pressing 2)
+	msg2 := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	newModel, _ := model.Update(msg2)
+	m := newModel.(Model)
+
+	if m.currentView != ViewTypeHabits {
+		t.Fatalf("expected habits view, got %v", m.currentView)
+	}
+	if len(m.viewStack) != 1 || m.viewStack[0] != ViewTypeJournal {
+		t.Fatalf("expected journal in view stack, got %v", m.viewStack)
+	}
+
+	// Press ESC - should go back to journal
+	msgEsc := tea.KeyMsg{Type: tea.KeyEsc}
+	newModel2, _ := m.Update(msgEsc)
+	m2 := newModel2.(Model)
+
+	if m2.currentView != ViewTypeJournal {
+		t.Errorf("expected ESC to go back to journal, got %v", m2.currentView)
+	}
+	if len(m2.viewStack) != 0 {
+		t.Errorf("expected empty view stack after going back, got %v", m2.viewStack)
+	}
+}
+
+func TestUAT_Navigation_Q_AlwaysShowsQuitConfirm(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Navigate to habits first (to have something in the stack)
+	model.currentView = ViewTypeHabits
+	model.viewStack = []ViewType{ViewTypeJournal}
+
+	// Press Q - should show quit confirmation (not go back)
+	msgQ := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
+	newModel, _ := model.Update(msgQ)
+	m := newModel.(Model)
+
+	if !m.quitConfirmMode.active {
+		t.Error("pressing q should show quit confirmation, even with views in stack")
+	}
+	// View should not have changed - still in habits
+	if m.currentView != ViewTypeHabits {
+		t.Errorf("expected to still be in habits view, got %v", m.currentView)
+	}
+}
+
 // =============================================================================
 // UAT Section 7: Journal View
 // =============================================================================

@@ -29,6 +29,7 @@ type KeyMap struct {
 	Retype         key.Binding
 	Undo           key.Binding
 	Quit           key.Binding
+	Back           key.Binding
 	Help           key.Binding
 	ViewJournal    key.Binding
 	ViewHabits     key.Binding
@@ -154,6 +155,10 @@ func DefaultKeyMap() KeyMap {
 		Quit: key.NewBinding(
 			key.WithKeys("q"),
 			key.WithHelp("q", "quit"),
+		),
+		Back: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "back"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),

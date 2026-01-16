@@ -318,6 +318,9 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
 
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
@@ -1873,6 +1876,9 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
 
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+
 	case key.Matches(msg, m.keyMap.Down):
 		if m.habitState.selectedIdx < len(m.habitState.habits)-1 {
 			m.habitState.selectedIdx++
@@ -1989,6 +1995,9 @@ func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.goalState.selectedIdx < len(m.goalState.goals)-1 {
@@ -2196,6 +2205,9 @@ func (m Model) handleListsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.listState.selectedListIdx < len(m.listState.lists)-1 {
@@ -2491,6 +2503,9 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
 	}
 
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
@@ -2507,6 +2522,9 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
 
 	case msg.String() == "enter":
 		if len(m.searchView.results) > 0 && m.searchView.selectedIdx < len(m.searchView.results) {
@@ -2610,6 +2628,11 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 }
 
 func (m Model) handleQuit() (Model, tea.Cmd) {
+	m.quitConfirmMode.active = true
+	return m, nil
+}
+
+func (m Model) handleBack() (Model, tea.Cmd) {
 	if len(m.viewStack) > 0 {
 		m.currentView = m.viewStack[len(m.viewStack)-1]
 		m.viewStack = m.viewStack[:len(m.viewStack)-1]
@@ -2630,7 +2653,6 @@ func (m Model) handleQuit() (Model, tea.Cmd) {
 		return m, cmd
 	}
 
-	m.quitConfirmMode.active = true
 	return m, nil
 }
 
