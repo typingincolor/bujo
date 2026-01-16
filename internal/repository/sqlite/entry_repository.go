@@ -83,7 +83,7 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE scheduled_date = ? AND (valid_to IS NULL OR valid_to = '')
-		ORDER BY created_at
+		ORDER BY created_at, entity_id
 	`, dateStr)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
-		ORDER BY scheduled_date, created_at
+		ORDER BY scheduled_date, created_at, entity_id
 	`, fromStr, toStr)
 	if err != nil {
 		return nil, err
@@ -131,7 +131,7 @@ func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]dom
 		)
 		SELECT DISTINCT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM parent_chain
-		ORDER BY scheduled_date, depth, created_at
+		ORDER BY scheduled_date, depth, created_at, entity_id
 	`, dateStr)
 	if err != nil {
 		return nil, err
@@ -528,7 +528,7 @@ func (r *EntryRepository) GetAll(ctx context.Context) ([]domain.Entry, error) {
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries
 		WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
-		ORDER BY scheduled_date, created_at
+		ORDER BY scheduled_date, created_at, entity_id
 	`)
 	if err != nil {
 		return nil, err
@@ -562,7 +562,7 @@ func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions)
 		args = append(args, opts.DateFrom.Format("2006-01-02"), opts.DateTo.Format("2006-01-02"))
 	}
 
-	query += ` ORDER BY scheduled_date DESC, created_at DESC`
+	query += ` ORDER BY scheduled_date DESC, created_at DESC, entity_id DESC`
 
 	limit := opts.Limit
 	if limit <= 0 {

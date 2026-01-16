@@ -9,7 +9,11 @@ import (
 type EntityID string
 
 func NewEntityID() EntityID {
-	return EntityID(uuid.New().String())
+	id, err := uuid.NewV7()
+	if err != nil {
+		return EntityID(uuid.New().String())
+	}
+	return EntityID(id.String())
 }
 
 func ParseEntityID(s string) (EntityID, error) {
