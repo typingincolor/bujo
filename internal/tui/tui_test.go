@@ -210,6 +210,140 @@ func TestModel_FlattenAgenda_WithOverdue(t *testing.T) {
 	}
 }
 
+func TestModel_FlattenAgenda_OverdueFiltersParentContext(t *testing.T) {
+	model := New(nil)
+	parentID := int64(1)
+	yesterday := time.Now().AddDate(0, 0, -1)
+
+	agenda := &service.MultiDayAgenda{
+		Overdue: []domain.Entry{
+			{ID: 1, Content: "Parent note", Type: domain.EntryTypeNote, ScheduledDate: &yesterday},
+			{ID: 2, Content: "Overdue task", Type: domain.EntryTypeTask, ParentID: &parentID, ScheduledDate: &yesterday},
+		},
+	}
+
+	result := model.flattenAgenda(agenda)
+
+	if len(result) != 1 {
+		t.Fatalf("expected 1 item (only the overdue task), got %d", len(result))
+	}
+	if result[0].Entry.Content != "Overdue task" {
+		t.Errorf("expected 'Overdue task', got %s", result[0].Entry.Content)
+	}
+}
+
+func TestModel_ToggleOverdueContext(t *testing.T) {
+	yesterday := time.Now().AddDate(0, 0, -1)
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{
+		Overdue: []domain.Entry{
+			{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+			{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+		},
+	}
+	model.entries = model.flattenAgenda(model.agenda)
+	model.selectedIdx = 0
+
+	if model.expandedOverdueContextID != nil {
+		t.Error("expandedOverdueContextID should be nil by default")
+	}
+
+	// Toggle context for task 1 (selected)
+	model = model.toggleOverdueContext()
+
+	if model.expandedOverdueContextID == nil || *model.expandedOverdueContextID != 1 {
+		t.Error("expandedOverdueContextID should be set to task 1 ID after toggle")
+	}
+
+	// Toggle again to close context
+	model = model.toggleOverdueContext()
+
+	if model.expandedOverdueContextID != nil {
+		t.Error("expandedOverdueContextID should be nil after second toggle")
+	}
+}
+
+func TestModel_FlattenAgenda_OverduePreservesParentTaskHierarchy(t *testing.T) {
+	model := New(nil)
+	parentID := int64(1)
+	yesterday := time.Now().AddDate(0, 0, -1)
+	parentEntityID := domain.EntityID("entity-1")
+
+	agenda := &service.MultiDayAgenda{
+		Overdue: []domain.Entry{
+			{ID: 1, EntityID: parentEntityID, Content: "Parent task", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+			{ID: 2, Content: "Child task", Type: domain.EntryTypeTask, ParentID: &parentID, ScheduledDate: &yesterday},
+		},
+	}
+
+	// Expand the parent to show its children
+	model.collapsed[parentEntityID] = false
+
+	result := model.flattenAgenda(agenda)
+
+	if len(result) != 2 {
+		t.Fatalf("expected 2 items (parent and child tasks), got %d", len(result))
+	}
+
+	if result[0].Entry.Content != "Parent task" {
+		t.Errorf("expected first item to be 'Parent task', got %s", result[0].Entry.Content)
+	}
+
+	if result[1].Entry.Content != "Child task" {
+		t.Errorf("expected second item to be 'Child task', got %s", result[1].Entry.Content)
+	}
+
+	if result[1].Entry.ParentID == nil || *result[1].Entry.ParentID != 1 {
+		t.Errorf("expected child task to have parent reference preserved, got %v", result[1].Entry.ParentID)
+	}
+}
+
+func TestModel_ToggleOverdueContext_ShowsAncestry(t *testing.T) {
+	yesterday := time.Now().AddDate(0, 0, -1)
+	noteID := int64(1)
+	taskID := int64(2)
+	noteEntityID := domain.EntityID("entity-1")
+	taskEntityID := domain.EntityID("entity-2")
+
+	model := New(nil)
+	model.agenda = &service.MultiDayAgenda{
+		Overdue: []domain.Entry{
+			{ID: noteID, EntityID: noteEntityID, Content: "Parent note", Type: domain.EntryTypeNote, ScheduledDate: &yesterday},
+			{ID: taskID, EntityID: taskEntityID, Content: "Child task", Type: domain.EntryTypeTask, ParentID: &noteID, ScheduledDate: &yesterday},
+		},
+	}
+	model.entries = model.flattenAgenda(model.agenda)
+	model.selectedIdx = 0
+
+	// By default, only the task is shown (parent is filtered)
+	if len(model.entries) != 1 {
+		t.Fatalf("expected 1 item (only task) by default, got %d", len(model.entries))
+	}
+	if model.entries[0].Entry.ID != taskID {
+		t.Errorf("expected task to be shown, got entry ID %d", model.entries[0].Entry.ID)
+	}
+
+	// After toggling context for the task, ancestry should be included
+	model.entries = model.flattenAgenda(model.agenda)
+	model = model.toggleOverdueContext()
+	model.entries = model.flattenAgenda(model.agenda)
+
+	// Expand parent to see full hierarchy
+	model.collapsed[noteEntityID] = false
+	model.entries = model.flattenAgenda(model.agenda)
+
+	if len(model.entries) < 2 {
+		t.Fatalf("expected at least 2 items (parent and task) when context expanded, got %d", len(model.entries))
+	}
+
+	if model.entries[0].Entry.ID != noteID {
+		t.Errorf("expected parent note to be shown first, got entry ID %d", model.entries[0].Entry.ID)
+	}
+	if model.entries[1].Entry.ID != taskID {
+		t.Errorf("expected child task to be shown second, got entry ID %d", model.entries[1].Entry.ID)
+	}
+}
+
 func TestModel_FlattenAgenda_WithDays(t *testing.T) {
 	model := New(nil)
 	location := "Home Office"
