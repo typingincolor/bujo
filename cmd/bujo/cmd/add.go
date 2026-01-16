@@ -101,10 +101,6 @@ Examples:
 			return fmt.Errorf("failed to add entries: %w", err)
 		}
 
-		for _, id := range ids {
-			fmt.Println(id)
-		}
-
 		fmt.Fprintf(os.Stderr, "Added %d entry(s)\n", len(ids))
 		return nil
 	},

@@ -90,6 +90,7 @@ bujo summary daily
 ```
 
 **Configuration:**
+- AI features are disabled by default. Set `BUJO_AI_ENABLED=true` to enable
 - Local AI is used by default if a model is downloaded
 - Set `BUJO_AI_PROVIDER=gemini` to force Gemini
 - Set `BUJO_AI_PROVIDER=local` to force local AI
@@ -194,7 +195,7 @@ bujo view 42 --up 1    # Show grandparent context
 
 #### `bujo add [entries...]`
 
-Add entries to today's journal. Returns the ID of each entry.
+Add entries to today's journal.
 
 ```bash
 bujo add ". Call mom"                    # Single entry
@@ -677,8 +678,11 @@ j/k: move  space: done  x: cancel  d: delete  q: quit  ?: help
 | `Ctrl+P` | Open command palette |
 | `Ctrl+S` | Search forward |
 | `Ctrl+R` | Search reverse |
+| `@` | Set location for current day |
+| `s` | Toggle AI summary collapse/expand |
+| `Esc` | Navigate back through view stack |
 | `?` | Toggle help |
-| `q` | Quit |
+| `q` | Quit (shows confirmation dialog) |
 
 **Habits View shortcuts:**
 
