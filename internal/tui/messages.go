@@ -153,3 +153,8 @@ type agendaReloadNeededMsg struct{}
 type locationsLoadedMsg struct {
 	locations []string
 }
+
+type editorFinishedMsg struct {
+	content string
+	err     error
+}
