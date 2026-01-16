@@ -19,6 +19,9 @@ func GetEditorCommand() string {
 
 func BuildEditorCmd(editorCmd string, filePath string) *exec.Cmd {
 	parts := strings.Fields(editorCmd)
+	if len(parts) == 0 {
+		parts = []string{"vi"}
+	}
 	args := append(parts[1:], filePath)
 	return exec.Command(parts[0], args...)
 }
@@ -45,4 +48,12 @@ func PrepareEditorFile(filePath string, content string) error {
 		return err
 	}
 	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+func CleanupCaptureTempFile(filePath string) error {
+	err := os.Remove(filePath)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }

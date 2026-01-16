@@ -236,6 +236,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case editorFinishedMsg:
 		_ = DeleteDraft(m.draftPath)
+		_ = CleanupCaptureTempFile(CaptureTempFilePath())
 		if msg.err != nil {
 			m.err = msg.err
 			return m, nil
