@@ -23,9 +23,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case agendaLoadedMsg:
+		// Preserve the currently selected entry EntityID before reloading
+		var selectedEntityID domain.EntityID
+		if m.selectedIdx >= 0 && m.selectedIdx < len(m.entries) {
+			selectedEntityID = m.entries[m.selectedIdx].Entry.EntityID
+		}
+
 		m.agenda = msg.agenda
 		m.entries = m.flattenAgenda(msg.agenda)
-		if m.selectedIdx >= len(m.entries) {
+
+		// Try to restore selection to the same entry
+		if selectedEntityID != "" {
+			found := false
+			for idx, item := range m.entries {
+				if item.Entry.EntityID == selectedEntityID {
+					m.selectedIdx = idx
+					found = true
+					break
+				}
+			}
+			if !found && m.selectedIdx >= len(m.entries) {
+				// Entry no longer exists, adjust to nearest valid position
+				if len(m.entries) > 0 {
+					m.selectedIdx = len(m.entries) - 1
+				} else {
+					m.selectedIdx = 0
+				}
+			}
+		} else if m.selectedIdx >= len(m.entries) {
+			// No previously selected entry or out of bounds
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
