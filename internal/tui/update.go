@@ -23,7 +23,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case agendaLoadedMsg:
-		// Preserve the currently selected entry EntityID before reloading
+		// Preserve the currently selected entry EntityID before reloading.
+		// We use EntityID (logical entity) not ID (row ID) to track across agenda reloads,
+		// since flattenAgenda may change the row order or count when entries are modified.
 		var selectedEntityID domain.EntityID
 		if m.selectedIdx >= 0 && m.selectedIdx < len(m.entries) {
 			selectedEntityID = m.entries[m.selectedIdx].Entry.EntityID

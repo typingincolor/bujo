@@ -4910,10 +4910,9 @@ func TestModel_WeeklyView_PastCompletedTasks_DisplayedInRed(t *testing.T) {
 	// Render the past completed entry (it's overdue)
 	rendered := model.renderEntry(model.entries[1], false)
 
-	// The entry should be styled - if IsOverdue is true, it should use OverdueStyle (red)
-	// For now, we check if the rendered output has any styling applied
-	// This test will fail initially because the styling logic might not apply red to completed past tasks
-	if rendered == model.entries[1].Entry.Content {
-		t.Error("expected past completed task to be styled, but plain text was returned")
+	// The entry should be styled with ANSI escape codes
+	// Check for presence of ANSI escape sequence (\x1b[) which indicates styling was applied
+	if !strings.Contains(rendered, "\x1b[") {
+		t.Error("expected past completed task to be styled with ANSI codes, but no styling found")
 	}
 }
