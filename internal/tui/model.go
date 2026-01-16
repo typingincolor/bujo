@@ -34,61 +34,61 @@ type Config struct {
 }
 
 type Model struct {
-	bujoService            *service.BujoService
-	habitService           *service.HabitService
-	listService            *service.ListService
-	goalService            *service.GoalService
-	summaryService         *service.SummaryService
-	statsService           *service.StatsService
-	agenda                 *service.MultiDayAgenda
-	journalGoals           []domain.Goal
-	entries                []EntryItem
-	collapsed              map[domain.EntityID]bool
-	selectedIdx            int
-	scrollOffset           int
-	viewMode               ViewMode
-	viewDate               time.Time
-	currentView            ViewType
-	viewStack              []ViewType
-	confirmMode            confirmState
-	quitConfirmMode        confirmQuitState
-	editMode               editState
-	answerMode             answerState
-	addMode                addState
-	migrateMode            migrateState
-	gotoMode               gotoState
-	captureMode            captureState
-	searchMode             searchState
-	searchView             searchViewState
-	retypeMode             retypeState
-	habitState             habitState
-	addHabitMode           addHabitState
-	confirmHabitDeleteMode confirmHabitDeleteState
-	listState              listState
-	moveListItemMode       moveListItemState
-	createListMode         createListState
-	moveToListMode         moveToListState
-	goalState              goalState
-	addGoalMode            addGoalState
-	editGoalMode           editGoalState
-	confirmGoalDeleteMode  confirmGoalDeleteState
-	moveGoalMode           moveGoalState
-	migrateToGoalMode      migrateToGoalState
-	summaryState           summaryState
-	summaryCollapsed       bool
-	showOverdueContext     bool
-	statsViewState         statsState
-	setLocationMode        setLocationState
-	commandPalette         commandPaletteState
-	commandRegistry        *CommandRegistry
-	undoState              undoState
-	help                   help.Model
-	keyMap                 KeyMap
-	markdownRenderer       *glamour.TermRenderer
-	width                  int
-	height                 int
-	err                    error
-	draftPath              string
+	bujoService              *service.BujoService
+	habitService             *service.HabitService
+	listService              *service.ListService
+	goalService              *service.GoalService
+	summaryService           *service.SummaryService
+	statsService             *service.StatsService
+	agenda                   *service.MultiDayAgenda
+	journalGoals             []domain.Goal
+	entries                  []EntryItem
+	collapsed                map[domain.EntityID]bool
+	selectedIdx              int
+	scrollOffset             int
+	viewMode                 ViewMode
+	viewDate                 time.Time
+	currentView              ViewType
+	viewStack                []ViewType
+	confirmMode              confirmState
+	quitConfirmMode          confirmQuitState
+	editMode                 editState
+	answerMode               answerState
+	addMode                  addState
+	migrateMode              migrateState
+	gotoMode                 gotoState
+	captureMode              captureState
+	searchMode               searchState
+	searchView               searchViewState
+	retypeMode               retypeState
+	habitState               habitState
+	addHabitMode             addHabitState
+	confirmHabitDeleteMode   confirmHabitDeleteState
+	listState                listState
+	moveListItemMode         moveListItemState
+	createListMode           createListState
+	moveToListMode           moveToListState
+	goalState                goalState
+	addGoalMode              addGoalState
+	editGoalMode             editGoalState
+	confirmGoalDeleteMode    confirmGoalDeleteState
+	moveGoalMode             moveGoalState
+	migrateToGoalMode        migrateToGoalState
+	summaryState             summaryState
+	summaryCollapsed         bool
+	expandedOverdueContextID *int64
+	statsViewState           statsState
+	setLocationMode          setLocationState
+	commandPalette           commandPaletteState
+	commandRegistry          *CommandRegistry
+	undoState                undoState
+	help                     help.Model
+	keyMap                   KeyMap
+	markdownRenderer         *glamour.TermRenderer
+	width                    int
+	height                   int
+	err                      error
+	draftPath                string
 }
 
 type searchState struct {
@@ -1110,8 +1110,8 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 
 	entriesToProcess := entries
 
-	if forceOverdue && !m.showOverdueContext {
-		entriesToProcess = m.filterOverdueContext(entries)
+	if forceOverdue {
+		entriesToProcess = m.filterOverdueContext(entries, m.expandedOverdueContextID)
 	}
 
 	parentMap := make(map[int64][]domain.Entry)
@@ -1226,11 +1226,30 @@ func (m Model) collapseAllSiblings() Model {
 }
 
 func (m Model) toggleOverdueContext() Model {
-	m.showOverdueContext = !m.showOverdueContext
+	if len(m.entries) == 0 {
+		return m
+	}
+
+	selectedEntry := m.entries[m.selectedIdx].Entry
+
+	// Only toggle for overdue tasks
+	if !selectedEntry.IsOverdue(time.Now()) {
+		return m
+	}
+
+	// Toggle context visibility for this entry
+	if m.expandedOverdueContextID != nil && *m.expandedOverdueContextID == selectedEntry.ID {
+		m.expandedOverdueContextID = nil
+	} else {
+		id := selectedEntry.ID
+		m.expandedOverdueContextID = &id
+	}
+
 	return m
 }
 
-func (m Model) filterOverdueContext(entries []domain.Entry) []domain.Entry {
+func (m Model) filterOverdueContext(entries []domain.Entry, expandedOverdueContextID *int64) []domain.Entry {
+	// First pass: keep only tasks
 	var filtered []domain.Entry
 	for _, e := range entries {
 		if e.Type == domain.EntryTypeTask {
@@ -1238,18 +1257,59 @@ func (m Model) filterOverdueContext(entries []domain.Entry) []domain.Entry {
 		}
 	}
 
-	idSet := make(map[int64]bool)
+	// Build ID maps for lookups
+	taskIDSet := make(map[int64]bool)
 	for _, e := range filtered {
-		idSet[e.ID] = true
+		taskIDSet[e.ID] = true
 	}
 
-	for i := range filtered {
-		if filtered[i].ParentID != nil && !idSet[*filtered[i].ParentID] {
-			filtered[i].ParentID = nil
+	entryByID := make(map[int64]domain.Entry)
+	for _, e := range entries {
+		entryByID[e.ID] = e
+	}
+
+	// If a task is selected and context is expanded, include its full ancestry path
+	var expandedAncestrySet map[int64]bool
+	if expandedOverdueContextID != nil {
+		expandedAncestrySet = make(map[int64]bool)
+		expandedAncestrySet[*expandedOverdueContextID] = true
+
+		// Trace path from expanded entry to root
+		current, exists := entryByID[*expandedOverdueContextID]
+		for exists && current.ParentID != nil {
+			parent, parentExists := entryByID[*current.ParentID]
+			if !parentExists {
+				break
+			}
+			expandedAncestrySet[*current.ParentID] = true
+			current = parent
 		}
 	}
 
-	return filtered
+	// Include all entries that are either tasks or in the expanded ancestry path
+	var result []domain.Entry
+	for _, e := range entries {
+		isTask := taskIDSet[e.ID]
+		inExpandedPath := expandedAncestrySet != nil && expandedAncestrySet[e.ID]
+
+		if isTask || inExpandedPath {
+			result = append(result, e)
+		}
+	}
+
+	// Orphan any non-task parents for entries not in the expanded path
+	for i := range result {
+		if result[i].ParentID != nil {
+			_, parentIsTask := taskIDSet[*result[i].ParentID]
+			inExpandedPath := expandedAncestrySet != nil && expandedAncestrySet[*result[i].ParentID]
+
+			if !parentIsTask && !inExpandedPath {
+				result[i].ParentID = nil
+			}
+		}
+	}
+
+	return result
 }
 
 func (m Model) ensureSelectedAndAncestorsExpanded() Model {
