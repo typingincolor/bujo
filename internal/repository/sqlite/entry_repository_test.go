@@ -942,3 +942,62 @@ func TestEntryRepository_Search_EmptyQuery(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, results, 0, "Empty query should return no results")
 }
+
+func TestEntryRepository_Update_PreservesOrder(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	sameTimestamp := time.Date(2026, 1, 6, 10, 30, 0, 0, time.UTC)
+
+	entry1 := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "entry 1",
+		ScheduledDate: &today,
+		CreatedAt:     sameTimestamp,
+	}
+	entry2 := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "entry 2",
+		ScheduledDate: &today,
+		CreatedAt:     sameTimestamp,
+	}
+	entry3 := domain.Entry{
+		Type:          domain.EntryTypeNote,
+		Content:       "entry 3",
+		ScheduledDate: &today,
+		CreatedAt:     sameTimestamp,
+	}
+
+	id1, err := repo.Insert(ctx, entry1)
+	require.NoError(t, err)
+	id2, err := repo.Insert(ctx, entry2)
+	require.NoError(t, err)
+	id3, err := repo.Insert(ctx, entry3)
+	require.NoError(t, err)
+
+	entriesBefore, err := repo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, entriesBefore, 3)
+	assert.Equal(t, "entry 1", entriesBefore[0].Content)
+	assert.Equal(t, "entry 2", entriesBefore[1].Content)
+	assert.Equal(t, "entry 3", entriesBefore[2].Content)
+
+	updatedEntry, err := repo.GetByID(ctx, id1)
+	require.NoError(t, err)
+	updatedEntry.Content = "entry 4"
+	err = repo.Update(ctx, *updatedEntry)
+	require.NoError(t, err)
+
+	entriesAfter, err := repo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, entriesAfter, 3)
+
+	assert.Equal(t, "entry 4", entriesAfter[0].Content, "updated entry should maintain position at index 0")
+	assert.Equal(t, "entry 2", entriesAfter[1].Content)
+	assert.Equal(t, "entry 3", entriesAfter[2].Content)
+
+	_ = id2
+	_ = id3
+}
