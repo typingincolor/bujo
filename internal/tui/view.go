@@ -139,7 +139,7 @@ func (m Model) renderContextHelp() string {
 	case ViewTypeLists, ViewTypeListItems:
 		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
 	case ViewTypeGoals:
-		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  q: quit"
+		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  m: move  q: quit"
 	case ViewTypeSearch:
 		return "j/k: navigate  /: search  q: quit"
 	case ViewTypeStats:
@@ -1086,9 +1086,6 @@ func (m Model) renderGoalsContent() string {
 		}
 		sb.WriteString("\n")
 	}
-
-	sb.WriteString(HelpStyle.Render("h/l: month • a: add • e: edit • d: delete • m: move • space: toggle"))
-	sb.WriteString("\n\n")
 
 	return sb.String()
 }
