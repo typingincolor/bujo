@@ -74,6 +74,7 @@ type Model struct {
 	moveGoalMode           moveGoalState
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
+	summaryCollapsed       bool
 	statsViewState         statsState
 	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
@@ -398,6 +399,7 @@ func NewWithConfig(cfg Config) Model {
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
+		summaryCollapsed:  true,
 		searchView:        searchViewState{input: searchInput},
 		statsViewState:    statsState{from: statsFrom, to: statsTo},
 	}

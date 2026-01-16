@@ -4551,6 +4551,7 @@ func TestJournalView_ShowsDailySummary(t *testing.T) {
 		Content: "Test daily summary content",
 	}
 	model.summaryState.horizon = "daily"
+	model.summaryCollapsed = false // Expand summary to see content
 	model.agenda = &service.MultiDayAgenda{}
 
 	output := model.View()
@@ -4570,6 +4571,7 @@ func TestJournalView_ShowsWeeklySummary(t *testing.T) {
 		Content: "Test weekly summary content",
 	}
 	model.summaryState.horizon = "weekly"
+	model.summaryCollapsed = false // Expand summary to see content
 	model.agenda = &service.MultiDayAgenda{}
 
 	output := model.View()

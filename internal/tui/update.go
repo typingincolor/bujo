@@ -321,6 +321,10 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Back):
 		return m.handleBack()
 
+	case key.Matches(msg, m.keyMap.ToggleSummary):
+		m.summaryCollapsed = !m.summaryCollapsed
+		return m, nil
+
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--

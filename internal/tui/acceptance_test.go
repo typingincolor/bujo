@@ -225,6 +225,59 @@ func TestUAT_Navigation_Esc_GoesBackFromNestedView(t *testing.T) {
 	}
 }
 
+func TestUAT_JournalView_AISummary_CollapsedByDefault(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Summary should be collapsed by default
+	if !model.summaryCollapsed {
+		t.Error("AI summary should be collapsed by default")
+	}
+}
+
+func TestUAT_JournalView_AISummary_ToggleWithS(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+	model.currentView = ViewTypeJournal
+	model.agenda = &service.MultiDayAgenda{}
+
+	// Initially collapsed
+	if !model.summaryCollapsed {
+		t.Fatal("AI summary should be collapsed by default")
+	}
+
+	// Press 's' to toggle
+	msgS := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}}
+	newModel, _ := model.Update(msgS)
+	m := newModel.(Model)
+
+	if m.summaryCollapsed {
+		t.Error("AI summary should be expanded after pressing 's'")
+	}
+
+	// Press 's' again to collapse
+	newModel2, _ := m.Update(msgS)
+	m2 := newModel2.(Model)
+
+	if !m2.summaryCollapsed {
+		t.Error("AI summary should be collapsed after pressing 's' again")
+	}
+}
+
 func TestUAT_Navigation_Q_AlwaysShowsQuitConfirm(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 

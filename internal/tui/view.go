@@ -1217,7 +1217,21 @@ func (m Model) renderJournalAISummary() string {
 
 	sb.WriteString(strings.Repeat("─", 50))
 	sb.WriteString("\n\n")
-	sb.WriteString(fmt.Sprintf("🤖 AI %s Summary\n\n", horizonLabel))
+
+	collapseIndicator := "▼"
+	if m.summaryCollapsed {
+		collapseIndicator = "▶"
+	}
+
+	sb.WriteString(fmt.Sprintf("%s 🤖 AI %s Summary", collapseIndicator, horizonLabel))
+
+	if m.summaryCollapsed {
+		sb.WriteString(HelpStyle.Render("  (press 's' to expand)"))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString("\n\n")
 
 	if m.summaryState.streaming && m.summaryState.accumulatedText != "" {
 		sb.WriteString("⏳ Generating...\n\n")
