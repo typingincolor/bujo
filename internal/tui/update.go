@@ -329,6 +329,11 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.summaryCollapsed = !m.summaryCollapsed
 		return m, nil
 
+	case key.Matches(msg, m.keyMap.ToggleOverdueContext):
+		m = m.toggleOverdueContext()
+		m.entries = m.flattenAgenda(m.agenda)
+		return m.ensuredVisible(), nil
+
 	case key.Matches(msg, m.keyMap.Up):
 		if m.selectedIdx > 0 {
 			m.selectedIdx--

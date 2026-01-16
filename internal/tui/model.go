@@ -76,6 +76,7 @@ type Model struct {
 	migrateToGoalMode      migrateToGoalState
 	summaryState           summaryState
 	summaryCollapsed       bool
+	showOverdueContext     bool
 	statsViewState         statsState
 	setLocationMode        setLocationState
 	commandPalette         commandPaletteState
@@ -1107,10 +1108,16 @@ func (m Model) parseCapture(content string) ([]domain.Entry, error) {
 func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdue bool, today time.Time) []EntryItem {
 	var items []EntryItem
 
+	entriesToProcess := entries
+
+	if forceOverdue && !m.showOverdueContext {
+		entriesToProcess = m.filterOverdueContext(entries)
+	}
+
 	parentMap := make(map[int64][]domain.Entry)
 	var roots []domain.Entry
 
-	for _, e := range entries {
+	for _, e := range entriesToProcess {
 		if e.ParentID == nil {
 			roots = append(roots, e)
 		} else {
@@ -1216,6 +1223,33 @@ func (m Model) collapseAllSiblings() Model {
 
 	m.entries = m.flattenAgenda(m.agenda)
 	return m.ensuredVisible()
+}
+
+func (m Model) toggleOverdueContext() Model {
+	m.showOverdueContext = !m.showOverdueContext
+	return m
+}
+
+func (m Model) filterOverdueContext(entries []domain.Entry) []domain.Entry {
+	var filtered []domain.Entry
+	for _, e := range entries {
+		if e.Type == domain.EntryTypeTask {
+			filtered = append(filtered, e)
+		}
+	}
+
+	idSet := make(map[int64]bool)
+	for _, e := range filtered {
+		idSet[e.ID] = true
+	}
+
+	for i := range filtered {
+		if filtered[i].ParentID != nil && !idSet[*filtered[i].ParentID] {
+			filtered[i].ParentID = nil
+		}
+	}
+
+	return filtered
 }
 
 func (m Model) ensureSelectedAndAncestorsExpanded() Model {

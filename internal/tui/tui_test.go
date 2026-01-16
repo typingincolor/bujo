@@ -210,6 +210,48 @@ func TestModel_FlattenAgenda_WithOverdue(t *testing.T) {
 	}
 }
 
+func TestModel_FlattenAgenda_OverdueFiltersParentContext(t *testing.T) {
+	model := New(nil)
+	parentID := int64(1)
+	yesterday := time.Now().AddDate(0, 0, -1)
+
+	agenda := &service.MultiDayAgenda{
+		Overdue: []domain.Entry{
+			{ID: 1, Content: "Parent note", Type: domain.EntryTypeNote, ScheduledDate: &yesterday},
+			{ID: 2, Content: "Overdue task", Type: domain.EntryTypeTask, ParentID: &parentID, ScheduledDate: &yesterday},
+		},
+	}
+
+	result := model.flattenAgenda(agenda)
+
+	if len(result) != 1 {
+		t.Fatalf("expected 1 item (only the overdue task), got %d", len(result))
+	}
+	if result[0].Entry.Content != "Overdue task" {
+		t.Errorf("expected 'Overdue task', got %s", result[0].Entry.Content)
+	}
+}
+
+func TestModel_ToggleOverdueContext(t *testing.T) {
+	model := New(nil)
+
+	if model.showOverdueContext {
+		t.Error("showOverdueContext should be false by default")
+	}
+
+	model = model.toggleOverdueContext()
+
+	if !model.showOverdueContext {
+		t.Error("showOverdueContext should be true after toggle")
+	}
+
+	model = model.toggleOverdueContext()
+
+	if model.showOverdueContext {
+		t.Error("showOverdueContext should be false after second toggle")
+	}
+}
+
 func TestModel_FlattenAgenda_WithDays(t *testing.T) {
 	model := New(nil)
 	location := "Home Office"

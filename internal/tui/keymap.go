@@ -3,53 +3,54 @@ package tui
 import "github.com/charmbracelet/bubbles/key"
 
 type KeyMap struct {
-	Up             key.Binding
-	Down           key.Binding
-	Top            key.Binding
-	Bottom         key.Binding
-	Done           key.Binding
-	Answer         key.Binding
-	CancelEntry    key.Binding
-	Delete         key.Binding
-	Edit           key.Binding
-	Add            key.Binding
-	AddChild       key.Binding
-	AddRoot        key.Binding
-	Migrate        key.Binding
-	MigrateToGoal  key.Binding
-	MoveListItem   key.Binding
-	MoveToList     key.Binding
-	Priority       key.Binding
-	ToggleView     key.Binding
-	GotoDate       key.Binding
-	Capture        key.Binding
-	Confirm        key.Binding
-	Cancel         key.Binding
-	UncancelEntry  key.Binding
-	Retype         key.Binding
-	Undo           key.Binding
-	Quit           key.Binding
-	Back           key.Binding
-	Help           key.Binding
-	ViewJournal    key.Binding
-	ViewHabits     key.Binding
-	ViewLists      key.Binding
-	ViewSearch     key.Binding
-	ViewStats      key.Binding
-	ViewGoals      key.Binding
-	ViewSettings   key.Binding
-	CommandPalette key.Binding
-	LogHabit       key.Binding
-	RemoveHabitLog key.Binding
-	DayLeft        key.Binding
-	DayRight       key.Binding
-	PrevPeriod     key.Binding
-	NextPeriod     key.Binding
-	ExpandAll      key.Binding
-	CollapseAll    key.Binding
-	OpenURL        key.Binding
-	ToggleSummary  key.Binding
-	SetLocation    key.Binding
+	Up                   key.Binding
+	Down                 key.Binding
+	Top                  key.Binding
+	Bottom               key.Binding
+	Done                 key.Binding
+	Answer               key.Binding
+	CancelEntry          key.Binding
+	Delete               key.Binding
+	Edit                 key.Binding
+	Add                  key.Binding
+	AddChild             key.Binding
+	AddRoot              key.Binding
+	Migrate              key.Binding
+	MigrateToGoal        key.Binding
+	MoveListItem         key.Binding
+	MoveToList           key.Binding
+	Priority             key.Binding
+	ToggleView           key.Binding
+	GotoDate             key.Binding
+	Capture              key.Binding
+	Confirm              key.Binding
+	Cancel               key.Binding
+	UncancelEntry        key.Binding
+	Retype               key.Binding
+	Undo                 key.Binding
+	Quit                 key.Binding
+	Back                 key.Binding
+	Help                 key.Binding
+	ViewJournal          key.Binding
+	ViewHabits           key.Binding
+	ViewLists            key.Binding
+	ViewSearch           key.Binding
+	ViewStats            key.Binding
+	ViewGoals            key.Binding
+	ViewSettings         key.Binding
+	CommandPalette       key.Binding
+	LogHabit             key.Binding
+	RemoveHabitLog       key.Binding
+	DayLeft              key.Binding
+	DayRight             key.Binding
+	PrevPeriod           key.Binding
+	NextPeriod           key.Binding
+	ExpandAll            key.Binding
+	CollapseAll          key.Binding
+	OpenURL              key.Binding
+	ToggleSummary        key.Binding
+	SetLocation          key.Binding
+	ToggleOverdueContext key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -241,6 +242,10 @@ func DefaultKeyMap() KeyMap {
 		SetLocation: key.NewBinding(
 			key.WithKeys("@"),
 			key.WithHelp("@", "set location"),
+		),
+		ToggleOverdueContext: key.NewBinding(
+			key.WithKeys("C"),
+			key.WithHelp("C", "toggle context"),
 		),
 	}
 }
