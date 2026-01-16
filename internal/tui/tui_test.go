@@ -4448,7 +4448,10 @@ func TestHabitView_ToggleView_ResetsWeekOffsetToAvoidFuture(t *testing.T) {
 	refDateNormalized := time.Date(refDateMonth.Year(), refDateMonth.Month(), refDateMonth.Day(), 0, 0, 0, 0, refDateMonth.Location())
 	daysOffset := todayNormalized.Sub(refDateNormalized).Hours() / 24
 
-	if daysOffset > 35 {
+	// Allow ~35 day margin: since month-mode offset of 1 = ~30 days, this ensures
+	// we're within approximately one month of the current date after the toggle
+	const maxDaysMargin = 35
+	if daysOffset > maxDaysMargin {
 		t.Errorf("after toggling to month mode, reference date should be recent (within ~30 days), but is %d days in past", int(daysOffset))
 	}
 }

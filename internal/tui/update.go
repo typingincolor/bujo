@@ -2004,7 +2004,9 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case HabitViewModeQuarter:
 			m.habitState.viewMode = HabitViewModeWeek
 		}
-		// Reset weekOffset when switching view modes to show current period
+		// Reset weekOffset when switching view modes because the offset represents
+		// different absolute time spans in each mode (7 days/week vs 30 days/month).
+		// Without resetting, users would see unexpected historical data when switching modes.
 		m.habitState.weekOffset = 0
 		return m, m.loadHabitsCmd()
 

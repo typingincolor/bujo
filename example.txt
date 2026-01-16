@@ -1,0 +1,11 @@
+what I want to see:
+
+. task 1 [context hidden]
+. task 2 [context hidden]
+
+select task 1, press 'C' then i see
+
+o event 1
+  - note 2
+    . task 1
+. task 2
