@@ -85,6 +85,17 @@ function App() {
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
+  const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
+    try {
+      const hasChildren = await HasChildren(entry.id)
+      setDeleteHasChildren(hasChildren)
+      setDeleteDialogEntry(entry)
+    } catch (err) {
+      console.error('Failed to check entry children:', err)
+      setError(err instanceof Error ? err.message : 'Failed to check entry')
+    }
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       if (view !== 'today' || flatEntries.length === 0) return
@@ -128,9 +139,7 @@ function App() {
           e.preventDefault()
           const entry = flatEntries[selectedIndex]
           if (entry) {
-            const hasChildren = await HasChildren(entry.id)
-            setDeleteHasChildren(hasChildren)
-            setDeleteDialogEntry(entry)
+            handleDeleteEntryRequest(entry)
           }
           break
         }
@@ -139,7 +148,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -262,11 +271,7 @@ function App() {
                 selectedEntryId={selectedEntryId}
                 onEntryChanged={loadData}
                 onEditEntry={(entry) => setEditModalEntry(entry)}
-                onDeleteEntry={async (entry) => {
-                  const hasChildren = await HasChildren(entry.id)
-                  setDeleteHasChildren(hasChildren)
-                  setDeleteDialogEntry(entry)
-                }}
+                onDeleteEntry={handleDeleteEntryRequest}
               />
             </div>
           )}
@@ -279,11 +284,7 @@ function App() {
                   day={day}
                   onEntryChanged={loadData}
                   onEditEntry={(entry) => setEditModalEntry(entry)}
-                  onDeleteEntry={async (entry) => {
-                    const hasChildren = await HasChildren(entry.id)
-                    setDeleteHasChildren(hasChildren)
-                    setDeleteDialogEntry(entry)
-                  }}
+                  onDeleteEntry={handleDeleteEntryRequest}
                 />
               ))}
               {weekDays.length === 0 && (
@@ -306,7 +307,7 @@ function App() {
 
           {view === 'goals' && (
             <div className="max-w-3xl mx-auto">
-              <GoalsView goals={goals} onGoalChanged={loadData} />
+              <GoalsView goals={goals} onGoalChanged={loadData} onError={setError} />
             </div>
           )}
         </main>

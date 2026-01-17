@@ -10,6 +10,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 interface GoalsViewProps {
   goals: Goal[];
   onGoalChanged?: () => void;
+  onError?: (message: string) => void;
 }
 
 function getMonthLabel(monthStr: string): string {
@@ -21,7 +22,7 @@ function toWailsTime(date: Date): time.Time {
   return date.toISOString() as unknown as time.Time
 }
 
-export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps) {
+export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: GoalsViewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [isAdding, setIsAdding] = useState(false);
   const [newGoalContent, setNewGoalContent] = useState('');
@@ -50,6 +51,7 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
       onGoalChanged?.();
     } catch (error) {
       console.error('Failed to toggle goal:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to toggle goal');
     }
   };
 
@@ -73,6 +75,7 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
       onGoalChanged?.();
     } catch (error) {
       console.error('Failed to create goal:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to create goal');
     }
   };
 
@@ -93,6 +96,7 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
       onGoalChanged?.();
     } catch (error) {
       console.error('Failed to delete goal:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to delete goal');
     }
   };
   

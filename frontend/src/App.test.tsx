@@ -376,6 +376,7 @@ describe('App - Delete Entry', () => {
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
     const dialogDeleteButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    expect(dialogDeleteButton).toBeDefined()
     fireEvent.click(dialogDeleteButton!)
 
     await waitFor(() => {

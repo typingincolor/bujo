@@ -171,6 +171,7 @@ describe('GoalsView - Delete Goal', () => {
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
     const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    expect(confirmButton).toBeDefined()
     await user.click(confirmButton!)
 
     await waitFor(() => {
@@ -187,6 +188,7 @@ describe('GoalsView - Delete Goal', () => {
 
     const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
     const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    expect(confirmButton).toBeDefined()
     await user.click(confirmButton!)
 
     await waitFor(() => {
