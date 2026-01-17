@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { GetAgenda, GetHabits, GetLists, GetGoals } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -9,7 +9,7 @@ import { GoalsView } from '@/components/bujo/GoalsView'
 import { Header } from '@/components/bujo/Header'
 import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
-import { DayEntries, Habit, BujoList, Goal } from '@/types/bujo'
+import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import './index.css'
 
@@ -64,6 +64,15 @@ function App() {
     setView(newView)
   }
 
+  const handleAddEntry = useCallback(async (content: string, type: EntryType) => {
+    const symbol = ENTRY_SYMBOLS[type]
+    const formattedContent = `${symbol} ${content}`
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    await AddEntry(formattedContent, toWailsTime(today))
+    loadData()
+  }, [loadData])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
     week: 'This Week',
@@ -113,7 +122,7 @@ function App() {
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
-              <AddEntryBar />
+              <AddEntryBar onAdd={handleAddEntry} />
               <DayView day={today} onEntryChanged={loadData} />
             </div>
           )}
