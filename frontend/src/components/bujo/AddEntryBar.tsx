@@ -11,6 +11,7 @@ const entryTypes: { type: EntryType; symbol: string; label: string }[] = [
   { type: 'task', symbol: '•', label: 'Task' },
   { type: 'note', symbol: '–', label: 'Note' },
   { type: 'event', symbol: '○', label: 'Event' },
+  { type: 'question', symbol: '?', label: 'Question' },
 ]
 
 export function AddEntryBar({ onAdd }: AddEntryBarProps) {

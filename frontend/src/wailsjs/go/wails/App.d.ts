@@ -50,3 +50,5 @@ export function MarkListItemUndone(arg1:number):Promise<void>;
 export function RemoveListItem(arg1:number):Promise<void>;
 
 export function Search(arg1:string):Promise<Array<domain.Entry>>;
+
+export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;

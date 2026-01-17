@@ -93,3 +93,7 @@ export function RemoveListItem(arg1) {
 export function Search(arg1) {
   return window['go']['wails']['App']['Search'](arg1);
 }
+
+export function AnswerQuestion(arg1, arg2) {
+  return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
+}

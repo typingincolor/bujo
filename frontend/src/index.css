@@ -63,6 +63,9 @@
     --bujo-done: 145 35% 42%;
     --bujo-migrated: 280 25% 50%;
     --bujo-cancelled: 0 40% 55%;
+    --bujo-question: 45 80% 50%;
+    --bujo-answered: 145 60% 45%;
+    --bujo-answer: 200 30% 45%;
     --bujo-streak: 28 85% 55%;
     --bujo-habit-fill: 145 45% 50%;
     --bujo-habit-empty: 40 10% 80%;
@@ -122,6 +125,9 @@
     --bujo-done: 145 35% 55%;
     --bujo-migrated: 280 30% 60%;
     --bujo-cancelled: 0 40% 60%;
+    --bujo-question: 45 70% 55%;
+    --bujo-answered: 145 50% 55%;
+    --bujo-answer: 200 35% 55%;
     --bujo-streak: 28 75% 60%;
     --bujo-habit-fill: 145 40% 55%;
     --bujo-habit-empty: 25 10% 30%;
@@ -171,6 +177,9 @@
     color: hsl(var(--bujo-cancelled));
     text-decoration: line-through;
   }
+  .entry-question { color: hsl(var(--bujo-question)); }
+  .entry-answered { color: hsl(var(--bujo-answered)); }
+  .entry-answer { color: hsl(var(--bujo-answer)); }
 
   /* Priority indicators */
   .priority-high { color: hsl(var(--priority-high)); }
