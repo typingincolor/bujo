@@ -3,9 +3,11 @@ import { cn } from '@/lib/utils';
 import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useState } from 'react';
+import { MarkGoalDone, MarkGoalActive } from '@/wailsjs/go/wails/App';
 
 interface GoalsViewProps {
   goals: Goal[];
+  onGoalChanged?: () => void;
 }
 
 function getMonthLabel(monthStr: string): string {
@@ -13,19 +15,32 @@ function getMonthLabel(monthStr: string): string {
   return format(date, 'MMMM yyyy');
 }
 
-export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
+export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps) {
   const [currentMonth, setCurrentMonth] = useState(() => format(new Date(), 'yyyy-MM'));
-  
+
   const filteredGoals = initialGoals.filter(g => g.month === currentMonth);
   const completedCount = filteredGoals.filter(g => g.completed).length;
-  const progress = filteredGoals.length > 0 
+  const progress = filteredGoals.length > 0
     ? Math.round((completedCount / filteredGoals.length) * 100)
     : 0;
-  
+
   const navigateMonth = (delta: number) => {
     const date = parse(currentMonth, 'yyyy-MM', new Date());
     date.setMonth(date.getMonth() + delta);
     setCurrentMonth(format(date, 'yyyy-MM'));
+  };
+
+  const handleToggleGoal = async (goalId: number, completed: boolean) => {
+    try {
+      if (completed) {
+        await MarkGoalActive(goalId);
+      } else {
+        await MarkGoalDone(goalId);
+      }
+      onGoalChanged?.();
+    } catch (error) {
+      console.error('Failed to toggle goal:', error);
+    }
   };
   
   return (
@@ -73,6 +88,7 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
           filteredGoals.map((goal) => (
             <div
               key={goal.id}
+              onClick={() => handleToggleGoal(goal.id, goal.completed)}
               className={cn(
                 'flex items-center gap-3 p-3 rounded-lg border border-border',
                 'bg-card hover:bg-secondary/30 transition-colors cursor-pointer group animate-fade-in'
