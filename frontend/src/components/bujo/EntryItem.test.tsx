@@ -5,13 +5,11 @@ import { Entry } from '@/types/bujo'
 
 const createTestEntry = (overrides: Partial<Entry> = {}): Entry => ({
   id: 1,
-  entityId: 'e1',
   type: 'task',
   content: 'Test entry',
-  priority: null,
+  priority: 'none',
   parentId: null,
-  depth: 0,
-  createdAt: '2026-01-17',
+  loggedDate: '2026-01-17',
   children: [],
   ...overrides,
 })

@@ -177,7 +177,7 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build Wails app
-        run: wails build -platform darwin/universal
+        run: wails build -platform darwin/universal -tags wails
 
       - name: Verify app bundle
         run: |
