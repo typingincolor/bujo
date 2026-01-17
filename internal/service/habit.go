@@ -68,6 +68,14 @@ func (s *HabitService) HabitExists(ctx context.Context, name string) (bool, erro
 	return habit != nil, nil
 }
 
+func (s *HabitService) CreateHabit(ctx context.Context, name string) (int64, error) {
+	habit, err := s.habitRepo.GetOrCreate(ctx, name, 1)
+	if err != nil {
+		return 0, err
+	}
+	return habit.ID, nil
+}
+
 func (s *HabitService) LogHabit(ctx context.Context, name string, count int) error {
 	return s.LogHabitForDate(ctx, name, count, time.Now())
 }

@@ -11,9 +11,13 @@ export function AddListItem(arg1:number,arg2:string):Promise<number>;
 
 export function CreateGoal(arg1:string,arg2:time.Time):Promise<number>;
 
+export function CreateHabit(arg1:string):Promise<number>;
+
 export function DeleteEntry(arg1:number):Promise<void>;
 
 export function DeleteGoal(arg1:number):Promise<void>;
+
+export function DeleteHabit(arg1:number):Promise<void>;
 
 export function EditEntry(arg1:number,arg2:string):Promise<void>;
 

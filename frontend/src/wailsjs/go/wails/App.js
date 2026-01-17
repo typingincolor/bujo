@@ -14,8 +14,16 @@ export function CreateGoal(arg1, arg2) {
   return window['go']['wails']['App']['CreateGoal'](arg1, arg2);
 }
 
+export function CreateHabit(arg1) {
+  return window['go']['wails']['App']['CreateHabit'](arg1);
+}
+
 export function DeleteEntry(arg1) {
   return window['go']['wails']['App']['DeleteEntry'](arg1);
+}
+
+export function DeleteHabit(arg1) {
+  return window['go']['wails']['App']['DeleteHabit'](arg1);
 }
 
 export function DeleteGoal(arg1) {
