@@ -3,6 +3,8 @@ import { format } from 'date-fns';
 import { Calendar, Search, Command } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const SEARCH_DEBOUNCE_MS = 200;
+
 interface SearchResult {
   id: number;
   content: string;
@@ -23,16 +25,21 @@ export function Header({ title, searchResults = [], onSearch, onSelectResult }: 
   const [showResults, setShowResults] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRequestRef = useRef(0);
 
   useEffect(() => {
+    const currentRequest = ++searchRequestRef.current;
+
     const debounceTimer = setTimeout(() => {
+      if (currentRequest !== searchRequestRef.current) return;
+
       if (query.length > 0) {
         onSearch?.(query);
         setShowResults(true);
       } else {
         setShowResults(false);
       }
-    }, 200);
+    }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(debounceTimer);
   }, [query, onSearch]);

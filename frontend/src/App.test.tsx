@@ -2,29 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
-const mockEntriesData = {
-  Days: [{
-    Date: '2026-01-17T00:00:00Z',
+const mockEntriesAgenda = createMockAgenda({
+  Days: [createMockDayEntries({
     Entries: [
-      { ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T10:00:00Z' },
-      { ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T11:00:00Z' },
-      { ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T12:00:00Z' },
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
     ],
-    Location: '',
-    Mood: '',
-    Weather: '',
-  }],
+  })],
   Overdue: [],
-} as const
+})
 
 const mockSearchResults = [
-  { ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Buy groceries', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-15T10:00:00Z' },
-  { ID: 11, EntityID: 'e11', Type: 'Note', Content: 'Grocery list ideas', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-14T10:00:00Z' },
-] as const
+  createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Buy groceries', CreatedAt: '2026-01-15T10:00:00Z' }),
+  createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Note', Content: 'Grocery list ideas', CreatedAt: '2026-01-14T10:00:00Z' }),
+]
 
 vi.mock('./wailsjs/go/wails/App', () => ({
   GetAgenda: vi.fn().mockResolvedValue({
+    Overdue: [],
     Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
   }),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
@@ -103,8 +101,7 @@ describe('App - AddEntryBar integration', () => {
 describe('App - Keyboard Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesData as any)
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
   })
 
   it('pressing j moves selection down', async () => {
@@ -210,10 +207,8 @@ describe('App - Keyboard Navigation', () => {
 describe('App - Search functionality', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesData as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vi.mocked(Search).mockResolvedValue(mockSearchResults as any)
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(Search).mockResolvedValue(mockSearchResults)
   })
 
   it('calls Search binding when typing in search input', async () => {
