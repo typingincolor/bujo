@@ -139,3 +139,7 @@ func (a *App) CreateHabit(name string) (int64, error) {
 func (a *App) DeleteHabit(habitID int64) error {
 	return a.services.Habit.DeleteHabitByID(a.ctx, habitID)
 }
+
+func (a *App) AnswerQuestion(questionID int64, answerText string) error {
+	return a.services.Bujo.MarkAnswered(a.ctx, questionID, answerText)
+}

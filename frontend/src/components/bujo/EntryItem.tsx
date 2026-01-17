@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -14,6 +14,7 @@ interface EntryItemProps {
   onToggleDone?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onAnswer?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -23,6 +24,9 @@ const contentStyles: Record<EntryType, string> = {
   done: 'line-through text-muted-foreground',
   migrated: 'text-muted-foreground',
   cancelled: 'line-through text-muted-foreground opacity-60',
+  question: 'text-bujo-question font-medium',
+  answered: 'text-bujo-answered',
+  answer: 'text-muted-foreground pl-4',
 };
 
 export function EntryItem({
@@ -36,6 +40,7 @@ export function EntryItem({
   onToggleDone,
   onEdit,
   onDelete,
+  onAnswer,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
 
@@ -88,6 +93,18 @@ export function EntryItem({
 
       {/* Action buttons (shown on hover) */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onAnswer && entry.type === 'question' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAnswer();
+            }}
+            title="Answer question"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+          </button>
+        )}
         {onEdit && (
           <button
             onClick={(e) => {

@@ -89,4 +89,84 @@ describe('EntryItem', () => {
     expect(onDelete).toHaveBeenCalledTimes(1)
     expect(onToggleDone).not.toHaveBeenCalled()
   })
+
+  describe('question/answer entry types', () => {
+    it('renders question entry with ? symbol', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'question', content: 'What is TDD?' })} />)
+      expect(screen.getByText('?')).toBeInTheDocument()
+      expect(screen.getByText('What is TDD?')).toBeInTheDocument()
+    })
+
+    it('renders answered entry with ★ symbol', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'answered', content: 'What is TDD?' })} />)
+      expect(screen.getByText('★')).toBeInTheDocument()
+      expect(screen.getByText('What is TDD?')).toBeInTheDocument()
+    })
+
+    it('renders answer entry with ↳ symbol', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'answer', content: 'Test-Driven Development' })} />)
+      expect(screen.getByText('↳')).toBeInTheDocument()
+      expect(screen.getByText('Test-Driven Development')).toBeInTheDocument()
+    })
+
+    it('question entries are not toggleable', () => {
+      const onToggleDone = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'question' })} onToggleDone={onToggleDone} />)
+
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onToggleDone).not.toHaveBeenCalled()
+    })
+
+    it('answered entries are not toggleable', () => {
+      const onToggleDone = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'answered' })} onToggleDone={onToggleDone} />)
+
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onToggleDone).not.toHaveBeenCalled()
+    })
+
+    it('answer entries are not toggleable', () => {
+      const onToggleDone = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'answer' })} onToggleDone={onToggleDone} />)
+
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onToggleDone).not.toHaveBeenCalled()
+    })
+
+    it('shows answer button for question entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'question', content: 'What is TDD?' })}
+          onAnswer={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Answer question')).toBeInTheDocument()
+    })
+
+    it('calls onAnswer when answer button is clicked', () => {
+      const onAnswer = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'question', content: 'What is TDD?' })}
+          onAnswer={onAnswer}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Answer question'))
+      expect(onAnswer).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show answer button for non-question entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onAnswer={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Answer question')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -14,6 +14,9 @@ const typeStyles: Record<EntryType, string> = {
   done: 'text-bujo-done',
   migrated: 'text-bujo-migrated',
   cancelled: 'text-bujo-cancelled',
+  question: 'text-bujo-question',
+  answered: 'text-bujo-answered',
+  answer: 'text-bujo-answer',
 };
 
 const priorityStyles: Record<Priority, string> = {
