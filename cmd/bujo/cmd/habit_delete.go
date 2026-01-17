@@ -61,9 +61,9 @@ Examples:
 		}
 
 		if isID {
-			err = habitService.DeleteHabitByID(cmd.Context(), id)
+			err = services.Habit.DeleteHabitByID(cmd.Context(), id)
 		} else {
-			err = habitService.DeleteHabit(cmd.Context(), name)
+			err = services.Habit.DeleteHabit(cmd.Context(), name)
 		}
 
 		if err != nil {

@@ -38,7 +38,7 @@ Examples:
 			return err
 		}
 
-		err = bujoService.RetypeEntry(cmd.Context(), id, newType)
+		err = services.Bujo.RetypeEntry(cmd.Context(), id, newType)
 		if err != nil {
 			return fmt.Errorf("failed to retype: %w", err)
 		}

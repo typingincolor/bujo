@@ -22,7 +22,7 @@ Examples:
 			return err
 		}
 
-		err = goalService.MarkDone(cmd.Context(), id)
+		err = services.Goal.MarkDone(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to mark goal as done: %w", err)
 		}

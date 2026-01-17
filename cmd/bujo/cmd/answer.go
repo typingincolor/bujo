@@ -29,7 +29,7 @@ Examples:
 
 		answerText := strings.Join(args[1:], " ")
 
-		err = bujoService.MarkAnswered(cmd.Context(), id, answerText)
+		err = services.Bujo.MarkAnswered(cmd.Context(), id, answerText)
 		if err != nil {
 			return fmt.Errorf("failed to mark answered: %w", err)
 		}

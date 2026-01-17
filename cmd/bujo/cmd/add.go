@@ -96,7 +96,7 @@ Examples:
 			opts.ParentID = &parentID
 		}
 
-		ids, err := bujoService.LogEntries(cmd.Context(), input, opts)
+		ids, err := services.Bujo.LogEntries(cmd.Context(), input, opts)
 		if err != nil {
 			return fmt.Errorf("failed to add entries: %w", err)
 		}

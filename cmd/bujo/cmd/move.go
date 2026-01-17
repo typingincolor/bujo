@@ -71,7 +71,7 @@ Examples:
 			opts.NewLoggedDate = &loggedDate
 		}
 
-		if err := bujoService.MoveEntry(cmd.Context(), id, opts); err != nil {
+		if err := services.Bujo.MoveEntry(cmd.Context(), id, opts); err != nil {
 			return fmt.Errorf("failed to move entry: %w", err)
 		}
 

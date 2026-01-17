@@ -35,7 +35,7 @@ Backups are stored in ~/.bujo/backups/ by default.`,
 			return err
 		}
 		backupDir = getDefaultBackupDir()
-		backupRepo := sqliterepo.NewBackupRepository(db)
+		backupRepo := sqliterepo.NewBackupRepository(services.DB)
 		backupService = service.NewBackupService(backupRepo)
 		return nil
 	},

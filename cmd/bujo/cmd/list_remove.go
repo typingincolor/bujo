@@ -24,7 +24,7 @@ Example:
 			return err
 		}
 
-		err = listService.RemoveItem(ctx, itemID)
+		err = services.List.RemoveItem(ctx, itemID)
 		if err != nil {
 			return fmt.Errorf("failed to remove item: %w", err)
 		}

@@ -40,7 +40,7 @@ Examples:
 			}
 		}
 
-		err = bujoService.SetLocation(cmd.Context(), targetDate, location)
+		err = services.Bujo.SetLocation(cmd.Context(), targetDate, location)
 		if err != nil {
 			return fmt.Errorf("failed to set location: %w", err)
 		}

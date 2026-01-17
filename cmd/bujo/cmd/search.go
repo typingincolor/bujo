@@ -71,7 +71,7 @@ Examples:
 			opts = opts.WithLimit(searchLimit)
 		}
 
-		results, err := bujoService.SearchEntries(cmd.Context(), opts)
+		results, err := services.Bujo.SearchEntries(cmd.Context(), opts)
 		if err != nil {
 			return fmt.Errorf("search failed: %w", err)
 		}
@@ -85,7 +85,7 @@ Examples:
 		for i, entry := range results {
 			ids[i] = entry.ID
 		}
-		ancestorsMap, err := bujoService.GetEntriesAncestorsMap(cmd.Context(), ids)
+		ancestorsMap, err := services.Bujo.GetEntriesAncestorsMap(cmd.Context(), ids)
 		if err != nil {
 			return fmt.Errorf("failed to fetch ancestors: %w", err)
 		}

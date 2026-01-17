@@ -49,9 +49,9 @@ Examples:
 		}
 
 		if isID {
-			err = habitService.SetHabitGoalByID(cmd.Context(), id, goal)
+			err = services.Habit.SetHabitGoalByID(cmd.Context(), id, goal)
 		} else {
-			err = habitService.SetHabitGoal(cmd.Context(), name, goal)
+			err = services.Habit.SetHabitGoal(cmd.Context(), name, goal)
 		}
 
 		if err != nil {

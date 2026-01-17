@@ -39,7 +39,7 @@ Examples:
 			}
 		}
 
-		err = bujoService.SetMood(cmd.Context(), targetDate, mood)
+		err = services.Bujo.SetMood(cmd.Context(), targetDate, mood)
 		if err != nil {
 			return fmt.Errorf("failed to set mood: %w", err)
 		}

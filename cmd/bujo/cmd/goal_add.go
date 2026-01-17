@@ -28,7 +28,7 @@ Examples:
 			return err
 		}
 
-		id, err := goalService.CreateGoal(cmd.Context(), content, month)
+		id, err := services.Goal.CreateGoal(cmd.Context(), content, month)
 		if err != nil {
 			return fmt.Errorf("failed to create goal: %w", err)
 		}

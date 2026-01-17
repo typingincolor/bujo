@@ -54,7 +54,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 		to = parsed
 	}
 
-	stats, err := statsService.GetStats(cmd.Context(), from, to)
+	stats, err := services.Stats.GetStats(cmd.Context(), from, to)
 	if err != nil {
 		return fmt.Errorf("failed to get stats: %w", err)
 	}

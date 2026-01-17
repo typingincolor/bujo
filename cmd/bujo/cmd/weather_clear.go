@@ -34,7 +34,7 @@ Examples:
 			}
 		}
 
-		err = bujoService.ClearWeather(cmd.Context(), targetDate)
+		err = services.Bujo.ClearWeather(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear weather: %w", err)
 		}
