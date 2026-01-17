@@ -74,3 +74,38 @@ func TestApp_GetHabits_ReturnsTrackerStatus(t *testing.T) {
 	assert.NotNil(t, status)
 	assert.NotNil(t, status.Habits)
 }
+
+func TestApp_GetLists_ReturnsAllLists(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	lists, err := wailsApp.GetLists()
+
+	require.NoError(t, err)
+	assert.NotNil(t, lists)
+}
+
+func TestApp_GetGoals_ReturnsGoalsForMonth(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	goals, err := wailsApp.GetGoals(month)
+
+	require.NoError(t, err)
+	assert.Empty(t, goals)
+}
