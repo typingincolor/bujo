@@ -29,6 +29,7 @@ export interface Habit {
   goal?: number;
   history: boolean[]; // last 7 or 30 days
   todayLogged: boolean;
+  todayCount: number;
 }
 
 export interface ListItem {

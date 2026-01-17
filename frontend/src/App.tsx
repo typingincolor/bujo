@@ -114,14 +114,14 @@ function App() {
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
               <AddEntryBar />
-              <DayView day={today} />
+              <DayView day={today} onEntryChanged={loadData} />
             </div>
           )}
 
           {view === 'week' && (
             <div className="max-w-4xl mx-auto space-y-8">
               {weekDays.map((day, i) => (
-                <DayView key={i} day={day} />
+                <DayView key={i} day={day} onEntryChanged={loadData} />
               ))}
               {weekDays.length === 0 && (
                 <p className="text-muted-foreground text-center py-8">No entries this week</p>
@@ -131,19 +131,19 @@ function App() {
 
           {view === 'habits' && (
             <div className="max-w-4xl mx-auto">
-              <HabitTracker habits={habits} />
+              <HabitTracker habits={habits} onHabitChanged={loadData} />
             </div>
           )}
 
           {view === 'lists' && (
             <div className="max-w-4xl mx-auto">
-              <ListsView lists={lists} />
+              <ListsView lists={lists} onListChanged={loadData} />
             </div>
           )}
 
           {view === 'goals' && (
             <div className="max-w-3xl mx-auto">
-              <GoalsView goals={goals} />
+              <GoalsView goals={goals} onGoalChanged={loadData} />
             </div>
           )}
         </main>
