@@ -1,10 +1,11 @@
 import { Goal } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { useState, useRef } from 'react';
-import { MarkGoalDone, MarkGoalActive, CreateGoal } from '@/wailsjs/go/wails/App';
+import { MarkGoalDone, MarkGoalActive, CreateGoal, DeleteGoal } from '@/wailsjs/go/wails/App';
 import { time } from '@/wailsjs/go/models';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface GoalsViewProps {
   goals: Goal[];
@@ -24,6 +25,7 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
   const [currentMonth, setCurrentMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   const [isAdding, setIsAdding] = useState(false);
   const [newGoalContent, setNewGoalContent] = useState('');
+  const [deleteGoal, setDeleteGoal] = useState<Goal | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredGoals = initialGoals.filter(g => g.month === currentMonth);
@@ -79,6 +81,18 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
       handleCreateGoal();
     } else if (e.key === 'Escape') {
       handleCancelAdding();
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteGoal) return;
+
+    try {
+      await DeleteGoal(deleteGoal.id);
+      setDeleteGoal(null);
+      onGoalChanged?.();
+    } catch (error) {
+      console.error('Failed to delete goal:', error);
     }
   };
   
@@ -176,6 +190,16 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
               )}>
                 {goal.content}
               </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteGoal(goal);
+                }}
+                title="Delete goal"
+                className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
               <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
                 #{goal.id}
               </span>
@@ -187,6 +211,17 @@ export function GoalsView({ goals: initialGoals, onGoalChanged }: GoalsViewProps
           </p>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={deleteGoal !== null}
+        title="Delete Goal"
+        message={`Are you sure you want to delete "${deleteGoal?.content}"?`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteGoal(null)}
+      />
     </div>
   );
 }

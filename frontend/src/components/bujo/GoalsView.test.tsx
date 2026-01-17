@@ -9,9 +9,10 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   MarkGoalDone: vi.fn().mockResolvedValue(undefined),
   MarkGoalActive: vi.fn().mockResolvedValue(undefined),
   CreateGoal: vi.fn().mockResolvedValue(1),
+  DeleteGoal: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateGoal } from '@/wailsjs/go/wails/App'
+import { CreateGoal, DeleteGoal } from '@/wailsjs/go/wails/App'
 
 const currentMonth = format(new Date(), 'yyyy-MM')
 
@@ -138,5 +139,80 @@ describe('GoalsView - Toggle Goals', () => {
     ]} />)
 
     expect(screen.getByText('1/2')).toBeInTheDocument()
+  })
+})
+
+describe('GoalsView - Delete Goal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows delete button on goal item hover', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+    expect(screen.getByTitle('Delete goal')).toBeInTheDocument()
+  })
+
+  it('shows confirmation dialog when delete button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Delete goal'))
+
+    expect(screen.getByText('Delete Goal')).toBeInTheDocument()
+    expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  })
+
+  it('calls DeleteGoal binding when confirming delete', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Delete goal'))
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    await user.click(confirmButton!)
+
+    await waitFor(() => {
+      expect(DeleteGoal).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onGoalChanged after deleting goal', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Delete goal'))
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    await user.click(confirmButton!)
+
+    await waitFor(() => {
+      expect(onGoalChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('closes dialog on cancel', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Delete goal'))
+    expect(screen.getByText('Delete Goal')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(screen.queryByText('Delete Goal')).not.toBeInTheDocument()
+  })
+
+  it('does not call DeleteGoal when cancel is clicked', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Delete goal'))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(DeleteGoal).not.toHaveBeenCalled()
   })
 })
