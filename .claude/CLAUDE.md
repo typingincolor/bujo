@@ -12,25 +12,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API.
+bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API. Also includes a Wails desktop app with React frontend.
 
-**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Wails v2 (desktop app), React + TypeScript, Gemini API
+**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API, Wails v2, React 19, TypeScript, Tailwind CSS
 
 ## Build Commands
 
+### Go Backend
 ```bash
-# CLI
 go build -o bujo ./cmd/bujo     # Build CLI binary
-go test ./...                    # Run all tests
+go test ./...                    # Run all Go tests
 go test ./internal/domain/...   # Run domain tests only
 go test -v -run TestName ./...  # Run specific test
 go test -cover ./...            # Run with coverage
 go vet ./...                    # Static analysis
+```
 
-# Wails Desktop App
-wails dev                        # Run in development mode (hot reload)
-wails build                      # Build production .app bundle
-wails generate module            # Regenerate TypeScript bindings
+### Frontend (React/TypeScript)
+```bash
+cd frontend
+npm install                      # Install dependencies
+npm test                         # Run frontend tests (Vitest)
+npm run test:watch               # Run tests in watch mode
+npm run build                    # Build for production
+npm run dev                      # Development server (for standalone testing)
+npm run lint                     # ESLint
+```
+
+### Wails Desktop App
+```bash
+wails dev                        # Development mode with hot reload
+wails build                      # Build production app
+wails generate module            # Regenerate Go bindings for frontend
 ```
 
 ## DATABASE SAFETY (CRITICAL)
@@ -59,22 +72,27 @@ wails generate module            # Regenerate TypeScript bindings
 Hexagonal Architecture with clear separation:
 
 ```
-cmd/bujo/           CLI entry point (Cobra adapter)
-main.go             Wails desktop app entry point
-frontend/           React + TypeScript frontend for Wails
+cmd/bujo/              CLI entry point (Cobra adapter)
+main.go                Wails desktop app entry point
+frontend/              React frontend for Wails app
+  src/
+    components/bujo/   Domain-specific UI components
+    lib/               Utilities (cn, transforms)
+    types/             TypeScript type definitions
+    wailsjs/           Auto-generated Wails bindings (do not edit)
 internal/
-  app/              Shared application setup (ServiceFactory)
-  domain/           Core business logic (100% TDD coverage required)
-    entry.go        Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
-    habit.go        Habit tracking with multi-log support
-    summary.go      AI summary types
-    parser.go       TreeParser for hierarchical input
-  service/          Stateless services (BujoService, HabitService)
-  repository/       SQLite repository implementations
+  domain/              Core business logic (100% TDD coverage required)
+    entry.go           Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
+    habit.go           Habit tracking with multi-log support
+    summary.go         AI summary types
+    parser.go          TreeParser for hierarchical input
+  service/             Stateless services (BujoService, HabitService)
+  repository/          SQLite repository implementations
   adapter/
-    cli/            Cobra command handlers
-    wails/          Wails bindings (desktop app)
-    ai/             Gemini integration
+    cli/               Cobra command handlers
+    wails/             Wails Go bindings (App struct with exported methods)
+    ai/                Gemini integration
+  app/                 ServiceFactory for dependency injection
 ```
 
 **Key Principle:** Business logic isolated in `internal/domain`. CLI and Wails desktop app are adapters to shared service layer.
@@ -213,46 +231,6 @@ Never skip tests because:
 5. Adapter (AI): Gemini with rolling summary logic
 
 For detailed specifications, see `spec.md`.
-
-## Version Control Strategy
-
-### Branch Structure for Major Releases
-
-For major feature work (like v2.0 Wails desktop app), use a **long-lived integration branch** with sub-branches:
-
-```
-main
-  └── feature/wails-desktop-app           # Integration branch (long-lived)
-        ├── feature/wails-canvas-ui       # Sub-branch for UI migration
-        ├── feature/wails-write-ops       # Sub-branch for write operations
-        └── feature/wails-interactivity   # Sub-branch for keyboard nav, etc.
-```
-
-### Workflow
-
-1. **Integration Branch**: `feature/wails-desktop-app` accumulates all Wails-related work
-2. **Sub-branches**: Create from integration branch for each phase/feature
-3. **PRs to Integration**: Sub-branches merge via PR into integration branch
-4. **Final PR to Main**: Single PR from integration branch to `main` for v2.0 release
-
-### Why This Approach
-
-- **Isolation**: Major changes don't destabilize `main` until ready
-- **Incremental Review**: Each phase gets its own PR review
-- **Revertability**: Easy to abandon integration branch if needed
-- **CI/CD**: `main` stays deployable; integration branch has its own CI
-
-### Commit Guidelines
-
-- Commits on integration branch: squash-merge from sub-branches
-- Sub-branch commits: atomic, TDD-compliant (RED/GREEN/REFACTOR cycle)
-- All commits require passing tests before push
-
-### GitHub Tracking
-
-- **Project Board**: "Bujo Desktop (Wails)" tracks all Wails issues
-- **Labels**: `wails`, `frontend`, `adapter` for categorization
-- **Milestones**: Each phase becomes a milestone for progress tracking
 
 ## Recent Architectural Patterns
 
