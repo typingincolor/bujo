@@ -51,5 +51,29 @@ else
     echo "✅ golangci-lint passed"
 fi
 
+# 5. Frontend lint
+echo "Running frontend lint..."
+if ! (cd frontend && npm run lint); then
+    echo "❌ Frontend lint failed. Push aborted."
+    exit 1
+fi
+echo "✅ Frontend lint passed"
+
+# 6. Frontend tests
+echo "Running frontend tests..."
+if ! (cd frontend && npm test); then
+    echo "❌ Frontend tests failed. Push aborted."
+    exit 1
+fi
+echo "✅ Frontend tests passed"
+
+# 7. Frontend build
+echo "Running frontend build..."
+if ! (cd frontend && npm run build); then
+    echo "❌ Frontend build failed. Push aborted."
+    exit 1
+fi
+echo "✅ Frontend build passed"
+
 echo ""
 echo "✅ All pre-push checks passed. Proceeding with push."

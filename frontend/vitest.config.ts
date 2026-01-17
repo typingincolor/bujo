@@ -7,6 +7,17 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/wailsjs/**',
+        'src/**/*.d.ts',
+        'src/main.tsx',
+      ],
+    },
   },
   resolve: {
     alias: {

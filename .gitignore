@@ -27,5 +27,3 @@ coverage.out
 /frontend/node_modules/
 /frontend/dist/
 
-# Generated Wails bindings
-/frontend/src/wailsjs/
