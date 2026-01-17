@@ -1,7 +1,8 @@
+import { useState, useRef, useEffect } from 'react';
 import { Habit } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Flame, Check } from 'lucide-react';
-import { LogHabit } from '@/wailsjs/go/wails/App';
+import { Flame, Check, Plus, X } from 'lucide-react';
+import { LogHabit, CreateHabit } from '@/wailsjs/go/wails/App';
 
 interface HabitTrackerProps {
   habits: Habit[];
@@ -94,6 +95,16 @@ function HabitRow({ habit, onLogHabit }: HabitRowProps) {
 }
 
 export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
+  const [isAddingHabit, setIsAddingHabit] = useState(false);
+  const [newHabitName, setNewHabitName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAddingHabit) {
+      inputRef.current?.focus();
+    }
+  }, [isAddingHabit]);
+
   const handleLogHabit = async (habitId: number) => {
     try {
       await LogHabit(habitId, 1);
@@ -103,12 +114,68 @@ export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
     }
   };
 
+  const handleCreateHabit = async () => {
+    const trimmedName = newHabitName.trim();
+    if (!trimmedName) return;
+
+    try {
+      await CreateHabit(trimmedName);
+      setNewHabitName('');
+      onHabitChanged?.();
+    } catch (error) {
+      console.error('Failed to create habit:', error);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCreateHabit();
+    } else if (e.key === 'Escape') {
+      setIsAddingHabit(false);
+      setNewHabitName('');
+    }
+  };
+
+  const handleCancel = () => {
+    setIsAddingHabit(false);
+    setNewHabitName('');
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
         <Flame className="w-5 h-5 text-bujo-streak" />
         <h2 className="font-display text-xl font-semibold">Habit Tracker</h2>
+        <button
+          onClick={() => setIsAddingHabit(true)}
+          className="ml-auto px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
+          aria-label="Add habit"
+        >
+          <Plus className="w-3 h-3" />
+          Add Habit
+        </button>
       </div>
+
+      {isAddingHabit && (
+        <div className="flex items-center gap-2 py-2 px-4 rounded-lg bg-card border border-border animate-fade-in">
+          <input
+            ref={inputRef}
+            type="text"
+            value={newHabitName}
+            onChange={(e) => setNewHabitName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Habit name"
+            className="flex-1 px-2 py-1.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+          <button
+            onClick={handleCancel}
+            className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+            aria-label="Cancel"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="space-y-1">
         {habits.map((habit) => (
