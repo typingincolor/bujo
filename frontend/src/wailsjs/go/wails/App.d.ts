@@ -38,3 +38,5 @@ export function MarkGoalDone(arg1:number):Promise<void>;
 export function MarkGoalActive(arg1:number):Promise<void>;
 
 export function DeleteGoal(arg1:number):Promise<void>;
+
+export function Search(arg1:string):Promise<Array<domain.Entry>>;

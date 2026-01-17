@@ -417,3 +417,48 @@ func TestApp_DeleteGoal_DeletesGoal(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, goals)
 }
+
+func TestApp_Search_ReturnsMatchingEntries(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	_, err = services.Bujo.LogEntries(ctx, ". Buy groceries", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	_, err = services.Bujo.LogEntries(ctx, ". Call dentist", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	_, err = services.Bujo.LogEntries(ctx, "- Meeting notes", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	results, err := wailsApp.Search("groceries")
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "Buy groceries", results[0].Content)
+}
+
+func TestApp_Search_ReturnsEmptyForNoMatch(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	_, err = services.Bujo.LogEntries(ctx, ". Buy groceries", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	results, err := wailsApp.Search("xyz123")
+	require.NoError(t, err)
+	assert.Empty(t, results)
+}

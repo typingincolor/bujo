@@ -69,3 +69,7 @@ export function MarkGoalActive(arg1) {
 export function DeleteGoal(arg1) {
   return window['go']['wails']['App']['DeleteGoal'](arg1);
 }
+
+export function Search(arg1) {
+  return window['go']['wails']['App']['Search'](arg1);
+}
