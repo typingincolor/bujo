@@ -17,6 +17,8 @@ export function DeleteEntry(arg1:number):Promise<void>;
 
 export function DeleteGoal(arg1:number):Promise<void>;
 
+export function DeleteHabit(arg1:number):Promise<void>;
+
 export function EditEntry(arg1:number,arg2:string):Promise<void>;
 
 export function GetAgenda(arg1:time.Time,arg2:time.Time):Promise<service.MultiDayAgenda>;

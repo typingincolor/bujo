@@ -22,6 +22,10 @@ export function DeleteEntry(arg1) {
   return window['go']['wails']['App']['DeleteEntry'](arg1);
 }
 
+export function DeleteHabit(arg1) {
+  return window['go']['wails']['App']['DeleteHabit'](arg1);
+}
+
 export function DeleteGoal(arg1) {
   return window['go']['wails']['App']['DeleteGoal'](arg1);
 }

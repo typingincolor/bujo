@@ -576,3 +576,25 @@ func TestApp_CreateHabit_CreatesNewHabit(t *testing.T) {
 	require.Len(t, status.Habits, 1)
 	assert.Equal(t, "Morning Run", status.Habits[0].Name)
 }
+
+func TestApp_DeleteHabit_RemovesHabit(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	habitID, err := wailsApp.CreateHabit("To Delete")
+	require.NoError(t, err)
+
+	err = wailsApp.DeleteHabit(habitID)
+	require.NoError(t, err)
+
+	status, err := wailsApp.GetHabits(7)
+	require.NoError(t, err)
+	assert.Empty(t, status.Habits)
+}

@@ -135,3 +135,7 @@ func (a *App) HasChildren(id int64) (bool, error) {
 func (a *App) CreateHabit(name string) (int64, error) {
 	return a.services.Habit.CreateHabit(a.ctx, name)
 }
+
+func (a *App) DeleteHabit(habitID int64) error {
+	return a.services.Habit.DeleteHabitByID(a.ctx, habitID)
+}

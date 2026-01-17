@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Habit } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Flame, Check, Plus, X } from 'lucide-react';
-import { LogHabit, CreateHabit } from '@/wailsjs/go/wails/App';
+import { Flame, Check, Plus, X, Trash2 } from 'lucide-react';
+import { LogHabit, CreateHabit, DeleteHabit } from '@/wailsjs/go/wails/App';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface HabitTrackerProps {
   habits: Habit[];
@@ -12,6 +13,7 @@ interface HabitTrackerProps {
 interface HabitRowProps {
   habit: Habit;
   onLogHabit: (habitId: number) => void;
+  onDeleteHabit: (habitId: number) => void;
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -27,11 +29,16 @@ function getRecentDays(): string[] {
   return days
 }
 
-function HabitRow({ habit, onLogHabit }: HabitRowProps) {
+function HabitRow({ habit, onLogHabit, onDeleteHabit }: HabitRowProps) {
   const recentDays = getRecentDays();
 
   const handleLog = () => {
     onLogHabit(habit.id);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteHabit(habit.id);
   };
 
   return (
@@ -90,6 +97,15 @@ function HabitRow({ habit, onLogHabit }: HabitRowProps) {
       >
         {habit.todayLogged ? `+1 (${habit.todayCount})` : 'Log'}
       </button>
+
+      {/* Delete button */}
+      <button
+        onClick={handleDelete}
+        title="Delete habit"
+        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
     </div>
   );
 }
@@ -97,6 +113,7 @@ function HabitRow({ habit, onLogHabit }: HabitRowProps) {
 export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
   const [isAddingHabit, setIsAddingHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
+  const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -127,6 +144,18 @@ export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
     }
   };
 
+  const handleDeleteHabit = async () => {
+    if (!habitToDelete) return;
+
+    try {
+      await DeleteHabit(habitToDelete.id);
+      setHabitToDelete(null);
+      onHabitChanged?.();
+    } catch (error) {
+      console.error('Failed to delete habit:', error);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleCreateHabit();
@@ -139,6 +168,13 @@ export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
   const handleCancel = () => {
     setIsAddingHabit(false);
     setNewHabitName('');
+  };
+
+  const handleRequestDelete = (habitId: number) => {
+    const habit = habits.find(h => h.id === habitId);
+    if (habit) {
+      setHabitToDelete(habit);
+    }
   };
 
   return (
@@ -179,9 +215,24 @@ export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
 
       <div className="space-y-1">
         {habits.map((habit) => (
-          <HabitRow key={habit.id} habit={habit} onLogHabit={handleLogHabit} />
+          <HabitRow
+            key={habit.id}
+            habit={habit}
+            onLogHabit={handleLogHabit}
+            onDeleteHabit={handleRequestDelete}
+          />
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!habitToDelete}
+        title="Delete Habit"
+        message={`Are you sure you want to delete "${habitToDelete?.name}"? This will also delete all habit logs.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteHabit}
+        onCancel={() => setHabitToDelete(null)}
+      />
     </div>
   );
 }

@@ -7,9 +7,10 @@ import { Habit } from '@/types/bujo'
 vi.mock('@/wailsjs/go/wails/App', () => ({
   LogHabit: vi.fn().mockResolvedValue(undefined),
   CreateHabit: vi.fn().mockResolvedValue(1),
+  DeleteHabit: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateHabit } from '@/wailsjs/go/wails/App'
+import { CreateHabit, DeleteHabit } from '@/wailsjs/go/wails/App'
 
 const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   id: 1,
@@ -130,5 +131,81 @@ describe('HabitTracker - Display Habits', () => {
   it('shows empty state when no habits', () => {
     render(<HabitTracker habits={[]} />)
     expect(screen.getByText(/habit tracker/i)).toBeInTheDocument()
+  })
+})
+
+describe('HabitTracker - Delete Habit', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows delete button on habit row', () => {
+    render(<HabitTracker habits={[createTestHabit({ name: 'Exercise' })]} />)
+    expect(screen.getByTitle('Delete habit')).toBeInTheDocument()
+  })
+
+  it('shows confirmation dialog when delete button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit({ name: 'Exercise' })]} />)
+
+    await user.click(screen.getByTitle('Delete habit'))
+
+    expect(screen.getByText('Delete Habit')).toBeInTheDocument()
+    expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  })
+
+  it('calls DeleteHabit binding when confirming delete', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ id: 42, name: 'Exercise' })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Delete habit'))
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    expect(confirmButton).toBeDefined()
+    await user.click(confirmButton!)
+
+    await waitFor(() => {
+      expect(DeleteHabit).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onHabitChanged after deleting habit', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ name: 'Exercise' })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Delete habit'))
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const confirmButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    await user.click(confirmButton!)
+
+    await waitFor(() => {
+      expect(onHabitChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('closes dialog on cancel', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit({ name: 'Exercise' })]} />)
+
+    await user.click(screen.getByTitle('Delete habit'))
+    expect(screen.getByText('Delete Habit')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(screen.queryByText('Delete Habit')).not.toBeInTheDocument()
+  })
+
+  it('does not call DeleteHabit when cancel is clicked', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit({ name: 'Exercise' })]} />)
+
+    await user.click(screen.getByTitle('Delete habit'))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(DeleteHabit).not.toHaveBeenCalled()
   })
 })
