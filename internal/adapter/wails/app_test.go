@@ -462,3 +462,96 @@ func TestApp_Search_ReturnsEmptyForNoMatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, results)
 }
+
+func TestApp_EditEntry_UpdatesEntryContent(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Original content", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.EditEntry(ids[0], "Updated content")
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "Updated content", agenda.Days[0].Entries[0].Content)
+}
+
+func TestApp_DeleteEntry_RemovesEntry(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Task to delete", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.DeleteEntry(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	assert.Empty(t, agenda.Days[0].Entries)
+}
+
+func TestApp_HasChildren_ReturnsTrueForParent(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Parent\n  . Child", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 2)
+
+	hasChildren, err := wailsApp.HasChildren(ids[0])
+	require.NoError(t, err)
+	assert.True(t, hasChildren)
+}
+
+func TestApp_HasChildren_ReturnsFalseForLeaf(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Leaf entry", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	hasChildren, err := wailsApp.HasChildren(ids[0])
+	require.NoError(t, err)
+	assert.False(t, hasChildren)
+}

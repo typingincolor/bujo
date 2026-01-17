@@ -10,6 +10,8 @@ interface DayViewProps {
   day: DayEntries;
   selectedEntryId?: number | null;
   onEntryChanged?: () => void;
+  onEditEntry?: (entry: Entry) => void;
+  onDeleteEntry?: (entry: Entry) => void;
 }
 
 function buildTree(entries: Entry[]): Entry[] {
@@ -47,9 +49,11 @@ interface EntryTreeProps {
   selectedEntryId?: number | null;
   onToggleCollapse: (id: number) => void;
   onToggleDone: (id: number) => void;
+  onEdit?: (entry: Entry) => void;
+  onDelete?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -67,6 +71,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               isSelected={entry.id === selectedEntryId}
               onToggleCollapse={() => onToggleCollapse(entry.id)}
               onToggleDone={() => onToggleDone(entry.id)}
+              onEdit={onEdit ? () => onEdit(entry) : undefined}
+              onDelete={onDelete ? () => onDelete(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -76,6 +82,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 selectedEntryId={selectedEntryId}
                 onToggleCollapse={onToggleCollapse}
                 onToggleDone={onToggleDone}
+                onEdit={onEdit}
+                onDelete={onDelete}
               />
             )}
           </div>
@@ -85,7 +93,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
-export function DayView({ day, selectedEntryId, onEntryChanged }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onDeleteEntry }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const tree = buildTree(day.entries);
   const dateObj = new Date(day.date + 'T00:00:00');
@@ -167,6 +175,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged }: DayViewProps) 
             selectedEntryId={selectedEntryId}
             onToggleCollapse={toggleCollapse}
             onToggleDone={handleToggleDone}
+            onEdit={onEditEntry}
+            onDelete={onDeleteEntry}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

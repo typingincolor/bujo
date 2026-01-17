@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2 } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -12,6 +12,8 @@ interface EntryItemProps {
   isSelected?: boolean;
   onToggleCollapse?: () => void;
   onToggleDone?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -32,6 +34,8 @@ export function EntryItem({
   isSelected = false,
   onToggleCollapse,
   onToggleDone,
+  onEdit,
+  onDelete,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
 
@@ -81,6 +85,34 @@ export function EntryItem({
           {childCount} hidden
         </span>
       )}
+
+      {/* Action buttons (shown on hover) */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onEdit && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            title="Edit entry"
+            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            title="Delete entry"
+            className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
       {/* Entry ID (shown on hover) */}
       <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">

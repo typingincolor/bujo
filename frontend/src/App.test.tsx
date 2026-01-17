@@ -32,9 +32,12 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
   Search: vi.fn().mockResolvedValue([]),
+  EditEntry: vi.fn().mockResolvedValue(undefined),
+  DeleteEntry: vi.fn().mockResolvedValue(undefined),
+  HasChildren: vi.fn().mockResolvedValue(false),
 }))
 
-import { GetAgenda, AddEntry, MarkEntryDone, Search } from './wailsjs/go/wails/App'
+import { GetAgenda, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -262,6 +265,159 @@ describe('App - Search functionality', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Buy groceries')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('App - Edit Entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('pressing e opens edit modal for selected entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('e')
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Entry')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('First task')).toBeInTheDocument()
+    })
+  })
+
+  it('calls EditEntry binding when saving edit', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('e')
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('First task')).toBeInTheDocument()
+    })
+
+    const input = screen.getByDisplayValue('First task')
+    await user.clear(input)
+    await user.type(input, 'Updated task')
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(EditEntry).toHaveBeenCalledWith(1, 'Updated task')
+    })
+  })
+
+  it('closes edit modal on cancel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('e')
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Entry')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Edit Entry')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('App - Delete Entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(HasChildren).mockResolvedValue(false)
+  })
+
+  it('pressing d opens delete confirmation for selected entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('d')
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Entry')).toBeInTheDocument()
+    })
+  })
+
+  it('calls DeleteEntry binding when confirming delete', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('d')
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Entry')).toBeInTheDocument()
+    })
+
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const dialogDeleteButton = deleteButtons.find(btn => btn.textContent === 'Delete')
+    expect(dialogDeleteButton).toBeDefined()
+    fireEvent.click(dialogDeleteButton!)
+
+    await waitFor(() => {
+      expect(DeleteEntry).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('shows warning when entry has children', async () => {
+    vi.mocked(HasChildren).mockResolvedValue(true)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('d')
+
+    await waitFor(() => {
+      expect(screen.getByText(/will also delete/i)).toBeInTheDocument()
+    })
+  })
+
+  it('closes delete dialog on cancel', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('d')
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete Entry')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Delete Entry')).not.toBeInTheDocument()
     })
   })
 })
