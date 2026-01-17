@@ -114,3 +114,8 @@ func (a *App) MarkGoalActive(goalID int64) error {
 func (a *App) DeleteGoal(goalID int64) error {
 	return a.services.Goal.DeleteGoal(a.ctx, goalID)
 }
+
+func (a *App) Search(query string) ([]domain.Entry, error) {
+	opts := domain.NewSearchOptions(query)
+	return a.services.Bujo.SearchEntries(a.ctx, opts)
+}

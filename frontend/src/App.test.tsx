@@ -7,19 +7,21 @@ const mockEntriesData = {
   Days: [{
     Date: '2026-01-17T00:00:00Z',
     Entries: [
-      { ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', Priority: '', ParentID: null, CreatedAt: '2026-01-17T10:00:00Z' },
-      { ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', Priority: '', ParentID: null, CreatedAt: '2026-01-17T11:00:00Z' },
-      { ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', Priority: '', ParentID: null, CreatedAt: '2026-01-17T12:00:00Z' },
+      { ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T10:00:00Z' },
+      { ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T11:00:00Z' },
+      { ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-17T12:00:00Z' },
     ],
     Location: '',
     Mood: '',
     Weather: '',
   }],
-}
+  Overdue: [],
+} as const
 
-const mockEmptyData = {
-  Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-}
+const mockSearchResults = [
+  { ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Buy groceries', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-15T10:00:00Z' },
+  { ID: 11, EntityID: 'e11', Type: 'Note', Content: 'Grocery list ideas', Priority: '', ParentID: null, Depth: 0, CreatedAt: '2026-01-14T10:00:00Z' },
+] as const
 
 vi.mock('./wailsjs/go/wails/App', () => ({
   GetAgenda: vi.fn().mockResolvedValue({
@@ -31,9 +33,10 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   AddEntry: vi.fn().mockResolvedValue([1]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
+  Search: vi.fn().mockResolvedValue([]),
 }))
 
-import { GetAgenda, AddEntry, MarkEntryDone } from './wailsjs/go/wails/App'
+import { GetAgenda, AddEntry, MarkEntryDone, Search } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -100,7 +103,8 @@ describe('App - AddEntryBar integration', () => {
 describe('App - Keyboard Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesData)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesData as any)
   })
 
   it('pressing j moves selection down', async () => {
@@ -200,5 +204,69 @@ describe('App - Keyboard Navigation', () => {
 
     const note = screen.getByText('A note').closest('[data-entry-id]')
     expect(note).toHaveAttribute('data-selected', 'true')
+  })
+})
+
+describe('App - Search functionality', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesData as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(Search).mockResolvedValue(mockSearchResults as any)
+  })
+
+  it('calls Search binding when typing in search input', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search entries...')
+    await user.type(searchInput, 'groceries')
+
+    await waitFor(() => {
+      expect(Search).toHaveBeenCalledWith('groceries')
+    }, { timeout: 1000 })
+  })
+
+  it('displays search results in dropdown', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search entries...')
+    await user.type(searchInput, 'groceries')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buy groceries')).toBeInTheDocument()
+    })
+  })
+
+  it('clears search results when input is cleared', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText('Search entries...')
+    await user.type(searchInput, 'groceries')
+
+    await waitFor(() => {
+      expect(screen.getByText('Buy groceries')).toBeInTheDocument()
+    })
+
+    await user.clear(searchInput)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Buy groceries')).not.toBeInTheDocument()
+    })
   })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -42,6 +42,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [searchResults, setSearchResults] = useState<Array<{ id: number; content: string; type: string; date: string }>>([])
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -96,7 +97,7 @@ function App() {
           e.preventDefault()
           setSelectedIndex(prev => Math.max(prev - 1, 0))
           break
-        case ' ':
+        case ' ': {
           e.preventDefault()
           const entry = flatEntries[selectedIndex]
           if (entry && (entry.type === 'task' || entry.type === 'done')) {
@@ -108,6 +109,7 @@ function App() {
             loadData()
           }
           break
+        }
       }
     }
 
@@ -122,6 +124,20 @@ function App() {
   const handleViewChange = (newView: ViewType) => {
     setView(newView)
   }
+
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query) {
+      setSearchResults([])
+      return
+    }
+    const results = await Search(query)
+    setSearchResults((results || []).map(entry => ({
+      id: entry.ID,
+      content: entry.Content,
+      type: entry.Type,
+      date: (entry.CreatedAt as unknown as string)?.split('T')[0] || '',
+    })))
+  }, [])
 
   const handleAddEntry = useCallback(async (content: string, type: EntryType) => {
     const symbol = ENTRY_SYMBOLS[type]
@@ -177,7 +193,7 @@ function App() {
       <Sidebar currentView={view} onViewChange={handleViewChange} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={viewTitles[view]} />
+        <Header title={viewTitles[view]} searchResults={searchResults} onSearch={handleSearch} />
 
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && today && (
