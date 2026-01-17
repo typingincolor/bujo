@@ -31,14 +31,17 @@ export function EntryItem({
   onToggleCollapse,
   onToggleDone,
 }: EntryItemProps) {
+  const isToggleable = entry.type === 'task' || entry.type === 'done';
+
   return (
     <div
       className={cn(
         'group flex items-start gap-2 py-1.5 px-2 rounded-md transition-colors',
-        'hover:bg-secondary/50 cursor-pointer animate-fade-in'
+        'hover:bg-secondary/50 animate-fade-in',
+        isToggleable && 'cursor-pointer'
       )}
       style={{ paddingLeft: `${depth * 20 + 8}px` }}
-      onClick={onToggleDone}
+      onClick={isToggleable ? onToggleDone : undefined}
     >
       {/* Collapse indicator */}
       {hasChildren ? (

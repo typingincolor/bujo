@@ -2,18 +2,21 @@ import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
 import { List, CheckCircle2, Circle, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
+import { MarkListItemDone, MarkListItemUndone } from '@/wailsjs/go/wails/App'
 
 interface ListsViewProps {
   lists: BujoList[]
+  onListChanged?: () => void
 }
 
 interface ListCardProps {
   list: BujoList
   isExpanded: boolean
   onToggle: () => void
+  onToggleItem: (itemId: number, done: boolean) => void
 }
 
-function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
+function ListCard({ list, isExpanded, onToggle, onToggleItem }: ListCardProps) {
   const progress = list.totalCount > 0
     ? Math.round((list.doneCount / list.totalCount) * 100)
     : 0
@@ -50,6 +53,7 @@ function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
           {list.items.map((item) => (
             <div
               key={item.id}
+              onClick={() => onToggleItem(item.id, item.done)}
               className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2 cursor-pointer"
             >
               {item.done ? (
@@ -74,7 +78,7 @@ function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
   )
 }
 
-export function ListsView({ lists }: ListsViewProps) {
+export function ListsView({ lists, onListChanged }: ListsViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(
     () => lists[0]?.id !== undefined ? new Set([lists[0].id]) : new Set()
   )
@@ -91,6 +95,19 @@ export function ListsView({ lists }: ListsViewProps) {
     })
   }
 
+  const handleToggleItem = async (itemId: number, currentlyDone: boolean) => {
+    try {
+      if (currentlyDone) {
+        await MarkListItemUndone(itemId)
+      } else {
+        await MarkListItemDone(itemId)
+      }
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to toggle list item:', error)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
@@ -105,6 +122,7 @@ export function ListsView({ lists }: ListsViewProps) {
             list={list}
             isExpanded={expandedIds.has(list.id)}
             onToggle={() => toggleExpanded(list.id)}
+            onToggleItem={handleToggleItem}
           />
         ))}
       </div>

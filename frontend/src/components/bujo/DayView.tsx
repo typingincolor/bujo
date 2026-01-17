@@ -4,9 +4,11 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
+  onEntryChanged?: () => void;
 }
 
 function buildTree(entries: Entry[]): Entry[] {
@@ -42,15 +44,16 @@ interface EntryTreeProps {
   depth?: number;
   collapsedIds: Set<number>;
   onToggleCollapse: (id: number) => void;
+  onToggleDone: (id: number) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse, onToggleDone }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
         const hasChildren = entry.children && entry.children.length > 0;
         const isCollapsed = collapsedIds.has(entry.id);
-        
+
         return (
           <div key={entry.id}>
             <EntryItem
@@ -60,6 +63,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse }: Entry
               hasChildren={hasChildren}
               childCount={entry.children?.length || 0}
               onToggleCollapse={() => onToggleCollapse(entry.id)}
+              onToggleDone={() => onToggleDone(entry.id)}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -67,6 +71,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse }: Entry
                 depth={depth + 1}
                 collapsedIds={collapsedIds}
                 onToggleCollapse={onToggleCollapse}
+                onToggleDone={onToggleDone}
               />
             )}
           </div>
@@ -76,11 +81,11 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse }: Entry
   );
 }
 
-export function DayView({ day }: DayViewProps) {
+export function DayView({ day, onEntryChanged }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const tree = buildTree(day.entries);
   const dateObj = new Date(day.date + 'T00:00:00');
-  
+
   const toggleCollapse = (id: number) => {
     setCollapsedIds(prev => {
       const next = new Set(prev);
@@ -91,6 +96,22 @@ export function DayView({ day }: DayViewProps) {
       }
       return next;
     });
+  };
+
+  const handleToggleDone = async (id: number) => {
+    const entry = day.entries.find(e => e.id === id);
+    if (!entry || (entry.type !== 'task' && entry.type !== 'done')) return;
+
+    try {
+      if (entry.type === 'done') {
+        await MarkEntryUndone(id);
+      } else {
+        await MarkEntryDone(id);
+      }
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to toggle entry:', error);
+    }
   };
   
   return (
@@ -140,6 +161,7 @@ export function DayView({ day }: DayViewProps) {
             entries={tree}
             collapsedIds={collapsedIds}
             onToggleCollapse={toggleCollapse}
+            onToggleDone={handleToggleDone}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

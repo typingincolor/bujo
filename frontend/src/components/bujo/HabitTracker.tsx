@@ -1,13 +1,16 @@
 import { Habit } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Flame, Check } from 'lucide-react';
+import { LogHabit } from '@/wailsjs/go/wails/App';
 
 interface HabitTrackerProps {
   habits: Habit[];
+  onHabitChanged?: () => void;
 }
 
 interface HabitRowProps {
   habit: Habit;
+  onLogHabit: (habitId: number) => void;
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -23,9 +26,13 @@ function getRecentDays(): string[] {
   return days
 }
 
-function HabitRow({ habit }: HabitRowProps) {
+function HabitRow({ habit, onLogHabit }: HabitRowProps) {
   const recentDays = getRecentDays();
-  
+
+  const handleLog = () => {
+    onLogHabit(habit.id);
+  };
+
   return (
     <div className="flex items-center gap-4 py-3 px-4 rounded-lg bg-card hover:bg-secondary/30 transition-colors group animate-slide-in">
       {/* Habit name and streak */}
@@ -47,7 +54,7 @@ function HabitRow({ habit }: HabitRowProps) {
           {habit.goal && <span>• Goal: {habit.goal}</span>}
         </div>
       </div>
-      
+
       {/* Sparkline */}
       <div className="flex items-center gap-1">
         {habit.history.map((completed, i) => (
@@ -69,33 +76,43 @@ function HabitRow({ habit }: HabitRowProps) {
           </div>
         ))}
       </div>
-      
+
       {/* Today status */}
       <button
+        onClick={handleLog}
         className={cn(
           'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
           habit.todayLogged
-            ? 'bg-bujo-done text-primary-foreground'
+            ? 'bg-bujo-done text-primary-foreground hover:bg-bujo-done/90'
             : 'bg-primary text-primary-foreground hover:bg-primary/90'
         )}
       >
-        {habit.todayLogged ? 'Done ✓' : 'Log'}
+        {habit.todayLogged ? `+1 (${habit.todayCount})` : 'Log'}
       </button>
     </div>
   );
 }
 
-export function HabitTracker({ habits }: HabitTrackerProps) {
+export function HabitTracker({ habits, onHabitChanged }: HabitTrackerProps) {
+  const handleLogHabit = async (habitId: number) => {
+    try {
+      await LogHabit(habitId, 1);
+      onHabitChanged?.();
+    } catch (error) {
+      console.error('Failed to log habit:', error);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
         <Flame className="w-5 h-5 text-bujo-streak" />
         <h2 className="font-display text-xl font-semibold">Habit Tracker</h2>
       </div>
-      
+
       <div className="space-y-1">
         {habits.map((habit) => (
-          <HabitRow key={habit.id} habit={habit} />
+          <HabitRow key={habit.id} habit={habit} onLogHabit={handleLogHabit} />
         ))}
       </div>
     </div>

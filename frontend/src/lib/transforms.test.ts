@@ -162,6 +162,7 @@ describe('transformHabit', () => {
       goal: 1,
       history: [true, true, false, true, true, true, false],
       todayLogged: true,
+      todayCount: 1,
     })
   })
 

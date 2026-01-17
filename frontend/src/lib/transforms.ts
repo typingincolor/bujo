@@ -33,6 +33,7 @@ export function transformHabit(h: service.HabitStatus): Habit {
     goal: h.GoalPerDay,
     history: (h.DayHistory || []).map(d => d.Completed),
     todayLogged: h.TodayCount > 0,
+    todayCount: h.TodayCount,
   }
 }
 
