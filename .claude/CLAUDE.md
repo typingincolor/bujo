@@ -14,17 +14,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API.
 
-**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API
+**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Wails v2 (desktop app), React + TypeScript, Gemini API
 
 ## Build Commands
 
 ```bash
-go build -o bujo ./cmd/bujo     # Build binary
+# CLI
+go build -o bujo ./cmd/bujo     # Build CLI binary
 go test ./...                    # Run all tests
 go test ./internal/domain/...   # Run domain tests only
 go test -v -run TestName ./...  # Run specific test
 go test -cover ./...            # Run with coverage
 go vet ./...                    # Static analysis
+
+# Wails Desktop App
+wails dev                        # Run in development mode (hot reload)
+wails build                      # Build production .app bundle
+wails generate module            # Regenerate TypeScript bindings
 ```
 
 ## DATABASE SAFETY (CRITICAL)
@@ -54,7 +60,10 @@ Hexagonal Architecture with clear separation:
 
 ```
 cmd/bujo/           CLI entry point (Cobra adapter)
+main.go             Wails desktop app entry point
+frontend/           React + TypeScript frontend for Wails
 internal/
+  app/              Shared application setup (ServiceFactory)
   domain/           Core business logic (100% TDD coverage required)
     entry.go        Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
     habit.go        Habit tracking with multi-log support
@@ -64,10 +73,11 @@ internal/
   repository/       SQLite repository implementations
   adapter/
     cli/            Cobra command handlers
+    wails/          Wails bindings (desktop app)
     ai/             Gemini integration
 ```
 
-**Key Principle:** Business logic isolated in `internal/domain`. CLI and future web server are adapters to shared logic.
+**Key Principle:** Business logic isolated in `internal/domain`. CLI and Wails desktop app are adapters to shared service layer.
 
 ## Data Model
 
@@ -203,6 +213,46 @@ Never skip tests because:
 5. Adapter (AI): Gemini with rolling summary logic
 
 For detailed specifications, see `spec.md`.
+
+## Version Control Strategy
+
+### Branch Structure for Major Releases
+
+For major feature work (like v2.0 Wails desktop app), use a **long-lived integration branch** with sub-branches:
+
+```
+main
+  └── feature/wails-desktop-app           # Integration branch (long-lived)
+        ├── feature/wails-canvas-ui       # Sub-branch for UI migration
+        ├── feature/wails-write-ops       # Sub-branch for write operations
+        └── feature/wails-interactivity   # Sub-branch for keyboard nav, etc.
+```
+
+### Workflow
+
+1. **Integration Branch**: `feature/wails-desktop-app` accumulates all Wails-related work
+2. **Sub-branches**: Create from integration branch for each phase/feature
+3. **PRs to Integration**: Sub-branches merge via PR into integration branch
+4. **Final PR to Main**: Single PR from integration branch to `main` for v2.0 release
+
+### Why This Approach
+
+- **Isolation**: Major changes don't destabilize `main` until ready
+- **Incremental Review**: Each phase gets its own PR review
+- **Revertability**: Easy to abandon integration branch if needed
+- **CI/CD**: `main` stays deployable; integration branch has its own CI
+
+### Commit Guidelines
+
+- Commits on integration branch: squash-merge from sub-branches
+- Sub-branch commits: atomic, TDD-compliant (RED/GREEN/REFACTOR cycle)
+- All commits require passing tests before push
+
+### GitHub Tracking
+
+- **Project Board**: "Bujo Desktop (Wails)" tracks all Wails issues
+- **Labels**: `wails`, `frontend`, `adapter` for categorization
+- **Milestones**: Each phase becomes a milestone for progress tracking
 
 ## Recent Architectural Patterns
 
