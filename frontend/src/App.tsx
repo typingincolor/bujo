@@ -11,6 +11,7 @@ import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
+import { startOfDay } from '@/lib/utils'
 import './index.css'
 
 // Wails serializes Go time.Time as ISO strings over JSON.
@@ -123,6 +124,7 @@ function App() {
 
   const handleViewChange = (newView: ViewType) => {
     setView(newView)
+    setSelectedIndex(0)
   }
 
   const handleSearch = useCallback(async (query: string) => {
@@ -130,22 +132,31 @@ function App() {
       setSearchResults([])
       return
     }
-    const results = await Search(query)
-    setSearchResults((results || []).map(entry => ({
-      id: entry.ID,
-      content: entry.Content,
-      type: entry.Type,
-      date: (entry.CreatedAt as unknown as string)?.split('T')[0] || '',
-    })))
+    try {
+      const results = await Search(query)
+      setSearchResults((results || []).map(entry => ({
+        id: entry.ID,
+        content: entry.Content,
+        type: entry.Type,
+        date: (entry.CreatedAt as unknown as string)?.split('T')[0] || '',
+      })))
+    } catch (err) {
+      console.error('Search failed:', err)
+      setSearchResults([])
+    }
   }, [])
 
   const handleAddEntry = useCallback(async (content: string, type: EntryType) => {
     const symbol = ENTRY_SYMBOLS[type]
     const formattedContent = `${symbol} ${content}`
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    await AddEntry(formattedContent, toWailsTime(today))
-    loadData()
+    const today = startOfDay(new Date())
+    try {
+      await AddEntry(formattedContent, toWailsTime(today))
+      loadData()
+    } catch (err) {
+      console.error('Failed to add entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to add entry')
+    }
   }, [loadData])
 
   const viewTitles: Record<ViewType, string> = {
