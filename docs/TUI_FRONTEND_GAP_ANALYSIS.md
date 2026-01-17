@@ -17,12 +17,13 @@ At implementation time, each feature needs discussion on the appropriate UI patt
 
 ## Executive Summary
 
-The TUI has **8 main views**, **54 distinct actions**, **9 entry types**, and **20+ modal dialogs**. The Frontend currently implements only **5 views** with many actions not yet available through any UI mechanism.
+The TUI has **8 main views**, **54 distinct actions**, **9 entry types**, and **20+ modal dialogs**. The CLI adds **65+ commands** with additional features like import/export, backup, and version history. The Frontend currently implements only **5 views** with many actions not yet available through any UI mechanism.
 
-| Category | TUI | Frontend | Gap |
-|----------|-----|----------|-----|
-| Main Views | 8 | 5 | **3 missing** |
-| Distinct Actions | 54 | ~15 | **~39 missing** |
+| Category | TUI/CLI | Frontend | Gap |
+|----------|---------|----------|-----|
+| Main Views | 8+ | 5 | **3+ missing** |
+| TUI Actions | 54 | ~15 | **~39 missing** |
+| CLI-only Features | 40+ | 0 | **40+ missing** |
 | Entry Types | 9 | 6 | **3 missing** |
 | UI Dialogs/Flows | 20+ | 3 | **17+ missing** |
 
@@ -325,9 +326,155 @@ The TUI has a full question/answer workflow:
 
 ---
 
-## 10. BACKEND BINDINGS NEEDED
+## 10. CLI-ONLY FEATURES (Not in TUI Either)
+
+The CLI has additional features not available in the TUI that should be considered for the Frontend.
+
+### Data Import/Export
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo export` | Export data to JSON | ❌ **MISSING** |
+| `bujo export --format csv` | Export to CSV files | ❌ **MISSING** |
+| `bujo export <id> -o file.md` | Export entry subtree to Markdown | ❌ **MISSING** |
+| `bujo import <file>` | Import from JSON backup | ❌ **MISSING** |
+| `bujo add -f <file>` | Add entries from file | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Export button (JSON/CSV download)
+- Import dialog (file upload + merge/replace option)
+- Bulk entry creation from text file or paste
+
+### Backup Management
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo backup` | List all backups | ❌ **MISSING** |
+| `bujo backup create` | Create new backup | ❌ **MISSING** |
+| `bujo backup verify <path>` | Verify backup integrity | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Backup list view in Settings
+- Create backup button
+- Verify/restore options
+
+### Version History & Restore
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo deleted` | List deleted entries | ❌ **MISSING** |
+| `bujo restore <entity-id>` | Restore deleted entry | ❌ **MISSING** |
+| `bujo history show <id>` | View entry version history | ❌ **MISSING** |
+| `bujo history restore <id> <ver>` | Restore to previous version | ❌ **MISSING** |
+| `bujo archive` | Archive old data versions | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- "Trash" view showing deleted entries
+- Restore button on deleted items
+- Version history panel for entries
+- Archive management in Settings
+
+### Entry Operations
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo add --parent <id>` | Add entry as child of specific entry | ❌ **MISSING** |
+| `bujo move <id> --parent <id>` | Reparent an entry | ❌ **MISSING** |
+| `bujo move <id> --root` | Move entry to root level | ❌ **MISSING** |
+| `bujo move <id> --logged <date>` | Change entry's logged date | ❌ **MISSING** |
+| `bujo view <id> -u 3` | View entry with ancestor context | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Drag-and-drop to reparent entries
+- Context menu "Move to root"
+- Date change option in edit modal
+- Entry detail view with breadcrumb
+
+### Question Management
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo questions` | List all unanswered questions | ❌ **MISSING** |
+| `bujo questions --all` | List all questions (including answered) | ❌ **MISSING** |
+| `bujo answer <id> <text>` | Answer a question | ❌ **MISSING** |
+| `bujo reopen <id>` | Reopen answered question | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Questions filter/view in sidebar or search
+- Answer dialog on question entries
+- Reopen button on answered questions
+
+### Habit Management (Extended)
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo habit log <name> -d <date>` | Log habit for specific date | ❌ **MISSING** |
+| `bujo habit rename <id> <name>` | Rename a habit | ❌ **MISSING** |
+| `bujo habit set-goal <id> <n>` | Set daily goal | ❌ **MISSING** |
+| `bujo habit set-weekly-goal <id> <n>` | Set weekly goal | ❌ **MISSING** |
+| `bujo habit set-monthly-goal <id> <n>` | Set monthly goal | ❌ **MISSING** |
+| `bujo habit log-delete <id> <date>` | Delete habit log for date | ❌ **MISSING** |
+| `bujo habit undo <id>` | Undo last habit log | ❌ **MISSING** |
+| `bujo habit show <id>` | Show habit details & history | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Habit detail/edit modal
+- Goal setting inputs (daily/weekly/monthly)
+- Log history view with delete option
+- Date picker for logging past days
+
+### List Management (Extended)
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo list create <name>` | Create new list | ❌ **MISSING** |
+| `bujo list delete <id>` | Delete entire list | ❌ **MISSING** |
+| `bujo list rename <id> <name>` | Rename list | ❌ **MISSING** |
+| `bujo list add <list> <content>` | Add item to list | ❌ **MISSING** |
+| `bujo list remove <list> <item>` | Remove item from list | ❌ **MISSING** |
+| `bujo list move <list> <item> <pos>` | Reorder item in list | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- "Create List" button
+- List rename/delete in context menu
+- Add item form per list
+- Drag-and-drop reordering
+
+### Day Context (Extended)
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo mood set <mood>` | Set mood for day | ❌ **MISSING** |
+| `bujo mood show` | View mood history | ❌ **MISSING** |
+| `bujo mood clear` | Clear mood for day | ❌ **MISSING** |
+| `bujo weather set <weather>` | Set weather for day | ❌ **MISSING** |
+| `bujo weather show` | View weather history | ❌ **MISSING** |
+| `bujo work set <location>` | Set work location | ❌ **MISSING** |
+| `bujo work show` | View location history | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- Day context editor in day header
+- Mood/weather/location pickers
+- History view in Stats or dedicated view
+
+### Outstanding Tasks View
+
+| CLI Command | Purpose | Frontend Status |
+|-------------|---------|-----------------|
+| `bujo tasks` | Show all outstanding tasks | ❌ **MISSING** |
+| `bujo tasks --from <date>` | Filter by date range | ❌ **MISSING** |
+
+**Frontend Equivalent Needed:**
+- "Outstanding Tasks" view or filter
+- Date range filter
+
+---
+
+## 11. BACKEND BINDINGS NEEDED (Updated)
 
 ### Missing Wails Bindings for Full Feature Parity:
+
+> This list now includes bindings needed for CLI-only features.
 
 | Function | Purpose |
 |----------|---------|
@@ -356,9 +503,37 @@ The TUI has a full question/answer workflow:
 | `AnswerQuestion(id, answer)` | Answer a question entry |
 | `CreateQuestion(content, date)` | Create question entry |
 
+### Additional Bindings for CLI-only Features:
+
+| Function | Purpose |
+|----------|---------|
+| `ExportData(from, to, format)` | Export data (JSON/CSV) |
+| `ImportData(data, mode)` | Import data (merge/replace) |
+| `AddEntriesFromText(text, date)` | Bulk add from text/file content |
+| `GetDeletedEntries()` | List deleted entries |
+| `RestoreEntry(entityId)` | Restore deleted entry |
+| `GetEntryHistory(entityId)` | Get version history |
+| `RestoreEntryVersion(entityId, version)` | Restore specific version |
+| `ListBackups()` | List available backups |
+| `CreateBackup()` | Create new backup |
+| `VerifyBackup(path)` | Verify backup integrity |
+| `MoveEntry(id, parentId, date)` | Move/reparent entry |
+| `GetQuestions(includeAnswered)` | List questions |
+| `ReopenQuestion(id)` | Reopen answered question |
+| `RenameHabit(id, name)` | Rename habit |
+| `SetHabitGoal(id, daily, weekly, monthly)` | Set habit goals |
+| `DeleteHabitLog(id, date)` | Delete specific habit log |
+| `CreateList(name)` | Create new list |
+| `DeleteList(id)` | Delete list |
+| `RenameList(id, name)` | Rename list |
+| `ReorderListItem(listId, itemId, position)` | Move item position |
+| `SetMood(date, mood)` | Set daily mood |
+| `SetWeather(date, weather)` | Set daily weather |
+| `GetOutstandingTasks(from, to)` | Get incomplete tasks |
+
 ---
 
-## 11. PRIORITY RECOMMENDATIONS
+## 12. PRIORITY RECOMMENDATIONS
 
 ### Critical (Must Have)
 1. **Capture Mode** - Core bullet journal workflow
@@ -369,39 +544,53 @@ The TUI has a full question/answer workflow:
 
 ### High Priority
 6. **Add/Delete Habits** - Cannot manage habits
-7. **Date Navigation** - h/l/`/` keys for date jumping
+7. **Date Navigation** - Navigate between dates
 8. **Cancel/Uncancel Entries** - Entry lifecycle management
 9. **Migrate Entries** - Move tasks between dates
-10. **Priority System** - `!` cycling
+10. **Priority System** - Set/change priority
+11. **List CRUD** - Create, rename, delete lists
+12. **Add/Delete List Items** - Full list item management
+13. **Habit Goals** - Set daily/weekly/monthly goals
+14. **Import/Export** - Data portability (JSON/CSV)
 
 ### Medium Priority
-11. **Settings View** - Configuration UI
-12. **Move to List** - List assignment
-13. **Convert to Goal** - Task → Goal workflow
-14. **Type Changing** - Retype entries
-15. **Habit Period Views** - Month/Quarter views
-16. **Command Palette** - Power user feature
+15. **Settings View** - Configuration UI
+16. **Move to List** - List assignment
+17. **Convert to Goal** - Task → Goal workflow
+18. **Type Changing** - Retype entries
+19. **Habit Period Views** - Month/Quarter views
+20. **Backup Management** - Create/list/verify backups
+21. **Deleted Items View** - Trash with restore
+22. **Outstanding Tasks View** - Filter incomplete tasks
 
 ### Lower Priority
-17. **Location Picker** - Day context
-18. **URL Opening** - External links
-19. **Undo System** - Single-level undo
-20. **Expand/Collapse All** - Bulk tree management
+23. **Location/Mood/Weather** - Day context management
+24. **URL Opening** - External links
+25. **Undo System** - Single-level undo
+26. **Expand/Collapse All** - Bulk tree management
+27. **Version History** - View and restore versions
+28. **Archive Management** - Clean up old versions
+29. **Entry Reparenting** - Drag-and-drop tree restructuring
 
 ---
 
-## 12. SUMMARY TABLE
+## 13. SUMMARY TABLE
 
 | Category | Items Missing | Severity |
 |----------|--------------|----------|
-| Views/Screens | 3 | 🔴 Critical |
-| Distinct Actions | ~39 | 🔴 Critical |
+| Views/Screens | 3+ (Search, Stats, Settings, Trash) | 🔴 Critical |
+| TUI Actions | ~39 | 🔴 Critical |
+| CLI-only Features | 40+ commands | 🟠 High |
 | Entry Types | 3 (Question system) | 🔴 Critical |
-| UI Dialogs/Flows | 17+ | 🟠 High |
+| UI Dialogs/Flows | 20+ | 🟠 High |
 | Capture Mode | 1 | 🔴 Critical |
 | AI Summary | 1 | 🟠 High |
-| Habit Management | 5 features | 🟠 High |
-| Backend Bindings | 25+ | 🟠 High |
+| Habit Management | 10+ features | 🟠 High |
+| List Management | 6 features | 🟠 High |
+| Data Import/Export | 5 features | 🟠 High |
+| Backup/Restore | 5 features | 🟡 Medium |
+| Version History | 4 features | 🟡 Medium |
+| Backend Bindings | 45+ | 🟠 High |
 
 ---
 
