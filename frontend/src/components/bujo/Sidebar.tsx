@@ -6,10 +6,12 @@ import {
   List,
   Target,
   Settings,
-  BookOpen
+  BookOpen,
+  Search,
+  BarChart3
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'week' | 'habits' | 'lists' | 'goals';
+export type ViewType = 'today' | 'week' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -22,6 +24,8 @@ const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'habits', icon: Flame, label: 'Habits' },
   { view: 'lists', icon: List, label: 'Lists' },
   { view: 'goals', icon: Target, label: 'Goals' },
+  { view: 'search', icon: Search, label: 'Search' },
+  { view: 'stats', icon: BarChart3, label: 'Stats' },
 ];
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
@@ -57,7 +61,15 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       
       {/* Footer */}
       <div className="p-3 border-t border-sidebar-border">
-        <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors">
+        <button
+          onClick={() => onViewChange('settings')}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+            currentView === 'settings'
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+              : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+          )}
+        >
           <Settings className="w-4 h-4" />
           Settings
         </button>

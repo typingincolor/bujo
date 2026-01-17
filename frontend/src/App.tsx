@@ -6,6 +6,9 @@ import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
+import { SearchView } from '@/components/bujo/SearchView'
+import { StatsView } from '@/components/bujo/StatsView'
+import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
 import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
@@ -221,6 +224,9 @@ function App() {
     habits: 'Habits',
     lists: 'Lists',
     goals: 'Goals',
+    search: 'Search',
+    stats: 'Statistics',
+    settings: 'Settings',
   }
 
   if (loading) {
@@ -308,6 +314,24 @@ function App() {
           {view === 'goals' && (
             <div className="max-w-3xl mx-auto">
               <GoalsView goals={goals} onGoalChanged={loadData} onError={setError} />
+            </div>
+          )}
+
+          {view === 'search' && (
+            <div className="max-w-3xl mx-auto">
+              <SearchView />
+            </div>
+          )}
+
+          {view === 'stats' && (
+            <div className="max-w-4xl mx-auto">
+              <StatsView days={days} habits={habits} goals={goals} />
+            </div>
+          )}
+
+          {view === 'settings' && (
+            <div className="max-w-2xl mx-auto">
+              <SettingsView />
             </div>
           )}
         </main>
