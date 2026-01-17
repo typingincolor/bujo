@@ -1,68 +1,214 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Definition of the design system - Bujo Paper-Inspired Theme
+   Warm, journal-like aesthetic with ink and cream palette
+   All colors MUST be HSL.
+*/
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
+@layer base {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Paper-inspired cream/ivory background */
+    --background: 43 30% 96%;
+    --foreground: 25 20% 18%;
+
+    /* Slightly warmer cards like aged paper */
+    --card: 40 25% 98%;
+    --card-foreground: 25 20% 18%;
+
+    --popover: 40 25% 98%;
+    --popover-foreground: 25 20% 18%;
+
+    /* Warm amber/ochre accent for primary actions */
+    --primary: 28 85% 45%;
+    --primary-foreground: 40 25% 98%;
+
+    /* Soft sage for secondary elements */
+    --secondary: 45 15% 92%;
+    --secondary-foreground: 25 20% 25%;
+
+    /* Muted warm gray */
+    --muted: 40 12% 90%;
+    --muted-foreground: 25 10% 50%;
+
+    /* Accent - warm terracotta */
+    --accent: 16 65% 55%;
+    --accent-foreground: 40 25% 98%;
+
+    /* Destructive - muted red */
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 40 25% 98%;
+
+    /* Borders - soft warm gray */
+    --border: 35 15% 85%;
+    --input: 35 15% 88%;
+    --ring: 28 85% 45%;
+
+    --radius: 0.625rem;
+
+    /* Custom bujo colors */
+    --bujo-task: 25 20% 25%;
+    --bujo-note: 200 15% 40%;
+    --bujo-event: 28 70% 50%;
+    --bujo-done: 145 35% 42%;
+    --bujo-migrated: 280 25% 50%;
+    --bujo-cancelled: 0 40% 55%;
+    --bujo-streak: 28 85% 55%;
+    --bujo-habit-fill: 145 45% 50%;
+    --bujo-habit-empty: 40 10% 80%;
+
+    /* Priority colors */
+    --priority-high: 0 70% 55%;
+    --priority-medium: 35 85% 55%;
+    --priority-low: 200 50% 55%;
+
+    /* Sidebar */
+    --sidebar-background: 40 20% 95%;
+    --sidebar-foreground: 25 20% 25%;
+    --sidebar-primary: 28 85% 45%;
+    --sidebar-primary-foreground: 40 25% 98%;
+    --sidebar-accent: 40 15% 90%;
+    --sidebar-accent-foreground: 25 20% 20%;
+    --sidebar-border: 35 15% 88%;
+    --sidebar-ring: 28 85% 45%;
+
+    /* Typography */
+    --font-display: 'Crimson Pro', Georgia, serif;
+    --font-body: 'Inter', system-ui, sans-serif;
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    --background: 25 15% 10%;
+    --foreground: 40 20% 90%;
+
+    --card: 25 15% 13%;
+    --card-foreground: 40 20% 90%;
+
+    --popover: 25 15% 13%;
+    --popover-foreground: 40 20% 90%;
+
+    --primary: 28 75% 55%;
+    --primary-foreground: 25 15% 10%;
+
+    --secondary: 25 12% 18%;
+    --secondary-foreground: 40 20% 85%;
+
+    --muted: 25 12% 20%;
+    --muted-foreground: 35 10% 60%;
+
+    --accent: 16 55% 50%;
+    --accent-foreground: 40 25% 95%;
+
+    --destructive: 0 55% 45%;
+    --destructive-foreground: 40 25% 95%;
+
+    --border: 25 12% 22%;
+    --input: 25 12% 22%;
+    --ring: 28 75% 55%;
+
+    --bujo-task: 40 15% 80%;
+    --bujo-note: 200 20% 65%;
+    --bujo-event: 28 60% 60%;
+    --bujo-done: 145 35% 55%;
+    --bujo-migrated: 280 30% 60%;
+    --bujo-cancelled: 0 40% 60%;
+    --bujo-streak: 28 75% 60%;
+    --bujo-habit-fill: 145 40% 55%;
+    --bujo-habit-empty: 25 10% 30%;
+
+    --priority-high: 0 60% 55%;
+    --priority-medium: 35 75% 55%;
+    --priority-low: 200 45% 55%;
+
+    --sidebar-background: 25 15% 8%;
+    --sidebar-foreground: 40 20% 85%;
+    --sidebar-primary: 28 75% 55%;
+    --sidebar-primary-foreground: 25 15% 10%;
+    --sidebar-accent: 25 12% 15%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border: 25 12% 18%;
+    --sidebar-ring: 28 75% 55%;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: var(--font-body);
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer components {
+  /* Entry type styling */
+  .entry-task { color: hsl(var(--bujo-task)); }
+  .entry-note { color: hsl(var(--bujo-note)); }
+  .entry-event { color: hsl(var(--bujo-event)); }
+  .entry-done { color: hsl(var(--bujo-done)); }
+  .entry-migrated { color: hsl(var(--bujo-migrated)); }
+  .entry-cancelled {
+    color: hsl(var(--bujo-cancelled));
+    text-decoration: line-through;
+  }
+
+  /* Priority indicators */
+  .priority-high { color: hsl(var(--priority-high)); }
+  .priority-medium { color: hsl(var(--priority-medium)); }
+  .priority-low { color: hsl(var(--priority-low)); }
+
+  /* Habit tracker dots */
+  .habit-dot-filled {
+    background-color: hsl(var(--bujo-habit-fill));
+  }
+  .habit-dot-empty {
+    background-color: hsl(var(--bujo-habit-empty));
+  }
+
+  /* Paper texture overlay */
+  .paper-texture {
+    background-image:
+      radial-gradient(ellipse at 20% 30%, hsl(40 30% 97%) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, hsl(35 20% 95%) 0%, transparent 50%);
+  }
+
+  /* Subtle journal lines */
+  .journal-lines {
+    background-image: repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      hsl(var(--border)) 31px,
+      hsl(var(--border)) 32px
+    );
+  }
+
+  /* Ink effect on hover */
+  .ink-hover {
+    @apply transition-all duration-200;
+  }
+  .ink-hover:hover {
+    text-shadow: 0 0 1px currentColor;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  .font-body {
+    font-family: var(--font-body);
   }
 }
