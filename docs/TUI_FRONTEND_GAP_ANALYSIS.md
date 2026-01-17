@@ -5,16 +5,26 @@
 
 ---
 
+## Important Note on Scope
+
+This report focuses on **functional parity** - ensuring every action achievable in the TUI is achievable in the Frontend through appropriate UI mechanisms (buttons, menus, context actions, modals, dropdowns, etc.).
+
+**Keyboard shortcuts are NOT required** - the Frontend is a web application and will use different interaction patterns. The TUI key bindings are listed only to document what *actions* exist, not to mandate keyboard shortcuts.
+
+At implementation time, each feature needs discussion on the appropriate UI pattern for the web context.
+
+---
+
 ## Executive Summary
 
-The TUI has **8 main views**, **54 key bindings**, **9 entry types**, and **20+ modal dialogs**. The Frontend currently implements only **5 views** with limited keyboard support and missing critical functionality.
+The TUI has **8 main views**, **54 distinct actions**, **9 entry types**, and **20+ modal dialogs**. The Frontend currently implements only **5 views** with many actions not yet available through any UI mechanism.
 
 | Category | TUI | Frontend | Gap |
 |----------|-----|----------|-----|
 | Main Views | 8 | 5 | **3 missing** |
-| Key Bindings | 54 | ~10 | **44 missing** |
+| Distinct Actions | 54 | ~15 | **~39 missing** |
 | Entry Types | 9 | 6 | **3 missing** |
-| Modal Dialogs | 20+ | 3 | **17+ missing** |
+| UI Dialogs/Flows | 20+ | 3 | **17+ missing** |
 
 ---
 
@@ -82,71 +92,65 @@ The TUI has **8 main views**, **54 key bindings**, **9 entry types**, and **20+ 
 
 ---
 
-## 3. MISSING KEY COMMANDS BY CATEGORY
+## 3. MISSING ACTIONS BY CATEGORY
 
-### Navigation & View Control (8 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `g` | Jump to first entry | ❌ **MISSING** |
-| `G` | Jump to last entry | ❌ **MISSING** |
-| `h`/`←` | Previous day/week | ❌ **MISSING** |
-| `l`/`→` | Next day/week | ❌ **MISSING** |
-| `w` | Toggle Day/Week view | ❌ Listed but **not implemented** |
-| `[` | Previous habit period | ❌ **MISSING** |
-| `]` | Next habit period | ❌ **MISSING** |
-| `/` | Go to specific date | ❌ Listed but **not implemented** |
+> **Note:** TUI key bindings shown for reference only. Frontend needs equivalent UI mechanisms (buttons, menus, etc.), not necessarily keyboard shortcuts.
 
-### Entry Management (15 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `x` | Cancel entry (⊗) | ❌ Listed but **not implemented** |
-| `X` | Uncancel entry | ❌ **MISSING** |
-| `a` | Add sibling entry | ❌ Listed but **not implemented** |
-| `A` | Add child entry | ❌ Listed but **not implemented** |
-| `r` | Add root entry | ❌ **MISSING** |
-| `m` | Migrate task | ❌ Listed but **not implemented** |
-| `M` | Convert task to goal | ❌ **MISSING** |
-| `L` | Move entry to list | ❌ **MISSING** |
-| `!` | Cycle priority | ❌ **MISSING** |
-| `t` | Change entry type | ❌ **MISSING** |
-| `u` | Undo last action | ❌ **MISSING** |
-| `R` | Answer question | ❌ **MISSING** |
-| `c` | **Capture mode** | ❌ **CRITICAL - MISSING** |
-| `C` | Toggle overdue context | ❌ **MISSING** |
-| `o` | Open URL in entry | ❌ **MISSING** |
+### Navigation & Date Control
+| TUI Key | Action | Frontend Status | Suggested UI |
+|---------|--------|-----------------|--------------|
+| `h`/`←` | Previous day/week | ❌ **MISSING** | Arrow buttons, date picker |
+| `l`/`→` | Next day/week | ❌ **MISSING** | Arrow buttons, date picker |
+| `/` | Go to specific date | ❌ **MISSING** | Date picker, calendar widget |
+| `[` | Previous habit period | ❌ **MISSING** | Period selector dropdown |
+| `]` | Next habit period | ❌ **MISSING** | Period selector dropdown |
 
-### Collapse/Expand (3 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `Enter` | Toggle collapse | ✅ Click only |
-| `ctrl+e` | Expand all siblings | ❌ **MISSING** |
-| `ctrl+c` | Collapse all siblings | ❌ **MISSING** |
+### Entry Management
+| TUI Key | Action | Frontend Status | Suggested UI |
+|---------|--------|-----------------|--------------|
+| `x` | Cancel entry (⊗) | ❌ **MISSING** | Context menu or button |
+| `X` | Uncancel entry | ❌ **MISSING** | Context menu or button |
+| `a` | Add sibling entry | ❌ **MISSING** | + button, inline form |
+| `A` | Add child entry | ❌ **MISSING** | Indent button, context menu |
+| `m` | Migrate task to date | ❌ **MISSING** | Context menu + date picker |
+| `M` | Convert task to goal | ❌ **MISSING** | Context menu + month picker |
+| `L` | Move entry to list | ❌ **MISSING** | Context menu + list picker |
+| `!` | Set priority | ❌ **MISSING** | Priority dropdown/selector |
+| `t` | Change entry type | ❌ **MISSING** | Type dropdown/selector |
+| `u` | Undo last action | ❌ **MISSING** | Undo button, toast action |
+| `R` | Answer question | ❌ **MISSING** | Reply button on questions |
+| `c` | **Capture mode** | ❌ **CRITICAL** | Multi-line modal/editor |
+| `o` | Open URL in entry | ❌ **MISSING** | Clickable links |
 
-### Search (3 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `ctrl+s` | Forward search | ❌ **MISSING** |
-| `ctrl+r` | Reverse search | ❌ **MISSING** |
-| `/` | Search from journal | ❌ **MISSING** |
+### Collapse/Expand
+| TUI Key | Action | Frontend Status | Suggested UI |
+|---------|--------|-----------------|--------------|
+| `Enter` | Toggle single entry | ✅ Click chevron | Already works |
+| `ctrl+e` | Expand all | ❌ **MISSING** | "Expand All" button |
+| `ctrl+c` | Collapse all | ❌ **MISSING** | "Collapse All" button |
 
-### Advanced (4 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `s` | Toggle AI summary | ❌ **MISSING** |
-| `@` | Set location | ❌ **MISSING** |
-| `ctrl+p` / `:` | Command palette | ❌ **MISSING** |
-| `?` | Toggle help | ❌ Listed but **not implemented** |
+### Search
+| Action | Frontend Status | Suggested UI |
+|--------|-----------------|--------------|
+| Full-text search | ⚠️ Header bar only | Dedicated search view |
+| Jump to search result | ❌ **MISSING** | Clickable results |
+| Show ancestry context | ❌ **MISSING** | Breadcrumb in results |
 
-### View Switching (7 missing)
-| Key | TUI Action | Frontend Status |
-|-----|------------|-----------------|
-| `1` | Journal view | ❌ No keyboard shortcut |
-| `2` | Habits view | ❌ No keyboard shortcut |
-| `3` | Lists view | ❌ No keyboard shortcut |
-| `4` | Search view | ❌ **View missing** |
-| `5` | Stats view | ❌ **View missing** |
-| `6` | Goals view | ❌ No keyboard shortcut |
-| `7` | Settings view | ❌ **View missing** |
+### Day Context & AI
+| TUI Key | Action | Frontend Status | Suggested UI |
+|---------|--------|-----------------|--------------|
+| `@` | Set location | ❌ **MISSING** | Location input in header |
+| `s` | Toggle AI summary | ❌ **MISSING** | Collapsible summary card |
+| - | Set mood | ❌ **MISSING** | Mood selector |
+| - | Set weather | ❌ **MISSING** | Weather input |
+
+### View Switching
+| Action | Frontend Status | Notes |
+|--------|-----------------|-------|
+| Switch views | ✅ Sidebar nav | Already works |
+| Search view | ❌ **View missing** | Need sidebar entry |
+| Stats view | ❌ **View missing** | Need sidebar entry |
+| Settings view | ❌ **View missing** | Need sidebar entry |
 
 ---
 
@@ -391,9 +395,9 @@ The TUI has a full question/answer workflow:
 | Category | Items Missing | Severity |
 |----------|--------------|----------|
 | Views/Screens | 3 | 🔴 Critical |
-| Key Bindings | 44 | 🔴 Critical |
+| Distinct Actions | ~39 | 🔴 Critical |
 | Entry Types | 3 (Question system) | 🔴 Critical |
-| Modal Dialogs | 17+ | 🟠 High |
+| UI Dialogs/Flows | 17+ | 🟠 High |
 | Capture Mode | 1 | 🔴 Critical |
 | AI Summary | 1 | 🟠 High |
 | Habit Management | 5 features | 🟠 High |
@@ -401,7 +405,9 @@ The TUI has a full question/answer workflow:
 
 ---
 
-## Appendix: Complete Key Binding Comparison
+## Appendix: Complete Action Reference
+
+> This appendix lists all TUI actions with their key bindings for reference. The "Frontend" column indicates whether the action is achievable through ANY UI mechanism (not necessarily keyboard).
 
 | Key | TUI Function | Frontend |
 |-----|--------------|----------|
