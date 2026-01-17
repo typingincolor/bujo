@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -9,6 +9,8 @@ import { GoalsView } from '@/components/bujo/GoalsView'
 import { Header } from '@/components/bujo/Header'
 import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
+import { EditEntryModal } from '@/components/bujo/EditEntryModal'
+import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -44,6 +46,9 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchResults, setSearchResults] = useState<Array<{ id: number; content: string; type: string; date: string }>>([])
+  const [editModalEntry, setEditModalEntry] = useState<Entry | null>(null)
+  const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
+  const [deleteHasChildren, setDeleteHasChildren] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -111,6 +116,24 @@ function App() {
           }
           break
         }
+        case 'e': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            setEditModalEntry(entry)
+          }
+          break
+        }
+        case 'd': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            const hasChildren = await HasChildren(entry.id)
+            setDeleteHasChildren(hasChildren)
+            setDeleteDialogEntry(entry)
+          }
+          break
+        }
       }
     }
 
@@ -158,6 +181,30 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to add entry')
     }
   }, [loadData])
+
+  const handleEditEntry = useCallback(async (newContent: string) => {
+    if (!editModalEntry) return
+    try {
+      await EditEntry(editModalEntry.id, newContent)
+      setEditModalEntry(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to edit entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to edit entry')
+    }
+  }, [editModalEntry, loadData])
+
+  const handleDeleteEntry = useCallback(async () => {
+    if (!deleteDialogEntry) return
+    try {
+      await DeleteEntry(deleteDialogEntry.id)
+      setDeleteDialogEntry(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to delete entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete entry')
+    }
+  }, [deleteDialogEntry, loadData])
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
@@ -210,14 +257,34 @@ function App() {
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
               <AddEntryBar onAdd={handleAddEntry} />
-              <DayView day={today} selectedEntryId={selectedEntryId} onEntryChanged={loadData} />
+              <DayView
+                day={today}
+                selectedEntryId={selectedEntryId}
+                onEntryChanged={loadData}
+                onEditEntry={(entry) => setEditModalEntry(entry)}
+                onDeleteEntry={async (entry) => {
+                  const hasChildren = await HasChildren(entry.id)
+                  setDeleteHasChildren(hasChildren)
+                  setDeleteDialogEntry(entry)
+                }}
+              />
             </div>
           )}
 
           {view === 'week' && (
             <div className="max-w-4xl mx-auto space-y-8">
               {weekDays.map((day, i) => (
-                <DayView key={i} day={day} onEntryChanged={loadData} />
+                <DayView
+                  key={i}
+                  day={day}
+                  onEntryChanged={loadData}
+                  onEditEntry={(entry) => setEditModalEntry(entry)}
+                  onDeleteEntry={async (entry) => {
+                    const hasChildren = await HasChildren(entry.id)
+                    setDeleteHasChildren(hasChildren)
+                    setDeleteDialogEntry(entry)
+                  }}
+                />
               ))}
               {weekDays.length === 0 && (
                 <p className="text-muted-foreground text-center py-8">No entries this week</p>
@@ -249,6 +316,27 @@ function App() {
           <KeyboardShortcuts />
         </div>
       </div>
+
+      {/* Edit Entry Modal */}
+      <EditEntryModal
+        isOpen={editModalEntry !== null}
+        initialContent={editModalEntry?.content || ''}
+        onSave={handleEditEntry}
+        onCancel={() => setEditModalEntry(null)}
+      />
+
+      {/* Delete Entry Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteDialogEntry !== null}
+        title="Delete Entry"
+        message={deleteHasChildren
+          ? `Are you sure you want to delete "${deleteDialogEntry?.content}"? This will also delete all child entries.`
+          : `Are you sure you want to delete "${deleteDialogEntry?.content}"?`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteEntry}
+        onCancel={() => setDeleteDialogEntry(null)}
+      />
     </div>
   )
 }

@@ -119,3 +119,15 @@ func (a *App) Search(query string) ([]domain.Entry, error) {
 	opts := domain.NewSearchOptions(query)
 	return a.services.Bujo.SearchEntries(a.ctx, opts)
 }
+
+func (a *App) EditEntry(id int64, newContent string) error {
+	return a.services.Bujo.EditEntry(a.ctx, id, newContent)
+}
+
+func (a *App) DeleteEntry(id int64) error {
+	return a.services.Bujo.DeleteEntry(a.ctx, id)
+}
+
+func (a *App) HasChildren(id int64) (bool, error) {
+	return a.services.Bujo.HasChildren(a.ctx, id)
+}
