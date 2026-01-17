@@ -25,12 +25,12 @@ Examples:
 			return err
 		}
 
-		list, err := services.List.GetListByID(ctx, listID)
+		list, err := listService.GetListByID(ctx, listID)
 		if err != nil {
 			return err
 		}
 
-		items, err := services.List.GetListItems(ctx, listID)
+		items, err := listService.GetListItems(ctx, listID)
 		if err != nil {
 			return fmt.Errorf("failed to get list items: %w", err)
 		}
@@ -58,7 +58,7 @@ Examples:
 			fmt.Printf("%s %s %s\n", gray(fmt.Sprintf("(%d)", item.RowID)), symbol, content)
 		}
 
-		summary, _ := services.List.GetListSummary(ctx, listID)
+		summary, _ := listService.GetListSummary(ctx, listID)
 		if summary != nil && summary.TotalItems > 0 {
 			fmt.Println(gray("---------------------------------------------------------"))
 			fmt.Printf("%s\n", gray(fmt.Sprintf("%d/%d done", summary.DoneItems, summary.TotalItems)))

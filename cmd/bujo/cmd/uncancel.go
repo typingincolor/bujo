@@ -25,7 +25,7 @@ Examples:
 			return err
 		}
 
-		err = services.Bujo.UncancelEntry(cmd.Context(), id)
+		err = bujoService.UncancelEntry(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to uncancel: %w", err)
 		}

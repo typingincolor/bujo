@@ -34,7 +34,7 @@ Examples:
 			}
 		}
 
-		err = services.Bujo.ClearMood(cmd.Context(), targetDate)
+		err = bujoService.ClearMood(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear mood: %w", err)
 		}

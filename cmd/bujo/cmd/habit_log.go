@@ -75,10 +75,10 @@ Examples:
 		}
 
 		if isID {
-			err = services.Habit.LogHabitByIDForDate(cmd.Context(), id, count, logDate)
+			err = habitService.LogHabitByIDForDate(cmd.Context(), id, count, logDate)
 		} else {
 			var exists bool
-			exists, err = services.Habit.HabitExists(cmd.Context(), name)
+			exists, err = habitService.HabitExists(cmd.Context(), name)
 			if err != nil {
 				return fmt.Errorf("failed to check habit: %w", err)
 			}
@@ -95,7 +95,7 @@ Examples:
 				}
 			}
 
-			err = services.Habit.LogHabitForDate(cmd.Context(), name, count, logDate)
+			err = habitService.LogHabitForDate(cmd.Context(), name, count, logDate)
 		}
 
 		if err != nil {

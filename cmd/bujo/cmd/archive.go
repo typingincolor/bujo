@@ -29,7 +29,7 @@ Old versions are rows with valid_to set, meaning they've been superseded.`,
 		if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
 			return err
 		}
-		listItemRepo := sqlite.NewListItemRepository(services.DB)
+		listItemRepo := sqlite.NewListItemRepository(db)
 		archiveService = service.NewArchiveService(listItemRepo)
 		return nil
 	},

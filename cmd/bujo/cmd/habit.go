@@ -22,7 +22,7 @@ By default shows a 7-day sparkline. Use --month for a calendar view.`,
 			days = 30
 		}
 
-		status, err := services.Habit.GetTrackerStatus(cmd.Context(), time.Now(), days)
+		status, err := habitService.GetTrackerStatus(cmd.Context(), time.Now(), days)
 		if err != nil {
 			return fmt.Errorf("failed to get habit status: %w", err)
 		}

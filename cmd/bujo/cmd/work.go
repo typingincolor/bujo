@@ -22,7 +22,7 @@ Examples:
   bujo work clear -d yesterday      # Clear a day's location`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
-		loc, err := services.Bujo.GetLocation(cmd.Context(), today)
+		loc, err := bujoService.GetLocation(cmd.Context(), today)
 		if err != nil {
 			return fmt.Errorf("failed to get location: %w", err)
 		}

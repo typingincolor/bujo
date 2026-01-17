@@ -34,7 +34,7 @@ Examples:
 			}
 		}
 
-		err = services.Bujo.ClearLocation(cmd.Context(), targetDate)
+		err = bujoService.ClearLocation(cmd.Context(), targetDate)
 		if err != nil {
 			return fmt.Errorf("failed to clear location: %w", err)
 		}

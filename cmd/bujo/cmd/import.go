@@ -58,14 +58,14 @@ func runImport(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(os.Stderr, "Warning: Replace mode will delete all existing data!")
 	}
 
-	entryRepo := sqlite.NewEntryRepository(services.DB)
-	habitRepo := sqlite.NewHabitRepository(services.DB)
-	habitLogRepo := sqlite.NewHabitLogRepository(services.DB)
-	dayContextRepo := sqlite.NewDayContextRepository(services.DB)
-	summaryRepo := sqlite.NewSummaryRepository(services.DB)
-	listRepo := sqlite.NewListRepository(services.DB)
-	listItemRepo := sqlite.NewListItemRepository(services.DB)
-	goalRepo := sqlite.NewGoalRepository(services.DB)
+	entryRepo := sqlite.NewEntryRepository(db)
+	habitRepo := sqlite.NewHabitRepository(db)
+	habitLogRepo := sqlite.NewHabitLogRepository(db)
+	dayContextRepo := sqlite.NewDayContextRepository(db)
+	summaryRepo := sqlite.NewSummaryRepository(db)
+	listRepo := sqlite.NewListRepository(db)
+	listItemRepo := sqlite.NewListItemRepository(db)
+	goalRepo := sqlite.NewGoalRepository(db)
 
 	importSvc := service.NewImportService(
 		entryRepo, habitRepo, habitLogRepo, dayContextRepo,

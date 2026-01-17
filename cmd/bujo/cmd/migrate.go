@@ -45,7 +45,7 @@ Examples:
 			return err
 		}
 
-		newID, err := services.Bujo.MigrateEntry(cmd.Context(), id, toDate)
+		newID, err := bujoService.MigrateEntry(cmd.Context(), id, toDate)
 		if err != nil {
 			return fmt.Errorf("failed to migrate entry: %w", err)
 		}

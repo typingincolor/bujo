@@ -24,7 +24,7 @@ Examples:
 			return err
 		}
 
-		err = services.Bujo.MarkDone(cmd.Context(), id)
+		err = bujoService.MarkDone(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to mark done: %w", err)
 		}

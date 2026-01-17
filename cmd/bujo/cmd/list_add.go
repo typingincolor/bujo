@@ -39,7 +39,7 @@ Examples:
 			content = content[2:]
 		}
 
-		id, err := services.List.AddItem(ctx, listID, entryType, content)
+		id, err := listService.AddItem(ctx, listID, entryType, content)
 		if err != nil {
 			return fmt.Errorf("failed to add item: %w", err)
 		}

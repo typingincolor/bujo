@@ -22,7 +22,7 @@ Examples:
   bujo mood clear -d yesterday      # Clear a day's mood`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
-		mood, err := services.Bujo.GetMood(cmd.Context(), today)
+		mood, err := bujoService.GetMood(cmd.Context(), today)
 		if err != nil {
 			return fmt.Errorf("failed to get mood: %w", err)
 		}

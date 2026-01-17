@@ -78,9 +78,9 @@ Examples:
 		var details *service.HabitDetails
 
 		if isID {
-			details, err = services.Habit.InspectHabitByID(cmd.Context(), id, from, to, today)
+			details, err = habitService.InspectHabitByID(cmd.Context(), id, from, to, today)
 		} else {
-			details, err = services.Habit.InspectHabit(cmd.Context(), name, from, to, today)
+			details, err = habitService.InspectHabit(cmd.Context(), name, from, to, today)
 		}
 
 		if err != nil {

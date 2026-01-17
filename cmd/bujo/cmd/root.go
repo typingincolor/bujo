@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/adapter/ai"
-	"github.com/typingincolor/bujo/internal/app"
+	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/repository/sqlite"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -21,9 +22,13 @@ var (
 	dbPath  string
 	verbose bool
 
-	services        *app.Services
-	servicesCleanup func()
-	summaryService  *service.SummaryService
+	db             *sql.DB
+	bujoService    *service.BujoService
+	habitService   *service.HabitService
+	listService    *service.ListService
+	goalService    *service.GoalService
+	summaryService *service.SummaryService
+	statsService   *service.StatsService
 )
 
 var rootCmd = &cobra.Command{
@@ -36,51 +41,58 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		factory := app.NewServiceFactory()
 		var err error
-		services, servicesCleanup, err = factory.Create(cmd.Context(), dbPath)
+		db, err = sqlite.OpenAndMigrate(dbPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to open database: %w", err)
 		}
 
 		backupDir := getDefaultBackupDir()
-		backupRepo := sqlite.NewBackupRepository(services.DB)
+		backupRepo := sqlite.NewBackupRepository(db)
 		backupSvc := service.NewBackupService(backupRepo)
-		created, path, backupErr := backupSvc.EnsureRecentBackup(cmd.Context(), backupDir, 7)
-		if backupErr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to ensure backup: %v\n", backupErr)
+		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), backupDir, 7)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to ensure backup: %v\n", err)
 		} else if created {
 			fmt.Fprintf(os.Stderr, "Creating backup... %s\n", path)
 		}
 
-		summaryService = initSummaryService(cmd)
+		entryRepo := sqlite.NewEntryRepository(db)
+		dayCtxRepo := sqlite.NewDayContextRepository(db)
+		habitRepo := sqlite.NewHabitRepository(db)
+		habitLogRepo := sqlite.NewHabitLogRepository(db)
+		listRepo := sqlite.NewListRepository(db)
+		listItemRepo := sqlite.NewListItemRepository(db)
+		goalRepo := sqlite.NewGoalRepository(db)
+		parser := domain.NewTreeParser()
+
+		bujoService = service.NewBujoService(entryRepo, dayCtxRepo, parser)
+		habitService = service.NewHabitService(habitRepo, habitLogRepo)
+		listService = service.NewListService(listRepo, listItemRepo)
+		goalService = service.NewGoalService(goalRepo)
+		statsService = service.NewStatsService(entryRepo, habitRepo, habitLogRepo)
+
+		summaryRepo := sqlite.NewSummaryRepository(db)
+		aiClient, err := ai.NewAIClient(cmd.Context())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
+		} else {
+			promptsDir := getDefaultPromptsDir()
+			promptLoader := ai.NewPromptLoader(promptsDir)
+			if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to create default prompts: %v\n", err)
+			}
+			generator := ai.NewGeminiGeneratorWithLoader(aiClient, promptLoader)
+			summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
+		}
 
 		return nil
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
-		if servicesCleanup != nil {
-			servicesCleanup()
+		if db != nil {
+			_ = db.Close()
 		}
 	},
-}
-
-func initSummaryService(cmd *cobra.Command) *service.SummaryService {
-	entryRepo := sqlite.NewEntryRepository(services.DB)
-	summaryRepo := sqlite.NewSummaryRepository(services.DB)
-
-	aiClient, err := ai.NewAIClient(cmd.Context())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
-		return nil
-	}
-
-	promptsDir := getDefaultPromptsDir()
-	promptLoader := ai.NewPromptLoader(promptsDir)
-	if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to create default prompts: %v\n", err)
-	}
-	generator := ai.NewGeminiGeneratorWithLoader(aiClient, promptLoader)
-	return service.NewSummaryService(entryRepo, summaryRepo, generator)
 }
 
 func Execute() error {
