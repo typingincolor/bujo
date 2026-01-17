@@ -24,7 +24,7 @@ Examples:
 		tomorrow := today.AddDate(0, 0, 1)
 		endDate := tomorrow.AddDate(0, 0, 6)
 
-		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), tomorrow, endDate)
+		agenda, err := services.Bujo.GetMultiDayAgenda(cmd.Context(), tomorrow, endDate)
 		if err != nil {
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}

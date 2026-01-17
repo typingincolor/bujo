@@ -45,9 +45,9 @@ Examples:
 		}
 
 		if isID {
-			err = habitService.RenameHabitByID(cmd.Context(), id, newName)
+			err = services.Habit.RenameHabitByID(cmd.Context(), id, newName)
 		} else {
-			err = habitService.RenameHabit(cmd.Context(), name, newName)
+			err = services.Habit.RenameHabit(cmd.Context(), name, newName)
 		}
 
 		if err != nil {

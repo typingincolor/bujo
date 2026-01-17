@@ -52,7 +52,7 @@ Examples:
 			return err
 		}
 
-		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), from, to)
+		agenda, err := services.Bujo.GetMultiDayAgenda(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get entries: %w", err)
 		}
@@ -60,7 +60,7 @@ Examples:
 		fmt.Print(cli.RenderMultiDayAgenda(agenda, todayStart))
 
 		currentMonth := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
-		goals, err := goalService.GetGoalsForMonth(cmd.Context(), currentMonth)
+		goals, err := services.Goal.GetGoalsForMonth(cmd.Context(), currentMonth)
 		if err != nil {
 			return fmt.Errorf("failed to get goals: %w", err)
 		}

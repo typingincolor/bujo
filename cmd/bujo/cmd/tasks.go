@@ -53,7 +53,7 @@ Examples:
 			return err
 		}
 
-		tasks, err := bujoService.GetOutstandingTasks(cmd.Context(), from, to)
+		tasks, err := services.Bujo.GetOutstandingTasks(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get tasks: %w", err)
 		}

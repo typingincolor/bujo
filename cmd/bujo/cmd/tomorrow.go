@@ -22,7 +22,7 @@ Examples:
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		tomorrow := today.AddDate(0, 0, 1)
 
-		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), tomorrow, tomorrow)
+		agenda, err := services.Bujo.GetMultiDayAgenda(cmd.Context(), tomorrow, tomorrow)
 		if err != nil {
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}

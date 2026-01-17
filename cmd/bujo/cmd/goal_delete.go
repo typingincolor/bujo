@@ -22,7 +22,7 @@ Examples:
 			return err
 		}
 
-		err = goalService.DeleteGoal(cmd.Context(), id)
+		err = services.Goal.DeleteGoal(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to delete goal: %w", err)
 		}

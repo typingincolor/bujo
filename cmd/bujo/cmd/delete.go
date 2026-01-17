@@ -33,7 +33,7 @@ Examples:
 			return err
 		}
 
-		hasChildren, err := bujoService.HasChildren(cmd.Context(), id)
+		hasChildren, err := services.Bujo.HasChildren(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to check entry: %w", err)
 		}
@@ -51,9 +51,9 @@ Examples:
 
 			switch choice {
 			case "1":
-				err = bujoService.DeleteEntry(cmd.Context(), id)
+				err = services.Bujo.DeleteEntry(cmd.Context(), id)
 			case "2":
-				err = bujoService.DeleteEntryAndReparent(cmd.Context(), id)
+				err = services.Bujo.DeleteEntryAndReparent(cmd.Context(), id)
 			case "3":
 				fmt.Fprintln(os.Stderr, "Cancelled")
 				return nil
@@ -61,7 +61,7 @@ Examples:
 				return fmt.Errorf("invalid choice: %s", choice)
 			}
 		} else {
-			err = bujoService.DeleteEntry(cmd.Context(), id)
+			err = services.Bujo.DeleteEntry(cmd.Context(), id)
 		}
 
 		if err != nil {

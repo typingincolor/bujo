@@ -18,7 +18,7 @@ Names can include spaces if quoted:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := strings.Join(args, " ")
 
-		list, err := listService.CreateList(cmd.Context(), name)
+		list, err := services.List.CreateList(cmd.Context(), name)
 		if err != nil {
 			return fmt.Errorf("failed to create list: %w", err)
 		}

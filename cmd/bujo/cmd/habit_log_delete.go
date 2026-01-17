@@ -25,7 +25,7 @@ Examples:
 			return fmt.Errorf("invalid log ID: %s", args[0])
 		}
 
-		err = habitService.DeleteLog(cmd.Context(), logID)
+		err = services.Habit.DeleteLog(cmd.Context(), logID)
 		if err != nil {
 			return fmt.Errorf("failed to delete log: %w", err)
 		}

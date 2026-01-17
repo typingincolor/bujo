@@ -22,7 +22,7 @@ Example:
 			return err
 		}
 
-		err = listService.MarkDone(ctx, itemID)
+		err = services.List.MarkDone(ctx, itemID)
 		if err != nil {
 			return fmt.Errorf("failed to mark done: %w", err)
 		}

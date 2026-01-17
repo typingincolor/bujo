@@ -24,7 +24,7 @@ Examples:
 			return err
 		}
 
-		err = bujoService.Undo(cmd.Context(), id)
+		err = services.Bujo.Undo(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to undo: %w", err)
 		}

@@ -25,7 +25,7 @@ Examples:
 			return err
 		}
 
-		err = bujoService.ReopenQuestion(cmd.Context(), id)
+		err = services.Bujo.ReopenQuestion(cmd.Context(), id)
 		if err != nil {
 			return fmt.Errorf("failed to reopen question: %w", err)
 		}

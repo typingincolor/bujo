@@ -22,7 +22,7 @@ Examples:
   bujo weather clear -d yesterday      # Clear a day's weather`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		today := time.Now()
-		weather, err := bujoService.GetWeather(cmd.Context(), today)
+		weather, err := services.Bujo.GetWeather(cmd.Context(), today)
 		if err != nil {
 			return fmt.Errorf("failed to get weather: %w", err)
 		}

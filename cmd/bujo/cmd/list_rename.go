@@ -26,7 +26,7 @@ Examples:
 
 		newName := strings.Join(args[1:], " ")
 
-		err = listService.RenameList(ctx, listID, newName)
+		err = services.List.RenameList(ctx, listID, newName)
 		if err != nil {
 			return fmt.Errorf("failed to rename list: %w", err)
 		}

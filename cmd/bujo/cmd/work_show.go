@@ -52,7 +52,7 @@ Examples:
 			return err
 		}
 
-		history, err := bujoService.GetLocationHistory(cmd.Context(), from, to)
+		history, err := services.Bujo.GetLocationHistory(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get location history: %w", err)
 		}

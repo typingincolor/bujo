@@ -52,7 +52,7 @@ Examples:
 			return err
 		}
 
-		history, err := bujoService.GetWeatherHistory(cmd.Context(), from, to)
+		history, err := services.Bujo.GetWeatherHistory(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get weather history: %w", err)
 		}

@@ -42,7 +42,7 @@ Examples:
 
 		if hasContent {
 			newContent := strings.Join(args[1:], " ")
-			err = bujoService.EditEntry(cmd.Context(), id, newContent)
+			err = services.Bujo.EditEntry(cmd.Context(), id, newContent)
 			if err != nil {
 				return fmt.Errorf("failed to edit entry: %w", err)
 			}
@@ -53,7 +53,7 @@ Examples:
 			if err != nil {
 				return err
 			}
-			err = bujoService.EditEntryPriority(cmd.Context(), id, priority)
+			err = services.Bujo.EditEntryPriority(cmd.Context(), id, priority)
 			if err != nil {
 				return fmt.Errorf("failed to update priority: %w", err)
 			}

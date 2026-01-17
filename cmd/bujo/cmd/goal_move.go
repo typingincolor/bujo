@@ -27,7 +27,7 @@ Examples:
 			return err
 		}
 
-		err = goalService.MoveToMonth(cmd.Context(), id, newMonth)
+		err = services.Goal.MoveToMonth(cmd.Context(), id, newMonth)
 		if err != nil {
 			return fmt.Errorf("failed to move goal: %w", err)
 		}

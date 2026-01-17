@@ -17,7 +17,7 @@ shopping lists, project backlogs, or any collection of items.
 
 Without subcommands, shows all lists with their progress.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		lists, err := listService.GetAllLists(cmd.Context())
+		lists, err := services.List.GetAllLists(cmd.Context())
 		if err != nil {
 			return fmt.Errorf("failed to get lists: %w", err)
 		}
@@ -34,7 +34,7 @@ Without subcommands, shows all lists with their progress.`,
 		fmt.Println(gray("---------------------------------------------------------"))
 
 		for _, list := range lists {
-			summary, err := listService.GetListSummary(cmd.Context(), list.ID)
+			summary, err := services.List.GetListSummary(cmd.Context(), list.ID)
 			if err != nil {
 				return err
 			}

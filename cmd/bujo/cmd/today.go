@@ -14,7 +14,7 @@ var todayCmd = &cobra.Command{
 	Long:  `Display today's entries, including overdue tasks, current location, and monthly goals.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		now := time.Now()
-		agenda, err := bujoService.GetDailyAgenda(cmd.Context(), now)
+		agenda, err := services.Bujo.GetDailyAgenda(cmd.Context(), now)
 		if err != nil {
 			return fmt.Errorf("failed to get agenda: %w", err)
 		}
@@ -22,7 +22,7 @@ var todayCmd = &cobra.Command{
 		fmt.Print(cli.RenderDailyAgenda(agenda))
 
 		currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		goals, err := goalService.GetGoalsForMonth(cmd.Context(), currentMonth)
+		goals, err := services.Goal.GetGoalsForMonth(cmd.Context(), currentMonth)
 		if err != nil {
 			return fmt.Errorf("failed to get goals: %w", err)
 		}

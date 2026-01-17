@@ -30,7 +30,7 @@ Examples:
 			return err
 		}
 
-		entries, err := bujoService.GetEntryContext(cmd.Context(), id, viewAncestors)
+		entries, err := services.Bujo.GetEntryContext(cmd.Context(), id, viewAncestors)
 		if err != nil {
 			return fmt.Errorf("failed to get entry: %w", err)
 		}
