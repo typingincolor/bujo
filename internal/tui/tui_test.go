@@ -3157,6 +3157,64 @@ func TestHabitView_ToggleView_ResetsWeekOffsetToAvoidFuture(t *testing.T) {
 	}
 }
 
+func TestHabitView_DayLabels_WeekView_ShowsDayNames(t *testing.T) {
+	model := New(nil)
+	model.habitState.viewMode = HabitViewModeWeek
+
+	labels := model.renderDayLabels(HabitDaysWeek)
+
+	// Week view should show day-of-week letters
+	for _, dayLetter := range []string{"S", "M", "T", "W", "F"} {
+		if !strings.Contains(labels, dayLetter) {
+			t.Errorf("week view labels should contain '%s', got: %s", dayLetter, labels)
+		}
+	}
+}
+
+func TestHabitView_DayLabels_MonthView_ShowsDateMarkers(t *testing.T) {
+	model := New(nil)
+	model.habitState.viewMode = HabitViewModeMonth
+
+	labels := model.renderDayLabels(HabitDaysMonth)
+
+	// Month view should NOT show day-of-week letters
+	if strings.Count(labels, "S") > 2 || strings.Count(labels, "M") > 2 {
+		t.Errorf("month view labels should show dates not day letters, got: %s", labels)
+	}
+
+	// Should contain numeric date markers
+	hasNumber := false
+	for _, r := range labels {
+		if r >= '0' && r <= '9' {
+			hasNumber = true
+			break
+		}
+	}
+	if !hasNumber {
+		t.Errorf("month view labels should contain date numbers, got: %s", labels)
+	}
+}
+
+func TestHabitView_DayLabels_QuarterView_ShowsMonthMarkers(t *testing.T) {
+	model := New(nil)
+	model.habitState.viewMode = HabitViewModeQuarter
+
+	labels := model.renderDayLabels(HabitDaysQuarter)
+
+	// Quarter view should show month abbreviations
+	monthAbbrevs := []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+	hasMonth := false
+	for _, abbrev := range monthAbbrevs {
+		if strings.Contains(labels, abbrev) {
+			hasMonth = true
+			break
+		}
+	}
+	if !hasMonth {
+		t.Errorf("quarter view labels should contain month abbreviations, got: %s", labels)
+	}
+}
+
 func TestNavigationStack_InitiallyEmpty(t *testing.T) {
 	model := New(nil)
 

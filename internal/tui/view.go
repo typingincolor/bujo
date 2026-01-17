@@ -336,16 +336,69 @@ func (m Model) renderSparkline(history []service.DayStatus, isSelected bool) str
 }
 
 func (m Model) renderDayLabels(days int) string {
+	referenceDate := m.getHabitReferenceDate()
+
+	switch m.habitState.viewMode {
+	case HabitViewModeMonth:
+		return m.renderMonthLabels(referenceDate, days)
+	case HabitViewModeQuarter:
+		return m.renderQuarterLabels(referenceDate, days)
+	default:
+		return m.renderWeekLabels(referenceDate, days)
+	}
+}
+
+func (m Model) renderWeekLabels(referenceDate time.Time, days int) string {
 	dayNames := []string{"S", "M", "T", "W", "T", "F", "S"}
 	var labels []string
 
-	referenceDate := m.getHabitReferenceDate()
 	for i := days - 1; i >= 0; i-- {
 		date := referenceDate.AddDate(0, 0, -i)
 		dayOfWeek := int(date.Weekday())
 		labels = append(labels, dayNames[dayOfWeek])
 	}
 	return strings.Join(labels, " ")
+}
+
+func (m Model) renderMonthLabels(referenceDate time.Time, days int) string {
+	var labels []string
+	var lastShownDate int
+
+	for i := days - 1; i >= 0; i-- {
+		date := referenceDate.AddDate(0, 0, -i)
+		dayOfMonth := date.Day()
+		displayPos := days - 1 - i
+
+		if displayPos == 0 || displayPos == days-1 || (dayOfMonth == 1 && displayPos > 0) {
+			labels = append(labels, fmt.Sprintf("%d", dayOfMonth))
+			lastShownDate = displayPos
+		} else if displayPos-lastShownDate >= 7 && dayOfMonth%7 == 0 {
+			labels = append(labels, fmt.Sprintf("%d", dayOfMonth))
+			lastShownDate = displayPos
+		} else {
+			labels = append(labels, "·")
+		}
+	}
+	return strings.Join(labels, " ")
+}
+
+func (m Model) renderQuarterLabels(referenceDate time.Time, days int) string {
+	var labels []string
+	var lastMonth time.Month
+
+	for i := days - 1; i >= 0; i-- {
+		date := referenceDate.AddDate(0, 0, -i)
+		displayPos := days - 1 - i
+
+		if displayPos == 0 || date.Month() != lastMonth {
+			monthAbbrev := date.Format("Jan")
+			labels = append(labels, monthAbbrev)
+			lastMonth = date.Month()
+		} else {
+			labels = append(labels, " · ")
+		}
+	}
+	return strings.Join(labels, "")
 }
 
 func (m Model) renderListsContent() string {
