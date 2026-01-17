@@ -9,6 +9,7 @@ interface EntryItemProps {
   isCollapsed?: boolean;
   hasChildren?: boolean;
   childCount?: number;
+  isSelected?: boolean;
   onToggleCollapse?: () => void;
   onToggleDone?: () => void;
 }
@@ -28,6 +29,7 @@ export function EntryItem({
   isCollapsed = false,
   hasChildren = false,
   childCount = 0,
+  isSelected = false,
   onToggleCollapse,
   onToggleDone,
 }: EntryItemProps) {
@@ -35,10 +37,13 @@ export function EntryItem({
 
   return (
     <div
+      data-entry-id={entry.id}
+      data-selected={isSelected}
       className={cn(
         'group flex items-start gap-2 py-1.5 px-2 rounded-md transition-colors',
         'hover:bg-secondary/50 animate-fade-in',
-        isToggleable && 'cursor-pointer'
+        isToggleable && 'cursor-pointer',
+        isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
       style={{ paddingLeft: `${depth * 20 + 8}px` }}
       onClick={isToggleable ? onToggleDone : undefined}

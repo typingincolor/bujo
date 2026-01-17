@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -9,7 +9,7 @@ import { GoalsView } from '@/components/bujo/GoalsView'
 import { Header } from '@/components/bujo/Header'
 import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
-import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS } from '@/types/bujo'
+import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import './index.css'
 
@@ -17,6 +17,20 @@ import './index.css'
 // This helper provides type-safe conversion from Date to the expected binding type.
 function toWailsTime(date: Date): time.Time {
   return date.toISOString() as unknown as time.Time
+}
+
+function flattenEntries(entries: Entry[]): Entry[] {
+  const result: Entry[] = []
+  function traverse(items: Entry[]) {
+    for (const entry of items) {
+      result.push(entry)
+      if (entry.children && entry.children.length > 0) {
+        traverse(entry.children)
+      }
+    }
+  }
+  traverse(entries)
+  return result
 }
 
 function App() {
@@ -27,6 +41,7 @@ function App() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState(0)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -59,6 +74,50 @@ function App() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const todayEntries = days[0]?.entries || []
+  const flatEntries = flattenEntries(todayEntries)
+
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (view !== 'today' || flatEntries.length === 0) return
+
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      switch (e.key) {
+        case 'j':
+        case 'ArrowDown':
+          e.preventDefault()
+          setSelectedIndex(prev => Math.min(prev + 1, flatEntries.length - 1))
+          break
+        case 'k':
+        case 'ArrowUp':
+          e.preventDefault()
+          setSelectedIndex(prev => Math.max(prev - 1, 0))
+          break
+        case ' ':
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry && (entry.type === 'task' || entry.type === 'done')) {
+            if (entry.type === 'done') {
+              await MarkEntryUndone(entry.id)
+            } else {
+              await MarkEntryDone(entry.id)
+            }
+            loadData()
+          }
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [view, flatEntries, selectedIndex, loadData])
+
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [days])
 
   const handleViewChange = (newView: ViewType) => {
     setView(newView)
@@ -110,6 +169,7 @@ function App() {
   }
 
   const today = days[0]
+  const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
   const weekDays = days.slice(0, 7)
 
   return (
@@ -123,7 +183,7 @@ function App() {
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
               <AddEntryBar onAdd={handleAddEntry} />
-              <DayView day={today} onEntryChanged={loadData} />
+              <DayView day={today} selectedEntryId={selectedEntryId} onEntryChanged={loadData} />
             </div>
           )}
 

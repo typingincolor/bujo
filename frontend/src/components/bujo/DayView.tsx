@@ -8,6 +8,7 @@ import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
+  selectedEntryId?: number | null;
   onEntryChanged?: () => void;
 }
 
@@ -43,11 +44,12 @@ interface EntryTreeProps {
   entries: Entry[];
   depth?: number;
   collapsedIds: Set<number>;
+  selectedEntryId?: number | null;
   onToggleCollapse: (id: number) => void;
   onToggleDone: (id: number) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse, onToggleDone }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -62,6 +64,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse, onToggl
               isCollapsed={isCollapsed}
               hasChildren={hasChildren}
               childCount={entry.children?.length || 0}
+              isSelected={entry.id === selectedEntryId}
               onToggleCollapse={() => onToggleCollapse(entry.id)}
               onToggleDone={() => onToggleDone(entry.id)}
             />
@@ -70,6 +73,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse, onToggl
                 entries={entry.children!}
                 depth={depth + 1}
                 collapsedIds={collapsedIds}
+                selectedEntryId={selectedEntryId}
                 onToggleCollapse={onToggleCollapse}
                 onToggleDone={onToggleDone}
               />
@@ -81,7 +85,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, onToggleCollapse, onToggl
   );
 }
 
-export function DayView({ day, onEntryChanged }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const tree = buildTree(day.entries);
   const dateObj = new Date(day.date + 'T00:00:00');
@@ -160,6 +164,7 @@ export function DayView({ day, onEntryChanged }: DayViewProps) {
           <EntryTree
             entries={tree}
             collapsedIds={collapsedIds}
+            selectedEntryId={selectedEntryId}
             onToggleCollapse={toggleCollapse}
             onToggleDone={handleToggleDone}
           />
