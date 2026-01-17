@@ -71,6 +71,10 @@ func (a *App) MarkEntryDone(id int64) error {
 	return a.services.Bujo.MarkDone(a.ctx, id)
 }
 
+func (a *App) MarkEntryUndone(id int64) error {
+	return a.services.Bujo.Undo(a.ctx, id)
+}
+
 func (a *App) AddEntry(input string, date time.Time) ([]int64, error) {
 	return a.services.Bujo.LogEntries(a.ctx, input, service.LogEntriesOptions{Date: date})
 }

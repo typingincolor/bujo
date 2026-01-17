@@ -137,6 +137,35 @@ func TestApp_MarkEntryDone_MarksTaskAsDone(t *testing.T) {
 	assert.Equal(t, "✓", agenda.Days[0].Entries[0].Type.Symbol())
 }
 
+func TestApp_MarkEntryUndone_RevertsToTask(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.MarkEntryDone(ids[0])
+	require.NoError(t, err)
+
+	err = wailsApp.MarkEntryUndone(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+}
+
 func TestApp_AddEntry_CreatesNewEntry(t *testing.T) {
 	ctx := context.Background()
 

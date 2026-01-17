@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -100,13 +100,17 @@ export function DayView({ day, onEntryChanged }: DayViewProps) {
 
   const handleToggleDone = async (id: number) => {
     const entry = day.entries.find(e => e.id === id);
-    if (entry?.type !== 'task') return;
+    if (!entry || (entry.type !== 'task' && entry.type !== 'done')) return;
 
     try {
-      await MarkEntryDone(id);
+      if (entry.type === 'done') {
+        await MarkEntryUndone(id);
+      } else {
+        await MarkEntryDone(id);
+      }
       onEntryChanged?.();
     } catch (error) {
-      console.error('Failed to mark entry done:', error);
+      console.error('Failed to toggle entry:', error);
     }
   };
   
