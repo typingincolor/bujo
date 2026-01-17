@@ -11,7 +11,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   RemoveListItem: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { AddListItem } from '@/wailsjs/go/wails/App'
+import { AddListItem, RemoveListItem } from '@/wailsjs/go/wails/App'
 
 const createTestList = (overrides: Partial<BujoList> = {}): BujoList => ({
   id: 1,
@@ -126,5 +126,50 @@ describe('ListsView - Display Lists', () => {
       ]
     })]} />)
     expect(screen.getByText('2/5')).toBeInTheDocument()
+  })
+})
+
+describe('ListsView - Delete List Item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows delete button on list items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} />)
+
+    expect(screen.getByTitle('Delete item')).toBeInTheDocument()
+  })
+
+  it('calls RemoveListItem binding when delete button is clicked', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Delete item'))
+
+    await waitFor(() => {
+      expect(RemoveListItem).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onListChanged after deleting item', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Delete item'))
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
   })
 })

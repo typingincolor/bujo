@@ -1,8 +1,8 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus } from 'lucide-react'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { MarkListItemDone, MarkListItemUndone, AddListItem } from '@/wailsjs/go/wails/App'
+import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem } from '@/wailsjs/go/wails/App'
 
 interface ListsViewProps {
   lists: BujoList[]
@@ -15,9 +15,10 @@ interface ListCardProps {
   onToggle: () => void
   onToggleItem: (itemId: number, done: boolean) => void
   onAddItem: (listId: number, content: string) => void
+  onDeleteItem: (itemId: number) => void
 }
 
-function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem }: ListCardProps) {
+function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem }: ListCardProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const progress = list.totalCount > 0
     ? Math.round((list.doneCount / list.totalCount) * 100)
@@ -31,6 +32,11 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem }: ListC
         setNewItemContent('')
       }
     }
+  }
+
+  const handleDeleteItem = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation()
+    onDeleteItem(itemId)
   }
 
   return (
@@ -79,9 +85,13 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem }: ListC
               )}>
                 {item.content}
               </span>
-              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
-                ({item.id})
-              </span>
+              <button
+                onClick={(e) => handleDeleteItem(e, item.id)}
+                title="Delete item"
+                className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))}
           {/* Add item input */}
@@ -141,6 +151,15 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
     }
   }
 
+  const handleDeleteItem = async (itemId: number) => {
+    try {
+      await RemoveListItem(itemId)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to delete list item:', error)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
@@ -157,6 +176,7 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
             onToggle={() => toggleExpanded(list.id)}
             onToggleItem={handleToggleItem}
             onAddItem={handleAddItem}
+            onDeleteItem={handleDeleteItem}
           />
         ))}
       </div>
