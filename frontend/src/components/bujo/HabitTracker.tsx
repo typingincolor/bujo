@@ -10,16 +10,17 @@ interface HabitRowProps {
   habit: Habit;
 }
 
-const DAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+const DAYS_TO_SHOW = 7
 
 function getRecentDays(): string[] {
-  const days: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(DAYS[d.getDay()]);
+  const days: string[] = []
+  for (let i = DAYS_TO_SHOW - 1; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    days.push(DAY_LABELS[d.getDay()])
   }
-  return days;
+  return days
 }
 
 function HabitRow({ habit }: HabitRowProps) {

@@ -1,31 +1,31 @@
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { Plus } from 'lucide-react';
-import { EntryType } from '@/types/bujo';
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
+import { Plus } from 'lucide-react'
+import { EntryType } from '@/types/bujo'
 
 interface AddEntryBarProps {
-  onAdd?: (content: string, type: EntryType) => void;
+  onAdd?: (content: string, type: EntryType) => void
 }
 
 const entryTypes: { type: EntryType; symbol: string; label: string }[] = [
   { type: 'task', symbol: '•', label: 'Task' },
   { type: 'note', symbol: '–', label: 'Note' },
   { type: 'event', symbol: '○', label: 'Event' },
-];
+]
 
 export function AddEntryBar({ onAdd }: AddEntryBarProps) {
-  const [content, setContent] = useState('');
-  const [selectedType, setSelectedType] = useState<EntryType>('task');
-  const [isFocused, setIsFocused] = useState(false);
-  
+  const [content, setContent] = useState('')
+  const [selectedType, setSelectedType] = useState<EntryType>('task')
+  const [isFocused, setIsFocused] = useState(false)
+
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     if (content.trim()) {
-      onAdd?.(content.trim(), selectedType);
-      setContent('');
+      onAdd?.(content.trim(), selectedType)
+      setContent('')
     }
-  };
-  
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -55,7 +55,7 @@ export function AddEntryBar({ onAdd }: AddEntryBarProps) {
           </button>
         ))}
       </div>
-      
+
       {/* Input */}
       <input
         type="text"
@@ -66,7 +66,7 @@ export function AddEntryBar({ onAdd }: AddEntryBarProps) {
         placeholder="What's on your mind?"
         className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground"
       />
-      
+
       {/* Submit */}
       <button
         type="submit"
@@ -81,5 +81,5 @@ export function AddEntryBar({ onAdd }: AddEntryBarProps) {
         <Plus className="w-4 h-4" />
       </button>
     </form>
-  );
+  )
 }

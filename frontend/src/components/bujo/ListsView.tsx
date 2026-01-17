@@ -1,23 +1,23 @@
-import { BujoList } from '@/types/bujo';
-import { cn } from '@/lib/utils';
-import { List, CheckCircle2, Circle, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { BujoList } from '@/types/bujo'
+import { cn } from '@/lib/utils'
+import { List, CheckCircle2, Circle, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 
 interface ListsViewProps {
-  lists: BujoList[];
+  lists: BujoList[]
 }
 
 interface ListCardProps {
-  list: BujoList;
-  isExpanded: boolean;
-  onToggle: () => void;
+  list: BujoList
+  isExpanded: boolean
+  onToggle: () => void
 }
 
 function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
-  const progress = list.totalCount > 0 
-    ? Math.round((list.doneCount / list.totalCount) * 100) 
-    : 0;
-  
+  const progress = list.totalCount > 0
+    ? Math.round((list.doneCount / list.totalCount) * 100)
+    : 0
+
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden animate-fade-in">
       {/* Header */}
@@ -43,7 +43,7 @@ function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
           />
         </div>
       </button>
-      
+
       {/* Items */}
       {isExpanded && (
         <div className="border-t border-border px-4 py-2 space-y-1">
@@ -71,31 +71,33 @@ function ListCard({ list, isExpanded, onToggle }: ListCardProps) {
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export function ListsView({ lists }: ListsViewProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set([lists[0]?.id]));
-  
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(
+    () => lists[0]?.id !== undefined ? new Set([lists[0].id]) : new Set()
+  )
+
   const toggleExpanded = (id: number) => {
     setExpandedIds(prev => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(id)) {
-        next.delete(id);
+        next.delete(id)
       } else {
-        next.add(id);
+        next.add(id)
       }
-      return next;
-    });
-  };
-  
+      return next
+    })
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
         <List className="w-5 h-5 text-primary" />
         <h2 className="font-display text-xl font-semibold">Lists</h2>
       </div>
-      
+
       <div className="space-y-2">
         {lists.map((list) => (
           <ListCard
@@ -107,5 +109,5 @@ export function ListsView({ lists }: ListsViewProps) {
         ))}
       </div>
     </div>
-  );
+  )
 }
