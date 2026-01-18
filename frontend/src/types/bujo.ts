@@ -64,12 +64,12 @@ export interface Goal {
 }
 
 export const ENTRY_SYMBOLS: Record<EntryType, string> = {
-  task: '.',
-  note: '-',
-  event: 'o',
-  done: 'x',
-  migrated: '>',
-  cancelled: 'X',
+  task: '•',
+  note: '–',
+  event: '○',
+  done: '✓',
+  migrated: '→',
+  cancelled: '✗',
   question: '?',
   answered: '★',
   answer: '↳',

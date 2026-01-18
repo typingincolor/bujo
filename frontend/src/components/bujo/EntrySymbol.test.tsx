@@ -3,35 +3,35 @@ import { render, screen } from '@testing-library/react'
 import { EntrySymbol } from './EntrySymbol'
 
 describe('EntrySymbol', () => {
-  describe('basic entry types', () => {
-    it('renders task symbol', () => {
+  describe('basic entry types with unicode symbols', () => {
+    it('renders task symbol as bullet point', () => {
       render(<EntrySymbol type="task" />)
-      expect(screen.getByText('.')).toBeInTheDocument()
+      expect(screen.getByText('•')).toBeInTheDocument()
     })
 
-    it('renders note symbol', () => {
+    it('renders note symbol as en dash', () => {
       render(<EntrySymbol type="note" />)
-      expect(screen.getByText('-')).toBeInTheDocument()
+      expect(screen.getByText('–')).toBeInTheDocument()
     })
 
-    it('renders event symbol', () => {
+    it('renders event symbol as circle', () => {
       render(<EntrySymbol type="event" />)
-      expect(screen.getByText('o')).toBeInTheDocument()
+      expect(screen.getByText('○')).toBeInTheDocument()
     })
 
-    it('renders done symbol', () => {
+    it('renders done symbol as check mark', () => {
       render(<EntrySymbol type="done" />)
-      expect(screen.getByText('x')).toBeInTheDocument()
+      expect(screen.getByText('✓')).toBeInTheDocument()
     })
 
-    it('renders migrated symbol', () => {
+    it('renders migrated symbol as arrow', () => {
       render(<EntrySymbol type="migrated" />)
-      expect(screen.getByText('>')).toBeInTheDocument()
+      expect(screen.getByText('→')).toBeInTheDocument()
     })
 
-    it('renders cancelled symbol', () => {
+    it('renders cancelled symbol as ballot X', () => {
       render(<EntrySymbol type="cancelled" />)
-      expect(screen.getByText('X')).toBeInTheDocument()
+      expect(screen.getByText('✗')).toBeInTheDocument()
     })
   })
 
@@ -49,6 +49,14 @@ describe('EntrySymbol', () => {
     it('renders answer symbol', () => {
       render(<EntrySymbol type="answer" />)
       expect(screen.getByText('↳')).toBeInTheDocument()
+    })
+  })
+
+  describe('alignment', () => {
+    it('has fixed width for consistent alignment', () => {
+      const { container } = render(<EntrySymbol type="task" />)
+      const symbolElement = container.querySelector('span span')
+      expect(symbolElement).toHaveClass('w-5')
     })
   })
 

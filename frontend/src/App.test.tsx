@@ -61,7 +61,7 @@ describe('App - AddEntryBar integration', () => {
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(AddEntry).toHaveBeenCalledWith('. Test task', expect.any(String))
+      expect(AddEntry).toHaveBeenCalledWith('• Test task', expect.any(String))
     })
   })
 

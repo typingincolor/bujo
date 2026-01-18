@@ -29,7 +29,7 @@ const priorityStyles: Record<Priority, string> = {
 export function EntrySymbol({ type, priority = 'none', className }: EntrySymbolProps) {
   return (
     <span className={cn('inline-flex items-center gap-1 font-body', className)}>
-      <span className={cn('text-lg font-medium', typeStyles[type])}>
+      <span className={cn('text-lg font-medium w-5 text-center', typeStyles[type])}>
         {ENTRY_SYMBOLS[type]}
       </span>
       {priority !== 'none' && (

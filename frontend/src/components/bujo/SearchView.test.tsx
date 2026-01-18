@@ -85,7 +85,7 @@ describe('SearchView', () => {
     await user.type(input, 'task')
 
     await waitFor(() => {
-      expect(screen.getByText('.')).toBeInTheDocument()
+      expect(screen.getByText('•')).toBeInTheDocument()
     })
   })
 
