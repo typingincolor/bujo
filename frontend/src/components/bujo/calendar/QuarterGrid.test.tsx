@@ -7,13 +7,13 @@ describe('QuarterGrid', () => {
   // Simple mock month calendar (just first week for brevity)
   const mockCalendar: CalendarDay[][] = [
     [
-      { date: '2025-01-05', dayOfWeek: 0, dayOfMonth: 5, isToday: false, isPadding: false },
-      { date: '2025-01-06', dayOfWeek: 1, dayOfMonth: 6, isToday: false, isPadding: false },
-      { date: '2025-01-07', dayOfWeek: 2, dayOfMonth: 7, isToday: false, isPadding: false },
-      { date: '2025-01-08', dayOfWeek: 3, dayOfMonth: 8, isToday: false, isPadding: false },
-      { date: '2025-01-09', dayOfWeek: 4, dayOfMonth: 9, isToday: false, isPadding: false },
-      { date: '2025-01-10', dayOfWeek: 5, dayOfMonth: 10, isToday: false, isPadding: false },
-      { date: '2025-01-11', dayOfWeek: 6, dayOfMonth: 11, isToday: false, isPadding: false },
+      { date: '2025-01-05', dayOfWeek: 0, dayOfMonth: 5, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-06', dayOfWeek: 1, dayOfMonth: 6, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-07', dayOfWeek: 2, dayOfMonth: 7, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-08', dayOfWeek: 3, dayOfMonth: 8, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-09', dayOfWeek: 4, dayOfMonth: 9, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-10', dayOfWeek: 5, dayOfMonth: 10, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-11', dayOfWeek: 6, dayOfMonth: 11, isToday: false, isPadding: false, isFuture: false },
     ],
   ];
 
@@ -71,8 +71,8 @@ describe('QuarterGrid', () => {
     const onLog = vi.fn();
     render(<QuarterGrid {...defaultProps} onLog={onLog} />);
 
-    // Click on first instance of day 5
-    const day5Buttons = screen.getAllByText('5');
+    // Click on first instance of day 5 using aria-label
+    const day5Buttons = screen.getAllByLabelText(/Log for 2025-01-05/);
     fireEvent.click(day5Buttons[0]);
 
     expect(onLog).toHaveBeenCalledWith('2025-01-05');

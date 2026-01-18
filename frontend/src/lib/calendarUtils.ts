@@ -6,6 +6,7 @@ export interface CalendarDay {
   dayOfMonth: number;
   isToday: boolean;
   isPadding: boolean;
+  isFuture: boolean;
 }
 
 export interface QuarterMonth {
@@ -47,12 +48,6 @@ function startOfWeek(date: Date): Date {
   return d;
 }
 
-function endOfWeek(date: Date): Date {
-  const d = startOfWeek(date);
-  d.setDate(d.getDate() + 6);
-  return d;
-}
-
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -75,11 +70,11 @@ function addMonths(date: Date, months: number): Date {
 
 export function getWeekDates(anchor: Date): CalendarDay[] {
   const today = getTodayString();
-  const weekStart = startOfWeek(anchor);
   const days: CalendarDay[] = [];
 
-  for (let i = 0; i < 7; i++) {
-    const d = addDays(weekStart, i);
+  // Show past 7 days ending with anchor (not calendar week)
+  for (let i = -6; i <= 0; i++) {
+    const d = addDays(anchor, i);
     const dateStr = formatDateString(d);
     days.push({
       date: dateStr,
@@ -87,6 +82,7 @@ export function getWeekDates(anchor: Date): CalendarDay[] {
       dayOfMonth: d.getDate(),
       isToday: dateStr === today,
       isPadding: false,
+      isFuture: dateStr > today,
     });
   }
 
@@ -116,6 +112,7 @@ export function getMonthCalendar(anchor: Date): CalendarDay[][] {
         dayOfMonth: currentDate.getDate(),
         isToday: dateStr === today,
         isPadding,
+        isFuture: dateStr > today,
       });
 
       currentDate = addDays(currentDate, 1);
@@ -183,8 +180,9 @@ export function mapDayHistoryToCalendar(
 export function formatPeriodLabel(anchor: Date, period: PeriodType): string {
   switch (period) {
     case 'week': {
-      const weekStart = startOfWeek(anchor);
-      const weekEnd = endOfWeek(anchor);
+      // Past 7 days ending with anchor
+      const weekStart = addDays(anchor, -6);
+      const weekEnd = anchor;
       const startMonth = MONTH_NAMES_SHORT[weekStart.getMonth()];
       const endMonth = MONTH_NAMES_SHORT[weekEnd.getMonth()];
       const year = weekEnd.getFullYear();

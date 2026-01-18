@@ -10,6 +10,7 @@ describe('DayCell', () => {
     dayOfMonth: 15,
     isToday: false,
     isPadding: false,
+    isFuture: false,
   };
 
   const defaultProps: DayCellProps = {
@@ -20,21 +21,15 @@ describe('DayCell', () => {
     onDecrement: vi.fn(),
   };
 
-  it('renders day number', () => {
-    render(<DayCell {...defaultProps} />);
-    expect(screen.getByText('15')).toBeInTheDocument();
+  it('renders blank when count is 0', () => {
+    render(<DayCell {...defaultProps} count={0} />);
+    const button = screen.getByRole('button');
+    expect(button.textContent).toBe('');
   });
 
   it('displays count when greater than 0', () => {
     render(<DayCell {...defaultProps} count={3} completed />);
     expect(screen.getByText('3')).toBeInTheDocument();
-  });
-
-  it('displays day number when count is 0', () => {
-    render(<DayCell {...defaultProps} count={0} />);
-    // Day number is shown instead of count
-    const button = screen.getByRole('button');
-    expect(button.textContent).toBe('15');
   });
 
   it('applies completed styling when completed', () => {
@@ -130,6 +125,25 @@ describe('DayCell', () => {
       const button = screen.getByRole('button');
       expect(button).toHaveClass('w-6');
       expect(button).toHaveClass('h-6');
+    });
+  });
+
+  describe('future dates', () => {
+    const futureDay: CalendarDay = {
+      date: '2025-01-20',
+      dayOfWeek: 1,
+      dayOfMonth: 20,
+      isToday: false,
+      isPadding: false,
+      isFuture: true,
+    };
+
+    it('renders nothing for future dates', () => {
+      const { container } = render(<DayCell {...defaultProps} day={futureDay} />);
+      // Should render an empty placeholder, not a button
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      // Container should still have a div for layout
+      expect(container.firstChild).toBeInTheDocument();
     });
   });
 });

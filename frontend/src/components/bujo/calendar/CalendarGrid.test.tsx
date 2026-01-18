@@ -7,35 +7,35 @@ describe('CalendarGrid', () => {
   // Mock a simple week: Jan 12-18, 2025 (Sun-Sat)
   const mockWeek: CalendarDay[][] = [
     [
-      { date: '2025-01-12', dayOfWeek: 0, dayOfMonth: 12, isToday: false, isPadding: false },
-      { date: '2025-01-13', dayOfWeek: 1, dayOfMonth: 13, isToday: false, isPadding: false },
-      { date: '2025-01-14', dayOfWeek: 2, dayOfMonth: 14, isToday: false, isPadding: false },
-      { date: '2025-01-15', dayOfWeek: 3, dayOfMonth: 15, isToday: true, isPadding: false },
-      { date: '2025-01-16', dayOfWeek: 4, dayOfMonth: 16, isToday: false, isPadding: false },
-      { date: '2025-01-17', dayOfWeek: 5, dayOfMonth: 17, isToday: false, isPadding: false },
-      { date: '2025-01-18', dayOfWeek: 6, dayOfMonth: 18, isToday: false, isPadding: false },
+      { date: '2025-01-12', dayOfWeek: 0, dayOfMonth: 12, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-13', dayOfWeek: 1, dayOfMonth: 13, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-14', dayOfWeek: 2, dayOfMonth: 14, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-15', dayOfWeek: 3, dayOfMonth: 15, isToday: true, isPadding: false, isFuture: false },
+      { date: '2025-01-16', dayOfWeek: 4, dayOfMonth: 16, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-17', dayOfWeek: 5, dayOfMonth: 17, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-18', dayOfWeek: 6, dayOfMonth: 18, isToday: false, isPadding: false, isFuture: false },
     ],
   ];
 
   // Mock month with padding (Jan 2025 - starts Wednesday)
   const mockMonth: CalendarDay[][] = [
     [
-      { date: '2024-12-29', dayOfWeek: 0, dayOfMonth: 29, isToday: false, isPadding: true },
-      { date: '2024-12-30', dayOfWeek: 1, dayOfMonth: 30, isToday: false, isPadding: true },
-      { date: '2024-12-31', dayOfWeek: 2, dayOfMonth: 31, isToday: false, isPadding: true },
-      { date: '2025-01-01', dayOfWeek: 3, dayOfMonth: 1, isToday: false, isPadding: false },
-      { date: '2025-01-02', dayOfWeek: 4, dayOfMonth: 2, isToday: false, isPadding: false },
-      { date: '2025-01-03', dayOfWeek: 5, dayOfMonth: 3, isToday: false, isPadding: false },
-      { date: '2025-01-04', dayOfWeek: 6, dayOfMonth: 4, isToday: false, isPadding: false },
+      { date: '2024-12-29', dayOfWeek: 0, dayOfMonth: 29, isToday: false, isPadding: true, isFuture: false },
+      { date: '2024-12-30', dayOfWeek: 1, dayOfMonth: 30, isToday: false, isPadding: true, isFuture: false },
+      { date: '2024-12-31', dayOfWeek: 2, dayOfMonth: 31, isToday: false, isPadding: true, isFuture: false },
+      { date: '2025-01-01', dayOfWeek: 3, dayOfMonth: 1, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-02', dayOfWeek: 4, dayOfMonth: 2, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-03', dayOfWeek: 5, dayOfMonth: 3, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-04', dayOfWeek: 6, dayOfMonth: 4, isToday: false, isPadding: false, isFuture: false },
     ],
     [
-      { date: '2025-01-05', dayOfWeek: 0, dayOfMonth: 5, isToday: false, isPadding: false },
-      { date: '2025-01-06', dayOfWeek: 1, dayOfMonth: 6, isToday: false, isPadding: false },
-      { date: '2025-01-07', dayOfWeek: 2, dayOfMonth: 7, isToday: false, isPadding: false },
-      { date: '2025-01-08', dayOfWeek: 3, dayOfMonth: 8, isToday: false, isPadding: false },
-      { date: '2025-01-09', dayOfWeek: 4, dayOfMonth: 9, isToday: false, isPadding: false },
-      { date: '2025-01-10', dayOfWeek: 5, dayOfMonth: 10, isToday: false, isPadding: false },
-      { date: '2025-01-11', dayOfWeek: 6, dayOfMonth: 11, isToday: false, isPadding: false },
+      { date: '2025-01-05', dayOfWeek: 0, dayOfMonth: 5, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-06', dayOfWeek: 1, dayOfMonth: 6, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-07', dayOfWeek: 2, dayOfMonth: 7, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-08', dayOfWeek: 3, dayOfMonth: 8, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-09', dayOfWeek: 4, dayOfMonth: 9, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-10', dayOfWeek: 5, dayOfMonth: 10, isToday: false, isPadding: false, isFuture: false },
+      { date: '2025-01-11', dayOfWeek: 6, dayOfMonth: 11, isToday: false, isPadding: false, isFuture: false },
     ],
   ];
 
@@ -75,12 +75,14 @@ describe('CalendarGrid', () => {
     expect(buttons).toHaveLength(14);
   });
 
-  it('shows day numbers for uncompleted days', () => {
+  it('shows blank circles for uncompleted days', () => {
     render(<CalendarGrid {...defaultProps} />);
 
-    // Days without completion show day number
-    expect(screen.getByText('12')).toBeInTheDocument();
-    expect(screen.getByText('13')).toBeInTheDocument();
+    // Days without completion show blank (empty circle)
+    const day12Button = screen.getByLabelText(/Log for 2025-01-12/);
+    const day13Button = screen.getByLabelText(/Log for 2025-01-13/);
+    expect(day12Button.textContent).toBe('');
+    expect(day13Button.textContent).toBe('');
   });
 
   it('shows count for completed days', () => {
@@ -94,8 +96,8 @@ describe('CalendarGrid', () => {
     const onLog = vi.fn();
     render(<CalendarGrid {...defaultProps} onLog={onLog} />);
 
-    // Click on day 12
-    fireEvent.click(screen.getByText('12'));
+    // Click on day 12 using aria-label
+    fireEvent.click(screen.getByLabelText(/Log for 2025-01-12/));
 
     expect(onLog).toHaveBeenCalledWith('2025-01-12');
   });

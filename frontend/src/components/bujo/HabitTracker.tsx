@@ -212,6 +212,32 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
   const effectiveAnchor = useMemo(() => anchorDate ?? new Date(), [anchorDate]);
   const periodLabel = useMemo(() => formatPeriodLabel(effectiveAnchor, currentPeriod), [effectiveAnchor, currentPeriod]);
 
+  const canGoNext = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const anchor = new Date(effectiveAnchor);
+    anchor.setHours(0, 0, 0, 0);
+
+    switch (currentPeriod) {
+      case 'week':
+        // Can't go next if anchor is today or later
+        return anchor < today;
+      case 'month':
+        // Can't go next if anchor is in current month
+        return anchor.getFullYear() < today.getFullYear() ||
+          (anchor.getFullYear() === today.getFullYear() && anchor.getMonth() < today.getMonth());
+      case 'quarter': {
+        // Can't go next if anchor is in current quarter (same month or within 2 months before)
+        const anchorQuarterEnd = anchor.getMonth();
+        const todayMonth = today.getMonth();
+        // Current quarter shows 2 months before anchor through anchor
+        // So anchor can be at most 2 months back from today for next to be enabled
+        return anchor.getFullYear() < today.getFullYear() ||
+          (anchor.getFullYear() === today.getFullYear() && anchorQuarterEnd < todayMonth - 2);
+      }
+    }
+  }, [effectiveAnchor, currentPeriod]);
+
   const handleNavigatePrev = useCallback(() => {
     const newAnchor = navigatePeriod(effectiveAnchor, currentPeriod, 'prev');
     onNavigate?.(newAnchor);
@@ -370,6 +396,7 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
           label={periodLabel}
           onPrev={handleNavigatePrev}
           onNext={handleNavigateNext}
+          canGoNext={canGoNext}
         />
 
         {/* Today button */}
@@ -416,7 +443,7 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
         <div className="flex items-center gap-4 px-4">
           <div className="flex-shrink-0 w-32" />
           <div className="flex-1">
-            <div className="grid grid-cols-7 gap-0.5 mb-1">
+            <div className="grid grid-cols-7 gap-px mb-1">
               {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => (
                 <div
                   key={i}

@@ -11,46 +11,54 @@ import { HabitDayStatus } from '@/types/bujo';
 
 describe('calendarUtils', () => {
   describe('getWeekDates', () => {
-    it('returns 7 days starting from Sunday', () => {
+    it('returns 7 days ending with anchor date (past view)', () => {
       // Wednesday Jan 15, 2025
       const anchor = new Date(2025, 0, 15);
       const week = getWeekDates(anchor);
 
       expect(week).toHaveLength(7);
-      // Should start on Sunday Jan 12
-      expect(week[0].date).toBe('2025-01-12');
-      expect(week[0].dayOfWeek).toBe(0); // Sunday
-      // Wednesday should be at index 3
-      expect(week[3].date).toBe('2025-01-15');
-      expect(week[3].dayOfWeek).toBe(3);
-      // Should end on Saturday Jan 18
-      expect(week[6].date).toBe('2025-01-18');
-      expect(week[6].dayOfWeek).toBe(6); // Saturday
+      // Should start 6 days before anchor: Jan 9
+      expect(week[0].date).toBe('2025-01-09');
+      expect(week[0].dayOfWeek).toBe(4); // Thursday
+      // Should end with anchor date: Jan 15
+      expect(week[6].date).toBe('2025-01-15');
+      expect(week[6].dayOfWeek).toBe(3); // Wednesday
     });
 
     it('handles week spanning month boundary', () => {
-      // Thursday Jan 30, 2025
-      const anchor = new Date(2025, 0, 30);
+      // Monday Feb 3, 2025
+      const anchor = new Date(2025, 1, 3);
       const week = getWeekDates(anchor);
 
       expect(week).toHaveLength(7);
-      // Sunday Jan 26
-      expect(week[0].date).toBe('2025-01-26');
-      // Saturday Feb 1
-      expect(week[6].date).toBe('2025-02-01');
+      // Should start Jan 28
+      expect(week[0].date).toBe('2025-01-28');
+      // Should end Feb 3
+      expect(week[6].date).toBe('2025-02-03');
     });
 
-    it('marks today correctly', () => {
+    it('marks today correctly when anchor is today', () => {
       const today = new Date();
       const week = getWeekDates(today);
 
       const todayStr = today.toISOString().split('T')[0];
-      const todayDay = week.find(d => d.date === todayStr);
-      expect(todayDay?.isToday).toBe(true);
+      // Today should be the last day (rightmost)
+      expect(week[6].date).toBe(todayStr);
+      expect(week[6].isToday).toBe(true);
 
       // Other days should not be today
-      const otherDays = week.filter(d => d.date !== todayStr);
+      const otherDays = week.slice(0, 6);
       otherDays.forEach(d => expect(d.isToday).toBe(false));
+    });
+
+    it('marks isFuture for dates after today', () => {
+      // Get a date in the past
+      const pastAnchor = new Date();
+      pastAnchor.setDate(pastAnchor.getDate() - 3);
+      const week = getWeekDates(pastAnchor);
+
+      // All dates should be in the past when anchor is 3 days ago
+      week.forEach(d => expect(d.isFuture).toBe(false));
     });
   });
 
@@ -116,6 +124,23 @@ describe('calendarUtils', () => {
       // March 1 is Saturday (index 6)
       // 31 days spanning 6 weeks
       expect(calendar).toHaveLength(6);
+    });
+
+    it('marks isFuture for dates after today', () => {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const calendar = getMonthCalendar(today);
+
+      const allDays = calendar.flat();
+      const todayDay = allDays.find(d => d.date === todayStr);
+      expect(todayDay?.isFuture).toBe(false);
+
+      // Days after today should be marked as future
+      allDays.forEach(d => {
+        if (d.date > todayStr) {
+          expect(d.isFuture).toBe(true);
+        }
+      });
     });
   });
 
@@ -252,18 +277,20 @@ describe('calendarUtils', () => {
   });
 
   describe('formatPeriodLabel', () => {
-    it('formats week as date range', () => {
+    it('formats week as date range (past 7 days ending with anchor)', () => {
       const anchor = new Date(2025, 0, 15);
       const label = formatPeriodLabel(anchor, 'week');
 
-      expect(label).toBe('Jan 12 - Jan 18, 2025');
+      // Jan 9 - Jan 15, 2025 (7 days ending with anchor)
+      expect(label).toBe('Jan 9 - Jan 15, 2025');
     });
 
     it('formats week spanning months', () => {
-      const anchor = new Date(2025, 0, 30);
+      const anchor = new Date(2025, 1, 3);
       const label = formatPeriodLabel(anchor, 'week');
 
-      expect(label).toBe('Jan 26 - Feb 1, 2025');
+      // Jan 28 - Feb 3, 2025
+      expect(label).toBe('Jan 28 - Feb 3, 2025');
     });
 
     it('formats month as month name and year', () => {

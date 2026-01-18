@@ -480,9 +480,9 @@ describe('HabitTracker - Date Range Indicator', () => {
     })
     render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
 
-    // CalendarNavigation shows the week range containing the anchor date
-    // Jan 3, 2024 is Wednesday, so week is Dec 31 - Jan 6
-    expect(screen.getByText(/Dec 31.*Jan 6.*2024/i)).toBeInTheDocument()
+    // CalendarNavigation shows past 7 days ending with anchor date
+    // Jan 3, 2024 anchor means Dec 28 - Jan 3
+    expect(screen.getByText(/Dec 28.*Jan 3.*2024/i)).toBeInTheDocument()
   })
 })
 
@@ -496,11 +496,11 @@ describe('HabitTracker - Day Order Display', () => {
     vi.useRealTimers()
   })
 
-  it('displays days in calendar order (Sunday to Saturday)', () => {
+  it('displays days in past-to-present order (oldest on left, anchor on right)', () => {
     const anchor = new Date('2024-01-07')
     const habit = createTestHabit({
       dayHistory: [
-        { date: '2024-01-07', completed: false, count: 0 }, // Sunday
+        { date: '2024-01-07', completed: false, count: 0 }, // Sunday (anchor)
         { date: '2024-01-06', completed: false, count: 0 }, // Saturday
         { date: '2024-01-05', completed: false, count: 0 }, // Friday
         { date: '2024-01-04', completed: false, count: 0 }, // Thursday
@@ -512,10 +512,10 @@ describe('HabitTracker - Day Order Display', () => {
     render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
 
     const dayCircles = screen.getAllByRole('button', { name: /Log for 2024-01/i })
-    // Calendar grid orders days Sunday to Saturday
-    // Jan 7 2024 is a Sunday, so week of Jan 7 is Jan 7-13
-    // First circle should be Sunday (Jan 7)
-    expect(dayCircles[0]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-07'))
+    // Past 7 days ending with anchor: Jan 1-7
+    // First circle should be oldest (Jan 1), last should be anchor (Jan 7)
+    expect(dayCircles[0]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-01'))
+    expect(dayCircles[6]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-07'))
   })
 })
 
@@ -560,7 +560,8 @@ describe('HabitTracker - Click to Log', () => {
   })
 
   it('displays count in day circle when habit is logged', () => {
-    const anchor = new Date('2024-01-01')
+    // Anchor to Jan 7 (system time) so Jan 1-7 are all visible
+    const anchor = new Date('2024-01-07')
     const habit = createTestHabit({
       dayHistory: [
         { date: '2024-01-07', completed: false, count: 0 },
@@ -654,10 +655,10 @@ describe('HabitTracker - Calendar Grid View', () => {
     const anchor = new Date('2024-01-15')
     render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
 
-    // Should show navigation with week label
+    // Should show navigation with week label (past 7 days ending with anchor)
     expect(screen.getByLabelText('Previous')).toBeInTheDocument()
     expect(screen.getByLabelText('Next')).toBeInTheDocument()
-    expect(screen.getByText(/Jan 14.*Jan 20.*2024/)).toBeInTheDocument()
+    expect(screen.getByText(/Jan 9.*Jan 15.*2024/)).toBeInTheDocument()
   })
 
   it('renders CalendarNavigation with correct label for month view', () => {
@@ -686,7 +687,8 @@ describe('HabitTracker - Calendar Grid View', () => {
 
   it('calls onNavigate when next button clicked', () => {
     const onNavigate = vi.fn()
-    const anchor = new Date('2024-01-15')
+    // Use anchor before today (Jan 8) so next button is enabled
+    const anchor = new Date('2024-01-08')
     render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} onNavigate={onNavigate} />)
 
     fireEvent.click(screen.getByLabelText('Next'))
@@ -694,7 +696,7 @@ describe('HabitTracker - Calendar Grid View', () => {
     expect(onNavigate).toHaveBeenCalled()
     // The new anchor should be 7 days after (week view default)
     const newAnchor = onNavigate.mock.calls[0][0] as Date
-    expect(newAnchor.getDate()).toBe(22) // Jan 15 + 7 = Jan 22
+    expect(newAnchor.getDate()).toBe(15) // Jan 8 + 7 = Jan 15
   })
 
   it('renders week view as single row calendar grid', () => {
@@ -763,5 +765,47 @@ describe('HabitTracker - Calendar Grid View', () => {
     expect(screen.getByText('November')).toBeInTheDocument()
     expect(screen.getByText('December')).toBeInTheDocument()
     expect(screen.getByText('January')).toBeInTheDocument()
+  })
+
+  it('disables next button when anchor is at today (week view)', () => {
+    // System time is Jan 15, 2024
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Next button should be disabled because navigating forward would show future dates
+    expect(screen.getByLabelText('Next')).toBeDisabled()
+  })
+
+  it('enables next button when anchor is before today (week view)', () => {
+    // System time is Jan 15, 2024, anchor is Jan 8
+    const anchor = new Date('2024-01-08')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Next button should be enabled because there's room to navigate forward
+    expect(screen.getByLabelText('Next')).toBeEnabled()
+  })
+
+  it('disables next button when anchor is at today (month view)', () => {
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Switch to month view
+    fireEvent.click(screen.getByRole('button', { name: /week/i }))
+    fireEvent.click(screen.getByRole('button', { name: /month/i }))
+
+    // Next button should be disabled in current month
+    expect(screen.getByLabelText('Next')).toBeDisabled()
+  })
+
+  it('disables next button when anchor is at today (quarter view)', () => {
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Switch to quarter view
+    fireEvent.click(screen.getByRole('button', { name: /week/i }))
+    fireEvent.click(screen.getByRole('button', { name: /quarter/i }))
+
+    // Next button should be disabled when anchor is in the current quarter
+    expect(screen.getByLabelText('Next')).toBeDisabled()
   })
 })

@@ -18,6 +18,11 @@ export function DayCell({
   onDecrement,
   compact = false,
 }: DayCellProps) {
+  // Don't render future dates - return empty placeholder for grid layout
+  if (day.isFuture) {
+    return <div className={compact ? 'w-5 h-5' : 'w-6 h-6'} />;
+  }
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -40,15 +45,15 @@ export function DayCell({
       aria-label={ariaLabel}
       title={`Click to add, ${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+click to remove`}
       className={cn(
-        'rounded-full flex items-center justify-center transition-all text-[10px] font-medium',
+        'rounded-full flex items-center justify-center text-[10px] font-medium',
         compact ? 'w-5 h-5' : 'w-6 h-6',
         completed ? 'bg-bujo-habit-fill text-primary-foreground' : 'bg-bujo-habit-empty text-muted-foreground',
         day.isToday && 'ring-2 ring-bujo-today',
         day.isPadding && 'opacity-30',
-        'hover:scale-110 cursor-pointer'
+        'cursor-pointer'
       )}
     >
-      {count > 0 ? count : day.dayOfMonth}
+      {count > 0 ? count : null}
     </button>
   );
 }

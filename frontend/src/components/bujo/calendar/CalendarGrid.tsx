@@ -21,9 +21,9 @@ export function CalendarGrid({
   compact = false,
 }: CalendarGridProps) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-px">
       {showHeader && (
-        <div className="grid grid-cols-7 gap-0.5 mb-1">
+        <div className="grid grid-cols-7 gap-px mb-1">
           {DAY_LABELS.map((label, i) => (
             <div
               key={i}
@@ -36,7 +36,7 @@ export function CalendarGrid({
       )}
 
       {calendar.map((row, rowIndex) => (
-        <div key={rowIndex} className="grid grid-cols-7 gap-0.5">
+        <div key={rowIndex} className="grid grid-cols-7 gap-px">
           {row.map((day) => {
             const dayData = dayHistory.get(day.date);
             const count = dayData?.count ?? 0;
