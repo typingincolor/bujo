@@ -63,7 +63,7 @@ describe('Header - Day Context', () => {
     expect(screen.getByTitle('Set mood')).toBeInTheDocument()
   })
 
-  it('shows mood picker when mood button is clicked', async () => {
+  it('shows mood picker with all mood options when clicked', async () => {
     const user = userEvent.setup()
     render(<Header title="Today" />)
 
@@ -72,6 +72,11 @@ describe('Header - Day Context', () => {
     expect(screen.getByText('😊')).toBeInTheDocument()
     expect(screen.getByText('😐')).toBeInTheDocument()
     expect(screen.getByText('😢')).toBeInTheDocument()
+    expect(screen.getByText('😤')).toBeInTheDocument()
+    expect(screen.getByText('😴')).toBeInTheDocument()
+    expect(screen.getByText('🤒')).toBeInTheDocument()
+    expect(screen.getByText('😰')).toBeInTheDocument()
+    expect(screen.getByText('🤗')).toBeInTheDocument()
   })
 
   it('calls SetMood binding when selecting mood', async () => {
@@ -93,15 +98,18 @@ describe('Header - Day Context', () => {
     expect(screen.getByTitle('Set weather')).toBeInTheDocument()
   })
 
-  it('shows weather picker when weather button is clicked', async () => {
+  it('shows weather picker with all weather options when clicked', async () => {
     const user = userEvent.setup()
     render(<Header title="Today" />)
 
     await user.click(screen.getByTitle('Set weather'))
 
     expect(screen.getByText('☀️')).toBeInTheDocument()
+    expect(screen.getByText('🌤️')).toBeInTheDocument()
     expect(screen.getByText('☁️')).toBeInTheDocument()
     expect(screen.getByText('🌧️')).toBeInTheDocument()
+    expect(screen.getByText('⛈️')).toBeInTheDocument()
+    expect(screen.getByText('❄️')).toBeInTheDocument()
   })
 
   it('calls SetWeather binding when selecting weather', async () => {
@@ -211,5 +219,39 @@ describe('Header - Location', () => {
     render(<Header title="Today" currentLocation="Home Office" />)
     // The location should be shown in the button text
     expect(screen.getByText('Home Office')).toBeInTheDocument()
+  })
+
+  it('shows quick location options with emojis when location button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    // Should show predefined location options with emojis
+    expect(screen.getByText('🏠')).toBeInTheDocument()
+    expect(screen.getByText('🏢')).toBeInTheDocument()
+    expect(screen.getByText('☕')).toBeInTheDocument()
+    expect(screen.getByText('📚')).toBeInTheDocument()
+    expect(screen.getByText('✈️')).toBeInTheDocument()
+  })
+
+  it('displays location emoji when predefined location is set', () => {
+    render(<Header title="Today" currentLocation="home" />)
+    // Home emoji should be displayed
+    expect(screen.getByText('🏠')).toBeInTheDocument()
+  })
+
+  it('calls SetLocation with predefined value when clicking quick option', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+    await user.click(screen.getByText('🏢'))
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+      const call = vi.mocked(SetLocation).mock.calls[0]
+      expect(call[1]).toBe('office')
+    })
   })
 })

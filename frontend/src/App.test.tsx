@@ -40,9 +40,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   CyclePriority: vi.fn().mockResolvedValue(undefined),
   MigrateEntry: vi.fn().mockResolvedValue(100),
   CreateHabit: vi.fn().mockResolvedValue(1),
+  SetMood: vi.fn().mockResolvedValue(undefined),
+  SetWeather: vi.fn().mockResolvedValue(undefined),
+  SetLocation: vi.fn().mockResolvedValue(undefined),
+  GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
 }))
 
-import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -1012,5 +1016,147 @@ describe('App - No flicker on data refresh', () => {
 
     // CRITICAL: Loading spinner should NOT have appeared during refresh
     expect(loadingSpinnerShownDuringRefresh).toBe(false)
+  })
+})
+
+describe('App - Day Context (Mood/Weather/Location)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Reset GetHabits mock that may have been changed by previous tests
+    vi.mocked(GetHabits).mockResolvedValue({ Habits: [] })
+  })
+
+  it('displays current mood emoji in header when mood is set', async () => {
+    const mockWithMood = createMockAgenda({
+      Days: [createMockDayEntries({
+        Mood: 'happy',
+        Entries: [],
+      })],
+      Overdue: [],
+    })
+    vi.mocked(GetAgenda).mockResolvedValue(mockWithMood)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Happy mood emoji should be displayed
+    expect(screen.getByText('😊')).toBeInTheDocument()
+  })
+
+  it('displays current weather emoji in header when weather is set', async () => {
+    const mockWithWeather = createMockAgenda({
+      Days: [createMockDayEntries({
+        Weather: 'sunny',
+        Entries: [],
+      })],
+      Overdue: [],
+    })
+    vi.mocked(GetAgenda).mockResolvedValue(mockWithWeather)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Sunny weather emoji should be displayed
+    expect(screen.getByText('☀️')).toBeInTheDocument()
+  })
+
+  it('displays current location in header when location is set', async () => {
+    const mockWithLocation = createMockAgenda({
+      Days: [createMockDayEntries({
+        Location: 'Home Office',
+        Entries: [],
+      })],
+      Overdue: [],
+    })
+    vi.mocked(GetAgenda).mockResolvedValue(mockWithLocation)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Location should be displayed (appears in both Header and DayView)
+    const locationElements = screen.getAllByText('Home Office')
+    expect(locationElements.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('calls SetMood and refreshes data when selecting mood', async () => {
+    const user = userEvent.setup()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click mood button to open picker
+    await user.click(screen.getByTitle('Set mood'))
+
+    // Select happy mood
+    await user.click(screen.getByText('😊'))
+
+    await waitFor(() => {
+      expect(SetMood).toHaveBeenCalled()
+    })
+
+    // Data should be refreshed
+    expect(GetAgenda).toHaveBeenCalledTimes(2)
+  })
+
+  it('calls SetWeather and refreshes data when selecting weather', async () => {
+    const user = userEvent.setup()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click weather button to open picker
+    await user.click(screen.getByTitle('Set weather'))
+
+    // Select sunny weather
+    await user.click(screen.getByText('☀️'))
+
+    await waitFor(() => {
+      expect(SetWeather).toHaveBeenCalled()
+    })
+
+    // Data should be refreshed
+    expect(GetAgenda).toHaveBeenCalledTimes(2)
+  })
+
+  it('calls SetLocation and refreshes data when setting location', async () => {
+    const user = userEvent.setup()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click location button to open picker
+    await user.click(screen.getByTitle('Set location'))
+
+    // Type a location and press Enter
+    const input = screen.getByPlaceholderText('Enter location...')
+    await user.type(input, 'Coffee Shop{Enter}')
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+    })
+
+    // Data should be refreshed
+    expect(GetAgenda).toHaveBeenCalledTimes(2)
   })
 })

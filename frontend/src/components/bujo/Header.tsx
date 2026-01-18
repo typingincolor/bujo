@@ -10,16 +10,33 @@ const MOOD_OPTIONS = [
   { emoji: '😊', value: 'happy' },
   { emoji: '😐', value: 'neutral' },
   { emoji: '😢', value: 'sad' },
+  { emoji: '😤', value: 'frustrated' },
+  { emoji: '😴', value: 'tired' },
+  { emoji: '🤒', value: 'sick' },
+  { emoji: '😰', value: 'anxious' },
+  { emoji: '🤗', value: 'grateful' },
 ] as const;
 
 const WEATHER_OPTIONS = [
   { emoji: '☀️', value: 'sunny' },
+  { emoji: '🌤️', value: 'partly-cloudy' },
   { emoji: '☁️', value: 'cloudy' },
   { emoji: '🌧️', value: 'rainy' },
+  { emoji: '⛈️', value: 'stormy' },
+  { emoji: '❄️', value: 'snowy' },
+] as const;
+
+const LOCATION_OPTIONS = [
+  { emoji: '🏠', value: 'home' },
+  { emoji: '🏢', value: 'office' },
+  { emoji: '☕', value: 'cafe' },
+  { emoji: '📚', value: 'library' },
+  { emoji: '✈️', value: 'travel' },
 ] as const;
 
 type MoodValue = typeof MOOD_OPTIONS[number]['value'];
 type WeatherValue = typeof WEATHER_OPTIONS[number]['value'];
+type LocationValue = typeof LOCATION_OPTIONS[number]['value'];
 
 interface SearchResult {
   id: number;
@@ -34,8 +51,8 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   onSelectResult?: (result: SearchResult) => void;
   onCapture?: () => void;
-  currentMood?: MoodValue;
-  currentWeather?: WeatherValue;
+  currentMood?: string;
+  currentWeather?: string;
   currentLocation?: string;
   onMoodChanged?: () => void;
   onWeatherChanged?: () => void;
@@ -147,12 +164,16 @@ export function Header({
     }
   };
 
-  const getMoodEmoji = (mood: MoodValue) => {
+  const getMoodEmoji = (mood: string) => {
     return MOOD_OPTIONS.find(m => m.value === mood)?.emoji;
   };
 
-  const getWeatherEmoji = (weather: WeatherValue) => {
+  const getWeatherEmoji = (weather: string) => {
     return WEATHER_OPTIONS.find(w => w.value === weather)?.emoji;
+  };
+
+  const getLocationEmoji = (location: string) => {
+    return LOCATION_OPTIONS.find(l => l.value === location)?.emoji;
   };
 
   return (
@@ -229,13 +250,25 @@ export function Header({
             )}
           >
             {currentLocation ? (
-              <span className="text-sm">{currentLocation}</span>
+              getLocationEmoji(currentLocation) || <span className="text-sm">{currentLocation}</span>
             ) : (
               <MapPin className="w-4 h-4" />
             )}
           </button>
           {showLocationPicker && (
             <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 w-48">
+              {/* Quick location options */}
+              <div className="flex gap-2 mb-2 pb-2 border-b border-border">
+                {LOCATION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleLocationSelect(option.value)}
+                    className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
+                  >
+                    {option.emoji}
+                  </button>
+                ))}
+              </div>
               <input
                 type="text"
                 value={locationInput}

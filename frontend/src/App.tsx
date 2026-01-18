@@ -365,7 +365,17 @@ function App() {
       <Sidebar currentView={view} onViewChange={handleViewChange} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header title={viewTitles[view]} searchResults={searchResults} onSearch={handleSearch} />
+        <Header
+          title={viewTitles[view]}
+          searchResults={searchResults}
+          onSearch={handleSearch}
+          currentMood={today?.mood}
+          currentWeather={today?.weather}
+          currentLocation={today?.location}
+          onMoodChanged={loadData}
+          onWeatherChanged={loadData}
+          onLocationChanged={loadData}
+        />
 
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && today && (
