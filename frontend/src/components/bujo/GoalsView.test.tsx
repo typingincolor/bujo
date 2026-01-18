@@ -12,9 +12,11 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   DeleteGoal: vi.fn().mockResolvedValue(undefined),
   MigrateGoal: vi.fn().mockResolvedValue(2),
   UpdateGoal: vi.fn().mockResolvedValue(undefined),
+  CancelGoal: vi.fn().mockResolvedValue(undefined),
+  UncancelGoal: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal } from '@/wailsjs/go/wails/App'
+import { CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal } from '@/wailsjs/go/wails/App'
 
 const currentMonth = format(new Date(), 'yyyy-MM')
 
@@ -205,7 +207,7 @@ describe('GoalsView - Delete Goal', () => {
     await user.click(screen.getByTitle('Delete goal'))
     expect(screen.getByText('Delete Goal')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    await user.click(screen.getByRole('button', { name: /^Cancel$/ }))
 
     expect(screen.queryByText('Delete Goal')).not.toBeInTheDocument()
   })
@@ -215,7 +217,7 @@ describe('GoalsView - Delete Goal', () => {
     render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
 
     await user.click(screen.getByTitle('Delete goal'))
-    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    await user.click(screen.getByRole('button', { name: /^Cancel$/ }))
 
     expect(DeleteGoal).not.toHaveBeenCalled()
   })
@@ -345,5 +347,93 @@ describe('GoalsView - Edit Goal', () => {
     })]} />)
 
     expect(screen.queryByTitle('Edit goal')).not.toBeInTheDocument()
+  })
+})
+
+describe('GoalsView - Cancel Goal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows cancel button on active goal item', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+    expect(screen.getByTitle('Cancel goal')).toBeInTheDocument()
+  })
+
+  it('calls CancelGoal binding when cancel button is clicked', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Cancel goal'))
+
+    await waitFor(() => {
+      expect(CancelGoal).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onGoalChanged after cancelling goal', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Cancel goal'))
+
+    await waitFor(() => {
+      expect(onGoalChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('shows cancelled indicator for cancelled goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Cancelled Goal',
+      status: 'cancelled'
+    })]} />)
+
+    expect(screen.getByText('Cancelled Goal')).toHaveClass('line-through')
+  })
+
+  it('shows uncancel button for cancelled goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Cancelled Goal',
+      status: 'cancelled'
+    })]} />)
+
+    expect(screen.getByTitle('Restore goal')).toBeInTheDocument()
+  })
+
+  it('calls UncancelGoal binding when restore button is clicked', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({
+      id: 42,
+      content: 'Cancelled Goal',
+      status: 'cancelled'
+    })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Restore goal'))
+
+    await waitFor(() => {
+      expect(UncancelGoal).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('does not show cancel button for migrated goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Migrated Goal',
+      status: 'migrated',
+      migratedTo: '2026-02'
+    })]} />)
+
+    expect(screen.queryByTitle('Cancel goal')).not.toBeInTheDocument()
+  })
+
+  it('does not show cancel button for cancelled goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Cancelled Goal',
+      status: 'cancelled'
+    })]} />)
+
+    expect(screen.queryByTitle('Cancel goal')).not.toBeInTheDocument()
   })
 })

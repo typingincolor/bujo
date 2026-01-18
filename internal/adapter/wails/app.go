@@ -123,6 +123,14 @@ func (a *App) UpdateGoal(goalID int64, content string) error {
 	return a.services.Goal.UpdateGoal(a.ctx, goalID, content)
 }
 
+func (a *App) CancelGoal(goalID int64) error {
+	return a.services.Goal.CancelGoal(a.ctx, goalID)
+}
+
+func (a *App) UncancelGoal(goalID int64) error {
+	return a.services.Goal.UncancelGoal(a.ctx, goalID)
+}
+
 func (a *App) Search(query string) ([]domain.Entry, error) {
 	opts := domain.NewSearchOptions(query)
 	return a.services.Bujo.SearchEntries(a.ctx, opts)

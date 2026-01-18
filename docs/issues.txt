@@ -14,7 +14,7 @@ x Today view - The top entry of the "Today" section is highlighted and the highl
 x CI build is failing
 x This Week view should be changed to past week view
 x Today view - location select - need to be able to add new locations to the list
-. Monthly goals - need to be able to migrate a goal to another month. Migrate goal should still appear in it's orginial month but marked as migrated.
-. Monthly goals - need to be able to edit an entry.
-. Monthly goals - need to be able to cancel an entry.
+x Monthly goals - need to be able to migrate a goal to another month. Migrate goal should still appear in it's orginial month but marked as migrated.
+x Monthly goals - need to be able to edit an entry.
+x Monthly goals - need to be able to cancel an entry.
 . Add overview tasks view in sidebar. This should work like the overdue secion in the TUI view. Optional context, collapsable etc

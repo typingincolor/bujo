@@ -13,6 +13,8 @@ export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;
 
 export function CancelEntry(arg1:number):Promise<void>;
 
+export function CancelGoal(arg1:number):Promise<void>;
+
 export function CreateGoal(arg1:string,arg2:time.Time):Promise<number>;
 
 export function CreateHabit(arg1:string):Promise<number>;
@@ -86,6 +88,8 @@ export function SetPriority(arg1:number,arg2:string):Promise<void>;
 export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;
 
 export function UncancelEntry(arg1:number):Promise<void>;
+
+export function UncancelGoal(arg1:number):Promise<void>;
 
 export function UndoHabitLog(arg1:number):Promise<void>;
 

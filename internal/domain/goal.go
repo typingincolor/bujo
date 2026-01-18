@@ -8,9 +8,10 @@ import (
 type GoalStatus string
 
 const (
-	GoalStatusActive   GoalStatus = "active"
-	GoalStatusDone     GoalStatus = "done"
-	GoalStatusMigrated GoalStatus = "migrated"
+	GoalStatusActive    GoalStatus = "active"
+	GoalStatusDone      GoalStatus = "done"
+	GoalStatusMigrated  GoalStatus = "migrated"
+	GoalStatusCancelled GoalStatus = "cancelled"
 )
 
 type Goal struct {
@@ -63,5 +64,14 @@ func (g Goal) MonthKey() string {
 
 func (g Goal) UpdateContent(content string) Goal {
 	g.Content = content
+	return g
+}
+
+func (g Goal) IsCancelled() bool {
+	return g.Status == GoalStatusCancelled
+}
+
+func (g Goal) MarkCancelled() Goal {
+	g.Status = GoalStatusCancelled
 	return g
 }

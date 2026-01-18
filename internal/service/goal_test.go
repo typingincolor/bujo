@@ -183,3 +183,35 @@ func TestGoalService_UpdateGoal(t *testing.T) {
 	goal, _ := service.GetGoal(ctx, id)
 	assert.Equal(t, "Updated content", goal.Content)
 }
+
+func TestGoalService_CancelGoal(t *testing.T) {
+	service := setupGoalService(t)
+	ctx := context.Background()
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	id, _ := service.CreateGoal(ctx, "Cancel me", month)
+
+	err := service.CancelGoal(ctx, id)
+
+	require.NoError(t, err)
+
+	goal, _ := service.GetGoal(ctx, id)
+	assert.True(t, goal.IsCancelled())
+}
+
+func TestGoalService_UncancelGoal(t *testing.T) {
+	service := setupGoalService(t)
+	ctx := context.Background()
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	id, _ := service.CreateGoal(ctx, "Uncancel me", month)
+	_ = service.CancelGoal(ctx, id)
+
+	err := service.UncancelGoal(ctx, id)
+
+	require.NoError(t, err)
+
+	goal, _ := service.GetGoal(ctx, id)
+	assert.False(t, goal.IsCancelled())
+	assert.Equal(t, domain.GoalStatusActive, goal.Status)
+}

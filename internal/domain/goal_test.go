@@ -169,3 +169,34 @@ func TestGoal_UpdateContent(t *testing.T) {
 	assert.Equal(t, original.Status, updated.Status, "other fields should be copied")
 	assert.Equal(t, original.Month, updated.Month, "other fields should be copied")
 }
+
+func TestGoal_IsCancelled(t *testing.T) {
+	goal := Goal{
+		Content: "Learn Go",
+		Status:  GoalStatusActive,
+	}
+	assert.False(t, goal.IsCancelled())
+
+	goal.Status = GoalStatusCancelled
+	assert.True(t, goal.IsCancelled())
+}
+
+func TestGoal_MarkCancelled(t *testing.T) {
+	entityID := NewEntityID()
+	original := Goal{
+		ID:       1,
+		EntityID: entityID,
+		Content:  "Learn Go",
+		Status:   GoalStatusActive,
+		Month:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+	}
+
+	updated := original.MarkCancelled()
+
+	assert.Equal(t, GoalStatusCancelled, updated.Status)
+	assert.Equal(t, GoalStatusActive, original.Status, "original should be unchanged")
+	assert.Equal(t, original.ID, updated.ID, "other fields should be copied")
+	assert.Equal(t, original.EntityID, updated.EntityID, "other fields should be copied")
+	assert.Equal(t, original.Content, updated.Content, "other fields should be copied")
+	assert.Equal(t, original.Month, updated.Month, "other fields should be copied")
+}

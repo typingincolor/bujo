@@ -1,9 +1,9 @@
 import { Goal } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash2, ArrowRight, Pencil } from 'lucide-react';
+import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash2, ArrowRight, Pencil, Ban, Undo2 } from 'lucide-react';
 import { format, parse, addMonths } from 'date-fns';
 import { useState, useRef } from 'react';
-import { MarkGoalDone, MarkGoalActive, CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal } from '@/wailsjs/go/wails/App';
+import { MarkGoalDone, MarkGoalActive, CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal } from '@/wailsjs/go/wails/App';
 import { time } from '@/wailsjs/go/models';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -161,6 +161,26 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
     }
   };
 
+  const handleCancelGoal = async (goal: Goal) => {
+    try {
+      await CancelGoal(goal.id);
+      onGoalChanged?.();
+    } catch (error) {
+      console.error('Failed to cancel goal:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to cancel goal');
+    }
+  };
+
+  const handleUncancelGoal = async (goal: Goal) => {
+    try {
+      await UncancelGoal(goal.id);
+      onGoalChanged?.();
+    } catch (error) {
+      console.error('Failed to restore goal:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to restore goal');
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Header with navigation */}
@@ -266,7 +286,8 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
                 <span className={cn(
                   'flex-1 text-sm',
                   goal.status === 'done' && 'line-through text-muted-foreground',
-                  goal.status === 'migrated' && 'text-muted-foreground'
+                  goal.status === 'migrated' && 'text-muted-foreground',
+                  goal.status === 'cancelled' && 'line-through text-muted-foreground'
                 )}>
                   {goal.content}
                   {goal.status === 'migrated' && goal.migratedTo && (
@@ -298,6 +319,30 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
                   className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <Pencil className="w-4 h-4" />
+                </button>
+              )}
+              {goal.status !== 'migrated' && goal.status !== 'cancelled' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelGoal(goal);
+                  }}
+                  title="Cancel goal"
+                  className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Ban className="w-4 h-4" />
+                </button>
+              )}
+              {goal.status === 'cancelled' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUncancelGoal(goal);
+                  }}
+                  title="Restore goal"
+                  className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Undo2 className="w-4 h-4" />
                 </button>
               )}
               <button

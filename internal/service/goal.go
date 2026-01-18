@@ -147,3 +147,29 @@ func (s *GoalService) MigrateGoal(ctx context.Context, id int64, toMonth time.Ti
 
 	return s.goalRepo.Insert(ctx, newGoal)
 }
+
+func (s *GoalService) CancelGoal(ctx context.Context, id int64) error {
+	goal, err := s.goalRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if goal == nil {
+		return fmt.Errorf("goal not found: %d", id)
+	}
+
+	updated := goal.MarkCancelled()
+	return s.goalRepo.Update(ctx, updated)
+}
+
+func (s *GoalService) UncancelGoal(ctx context.Context, id int64) error {
+	goal, err := s.goalRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if goal == nil {
+		return fmt.Errorf("goal not found: %d", id)
+	}
+
+	updated := goal.MarkActive()
+	return s.goalRepo.Update(ctx, updated)
+}

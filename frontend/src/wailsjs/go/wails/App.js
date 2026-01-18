@@ -18,6 +18,10 @@ export function CancelEntry(arg1) {
   return window['go']['wails']['App']['CancelEntry'](arg1);
 }
 
+export function CancelGoal(arg1) {
+  return window['go']['wails']['App']['CancelGoal'](arg1);
+}
+
 export function CreateGoal(arg1, arg2) {
   return window['go']['wails']['App']['CreateGoal'](arg1, arg2);
 }
@@ -164,6 +168,10 @@ export function SetWeather(arg1, arg2) {
 
 export function UncancelEntry(arg1) {
   return window['go']['wails']['App']['UncancelEntry'](arg1);
+}
+
+export function UncancelGoal(arg1) {
+  return window['go']['wails']['App']['UncancelGoal'](arg1);
 }
 
 export function UndoHabitLog(arg1) {
