@@ -1,14 +1,15 @@
 import { useState, useCallback } from 'react';
 import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag } from 'lucide-react';
-import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
+import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ENTRY_SYMBOLS, EntryType } from '@/types/bujo';
+import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
 
 interface SearchResult {
   id: number;
   content: string;
   type: EntryType;
+  priority: Priority;
   date: string;
   parentId: number | null;
 }
@@ -43,6 +44,7 @@ export function SearchView() {
         id: entry.ID,
         content: entry.Content,
         type: entry.Type as EntryType,
+        priority: ((entry.Priority as string)?.toLowerCase() || 'none') as Priority,
         date: (entry.CreatedAt as unknown as string) || '',
         parentId: entry.ParentID ?? null,
       })));
@@ -83,53 +85,61 @@ export function SearchView() {
     setExpandedIds(newExpanded);
   }, [expandedIds, ancestorsMap]);
 
+  const refreshEntry = useCallback(async (oldId: number) => {
+    const updated = await GetEntry(oldId);
+    if (updated) {
+      setResults(prev => prev.map(r =>
+        r.id === oldId ? {
+          id: updated.ID,
+          content: updated.Content,
+          type: updated.Type as EntryType,
+          priority: ((updated.Priority as string)?.toLowerCase() || 'none') as Priority,
+          date: (updated.CreatedAt as unknown as string) || r.date,
+          parentId: updated.ParentID ?? null,
+        } : r
+      ));
+    }
+  }, []);
+
   const handleMarkDone = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await MarkEntryDone(id);
-      setResults(prev => prev.map(r =>
-        r.id === id ? { ...r, type: 'done' as EntryType } : r
-      ));
+      await refreshEntry(id);
     } catch (error) {
       console.error('Failed to mark done:', error);
     }
-  }, []);
+  }, [refreshEntry]);
 
   const handleMarkUndone = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await MarkEntryUndone(id);
-      setResults(prev => prev.map(r =>
-        r.id === id ? { ...r, type: 'task' as EntryType } : r
-      ));
+      await refreshEntry(id);
     } catch (error) {
       console.error('Failed to mark undone:', error);
     }
-  }, []);
+  }, [refreshEntry]);
 
   const handleCancel = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await CancelEntry(id);
-      setResults(prev => prev.map(r =>
-        r.id === id ? { ...r, type: 'cancelled' as EntryType } : r
-      ));
+      await refreshEntry(id);
     } catch (error) {
       console.error('Failed to cancel entry:', error);
     }
-  }, []);
+  }, [refreshEntry]);
 
   const handleUncancel = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await UncancelEntry(id);
-      setResults(prev => prev.map(r =>
-        r.id === id ? { ...r, type: 'task' as EntryType } : r
-      ));
+      await refreshEntry(id);
     } catch (error) {
       console.error('Failed to uncancel entry:', error);
     }
-  }, []);
+  }, [refreshEntry]);
 
   const handleDelete = useCallback(async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -145,10 +155,11 @@ export function SearchView() {
     e.stopPropagation();
     try {
       await CyclePriority(id);
+      await refreshEntry(id);
     } catch (error) {
       console.error('Failed to cycle priority:', error);
     }
-  }, []);
+  }, [refreshEntry]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -232,19 +243,33 @@ export function SearchView() {
                 data-result-id={result.id}
                 style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
               >
-                <span className={cn(
-                  'text-lg font-mono flex-shrink-0 w-5 text-center',
-                  result.type === 'done' && 'text-bujo-done',
-                  result.type === 'task' && 'text-bujo-task',
-                  result.type === 'note' && 'text-bujo-note',
-                  result.type === 'event' && 'text-bujo-event',
-                )}>
-                  {getSymbol(result.type)}
+                <span className="inline-flex items-center gap-1 flex-shrink-0">
+                  <span className={cn(
+                    'text-lg font-mono w-5 text-center',
+                    result.type === 'done' && 'text-bujo-done',
+                    result.type === 'task' && 'text-bujo-task',
+                    result.type === 'note' && 'text-bujo-note',
+                    result.type === 'event' && 'text-bujo-event',
+                    result.type === 'cancelled' && 'text-bujo-cancelled',
+                  )}>
+                    {getSymbol(result.type)}
+                  </span>
+                  {result.priority !== 'none' && (
+                    <span className={cn(
+                      'text-xs font-bold',
+                      result.priority === 'low' && 'text-priority-low',
+                      result.priority === 'medium' && 'text-priority-medium',
+                      result.priority === 'high' && 'text-priority-high',
+                    )}>
+                      {PRIORITY_SYMBOLS[result.priority]}
+                    </span>
+                  )}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className={cn(
                     'text-sm',
-                    result.type === 'done' && 'line-through text-muted-foreground'
+                    result.type === 'done' && 'text-bujo-done',
+                    result.type === 'cancelled' && 'line-through text-muted-foreground'
                   )}>
                     {result.content}
                   </p>

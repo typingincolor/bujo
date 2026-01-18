@@ -375,6 +375,49 @@ func TestBujoService_GetEntryContext_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_GetEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	entry, err := service.GetEntry(ctx, ids[0])
+
+	require.NoError(t, err)
+	assert.Equal(t, "Buy groceries", entry.Content)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_GetEntry_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	_, err := service.GetEntry(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestBujoService_GetEntry_ReturnsCurrentVersionAfterUpdate(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	originalID := ids[0]
+
+	err = service.MarkDone(ctx, originalID)
+	require.NoError(t, err)
+
+	entry, err := service.GetEntry(ctx, originalID)
+
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeDone, entry.Type)
+}
+
 func TestBujoService_EditEntry(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

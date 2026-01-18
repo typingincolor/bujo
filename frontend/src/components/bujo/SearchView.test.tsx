@@ -5,6 +5,7 @@ import { SearchView } from './SearchView'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({
   Search: vi.fn().mockResolvedValue([]),
+  GetEntry: vi.fn().mockResolvedValue(null),
   GetEntryAncestors: vi.fn().mockResolvedValue([]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
@@ -447,6 +448,41 @@ describe('SearchView - Actions', () => {
     })
   })
 
+  it('renders cancelled entries with strikethrough style', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Cancelled task', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'cancelled')
+
+    await waitFor(() => {
+      const content = screen.getByText('Cancelled task')
+      expect(content).toHaveClass('line-through')
+    })
+  })
+
+  it('renders done entries with success color (not strikethrough)', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Done task', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'done')
+
+    await waitFor(() => {
+      const content = screen.getByText('Done task')
+      expect(content).not.toHaveClass('line-through')
+      expect(content).toHaveClass('text-bujo-done')
+    })
+  })
+
   it('calls CancelEntry when cancel button is clicked', async () => {
     const { CancelEntry } = await import('@/wailsjs/go/wails/App')
     vi.mocked(Search).mockResolvedValue([
@@ -554,6 +590,50 @@ describe('SearchView - Actions', () => {
 
     await waitFor(() => {
       expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
+    })
+  })
+
+  it('displays priority indicator for entries with priority', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 1, Content: 'High priority task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), Priority: 'high' },
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'priority')
+
+    await waitFor(() => {
+      expect(screen.getByText('!!!')).toBeInTheDocument()
+    })
+  })
+
+  it('updates priority indicator after cycling priority', async () => {
+    const { CyclePriority, GetEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), Priority: 'none' },
+    ] as never)
+    vi.mocked(GetEntry).mockResolvedValue({
+      ...createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+      Priority: 'low',
+    } as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Cycle priority'))
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(42)
+      expect(screen.getByText('!')).toBeInTheDocument()
     })
   })
 })

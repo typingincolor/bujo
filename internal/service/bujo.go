@@ -219,6 +219,10 @@ func (s *BujoService) getEntry(ctx context.Context, id int64) (*domain.Entry, er
 	return entry, nil
 }
 
+func (s *BujoService) GetEntry(ctx context.Context, id int64) (*domain.Entry, error) {
+	return s.getEntry(ctx, id)
+}
+
 func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location string) error {
 	dayCtx := domain.DayContext{
 		Date:     date,
