@@ -749,3 +749,58 @@ func TestApp_MigrateEntry_MovesTaskToFutureDate(t *testing.T) {
 	require.Len(t, agenda.Days[0].Entries, 1)
 	assert.Equal(t, "Test task", agenda.Days[0].Entries[0].Content)
 }
+
+func TestApp_SetLocation_SetsLocationForDate(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	err = wailsApp.SetLocation(today, "Manchester Office")
+	require.NoError(t, err)
+
+	// Verify location is set by checking the agenda
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.NotNil(t, agenda.Days[0].Location)
+	assert.Equal(t, "Manchester Office", *agenda.Days[0].Location)
+}
+
+func TestApp_GetLocationHistory_ReturnsUniqueLocations(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	dayBefore := today.AddDate(0, 0, -2)
+
+	// Set locations for different days, with a duplicate
+	err = wailsApp.SetLocation(today, "Manchester Office")
+	require.NoError(t, err)
+	err = wailsApp.SetLocation(yesterday, "Home")
+	require.NoError(t, err)
+	err = wailsApp.SetLocation(dayBefore, "Manchester Office") // Duplicate
+	require.NoError(t, err)
+
+	locations, err := wailsApp.GetLocationHistory()
+	require.NoError(t, err)
+
+	// Should have 2 unique locations
+	assert.Len(t, locations, 2)
+	assert.Contains(t, locations, "Manchester Office")
+	assert.Contains(t, locations, "Home")
+}

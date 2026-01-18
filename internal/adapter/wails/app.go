@@ -207,3 +207,28 @@ func (a *App) CyclePriority(id int64) error {
 func (a *App) MigrateEntry(id int64, toDate time.Time) (int64, error) {
 	return a.services.Bujo.MigrateEntry(a.ctx, id, toDate)
 }
+
+func (a *App) SetLocation(date time.Time, location string) error {
+	return a.services.Bujo.SetLocation(a.ctx, date, location)
+}
+
+const locationHistoryMonths = 6
+
+func (a *App) GetLocationHistory() ([]string, error) {
+	now := time.Now()
+	from := now.AddDate(0, -locationHistoryMonths, 0)
+	history, err := a.services.Bujo.GetLocationHistory(a.ctx, from, now)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	var locations []string
+	for _, dayCtx := range history {
+		if dayCtx.Location != nil && *dayCtx.Location != "" && !seen[*dayCtx.Location] {
+			seen[*dayCtx.Location] = true
+			locations = append(locations, *dayCtx.Location)
+		}
+	}
+	return locations, nil
+}

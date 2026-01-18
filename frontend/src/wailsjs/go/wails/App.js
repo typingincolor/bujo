@@ -74,6 +74,10 @@ export function GetLists() {
   return window['go']['wails']['App']['GetLists']();
 }
 
+export function GetLocationHistory() {
+  return window['go']['wails']['App']['GetLocationHistory']();
+}
+
 export function Greet(arg1) {
   return window['go']['wails']['App']['Greet'](arg1);
 }
@@ -132,6 +136,10 @@ export function Search(arg1) {
 
 export function SetHabitGoal(arg1, arg2) {
   return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
+}
+
+export function SetLocation(arg1, arg2) {
+  return window['go']['wails']['App']['SetLocation'](arg1, arg2);
 }
 
 export function SetMood(arg1, arg2) {

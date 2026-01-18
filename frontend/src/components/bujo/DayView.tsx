@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;

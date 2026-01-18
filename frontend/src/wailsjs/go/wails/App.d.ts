@@ -41,6 +41,8 @@ export function GetHabits(arg1:number):Promise<service.TrackerStatus>;
 
 export function GetLists():Promise<Array<wails.ListWithItems>>;
 
+export function GetLocationHistory():Promise<Array<string>>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function HasChildren(arg1:number):Promise<boolean>;
@@ -70,6 +72,8 @@ export function RenameList(arg1:number,arg2:string):Promise<void>;
 export function Search(arg1:string):Promise<Array<domain.Entry>>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
+
+export function SetLocation(arg1:time.Time,arg2:string):Promise<void>;
 
 export function SetMood(arg1:time.Time,arg2:string):Promise<void>;
 
