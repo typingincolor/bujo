@@ -57,7 +57,7 @@ export function EntryItem({
       data-entry-id={entry.id}
       data-selected={isSelected}
       className={cn(
-        'group flex items-start gap-2 py-1.5 px-2 rounded-md transition-colors',
+        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors',
         'hover:bg-secondary/50 animate-fade-in',
         isToggleable && 'cursor-pointer',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
@@ -72,7 +72,7 @@ export function EntryItem({
             e.stopPropagation();
             onToggleCollapse?.();
           }}
-          className="w-4 h-4 mt-0.5 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="w-4 h-4 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
         >
           {isCollapsed ? (
             <ChevronRight className="w-3.5 h-3.5" />

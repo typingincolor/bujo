@@ -20,6 +20,12 @@ describe('EntryItem', () => {
     expect(screen.getByText('My task')).toBeInTheDocument()
   })
 
+  it('aligns symbol and text vertically centered', () => {
+    render(<EntryItem entry={createTestEntry({ content: 'My task' })} />)
+    const container = screen.getByText('My task').closest('[data-entry-id]')
+    expect(container).toHaveClass('items-center')
+  })
+
   it('shows edit button on hover', () => {
     render(<EntryItem entry={createTestEntry()} onEdit={() => {}} />)
     const button = screen.getByTitle('Edit entry')
