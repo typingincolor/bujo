@@ -63,6 +63,7 @@ export function transformGoal(g: domain.Goal): Goal {
     id: g.ID,
     content: g.Content,
     month: monthStr,
-    completed: g.Status === 'done',
+    status: (g.Status?.toLowerCase() || 'active') as Goal['status'],
+    migratedTo: g.MigratedTo ? String(g.MigratedTo).slice(0, 7) : undefined,
   }
 }

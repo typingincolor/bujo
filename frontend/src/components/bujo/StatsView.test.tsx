@@ -26,7 +26,7 @@ const createTestGoal = (overrides: Partial<Goal> = {}): Goal => ({
   id: 1,
   content: 'Test goal',
   month: currentMonth,
-  completed: false,
+  status: 'active',
   ...overrides,
 })
 
@@ -90,9 +90,9 @@ describe('StatsView', () => {
 
   it('displays monthly goals progress', () => {
     const goals = [
-      createTestGoal({ id: 1, completed: true }),
-      createTestGoal({ id: 2, completed: true }),
-      createTestGoal({ id: 3, completed: false }),
+      createTestGoal({ id: 1, status: 'done' }),
+      createTestGoal({ id: 2, status: 'done' }),
+      createTestGoal({ id: 3, status: 'active' }),
     ]
     render(<StatsView days={[]} habits={[]} goals={goals} />)
     expect(screen.getByText(/monthly goals/i)).toBeInTheDocument()

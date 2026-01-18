@@ -1,6 +1,5 @@
 import { Keyboard } from 'lucide-react';
-
-type ViewType = 'today' | 'week' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
+import { ViewType } from './Sidebar';
 
 interface KeyboardShortcutsProps {
   view?: ViewType;

@@ -20,7 +20,7 @@ export function QuickStats({ days, habits, goals, overdueCount }: QuickStatsProp
   
   const currentMonth = format(new Date(), 'yyyy-MM');
   const monthGoals = goals.filter(g => g.month === currentMonth);
-  const goalsCompleted = monthGoals.filter(g => g.completed).length;
+  const goalsCompleted = monthGoals.filter(g => g.status === 'done').length;
   
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

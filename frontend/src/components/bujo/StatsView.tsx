@@ -39,7 +39,7 @@ export function StatsView({ days, habits, goals }: StatsViewProps) {
 
   const currentMonth = format(new Date(), 'yyyy-MM');
   const monthGoals = goals.filter(g => g.month === currentMonth);
-  const completedGoals = monthGoals.filter(g => g.completed).length;
+  const completedGoals = monthGoals.filter(g => g.status === 'done').length;
 
   return (
     <div className="space-y-6">

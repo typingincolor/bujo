@@ -53,7 +53,7 @@ export interface BujoList {
   totalCount: number;
 }
 
-export type GoalStatus = 'active' | 'done' | 'migrated';
+export type GoalStatus = 'active' | 'done' | 'migrated' | 'cancelled';
 
 export interface Goal {
   id: number;

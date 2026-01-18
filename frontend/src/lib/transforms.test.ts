@@ -289,10 +289,10 @@ describe('transformGoal', () => {
     expect(result.id).toBe(1)
     expect(result.content).toBe('Learn TypeScript')
     expect(result.month).toBe('2026-01')
-    expect(result.completed).toBe(false)
+    expect(result.status).toBe('active')
   })
 
-  it('marks goal as completed when status is done', () => {
+  it('preserves goal status when done', () => {
     const input = {
       ID: 2,
       Content: 'Finish project',
@@ -302,7 +302,7 @@ describe('transformGoal', () => {
 
     const result = transformGoal(input)
 
-    expect(result.completed).toBe(true)
+    expect(result.status).toBe('done')
   })
 
   it('handles missing Month by using current month', () => {
