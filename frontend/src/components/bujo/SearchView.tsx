@@ -213,8 +213,12 @@ export function SearchView() {
               {/* Ancestors context */}
               {isExpanded && ancestors.length > 0 && (
                 <div className="mb-2 pb-2 border-b border-border/50 space-y-1">
-                  {ancestors.map((ancestor) => (
-                    <div key={ancestor.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {ancestors.map((ancestor, index) => (
+                    <div
+                      key={ancestor.id}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                      style={{ paddingLeft: `${index * 20}px` }}
+                    >
                       <span className="font-mono">{getSymbol(ancestor.type)}</span>
                       <span>{ancestor.content}</span>
                     </div>
@@ -223,7 +227,11 @@ export function SearchView() {
               )}
 
               {/* Main result row */}
-              <div className="flex items-start gap-3">
+              <div
+                className="flex items-start gap-3"
+                data-result-id={result.id}
+                style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
+              >
                 <span className={cn(
                   'text-lg font-mono flex-shrink-0 w-5 text-center',
                   result.type === 'done' && 'text-bujo-done',

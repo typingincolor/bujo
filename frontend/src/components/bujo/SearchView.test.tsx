@@ -255,6 +255,66 @@ describe('SearchView - Context Display', () => {
       expect(screen.getByText('Parent note')).toBeInTheDocument()
     })
   })
+
+  it('indents ancestors to show hierarchy', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 3, Content: 'Grandchild task', Type: 'task', ParentID: 2, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Grandparent event', Type: 'event', ParentID: null, CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Parent note', Type: 'note', ParentID: 1, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'grandchild')
+
+    await waitFor(() => {
+      expect(screen.getByText('Grandchild task')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Grandchild task'))
+
+    await waitFor(() => {
+      // Root ancestor (grandparent) should have no indentation
+      const grandparentRow = screen.getByText('Grandparent event').closest('div')
+      expect(grandparentRow).toHaveStyle({ paddingLeft: '0px' })
+
+      // Second level (parent) should be indented
+      const parentRow = screen.getByText('Parent note').closest('div')
+      expect(parentRow).toHaveStyle({ paddingLeft: '20px' })
+    })
+  })
+
+  it('indents the main result to continue hierarchy', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 3, Content: 'Grandchild task', Type: 'task', ParentID: 2, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Grandparent event', Type: 'event', ParentID: null, CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Parent note', Type: 'note', ParentID: 1, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'grandchild')
+
+    await waitFor(() => {
+      expect(screen.getByText('Grandchild task')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Grandchild task'))
+
+    await waitFor(() => {
+      // Main result should be indented one level deeper than parent (2 ancestors = 40px)
+      const mainResultRow = screen.getByText('Grandchild task').closest('[data-result-id]')
+      expect(mainResultRow).toHaveStyle({ paddingLeft: '40px' })
+    })
+  })
 })
 
 describe('SearchView - Actions', () => {
