@@ -165,6 +165,26 @@ func (s *ListService) MarkUndone(ctx context.Context, itemID int64) error {
 	return s.listItemRepo.Update(ctx, *item)
 }
 
+func (s *ListService) Cancel(ctx context.Context, itemID int64) error {
+	item, err := s.getItemByID(ctx, itemID)
+	if err != nil {
+		return err
+	}
+
+	item.Type = domain.ListItemTypeCancelled
+	return s.listItemRepo.Update(ctx, *item)
+}
+
+func (s *ListService) Uncancel(ctx context.Context, itemID int64) error {
+	item, err := s.getItemByID(ctx, itemID)
+	if err != nil {
+		return err
+	}
+
+	item.Type = domain.ListItemTypeTask
+	return s.listItemRepo.Update(ctx, *item)
+}
+
 func (s *ListService) MoveItem(ctx context.Context, itemID int64, targetListID int64) error {
 	item, err := s.getItemByID(ctx, itemID)
 	if err != nil {

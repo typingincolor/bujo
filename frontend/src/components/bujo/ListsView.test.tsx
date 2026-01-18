@@ -13,9 +13,11 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   DeleteList: vi.fn().mockResolvedValue(undefined),
   RenameList: vi.fn().mockResolvedValue(undefined),
   EditListItem: vi.fn().mockResolvedValue(undefined),
+  CancelListItem: vi.fn().mockResolvedValue(undefined),
+  UncancelListItem: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem } from '@/wailsjs/go/wails/App'
+import { AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem } from '@/wailsjs/go/wails/App'
 
 const createTestList = (overrides: Partial<BujoList> = {}): BujoList => ({
   id: 1,
@@ -446,5 +448,104 @@ describe('ListsView - Edit List Item', () => {
 
     expect(screen.queryByDisplayValue('Buy milk')).not.toBeInTheDocument()
     expect(EditListItem).not.toHaveBeenCalled()
+  })
+})
+
+describe('ListsView - Cancel List Item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows cancel button on task items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'task' })]
+    })]} />)
+
+    expect(screen.getByTitle('Cancel item')).toBeInTheDocument()
+  })
+
+  it('calls CancelListItem binding when cancel button is clicked', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk', type: 'task' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Cancel item'))
+
+    await waitFor(() => {
+      expect(CancelListItem).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onListChanged after cancelling item', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'task' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Cancel item'))
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('does not show cancel button on done items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'done', done: true })]
+    })]} />)
+
+    expect(screen.queryByTitle('Cancel item')).not.toBeInTheDocument()
+  })
+})
+
+describe('ListsView - Uncancel List Item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows uncancel button on cancelled items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'cancelled' })]
+    })]} />)
+
+    expect(screen.getByTitle('Uncancel item')).toBeInTheDocument()
+  })
+
+  it('calls UncancelListItem binding when uncancel button is clicked', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk', type: 'cancelled' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Uncancel item'))
+
+    await waitFor(() => {
+      expect(UncancelListItem).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onListChanged after uncancelling item', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'cancelled' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Uncancel item'))
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
   })
 })

@@ -418,3 +418,62 @@ func TestListService_EditItem_PreservesType(t *testing.T) {
 	assert.Equal(t, "Oat Milk", items[0].Content)
 	assert.Equal(t, domain.ListItemTypeDone, items[0].Type)
 }
+
+func TestListService_Cancel(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	itemID, err := svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
+	require.NoError(t, err)
+
+	err = svc.Cancel(ctx, itemID)
+	require.NoError(t, err)
+
+	items, err := svc.GetListItems(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.ListItemTypeCancelled, items[0].Type)
+}
+
+func TestListService_Cancel_NotFound(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	err := svc.Cancel(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "item not found")
+}
+
+func TestListService_Uncancel(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	list, err := svc.CreateList(ctx, "Shopping")
+	require.NoError(t, err)
+
+	itemID, err := svc.AddItem(ctx, list.ID, domain.EntryTypeTask, "Milk")
+	require.NoError(t, err)
+
+	err = svc.Cancel(ctx, itemID)
+	require.NoError(t, err)
+
+	err = svc.Uncancel(ctx, itemID)
+	require.NoError(t, err)
+
+	items, err := svc.GetListItems(ctx, list.ID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.ListItemTypeTask, items[0].Type)
+}
+
+func TestListService_Uncancel_NotFound(t *testing.T) {
+	svc := setupListService(t)
+	ctx := context.Background()
+
+	err := svc.Uncancel(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "item not found")
+}

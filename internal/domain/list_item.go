@@ -8,13 +8,15 @@ import (
 type ListItemType string
 
 const (
-	ListItemTypeTask ListItemType = "task"
-	ListItemTypeDone ListItemType = "done"
+	ListItemTypeTask      ListItemType = "task"
+	ListItemTypeDone      ListItemType = "done"
+	ListItemTypeCancelled ListItemType = "cancelled"
 )
 
 var validListItemTypes = map[ListItemType]string{
-	ListItemTypeTask: ".",
-	ListItemTypeDone: "x",
+	ListItemTypeTask:      ".",
+	ListItemTypeDone:      "x",
+	ListItemTypeCancelled: "X",
 }
 
 func (t ListItemType) IsValid() bool {
@@ -64,4 +66,8 @@ func (li ListItem) Validate() error {
 
 func (li ListItem) IsComplete() bool {
 	return li.Type == ListItemTypeDone
+}
+
+func (li ListItem) IsCancelled() bool {
+	return li.Type == ListItemTypeCancelled
 }

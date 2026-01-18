@@ -22,6 +22,10 @@ export function CancelGoal(arg1) {
   return window['go']['wails']['App']['CancelGoal'](arg1);
 }
 
+export function CancelListItem(arg1) {
+  return window['go']['wails']['App']['CancelListItem'](arg1);
+}
+
 export function CreateGoal(arg1, arg2) {
   return window['go']['wails']['App']['CreateGoal'](arg1, arg2);
 }
@@ -172,6 +176,10 @@ export function UncancelEntry(arg1) {
 
 export function UncancelGoal(arg1) {
   return window['go']['wails']['App']['UncancelGoal'](arg1);
+}
+
+export function UncancelListItem(arg1) {
+  return window['go']['wails']['App']['UncancelListItem'](arg1);
 }
 
 export function UndoHabitLog(arg1) {

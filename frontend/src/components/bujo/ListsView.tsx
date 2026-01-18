@@ -1,8 +1,8 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X } from 'lucide-react'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem } from '@/wailsjs/go/wails/App'
+import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem } from '@/wailsjs/go/wails/App'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface ListsViewProps {
@@ -20,9 +20,11 @@ interface ListCardProps {
   onDeleteList: (listId: number) => void
   onRenameList: (listId: number, newName: string) => void
   onEditItem: (itemId: number, content: string) => void
+  onCancelItem: (itemId: number) => void
+  onUncancelItem: (itemId: number) => void
 }
 
-function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem }: ListCardProps) {
+function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem, onCancelItem, onUncancelItem }: ListCardProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameName, setRenameName] = useState(list.name)
@@ -105,6 +107,16 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
     }
   }
 
+  const handleCancelItem = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation()
+    onCancelItem(itemId)
+  }
+
+  const handleUncancelItem = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation()
+    onUncancelItem(itemId)
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden animate-fade-in">
       {/* Header */}
@@ -167,8 +179,10 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
               onClick={() => editingItemId !== item.id && onToggleItem(item.id, item.done)}
               className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2 cursor-pointer"
             >
-              {item.done ? (
+              {item.type === 'done' ? (
                 <CheckCircle2 className="w-4 h-4 text-bujo-done flex-shrink-0" />
+              ) : item.type === 'cancelled' ? (
+                <Ban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               ) : (
                 <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               )}
@@ -186,10 +200,28 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
               ) : (
                 <span className={cn(
                   'text-sm flex-1',
-                  item.done && 'line-through text-muted-foreground'
+                  (item.done || item.type === 'cancelled') && 'line-through text-muted-foreground'
                 )}>
                   {item.content}
                 </span>
+              )}
+              {item.type === 'task' && (
+                <button
+                  onClick={(e) => handleCancelItem(e, item.id)}
+                  title="Cancel item"
+                  className="p-1 rounded text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Ban className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {item.type === 'cancelled' && (
+                <button
+                  onClick={(e) => handleUncancelItem(e, item.id)}
+                  title="Uncancel item"
+                  className="p-1 rounded text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
               )}
               <button
                 onClick={(e) => handleEditItemClick(e, item.id, item.content)}
@@ -336,6 +368,24 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
     }
   }
 
+  const handleCancelItem = async (itemId: number) => {
+    try {
+      await CancelListItem(itemId)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to cancel list item:', error)
+    }
+  }
+
+  const handleUncancelItem = async (itemId: number) => {
+    try {
+      await UncancelListItem(itemId)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to uncancel list item:', error)
+    }
+  }
+
   const handleRequestDeleteList = (listId: number) => {
     const list = lists.find(l => l.id === listId)
     if (list) {
@@ -392,6 +442,8 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
             onDeleteList={handleRequestDeleteList}
             onRenameList={handleRenameList}
             onEditItem={handleEditItem}
+            onCancelItem={handleCancelItem}
+            onUncancelItem={handleUncancelItem}
           />
         ))}
       </div>

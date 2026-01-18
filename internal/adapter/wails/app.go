@@ -196,6 +196,14 @@ func (a *App) EditListItem(itemID int64, content string) error {
 	return a.services.List.EditItem(a.ctx, itemID, content)
 }
 
+func (a *App) CancelListItem(itemID int64) error {
+	return a.services.List.Cancel(a.ctx, itemID)
+}
+
+func (a *App) UncancelListItem(itemID int64) error {
+	return a.services.List.Uncancel(a.ctx, itemID)
+}
+
 func (a *App) SetMood(date time.Time, mood string) error {
 	return a.services.Bujo.SetMood(a.ctx, date, mood)
 }

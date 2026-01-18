@@ -23,7 +23,7 @@ x Past Week view - click on a task should not mark it as complete. It should hig
 x Past Week view - need to be able to move backwards and forwards in time.
 x Past Week  view - it is still showing the future.
 x Past Week view  - change name to Review
-. list view - need to be able to (un)cancel list items.
+x list view - need to be able to (un)cancel list items.
 . list view - need to be able to move items between lists.
 . list view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
 . goals view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
@@ -37,3 +37,4 @@ x Change "Past Week" view to "Review"
 . Today view - use unicode characters to indicate entry types (see tui and bujo today). The entry text is not aligned with the entry type. The should be vertical centre aligned
 . CI build failing
 . Today/Review view - chose a better icon for un-complete icon, it should be the . we use to represent a task
+. Rename overdue as outstanding tasks
