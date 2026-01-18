@@ -19,6 +19,7 @@ type PeriodView = 'week' | 'month' | 'quarter';
 interface HabitTrackerProps {
   habits: Habit[];
   onHabitChanged?: () => void;
+  period?: PeriodView;
   onPeriodChange?: (period: PeriodView) => void;
   anchorDate?: Date;
   onNavigate?: (newAnchor: Date) => void;
@@ -110,6 +111,7 @@ function HabitRow({
             dayHistory={dayHistory}
             onLog={handleLog}
             onDecrement={handleDecrement}
+            showHeader={false}
           />
         );
       }
@@ -206,15 +208,18 @@ function HabitRow({
   );
 }
 
-export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDate, onNavigate }: HabitTrackerProps) {
+export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, anchorDate, onNavigate }: HabitTrackerProps) {
   const [isAddingHabit, setIsAddingHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
-  const [currentPeriod, setCurrentPeriod] = useState<PeriodView>('week');
+  const [internalPeriod, setInternalPeriod] = useState<PeriodView>('week');
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
   const [settingGoalFor, setSettingGoalFor] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const periodMenuRef = useRef<HTMLDivElement>(null);
+
+  // Use controlled period if provided, otherwise use internal state
+  const currentPeriod = period ?? internalPeriod;
 
   const effectiveAnchor = useMemo(() => anchorDate ?? new Date(), [anchorDate]);
   const periodLabel = useMemo(() => formatPeriodLabel(effectiveAnchor, currentPeriod), [effectiveAnchor, currentPeriod]);
@@ -228,6 +233,10 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDat
     const newAnchor = navigatePeriod(effectiveAnchor, currentPeriod, 'next');
     onNavigate?.(newAnchor);
   }, [effectiveAnchor, currentPeriod, onNavigate]);
+
+  const handleNavigateToday = useCallback(() => {
+    onNavigate?.(new Date());
+  }, [onNavigate]);
 
   useEffect(() => {
     if (isAddingHabit) {
@@ -300,10 +309,12 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDat
     }
   };
 
-  const handlePeriodChange = (period: PeriodView) => {
-    setCurrentPeriod(period);
+  const handlePeriodChange = (newPeriod: PeriodView) => {
+    // Update internal state for uncontrolled mode
+    setInternalPeriod(newPeriod);
     setShowPeriodMenu(false);
-    onPeriodChange?.(period);
+    // Notify parent (required for controlled mode)
+    onPeriodChange?.(newPeriod);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -373,6 +384,14 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDat
           onNext={handleNavigateNext}
         />
 
+        {/* Today button */}
+        <button
+          onClick={handleNavigateToday}
+          className="px-2 py-1 text-xs rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+        >
+          Today
+        </button>
+
         <button
           onClick={() => setIsAddingHabit(true)}
           className="ml-auto px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
@@ -401,6 +420,27 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDat
           >
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Shared day header for week view */}
+      {currentPeriod === 'week' && habits.length > 0 && (
+        <div className="flex items-center gap-4 px-4">
+          <div className="flex-shrink-0 w-32" />
+          <div className="flex-1">
+            <div className="grid grid-cols-7 gap-0.5 mb-1">
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => (
+                <div
+                  key={i}
+                  className="w-full flex justify-center text-[10px] text-muted-foreground font-medium"
+                >
+                  {label}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Spacer for action buttons */}
+          <div className="w-[72px]" />
         </div>
       )}
 

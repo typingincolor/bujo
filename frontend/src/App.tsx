@@ -415,6 +415,7 @@ function App() {
               <HabitTracker
                 habits={habits}
                 onHabitChanged={loadData}
+                period={habitPeriod}
                 onPeriodChange={handleHabitPeriodChange}
                 anchorDate={habitAnchorDate}
                 onNavigate={handleHabitNavigate}

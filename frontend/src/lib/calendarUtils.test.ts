@@ -121,40 +121,40 @@ describe('calendarUtils', () => {
   });
 
   describe('getQuarterMonths', () => {
-    it('returns 3 consecutive months', () => {
+    it('returns 3 months ending with anchor month (shows past)', () => {
       const anchor = new Date(2025, 0, 15); // January
       const quarters = getQuarterMonths(anchor);
 
       expect(quarters).toHaveLength(3);
 
-      // First month: January 2025
-      expect(quarters[0].month).toBe(0);
-      expect(quarters[0].year).toBe(2025);
-      expect(quarters[0].name).toBe('January');
+      // First month: November 2024 (2 months ago)
+      expect(quarters[0].month).toBe(10);
+      expect(quarters[0].year).toBe(2024);
+      expect(quarters[0].name).toBe('November');
 
-      // Second month: February 2025
-      expect(quarters[1].month).toBe(1);
-      expect(quarters[1].year).toBe(2025);
-      expect(quarters[1].name).toBe('February');
+      // Second month: December 2024 (1 month ago)
+      expect(quarters[1].month).toBe(11);
+      expect(quarters[1].year).toBe(2024);
+      expect(quarters[1].name).toBe('December');
 
-      // Third month: March 2025
-      expect(quarters[2].month).toBe(2);
+      // Third month: January 2025 (current)
+      expect(quarters[2].month).toBe(0);
       expect(quarters[2].year).toBe(2025);
-      expect(quarters[2].name).toBe('March');
+      expect(quarters[2].name).toBe('January');
     });
 
-    it('handles year boundary', () => {
-      // November 2024 - quarter spans into 2025
-      const anchor = new Date(2024, 10, 15);
+    it('handles year boundary (March shows Jan-Mar)', () => {
+      // March 2025 - quarter shows Jan, Feb, Mar
+      const anchor = new Date(2025, 2, 15);
       const quarters = getQuarterMonths(anchor);
 
-      expect(quarters[0].month).toBe(10); // November
-      expect(quarters[0].year).toBe(2024);
+      expect(quarters[0].month).toBe(0); // January
+      expect(quarters[0].year).toBe(2025);
 
-      expect(quarters[1].month).toBe(11); // December
-      expect(quarters[1].year).toBe(2024);
+      expect(quarters[1].month).toBe(1); // February
+      expect(quarters[1].year).toBe(2025);
 
-      expect(quarters[2].month).toBe(0); // January
+      expect(quarters[2].month).toBe(2); // March
       expect(quarters[2].year).toBe(2025);
     });
 
@@ -274,18 +274,18 @@ describe('calendarUtils', () => {
       expect(label).toBe('January 2025');
     });
 
-    it('formats quarter as month range', () => {
+    it('formats quarter as month range (past to current)', () => {
       const anchor = new Date(2025, 0, 15);
       const label = formatPeriodLabel(anchor, 'quarter');
 
-      expect(label).toBe('Jan - Mar 2025');
+      expect(label).toBe('Nov 2024 - Jan 2025');
     });
 
-    it('formats quarter spanning years', () => {
-      const anchor = new Date(2024, 10, 15);
+    it('formats quarter within same year', () => {
+      const anchor = new Date(2025, 5, 15); // June
       const label = formatPeriodLabel(anchor, 'quarter');
 
-      expect(label).toBe('Nov 2024 - Jan 2025');
+      expect(label).toBe('Apr - Jun 2025');
     });
   });
 });

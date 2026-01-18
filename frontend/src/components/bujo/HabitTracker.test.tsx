@@ -582,6 +582,63 @@ describe('HabitTracker - Click to Log', () => {
   })
 })
 
+describe('HabitTracker - Week View Header', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-15T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows day labels (S M T W T F S) only once at the top in week view', () => {
+    const anchor = new Date('2024-01-15')
+    const habits = [
+      createTestHabit({ id: 1, name: 'Habit 1' }),
+      createTestHabit({ id: 2, name: 'Habit 2' }),
+      createTestHabit({ id: 3, name: 'Habit 3' }),
+    ]
+    render(<HabitTracker habits={habits} anchorDate={anchor} />)
+
+    // With 3 habits, there should be exactly 2 'S' letters (for Sunday and Saturday)
+    // NOT 6 (2 per habit row) - header should only appear once at the top
+    const sundayLabels = screen.getAllByText('S')
+    expect(sundayLabels).toHaveLength(2) // Only Sunday and Saturday from single header
+
+    // Verify other day labels appear only once each
+    expect(screen.getAllByText('M')).toHaveLength(1)
+    expect(screen.getAllByText('W')).toHaveLength(1)
+    expect(screen.getAllByText('F')).toHaveLength(1)
+    // T appears twice (Tuesday and Thursday) in the single header
+    expect(screen.getAllByText('T')).toHaveLength(2)
+  })
+
+  it('shows Today button in week view', () => {
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    expect(screen.getByRole('button', { name: /today/i })).toBeInTheDocument()
+  })
+
+  it('calls onNavigate with current date when Today button is clicked', () => {
+    const onNavigate = vi.fn()
+    // Anchor to past week (Jan 1)
+    const anchor = new Date('2024-01-01')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} onNavigate={onNavigate} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /today/i }))
+
+    expect(onNavigate).toHaveBeenCalled()
+    // The new anchor should be today (Jan 15, 2024 from fake timer)
+    const newAnchor = onNavigate.mock.calls[0][0] as Date
+    expect(newAnchor.getDate()).toBe(15)
+    expect(newAnchor.getMonth()).toBe(0) // January
+    expect(newAnchor.getFullYear()).toBe(2024)
+  })
+})
+
 describe('HabitTracker - Calendar Grid View', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -682,11 +739,12 @@ describe('HabitTracker - Calendar Grid View', () => {
     expect(screen.getByLabelText(/Log for 2024-01-01/i)).toBeInTheDocument()
   })
 
-  it('renders quarter view with three month calendars', () => {
+  it('renders quarter view with three month calendars (past months)', () => {
     const anchor = new Date('2024-01-15')
     const habit = createTestHabit({
       dayHistory: Array.from({ length: 90 }, (_, i) => {
-        const date = new Date('2024-01-01')
+        // Generate dates from November 2023 through January 2024
+        const date = new Date('2023-11-01')
         date.setDate(date.getDate() + i)
         return {
           date: date.toISOString().split('T')[0],
@@ -701,9 +759,9 @@ describe('HabitTracker - Calendar Grid View', () => {
     fireEvent.click(screen.getByRole('button', { name: /week/i }))
     fireEvent.click(screen.getByRole('button', { name: /quarter/i }))
 
-    // Should show three month names
+    // Should show three month names (past: Nov, Dec, Jan)
+    expect(screen.getByText('November')).toBeInTheDocument()
+    expect(screen.getByText('December')).toBeInTheDocument()
     expect(screen.getByText('January')).toBeInTheDocument()
-    expect(screen.getByText('February')).toBeInTheDocument()
-    expect(screen.getByText('March')).toBeInTheDocument()
   })
 })

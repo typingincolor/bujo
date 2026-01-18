@@ -135,7 +135,8 @@ export function getMonthCalendar(anchor: Date): CalendarDay[][] {
 export function getQuarterMonths(anchor: Date): QuarterMonth[] {
   const months: QuarterMonth[] = [];
 
-  for (let i = 0; i < 3; i++) {
+  // Show 2 months before anchor + anchor month (past, not future)
+  for (let i = -2; i <= 0; i++) {
     const monthDate = addMonths(anchor, i);
     months.push({
       month: monthDate.getMonth(),
@@ -199,8 +200,9 @@ export function formatPeriodLabel(anchor: Date, period: PeriodType): string {
     }
 
     case 'quarter': {
-      const monthStart = anchor;
-      const monthEnd = addMonths(anchor, 2);
+      // Quarter shows past: 2 months ago to anchor month
+      const monthStart = addMonths(anchor, -2);
+      const monthEnd = anchor;
       const startMonth = MONTH_NAMES_SHORT[monthStart.getMonth()];
       const endMonth = MONTH_NAMES_SHORT[monthEnd.getMonth()];
       const startYear = monthStart.getFullYear();

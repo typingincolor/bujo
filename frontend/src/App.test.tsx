@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
@@ -516,6 +516,45 @@ describe('App - Habit View Toggle', () => {
     await waitFor(() => {
       expect(GetHabits).toHaveBeenCalledWith(45)
     })
+  })
+
+  it('pressing w key cycles habit period from week to month', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Switch to habits view
+    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    await user.click(habitsButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+    })
+
+    // Verify we're in week view
+    expect(screen.getByRole('button', { name: /^week$/i })).toBeInTheDocument()
+
+    vi.mocked(GetHabits).mockClear()
+
+    // Press 'w' key to cycle to month view - dispatch proper KeyboardEvent
+    const event = new KeyboardEvent('keydown', {
+      key: 'w',
+      bubbles: true,
+      cancelable: true,
+    })
+    await act(async () => {
+      window.dispatchEvent(event)
+    })
+
+    await waitFor(() => {
+      expect(GetHabits).toHaveBeenCalledWith(45)
+    }, { timeout: 2000 })
+
+    // Period button should now show 'month'
+    expect(screen.getByRole('button', { name: /^month$/i })).toBeInTheDocument()
   })
 })
 
