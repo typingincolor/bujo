@@ -1,6 +1,6 @@
 import { Goal } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash2, ArrowRight, Pencil, Ban, Undo2 } from 'lucide-react';
+import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash2, ArrowRight, Pencil, Ban, Undo2, Check } from 'lucide-react';
 import { format, parse, addMonths } from 'date-fns';
 import { useState, useRef } from 'react';
 import { MarkGoalDone, MarkGoalActive, CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal } from '@/wailsjs/go/wails/App';
@@ -258,11 +258,10 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
           filteredGoals.map((goal) => (
             <div
               key={goal.id}
-              onClick={() => handleToggleGoal(goal)}
               className={cn(
                 'flex items-center gap-3 p-3 rounded-lg border border-border',
-                'bg-card hover:bg-secondary/30 transition-colors cursor-pointer group animate-fade-in',
-                goal.status === 'migrated' && 'opacity-60 cursor-default'
+                'bg-card hover:bg-secondary/30 transition-colors group animate-fade-in',
+                goal.status === 'migrated' && 'opacity-60'
               )}
             >
               {goal.status === 'done' ? (
@@ -296,6 +295,25 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
                     </span>
                   )}
                 </span>
+              )}
+              {/* Tick/untick buttons for active and done goals */}
+              {goal.status === 'active' && (
+                <button
+                  onClick={() => handleToggleGoal(goal)}
+                  title="Mark as done"
+                  className="p-1 rounded text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              )}
+              {goal.status === 'done' && (
+                <button
+                  onClick={() => handleToggleGoal(goal)}
+                  title="Mark as not done"
+                  className="p-1 rounded text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Circle className="w-4 h-4" />
+                </button>
               )}
               {goal.status !== 'migrated' && (
                 <button

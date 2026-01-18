@@ -16,7 +16,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   UncancelGoal: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal } from '@/wailsjs/go/wails/App'
+import { CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal, MarkGoalDone, MarkGoalActive } from '@/wailsjs/go/wails/App'
 
 const currentMonth = format(new Date(), 'yyyy-MM')
 
@@ -347,6 +347,72 @@ describe('GoalsView - Edit Goal', () => {
     })]} />)
 
     expect(screen.queryByTitle('Edit goal')).not.toBeInTheDocument()
+  })
+})
+
+describe('GoalsView - Click and Tick/Untick Behavior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('clicking on a goal does not call toggle handler', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal', status: 'active' })]} />)
+
+    await user.click(screen.getByText('My Goal'))
+
+    expect(MarkGoalDone).not.toHaveBeenCalled()
+    expect(MarkGoalActive).not.toHaveBeenCalled()
+  })
+
+  it('shows tick button on active goals to mark as done', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Active Goal', status: 'active' })]} />)
+
+    expect(screen.getByTitle('Mark as done')).toBeInTheDocument()
+  })
+
+  it('shows untick button on done goals to mark as not done', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Done Goal', status: 'done' })]} />)
+
+    expect(screen.getByTitle('Mark as not done')).toBeInTheDocument()
+  })
+
+  it('calls MarkGoalDone when tick button is clicked', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'Active Goal', status: 'active' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Mark as done'))
+
+    await waitFor(() => {
+      expect(MarkGoalDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls MarkGoalActive when untick button is clicked', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'Done Goal', status: 'done' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Mark as not done'))
+
+    await waitFor(() => {
+      expect(MarkGoalActive).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('does not show tick/untick button on cancelled goals', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Cancelled Goal', status: 'cancelled' })]} />)
+
+    expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
+  })
+
+  it('does not show tick/untick button on migrated goals', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Migrated Goal', status: 'migrated', migratedTo: '2026-02' })]} />)
+
+    expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
   })
 })
 
