@@ -358,6 +358,94 @@ describe('App - QuickStats', () => {
   })
 })
 
+describe('App - Day Navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('renders prev/next day navigation buttons in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: /previous day/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /next day/i })).toBeInTheDocument()
+  })
+
+  it('clicking next day navigates to next day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const nextButton = screen.getByRole('button', { name: /next day/i })
+    await user.click(nextButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('clicking prev day navigates to previous day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const prevButton = screen.getByRole('button', { name: /previous day/i })
+    await user.click(prevButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('pressing h navigates to previous day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    await user.keyboard('h')
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('pressing l navigates to next day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    await user.keyboard('l')
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
 describe('App - Delete Entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
