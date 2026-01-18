@@ -23,7 +23,33 @@ if [ -n "$unformatted" ]; then
 fi
 echo "✅ gofmt passed"
 
-# 2. Run tests
+# 2. Check go.mod tidy
+echo "Checking go.mod is tidy..."
+cp go.mod go.mod.backup
+cp go.sum go.sum.backup
+go mod tidy
+if ! diff -q go.mod go.mod.backup > /dev/null 2>&1 || ! diff -q go.sum go.sum.backup > /dev/null 2>&1; then
+    echo "❌ go.mod or go.sum is not tidy. Run 'go mod tidy' and commit changes."
+    mv go.mod.backup go.mod
+    mv go.sum.backup go.sum
+    exit 1
+fi
+rm go.mod.backup go.sum.backup
+echo "✅ go.mod is tidy"
+
+# 3. Build all Go code (CLI and internal packages including TUI)
+echo "Building Go code..."
+if ! go build ./cmd/bujo; then
+    echo "❌ CLI build failed. Push aborted."
+    exit 1
+fi
+if ! go build ./internal/...; then
+    echo "❌ Internal packages build failed. Push aborted."
+    exit 1
+fi
+echo "✅ Go build passed"
+
+# 4. Run tests
 echo "Running tests..."
 if ! go test ./...; then
     echo "❌ Tests failed. Push aborted."
@@ -31,7 +57,7 @@ if ! go test ./...; then
 fi
 echo "✅ Tests passed"
 
-# 3. Run go vet
+# 5. Run go vet
 echo "Running go vet..."
 if ! go vet ./...; then
     echo "❌ go vet failed. Push aborted."
@@ -39,7 +65,7 @@ if ! go vet ./...; then
 fi
 echo "✅ go vet passed"
 
-# 4. Run golangci-lint
+# 6. Run golangci-lint
 echo "Running golangci-lint..."
 if ! command -v golangci-lint &> /dev/null; then
     echo "⚠️  golangci-lint not found, skipping"
@@ -51,7 +77,7 @@ else
     echo "✅ golangci-lint passed"
 fi
 
-# 5. Frontend lint
+# 7. Frontend lint
 echo "Running frontend lint..."
 if ! (cd frontend && npm run lint); then
     echo "❌ Frontend lint failed. Push aborted."
@@ -59,7 +85,15 @@ if ! (cd frontend && npm run lint); then
 fi
 echo "✅ Frontend lint passed"
 
-# 6. Frontend tests
+# 8. Frontend TypeScript check
+echo "Running TypeScript check..."
+if ! (cd frontend && npx tsc --noEmit); then
+    echo "❌ TypeScript check failed. Push aborted."
+    exit 1
+fi
+echo "✅ TypeScript check passed"
+
+# 9. Frontend tests
 echo "Running frontend tests..."
 if ! (cd frontend && npm test); then
     echo "❌ Frontend tests failed. Push aborted."
@@ -67,13 +101,21 @@ if ! (cd frontend && npm test); then
 fi
 echo "✅ Frontend tests passed"
 
-# 7. Frontend build
+# 10. Frontend build
 echo "Running frontend build..."
 if ! (cd frontend && npm run build); then
     echo "❌ Frontend build failed. Push aborted."
     exit 1
 fi
 echo "✅ Frontend build passed"
+
+# 11. npm audit (security check)
+echo "Running npm audit..."
+if ! (cd frontend && npm audit --audit-level=high); then
+    echo "❌ npm audit found high severity vulnerabilities. Push aborted."
+    exit 1
+fi
+echo "✅ npm audit passed"
 
 echo ""
 echo "✅ All pre-push checks passed. Proceeding with push."
