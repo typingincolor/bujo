@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -56,7 +57,7 @@ func (l *PromptLoader) loadContent(filename string) (string, error) {
 		}
 	}
 
-	embeddedPath := filepath.Join("prompts", filename)
+	embeddedPath := path.Join("prompts", filename)
 	content, err := defaultPrompts.ReadFile(embeddedPath)
 	if err != nil {
 		return "", fmt.Errorf("prompt file not found: %s", filename)
@@ -88,7 +89,7 @@ func (l *PromptLoader) EnsureDefaults(ctx context.Context) error {
 			continue
 		}
 
-		embeddedPath := filepath.Join("prompts", filename)
+		embeddedPath := path.Join("prompts", filename)
 		content, err := defaultPrompts.ReadFile(embeddedPath)
 		if err != nil {
 			return fmt.Errorf("failed to read embedded prompt %s: %w", filename, err)
