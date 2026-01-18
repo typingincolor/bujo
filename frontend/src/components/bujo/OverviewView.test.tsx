@@ -233,6 +233,31 @@ describe('OverviewView - Collapsible', () => {
   })
 })
 
+describe('OverviewView - Visual Styling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders outstanding task entries without red destructive color', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task', content: 'Outstanding task' })]} />)
+    const content = screen.getByText('Outstanding task')
+    expect(content).not.toHaveClass('text-destructive')
+  })
+
+  it('renders done entries with success color (not strikethrough)', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'done', content: 'Done task' })]} />)
+    const content = screen.getByText('Done task')
+    expect(content).toHaveClass('text-bujo-done')
+    expect(content).not.toHaveClass('line-through')
+  })
+
+  it('renders cancelled entries with strikethrough style', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled', content: 'Cancelled task' })]} />)
+    const content = screen.getByText('Cancelled task')
+    expect(content).toHaveClass('line-through')
+  })
+})
+
 describe('OverviewView - Context Display', () => {
   beforeEach(() => {
     vi.clearAllMocks()

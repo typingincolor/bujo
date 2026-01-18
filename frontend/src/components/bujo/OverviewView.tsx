@@ -206,7 +206,8 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             </span>
                             <span className={cn(
                               'flex-1 text-sm',
-                              entry.type === 'done' && 'line-through text-muted-foreground'
+                              entry.type === 'done' && 'text-bujo-done',
+                              entry.type === 'cancelled' && 'line-through text-muted-foreground'
                             )}>
                               {entry.content}
                             </span>
