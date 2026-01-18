@@ -823,3 +823,136 @@ func TestApp_GetSummary_ReturnsUnavailableWhenNoAIService(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "", summary)
 }
+
+func TestApp_GetEntry_ReturnsEntryByID(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := wailsApp.AddEntry("• Test task", today)
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	entry, err := wailsApp.GetEntry(ids[0])
+
+	require.NoError(t, err)
+	assert.NotNil(t, entry)
+	assert.Equal(t, "Test task", entry.Content)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestApp_GetEntry_ReturnsCurrentVersionAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := wailsApp.AddEntry("• Test task", today)
+	require.NoError(t, err)
+	originalID := ids[0]
+
+	err = wailsApp.MarkEntryDone(originalID)
+	require.NoError(t, err)
+
+	entry, err := wailsApp.GetEntry(originalID)
+
+	require.NoError(t, err)
+	assert.NotNil(t, entry)
+	assert.Equal(t, domain.EntryTypeDone, entry.Type)
+}
+
+func TestApp_GetEntry_ReturnsNilForNonExistent(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	entry, err := wailsApp.GetEntry(99999)
+
+	require.Error(t, err)
+	assert.Nil(t, entry)
+}
+
+func TestApp_AddChildEntry_CreatesChildUnderParent(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create parent entry
+	parentIDs, err := wailsApp.AddEntry(". Parent task", today)
+	require.NoError(t, err)
+	require.Len(t, parentIDs, 1)
+	parentID := parentIDs[0]
+
+	// Add child entry
+	childIDs, err := wailsApp.AddChildEntry(parentID, ". Child task", today)
+	require.NoError(t, err)
+	require.Len(t, childIDs, 1)
+
+	// Verify child has correct parent
+	child, err := wailsApp.GetEntry(childIDs[0])
+	require.NoError(t, err)
+	assert.Equal(t, "Child task", child.Content)
+	assert.NotNil(t, child.ParentID)
+	assert.Equal(t, parentID, *child.ParentID)
+}
+
+func TestApp_AddChildEntry_SupportsMultipleChildren(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create parent entry
+	parentIDs, err := wailsApp.AddEntry(". Parent task", today)
+	require.NoError(t, err)
+	parentID := parentIDs[0]
+
+	// Add multiple children using multi-line input
+	childIDs, err := wailsApp.AddChildEntry(parentID, `. Child 1
+- Child note`, today)
+	require.NoError(t, err)
+	require.Len(t, childIDs, 2)
+
+	// Verify both have same parent
+	child1, err := wailsApp.GetEntry(childIDs[0])
+	require.NoError(t, err)
+	assert.Equal(t, parentID, *child1.ParentID)
+
+	child2, err := wailsApp.GetEntry(childIDs[1])
+	require.NoError(t, err)
+	assert.Equal(t, parentID, *child2.ParentID)
+}

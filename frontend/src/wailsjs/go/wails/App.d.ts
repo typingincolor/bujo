@@ -5,6 +5,8 @@ import {service} from '../models';
 import {domain} from '../models';
 import {wails} from '../models';
 
+export function AddChildEntry(arg1:number,arg2:string,arg3:time.Time):Promise<Array<number>>;
+
 export function AddEntry(arg1:string,arg2:time.Time):Promise<Array<number>>;
 
 export function AddListItem(arg1:number,arg2:string):Promise<number>;
@@ -38,6 +40,8 @@ export function EditEntry(arg1:number,arg2:string):Promise<void>;
 export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
 export function GetAgenda(arg1:time.Time,arg2:time.Time):Promise<service.MultiDayAgenda>;
+
+export function GetEntry(arg1:number):Promise<domain.Entry>;
 
 export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;
 

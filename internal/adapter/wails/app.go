@@ -79,6 +79,10 @@ func (a *App) AddEntry(input string, date time.Time) ([]int64, error) {
 	return a.services.Bujo.LogEntries(a.ctx, input, service.LogEntriesOptions{Date: date})
 }
 
+func (a *App) AddChildEntry(parentID int64, input string, date time.Time) ([]int64, error) {
+	return a.services.Bujo.LogEntries(a.ctx, input, service.LogEntriesOptions{Date: date, ParentID: &parentID})
+}
+
 func (a *App) LogHabit(habitID int64, count int) error {
 	return a.services.Habit.LogHabitByID(a.ctx, habitID, count)
 }
@@ -134,6 +138,10 @@ func (a *App) UncancelGoal(goalID int64) error {
 func (a *App) Search(query string) ([]domain.Entry, error) {
 	opts := domain.NewSearchOptions(query)
 	return a.services.Bujo.SearchEntries(a.ctx, opts)
+}
+
+func (a *App) GetEntry(id int64) (*domain.Entry, error) {
+	return a.services.Bujo.GetEntry(a.ctx, id)
 }
 
 func (a *App) GetEntryAncestors(id int64) ([]domain.Entry, error) {
