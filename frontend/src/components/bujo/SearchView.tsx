@@ -354,11 +354,12 @@ export function SearchView() {
               >
                 {/* Context indicator - shows when entry has parent and isn't expanded */}
                 {result.parentId !== null && !isExpanded && (
-                  <ChevronUp
-                    className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                    aria-label="Has parent context"
-                    title="Has parent context"
-                  />
+                  <span title="Has parent context">
+                    <ChevronUp
+                      className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                      aria-label="Has parent context"
+                    />
+                  </span>
                 )}
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
                   <span className={cn(

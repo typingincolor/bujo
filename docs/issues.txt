@@ -59,4 +59,4 @@ x Search View (and maybe others) - click cycle priority does nothing. Check all 
 x Cannot change type on Today view and probably review review
 x The action icons should stay in the same places. Use empty placeholders for icons that are missing.
 . Complete work on file upload / drag and drop
-. Outstanding questions view is not working. I have an outstanding question and I cannot see it.
+x Outstanding questions view is not working. I have an outstanding question and I cannot see it.

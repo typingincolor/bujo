@@ -539,18 +539,22 @@ func (r *EntryRepository) GetAll(ctx context.Context) ([]domain.Entry, error) {
 }
 
 func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
-	if opts.Query == "" {
+	if opts.Query == "" && opts.Type == nil {
 		return []domain.Entry{}, nil
 	}
 
 	query := `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
 		FROM entries
-		WHERE content LIKE '%' || ? || '%' COLLATE NOCASE
-		AND (valid_to IS NULL OR valid_to = '')
+		WHERE (valid_to IS NULL OR valid_to = '')
 		AND op_type != 'DELETE'
 	`
-	args := []any{opts.Query}
+	var args []any
+
+	if opts.Query != "" {
+		query += ` AND content LIKE '%' || ? || '%' COLLATE NOCASE`
+		args = append(args, opts.Query)
+	}
 
 	if opts.Type != nil {
 		query += ` AND type = ?`

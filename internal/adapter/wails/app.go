@@ -188,6 +188,11 @@ func (a *App) AnswerQuestion(questionID int64, answerText string) error {
 	return a.services.Bujo.MarkAnswered(a.ctx, questionID, answerText)
 }
 
+func (a *App) GetOutstandingQuestions() ([]domain.Entry, error) {
+	opts := domain.NewSearchOptions("").WithType(domain.EntryTypeQuestion).WithLimit(100)
+	return a.services.Bujo.SearchEntries(a.ctx, opts)
+}
+
 func (a *App) CreateList(name string) (int64, error) {
 	list, err := a.services.List.CreateList(a.ctx, name)
 	if err != nil {

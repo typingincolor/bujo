@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -53,6 +53,7 @@ function App() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [overdueEntries, setOverdueEntries] = useState<Entry[]>([])
   const [overdueCount, setOverdueCount] = useState(0)
+  const [outstandingQuestions, setOutstandingQuestions] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -86,12 +87,13 @@ function App() {
       const reviewEnd = new Date(reviewAnchorDate.getTime() + 24 * 60 * 60 * 1000) // Include anchor date
       const reviewStart = new Date(reviewAnchorDate.getTime() - 6 * 24 * 60 * 60 * 1000)
 
-      const [agendaData, reviewData, habitsData, listsData, goalsData] = await Promise.all([
+      const [agendaData, reviewData, habitsData, listsData, goalsData, questionsData] = await Promise.all([
         GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
         GetAgenda(toWailsTime(reviewStart), toWailsTime(reviewEnd)),
         GetHabits(habitDays),
         GetLists(),
         GetGoals(toWailsTime(monthStart)),
+        GetOutstandingQuestions(),
       ])
 
       const transformedDays = (agendaData?.Days || []).map(transformDayEntries)
@@ -104,6 +106,7 @@ function App() {
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
+      setOutstandingQuestions((questionsData || []).map(transformEntry))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
@@ -385,6 +388,7 @@ function App() {
     today: 'Today',
     week: 'Review',
     overview: 'Outstanding Tasks',
+    questions: 'Outstanding Questions',
     habits: 'Habits',
     lists: 'Lists',
     goals: 'Goals',
@@ -556,7 +560,7 @@ function App() {
           {view === 'questions' && (
             <div className="max-w-3xl mx-auto">
               <QuestionsView
-                questions={overdueEntries}
+                questions={outstandingQuestions}
                 onEntryChanged={loadData}
                 onError={setError}
               />

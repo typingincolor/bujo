@@ -23,6 +23,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
+  GetOutstandingQuestions: vi.fn().mockResolvedValue([]),
   AddEntry: vi.fn().mockResolvedValue([1]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),

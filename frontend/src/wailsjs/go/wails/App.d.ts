@@ -53,6 +53,8 @@ export function GetLists():Promise<Array<wails.ListWithItems>>;
 
 export function GetLocationHistory():Promise<Array<string>>;
 
+export function GetOutstandingQuestions():Promise<Array<domain.Entry>>;
+
 export function GetSummary(arg1:time.Time):Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;

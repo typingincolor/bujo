@@ -1024,3 +1024,56 @@ func TestApp_MoveEntryToRoot_RemovesParent(t *testing.T) {
 	assert.Nil(t, updated.ParentID)
 	assert.Equal(t, 0, updated.Depth)
 }
+
+func TestApp_GetOutstandingQuestions_ReturnsOnlyQuestions(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create various entry types
+	_, err = wailsApp.AddEntry(". Task entry", today)
+	require.NoError(t, err)
+	_, err = wailsApp.AddEntry("- Note entry", today)
+	require.NoError(t, err)
+	_, err = wailsApp.AddEntry("? Unanswered question", today)
+	require.NoError(t, err)
+	questionIDs, err := wailsApp.AddEntry("? Another question", today)
+	require.NoError(t, err)
+
+	// Answer one question
+	err = wailsApp.AnswerQuestion(questionIDs[0], "The answer")
+	require.NoError(t, err)
+
+	// Get outstanding questions
+	questions, err := wailsApp.GetOutstandingQuestions()
+	require.NoError(t, err)
+
+	// Should only return the one unanswered question
+	require.Len(t, questions, 1)
+	assert.Equal(t, "Unanswered question", questions[0].Content)
+	assert.Equal(t, domain.EntryTypeQuestion, questions[0].Type)
+}
+
+func TestApp_GetOutstandingQuestions_ReturnsEmptyWhenNone(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	questions, err := wailsApp.GetOutstandingQuestions()
+	require.NoError(t, err)
+	assert.Empty(t, questions)
+}

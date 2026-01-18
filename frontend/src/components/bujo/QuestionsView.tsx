@@ -6,10 +6,6 @@ import { useState, useEffect } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
 import { AnswerQuestionModal } from './AnswerQuestionModal'
 
-function ActionPlaceholder() {
-  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />
-}
-
 interface QuestionsViewProps {
   questions: Entry[]
   onEntryChanged?: () => void
@@ -293,11 +289,12 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                           >
                             {/* Context indicator - shows when entry has parent and isn't expanded */}
                             {entry.parentId !== null && !isExpanded && (
-                              <ChevronUp
-                                className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                                aria-label="Has parent context"
-                                title="Has parent context"
-                              />
+                              <span title="Has parent context">
+                                <ChevronUp
+                                  className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                                  aria-label="Has parent context"
+                                />
+                              </span>
                             )}
                             <span
                               data-testid="entry-symbol"
