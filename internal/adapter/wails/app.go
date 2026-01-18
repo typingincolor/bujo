@@ -140,6 +140,18 @@ func (a *App) DeleteHabit(habitID int64) error {
 	return a.services.Habit.DeleteHabitByID(a.ctx, habitID)
 }
 
+func (a *App) LogHabitForDate(habitID int64, count int, date time.Time) error {
+	return a.services.Habit.LogHabitByIDForDate(a.ctx, habitID, count, date)
+}
+
+func (a *App) UndoHabitLog(habitID int64) error {
+	return a.services.Habit.UndoLastLogByID(a.ctx, habitID)
+}
+
+func (a *App) SetHabitGoal(habitID int64, dailyGoal int) error {
+	return a.services.Habit.SetHabitGoalByID(a.ctx, habitID, dailyGoal)
+}
+
 func (a *App) AnswerQuestion(questionID int64, answerText string) error {
 	return a.services.Bujo.MarkAnswered(a.ctx, questionID, answerText)
 }
