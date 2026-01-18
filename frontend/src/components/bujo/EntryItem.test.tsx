@@ -169,4 +169,78 @@ describe('EntryItem', () => {
       expect(screen.queryByTitle('Answer question')).not.toBeInTheDocument()
     })
   })
+
+  describe('cancel/uncancel functionality', () => {
+    it('shows cancel button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCancel={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
+    })
+
+    it('shows uncancel button for cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onUncancel={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
+    })
+
+    it('calls onCancel when cancel button is clicked', () => {
+      const onCancel = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCancel={onCancel}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Cancel entry'))
+      expect(onCancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onUncancel when uncancel button is clicked', () => {
+      const onUncancel = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onUncancel={onUncancel}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Uncancel entry'))
+      expect(onUncancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders cancelled entry with strikethrough style', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'cancelled', content: 'Cancelled task' })} />)
+      const content = screen.getByText('Cancelled task')
+      expect(content).toHaveClass('line-through')
+    })
+
+    it('does not show cancel button for cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onCancel={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Cancel entry')).not.toBeInTheDocument()
+    })
+
+    it('does not show uncancel button for non-cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onUncancel={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Uncancel entry')).not.toBeInTheDocument()
+    })
+  })
 })

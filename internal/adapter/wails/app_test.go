@@ -598,3 +598,58 @@ func TestApp_DeleteHabit_RemovesHabit(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, status.Habits)
 }
+
+func TestApp_CancelEntry_CancelsTask(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.CancelEntry(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "✗", agenda.Days[0].Entries[0].Type.Symbol())
+}
+
+func TestApp_UncancelEntry_RevertsToTask(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.CancelEntry(ids[0])
+	require.NoError(t, err)
+
+	err = wailsApp.UncancelEntry(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+}

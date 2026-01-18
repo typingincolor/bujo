@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -51,9 +51,11 @@ interface EntryTreeProps {
   onToggleDone: (id: number) => void;
   onEdit?: (entry: Entry) => void;
   onDelete?: (entry: Entry) => void;
+  onCancel?: (entry: Entry) => void;
+  onUncancel?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -73,6 +75,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onToggleDone={() => onToggleDone(entry.id)}
               onEdit={onEdit ? () => onEdit(entry) : undefined}
               onDelete={onDelete ? () => onDelete(entry) : undefined}
+              onCancel={onCancel ? () => onCancel(entry) : undefined}
+              onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -84,6 +88,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onToggleDone={onToggleDone}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onCancel={onCancel}
+                onUncancel={onUncancel}
               />
             )}
           </div>
@@ -125,7 +131,25 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
       console.error('Failed to toggle entry:', error);
     }
   };
-  
+
+  const handleCancelEntry = async (entry: Entry) => {
+    try {
+      await CancelEntry(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cancel entry:', error);
+    }
+  };
+
+  const handleUncancelEntry = async (entry: Entry) => {
+    try {
+      await UncancelEntry(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to uncancel entry:', error);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Day Header */}
@@ -177,6 +201,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
             onToggleDone={handleToggleDone}
             onEdit={onEditEntry}
             onDelete={onDeleteEntry}
+            onCancel={handleCancelEntry}
+            onUncancel={handleUncancelEntry}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

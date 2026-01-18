@@ -183,3 +183,11 @@ func (a *App) SetMood(date time.Time, mood string) error {
 func (a *App) SetWeather(date time.Time, weather string) error {
 	return a.services.Bujo.SetWeather(a.ctx, date, weather)
 }
+
+func (a *App) CancelEntry(id int64) error {
+	return a.services.Bujo.CancelEntry(a.ctx, id)
+}
+
+func (a *App) UncancelEntry(id int64) error {
+	return a.services.Bujo.UncancelEntry(a.ctx, id)
+}

@@ -9,9 +9,15 @@ export function AddEntry(arg1:string,arg2:time.Time):Promise<Array<number>>;
 
 export function AddListItem(arg1:number,arg2:string):Promise<number>;
 
+export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;
+
+export function CancelEntry(arg1:number):Promise<void>;
+
 export function CreateGoal(arg1:string,arg2:time.Time):Promise<number>;
 
 export function CreateHabit(arg1:string):Promise<number>;
+
+export function CreateList(arg1:string):Promise<number>;
 
 export function DeleteEntry(arg1:number):Promise<void>;
 
@@ -19,7 +25,11 @@ export function DeleteGoal(arg1:number):Promise<void>;
 
 export function DeleteHabit(arg1:number):Promise<void>;
 
+export function DeleteList(arg1:number,arg2:boolean):Promise<void>;
+
 export function EditEntry(arg1:number,arg2:string):Promise<void>;
+
+export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
 export function GetAgenda(arg1:time.Time,arg2:time.Time):Promise<service.MultiDayAgenda>;
 
@@ -35,6 +45,8 @@ export function HasChildren(arg1:number):Promise<boolean>;
 
 export function LogHabit(arg1:number,arg2:number):Promise<void>;
 
+export function LogHabitForDate(arg1:number,arg2:number,arg3:time.Time):Promise<void>;
+
 export function MarkEntryDone(arg1:number):Promise<void>;
 
 export function MarkEntryUndone(arg1:number):Promise<void>;
@@ -49,24 +61,16 @@ export function MarkListItemUndone(arg1:number):Promise<void>;
 
 export function RemoveListItem(arg1:number):Promise<void>;
 
-export function Search(arg1:string):Promise<Array<domain.Entry>>;
-
-export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;
-
-export function LogHabitForDate(arg1:number,arg2:number,arg3:time.Time):Promise<void>;
-
-export function UndoHabitLog(arg1:number):Promise<void>;
-
-export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
-
-export function CreateList(arg1:string):Promise<number>;
-
-export function DeleteList(arg1:number,arg2:boolean):Promise<void>;
-
 export function RenameList(arg1:number,arg2:string):Promise<void>;
 
-export function EditListItem(arg1:number,arg2:string):Promise<void>;
+export function Search(arg1:string):Promise<Array<domain.Entry>>;
+
+export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
 
 export function SetMood(arg1:time.Time,arg2:string):Promise<void>;
 
 export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;
+
+export function UncancelEntry(arg1:number):Promise<void>;
+
+export function UndoHabitLog(arg1:number):Promise<void>;
