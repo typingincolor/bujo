@@ -551,6 +551,88 @@ describe('ListsView - Uncancel List Item', () => {
   })
 })
 
+describe('ListsView - Click and Tick/Untick Behavior', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('clicking on a task item does not call toggle handler', async () => {
+    const user = userEvent.setup()
+    const { MarkListItemDone, MarkListItemUndone } = await import('@/wailsjs/go/wails/App')
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk', type: 'task', done: false })]
+    })]} />)
+
+    // Click on the item row
+    await user.click(screen.getByText('Buy milk'))
+
+    // Neither mark done nor mark undone should be called
+    expect(MarkListItemDone).not.toHaveBeenCalled()
+    expect(MarkListItemUndone).not.toHaveBeenCalled()
+  })
+
+  it('shows tick button on task items to mark as done', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'task', done: false })]
+    })]} />)
+
+    expect(screen.getByTitle('Mark as done')).toBeInTheDocument()
+  })
+
+  it('shows untick button on done items to mark as not done', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'done', done: true })]
+    })]} />)
+
+    expect(screen.getByTitle('Mark as not done')).toBeInTheDocument()
+  })
+
+  it('calls MarkListItemDone when tick button is clicked', async () => {
+    const user = userEvent.setup()
+    const { MarkListItemDone } = await import('@/wailsjs/go/wails/App')
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk', type: 'task', done: false })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Mark as done'))
+
+    await waitFor(() => {
+      expect(MarkListItemDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls MarkListItemUndone when untick button is clicked', async () => {
+    const user = userEvent.setup()
+    const { MarkListItemUndone } = await import('@/wailsjs/go/wails/App')
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk', type: 'done', done: true })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Mark as not done'))
+
+    await waitFor(() => {
+      expect(MarkListItemUndone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('does not show tick/untick button on cancelled items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk', type: 'cancelled' })]
+    })]} />)
+
+    expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
+  })
+})
+
 describe('ListsView - Move List Item', () => {
   beforeEach(() => {
     vi.clearAllMocks()

@@ -1,6 +1,6 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw, MoveRight } from 'lucide-react'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw, MoveRight, Check } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem, MoveListItem } from '@/wailsjs/go/wails/App'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -121,6 +121,11 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
     onUncancelItem(itemId)
   }
 
+  const handleTickItem = (e: React.MouseEvent, itemId: number, done: boolean) => {
+    e.stopPropagation()
+    onToggleItem(itemId, done)
+  }
+
   const handleMoveClick = (e: React.MouseEvent, itemId: number) => {
     e.stopPropagation()
     setMovingItemId(movingItemId === itemId ? null : itemId)
@@ -204,8 +209,7 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
           {list.items.map((item) => (
             <div
               key={item.id}
-              onClick={() => editingItemId !== item.id && onToggleItem(item.id, item.done)}
-              className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2 cursor-pointer"
+              className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2"
             >
               {item.type === 'done' ? (
                 <CheckCircle2 className="w-4 h-4 text-bujo-done flex-shrink-0" />
@@ -213,6 +217,25 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
                 <Ban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               ) : (
                 <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              )}
+              {/* Tick/untick buttons for task and done items */}
+              {item.type === 'task' && (
+                <button
+                  onClick={(e) => handleTickItem(e, item.id, item.done)}
+                  title="Mark as done"
+                  className="p-1 rounded text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {item.type === 'done' && (
+                <button
+                  onClick={(e) => handleTickItem(e, item.id, item.done)}
+                  title="Mark as not done"
+                  className="p-1 rounded text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Circle className="w-3.5 h-3.5" />
+                </button>
               )}
               {editingItemId === item.id ? (
                 <input
