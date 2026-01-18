@@ -217,5 +217,5 @@ jobs:
 
       - name: Verify app bundle
         run: |
-          test -d build/bin/bujo.app
+          test -d build/bin/bujoapp.app
           echo "✅ App bundle created successfully"
