@@ -65,6 +65,10 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
           No shortcuts for this view
         </div>
       )}
+
+      <div className="border-t border-border pt-2 mt-2">
+        <KeyboardHint keys={['?']} action="Toggle this panel" />
+      </div>
     </div>
   );
 }

@@ -150,15 +150,17 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Cmd+? (Cmd+Shift+/) toggles keyboard shortcuts panel
-      if (e.key === '?' && e.metaKey) {
+      const target = e.target as HTMLElement
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+
+      // ? toggles keyboard shortcuts panel (works even when not in input)
+      if (e.key === '?' && !isInputFocused) {
         e.preventDefault()
         setShowKeyboardShortcuts(prev => !prev)
         return
       }
 
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+      if (isInputFocused) return
 
       // Day navigation shortcuts (h/l) - always available in today view
       if (view === 'today') {
@@ -462,7 +464,7 @@ function App() {
           )}
         </main>
 
-        {/* Keyboard shortcuts hint - toggle with Cmd+? */}
+        {/* Keyboard shortcuts hint - toggle with ? */}
         {showKeyboardShortcuts && (
           <div className="fixed bottom-4 right-4 w-72 z-50">
             <KeyboardShortcuts view={view} />

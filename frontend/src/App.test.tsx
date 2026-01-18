@@ -574,7 +574,7 @@ describe('App - Keyboard Shortcuts Panel Toggle', () => {
     expect(screen.queryByText('Keyboard Shortcuts')).not.toBeInTheDocument()
   })
 
-  it('cmd-? toggles keyboard shortcuts panel visibility', async () => {
+  it('? key toggles keyboard shortcuts panel visibility', async () => {
     render(<App />)
 
     await waitFor(() => {
@@ -584,11 +584,9 @@ describe('App - Keyboard Shortcuts Panel Toggle', () => {
     // Initially hidden
     expect(screen.queryByText('Keyboard Shortcuts')).not.toBeInTheDocument()
 
-    // Press Cmd+? (Cmd+Shift+/) to show
+    // Press ? to show (no modifier key needed)
     const showEvent = new KeyboardEvent('keydown', {
       key: '?',
-      metaKey: true,
-      shiftKey: true,
       bubbles: true,
       cancelable: true,
     })
@@ -601,11 +599,9 @@ describe('App - Keyboard Shortcuts Panel Toggle', () => {
       expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument()
     })
 
-    // Press Cmd+? again to hide
+    // Press ? again to hide
     const hideEvent = new KeyboardEvent('keydown', {
       key: '?',
-      metaKey: true,
-      shiftKey: true,
       bubbles: true,
       cancelable: true,
     })
