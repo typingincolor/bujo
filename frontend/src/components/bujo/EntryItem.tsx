@@ -12,6 +12,7 @@ interface EntryItemProps {
   isSelected?: boolean;
   onToggleCollapse?: () => void;
   onToggleDone?: () => void;
+  onSelect?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onAnswer?: () => void;
@@ -42,6 +43,7 @@ export function EntryItem({
   isSelected = false,
   onToggleCollapse,
   onToggleDone,
+  onSelect,
   onEdit,
   onDelete,
   onAnswer,
@@ -51,6 +53,13 @@ export function EntryItem({
   onMigrate,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
+
+  const handleClick = () => {
+    onSelect?.();
+    if (isToggleable) {
+      onToggleDone?.();
+    }
+  };
 
   return (
     <div
@@ -63,7 +72,7 @@ export function EntryItem({
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
       style={{ paddingLeft: `${depth * 20 + 8}px` }}
-      onClick={isToggleable ? onToggleDone : undefined}
+      onClick={handleClick}
     >
       {/* Collapse indicator */}
       {hasChildren ? (

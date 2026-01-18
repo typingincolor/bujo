@@ -216,6 +216,46 @@ describe('App - Keyboard Navigation', () => {
   })
 })
 
+describe('App - Click Selection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('clicking an entry updates the selection to that entry', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    // Initially first task is selected
+    const firstTask = screen.getByText('First task').closest('[data-entry-id]')
+    expect(firstTask).toHaveAttribute('data-selected', 'true')
+
+    // Click on the note entry
+    const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
+    fireEvent.click(noteEntry!)
+
+    // Now the note should be selected
+    expect(noteEntry).toHaveAttribute('data-selected', 'true')
+    expect(firstTask).toHaveAttribute('data-selected', 'false')
+  })
+
+  it('clicking second task updates selection', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const secondTask = screen.getByText('Second task').closest('[data-entry-id]')
+    fireEvent.click(secondTask!)
+
+    expect(secondTask).toHaveAttribute('data-selected', 'true')
+  })
+})
+
 describe('App - Search functionality', () => {
   beforeEach(() => {
     vi.clearAllMocks()

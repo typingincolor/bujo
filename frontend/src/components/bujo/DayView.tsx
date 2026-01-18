@@ -10,6 +10,7 @@ interface DayViewProps {
   day: DayEntries;
   selectedEntryId?: number | null;
   onEntryChanged?: () => void;
+  onSelectEntry?: (id: number) => void;
   onEditEntry?: (entry: Entry) => void;
   onDeleteEntry?: (entry: Entry) => void;
   onMigrateEntry?: (entry: Entry) => void;
@@ -50,6 +51,7 @@ interface EntryTreeProps {
   selectedEntryId?: number | null;
   onToggleCollapse: (id: number) => void;
   onToggleDone: (id: number) => void;
+  onSelect?: (id: number) => void;
   onEdit?: (entry: Entry) => void;
   onDelete?: (entry: Entry) => void;
   onCancel?: (entry: Entry) => void;
@@ -58,7 +60,7 @@ interface EntryTreeProps {
   onMigrate?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -76,6 +78,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               isSelected={entry.id === selectedEntryId}
               onToggleCollapse={() => onToggleCollapse(entry.id)}
               onToggleDone={() => onToggleDone(entry.id)}
+              onSelect={onSelect ? () => onSelect(entry.id) : undefined}
               onEdit={onEdit ? () => onEdit(entry) : undefined}
               onDelete={onDelete ? () => onDelete(entry) : undefined}
               onCancel={onCancel ? () => onCancel(entry) : undefined}
@@ -91,6 +94,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 selectedEntryId={selectedEntryId}
                 onToggleCollapse={onToggleCollapse}
                 onToggleDone={onToggleDone}
+                onSelect={onSelect}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onCancel={onCancel}
@@ -106,7 +110,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
-export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onDeleteEntry, onMigrateEntry }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -265,6 +269,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
             selectedEntryId={selectedEntryId}
             onToggleCollapse={toggleCollapse}
             onToggleDone={handleToggleDone}
+            onSelect={onSelectEntry}
             onEdit={onEditEntry}
             onDelete={onDeleteEntry}
             onCancel={handleCancelEntry}

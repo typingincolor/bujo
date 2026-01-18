@@ -319,6 +319,13 @@ function App() {
     }
   }, [migrateModalEntry, loadData])
 
+  const handleSelectEntry = useCallback((id: number) => {
+    const index = flatEntries.findIndex(e => e.id === id)
+    if (index !== -1) {
+      setSelectedIndex(index)
+    }
+  }, [flatEntries])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
     week: 'This Week',
@@ -412,6 +419,7 @@ function App() {
                 day={today}
                 selectedEntryId={selectedEntryId}
                 onEntryChanged={loadData}
+                onSelectEntry={handleSelectEntry}
                 onEditEntry={(entry) => setEditModalEntry(entry)}
                 onDeleteEntry={handleDeleteEntryRequest}
                 onMigrateEntry={(entry) => setMigrateModalEntry(entry)}

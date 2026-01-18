@@ -298,6 +298,53 @@ describe('EntryItem', () => {
     })
   })
 
+  describe('selection functionality', () => {
+    it('calls onSelect when entry row is clicked', () => {
+      const onSelect = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ id: 42, content: 'Click me' })}
+          onSelect={onSelect}
+        />
+      )
+
+      const container = screen.getByText('Click me').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onSelect).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onSelect for note entries when clicked', () => {
+      const onSelect = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note', content: 'A note' })}
+          onSelect={onSelect}
+        />
+      )
+
+      const container = screen.getByText('A note').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onSelect).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls both onSelect and onToggleDone for task entries', () => {
+      const onSelect = vi.fn()
+      const onToggleDone = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task', content: 'A task' })}
+          onSelect={onSelect}
+          onToggleDone={onToggleDone}
+        />
+      )
+
+      const container = screen.getByText('A task').closest('[data-entry-id]')
+      fireEvent.click(container!)
+      expect(onSelect).toHaveBeenCalledTimes(1)
+      expect(onToggleDone).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('migration functionality', () => {
     it('shows migrate button for task entries', () => {
       render(
