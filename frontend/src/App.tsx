@@ -14,6 +14,7 @@ import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
+import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -271,6 +272,7 @@ function App() {
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
+              <QuickStats days={days} habits={habits} goals={goals} />
               <AddEntryBar onAdd={handleAddEntry} />
               <DayView
                 day={today}

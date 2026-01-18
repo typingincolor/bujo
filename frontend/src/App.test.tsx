@@ -338,6 +338,26 @@ describe('App - Edit Entry', () => {
   })
 })
 
+describe('App - QuickStats', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('renders QuickStats component in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Tasks Completed')).toBeInTheDocument()
+    expect(screen.getByText('Pending Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Habits Today')).toBeInTheDocument()
+    expect(screen.getByText('Monthly Goals')).toBeInTheDocument()
+  })
+})
+
 describe('App - Delete Entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
