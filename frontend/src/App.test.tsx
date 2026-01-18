@@ -337,7 +337,7 @@ describe('App - QuickStats', () => {
     })
 
     expect(screen.getByText('Tasks Completed')).toBeInTheDocument()
-    expect(screen.getByText('Overdue Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Outstanding Tasks')).toBeInTheDocument()
     expect(screen.getByText('Habits Today')).toBeInTheDocument()
     expect(screen.getByText('Monthly Goals')).toBeInTheDocument()
   })
@@ -363,7 +363,7 @@ describe('App - QuickStats', () => {
 
     // Should show 3 overdue tasks - the value is in a sibling div
     // Find the outer card by going up from the label
-    const overdueLabel = screen.getByText('Overdue Tasks')
+    const overdueLabel = screen.getByText('Outstanding Tasks')
     const overdueCard = overdueLabel.closest('.rounded-lg')
     expect(overdueCard).toHaveTextContent('3')
   })

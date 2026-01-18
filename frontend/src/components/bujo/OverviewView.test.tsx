@@ -28,7 +28,7 @@ describe('OverviewView - Display', () => {
 
   it('renders the overview header with count', () => {
     render(<OverviewView overdueEntries={[createTestEntry()]} />)
-    expect(screen.getByText(/overdue tasks/i)).toBeInTheDocument()
+    expect(screen.getByText(/outstanding tasks/i)).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
@@ -48,7 +48,7 @@ describe('OverviewView - Display', () => {
 
   it('shows empty state when no overdue entries', () => {
     render(<OverviewView overdueEntries={[]} />)
-    expect(screen.getByText(/no overdue tasks/i)).toBeInTheDocument()
+    expect(screen.getByText(/no outstanding tasks/i)).toBeInTheDocument()
   })
 
   it('displays entry date', () => {

@@ -107,7 +107,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
           )}
         </button>
         <AlertTriangle className="w-5 h-5 text-warning" />
-        <h2 className="font-display text-xl font-semibold flex-1">Overdue Tasks</h2>
+        <h2 className="font-display text-xl font-semibold flex-1">Outstanding Tasks</h2>
         <span className="px-2 py-0.5 text-sm font-medium bg-warning/20 text-warning rounded-full">
           {taskEntries.length}
         </span>
@@ -118,7 +118,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
         <>
           {taskEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground italic py-6 text-center">
-              No overdue tasks. You're all caught up!
+              No outstanding tasks. You're all caught up!
             </p>
           ) : (
             <div className="space-y-4">

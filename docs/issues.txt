@@ -37,7 +37,7 @@ x remove search entries... box from the header
 x Today view - use unicode characters to indicate entry types (see tui and bujo today). The entry text is not aligned with the entry type. The should be vertical centre aligned
 x CI build failing
 x Today/Review view - chose a better icon for un-complete icon, it should be the . we use to represent a task
-. Rename overdue as outstanding tasks
+x Rename overdue as outstanding tasks
 . Make sure icons are consistent across all views
 . Update architecture document, remove out of date documents if they are no longer relevant
 . in search results you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
