@@ -156,6 +156,7 @@ describe('App - Click Selection', () => {
   })
 
   it('clicking an entry updates the selection to that entry', async () => {
+    const user = userEvent.setup()
     render(<App />)
 
     await waitFor(() => {
@@ -168,14 +169,17 @@ describe('App - Click Selection', () => {
 
     // Click on the note entry
     const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
-    fireEvent.click(noteEntry!)
+    await user.click(noteEntry!)
 
     // Now the note should be selected
-    expect(noteEntry).toHaveAttribute('data-selected', 'true')
+    await waitFor(() => {
+      expect(noteEntry).toHaveAttribute('data-selected', 'true')
+    })
     expect(firstTask).toHaveAttribute('data-selected', 'false')
   })
 
   it('clicking second task updates selection', async () => {
+    const user = userEvent.setup()
     render(<App />)
 
     await waitFor(() => {
@@ -183,9 +187,11 @@ describe('App - Click Selection', () => {
     })
 
     const secondTask = screen.getByText('Second task').closest('[data-entry-id]')
-    fireEvent.click(secondTask!)
+    await user.click(secondTask!)
 
-    expect(secondTask).toHaveAttribute('data-selected', 'true')
+    await waitFor(() => {
+      expect(secondTask).toHaveAttribute('data-selected', 'true')
+    })
   })
 })
 

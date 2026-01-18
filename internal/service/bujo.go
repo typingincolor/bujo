@@ -69,6 +69,9 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 		if parent == nil {
 			return nil, fmt.Errorf("parent entry %d not found", *opts.ParentID)
 		}
+		if parent.Type == domain.EntryTypeQuestion {
+			return nil, fmt.Errorf("cannot add children to questions, use answer instead")
+		}
 		parentDepth = parent.Depth + 1
 	}
 

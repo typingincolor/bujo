@@ -1713,6 +1713,27 @@ func TestBujoService_LogEntries_WithParentID_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "parent")
 }
 
+func TestBujoService_LogEntries_CannotAddChildToQuestion(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 18, 0, 0, 0, 0, time.UTC)
+
+	// Create a question entry
+	questionIDs, err := service.LogEntries(ctx, "? What is the answer", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, questionIDs, 1)
+
+	// Try to add a child to the question - should fail
+	_, err = service.LogEntries(ctx, ". Child task", LogEntriesOptions{
+		Date:     today,
+		ParentID: &questionIDs[0],
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot add children to questions")
+}
+
 func TestBujoService_GetEntryAncestors_ReturnsParentChain(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()

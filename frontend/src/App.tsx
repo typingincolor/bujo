@@ -19,6 +19,7 @@ import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
+import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -61,6 +62,7 @@ function App() {
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
   const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
+  const [answerModalEntry, setAnswerModalEntry] = useState<Entry | null>(null)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
   const [habitDays, setHabitDays] = useState(14)
   const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
@@ -241,7 +243,13 @@ function App() {
         }
         if (e.key === 'a') {
           e.preventDefault()
-          setInlineInputMode('sibling')
+          // If selected entry is a question, open answer modal instead
+          const selectedEntry = flatEntries[selectedIndex]
+          if (selectedEntry?.type === 'question') {
+            setAnswerModalEntry(selectedEntry)
+          } else {
+            setInlineInputMode('sibling')
+          }
           return
         }
         if (e.key === 'A') {
@@ -487,6 +495,7 @@ function App() {
                 onDeleteEntry={handleDeleteEntryRequest}
                 onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                 onAddChild={handleAddChild}
+                onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
               />
               {inlineInputMode ? (
                 <InlineEntryInput
@@ -539,6 +548,7 @@ function App() {
                   onDeleteEntry={handleDeleteEntryRequest}
                   onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                   onAddChild={handleAddChild}
+                  onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
                 />
               ))}
               {reviewDays.length === 0 && (
@@ -647,6 +657,20 @@ function App() {
         onMigrate={handleMigrateEntry}
         onCancel={() => setMigrateModalEntry(null)}
       />
+
+      {/* Answer Question Modal */}
+      {answerModalEntry && (
+        <AnswerQuestionModal
+          isOpen={answerModalEntry !== null}
+          questionId={answerModalEntry.id}
+          questionContent={answerModalEntry.content}
+          onClose={() => setAnswerModalEntry(null)}
+          onAnswered={() => {
+            setAnswerModalEntry(null)
+            loadData()
+          }}
+        />
+      )}
 
       {/* Capture Modal */}
       <CaptureModal

@@ -15,6 +15,7 @@ interface DayViewProps {
   onDeleteEntry?: (entry: Entry) => void;
   onMigrateEntry?: (entry: Entry) => void;
   onAddChild?: (entry: Entry) => void;
+  onAnswerEntry?: (entry: Entry) => void;
 }
 
 function buildTree(entries: Entry[]): Entry[] {
@@ -62,9 +63,10 @@ interface EntryTreeProps {
   onCycleType?: (entry: Entry) => void;
   onAddChild?: (entry: Entry) => void;
   onMoveToRoot?: (entry: Entry) => void;
+  onAnswer?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onAnswer }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -91,8 +93,9 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
               onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
-              onAddChild={onAddChild ? () => onAddChild(entry) : undefined}
+              onAddChild={onAddChild && entry.type !== 'question' ? () => onAddChild(entry) : undefined}
               onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
+              onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -112,6 +115,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onCycleType={onCycleType}
                 onAddChild={onAddChild}
                 onMoveToRoot={onMoveToRoot}
+                onAnswer={onAnswer}
               />
             )}
           </div>
@@ -121,7 +125,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
-export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry, onAddChild }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry, onAddChild, onAnswerEntry }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -312,6 +316,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onCycleType={handleCycleType}
             onAddChild={onAddChild}
             onMoveToRoot={handleMoveToRoot}
+            onAnswer={onAnswerEntry}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

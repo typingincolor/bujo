@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main, feature/wails-desktop-app]
+    branches: [main]
     tags: ['v*']
     paths-ignore:
       - '**.md'
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
   pull_request:
-    branches: [main, feature/wails-desktop-app]
+    branches: [main]
     paths-ignore:
       - '**.md'
       - 'docs/**'

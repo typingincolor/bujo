@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, ChevronUp } from 'lucide-react';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, ChevronUp, MessageCircle } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
+import { AnswerQuestionModal } from './AnswerQuestionModal';
 
 function ActionPlaceholder() {
   return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
@@ -31,6 +32,8 @@ export function SearchView() {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [ancestorsMap, setAncestorsMap] = useState<Map<number, AncestorEntry[]>>(new Map());
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [answerModalOpen, setAnswerModalOpen] = useState(false);
+  const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
@@ -194,6 +197,20 @@ export function SearchView() {
     }
   }, [refreshEntry]);
 
+  const handleAnswer = useCallback((result: SearchResult) => {
+    setQuestionToAnswer(result);
+    setAnswerModalOpen(true);
+  }, []);
+
+  const handleAnswerSubmitted = useCallback(async () => {
+    setAnswerModalOpen(false);
+    const answeredId = questionToAnswer?.id;
+    setQuestionToAnswer(null);
+    if (answeredId) {
+      await refreshEntry(answeredId);
+    }
+  }, [questionToAnswer, refreshEntry]);
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -254,6 +271,15 @@ export function SearchView() {
             await handleCycleTypeKeyboard(selected.id, selected.type);
           }
           break;
+        case 'a':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            const selected = results[selectedIndex];
+            if (selected.type === 'question') {
+              handleAnswer(selected);
+            }
+          }
+          break;
         case 'Enter':
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < results.length) {
@@ -265,7 +291,7 @@ export function SearchView() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [results, selectedIndex, refreshEntry, toggleExpanded, handleCycleTypeKeyboard]);
+  }, [results, selectedIndex, refreshEntry, toggleExpanded, handleCycleTypeKeyboard, handleAnswer]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -415,6 +441,15 @@ export function SearchView() {
                   >
                     <span className="text-sm font-bold leading-none">•</span>
                   </button>
+                ) : result.type === 'question' ? (
+                  <button
+                    data-action-slot
+                    onClick={(e) => { e.stopPropagation(); handleAnswer(result); }}
+                    title="Answer question"
+                    className="p-1 rounded hover:bg-bujo-question/20 text-muted-foreground hover:text-bujo-question"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
                 ) : (
                   <ActionPlaceholder />
                 )}
@@ -494,6 +529,17 @@ export function SearchView() {
           );
         })}
       </div>
+
+      {/* Answer Question Modal */}
+      {questionToAnswer && (
+        <AnswerQuestionModal
+          isOpen={answerModalOpen}
+          questionId={questionToAnswer.id}
+          questionContent={questionToAnswer.content}
+          onClose={() => { setAnswerModalOpen(false); setQuestionToAnswer(null); }}
+          onAnswered={handleAnswerSubmitted}
+        />
+      )}
     </div>
   );
 }
