@@ -38,9 +38,12 @@ x Today view - use unicode characters to indicate entry types (see tui and bujo 
 x CI build failing
 x Today/Review view - chose a better icon for un-complete icon, it should be the . we use to represent a task
 x Rename overdue as outstanding tasks
-. Make sure icons are consistent across all views
+x Make sure icons are consistent across all views
 . Update architecture document, remove out of date documents if they are no longer relevant
 . in search results you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
+. outstanding tasks you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
 . the orange highlighting of a entry is unnecessary is the today view
 . all views should use indentation as appropriate to show hieracy. Search results is not doing this
 . choose a better icon for cycle priority a ! maybe
+. alerttriangle is not an appropriate icon for outstanding tasks
+. today/review view - right click on entry give you the option to add a child or move to root.

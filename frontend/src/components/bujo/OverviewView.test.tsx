@@ -108,6 +108,12 @@ describe('OverviewView - Interactions', () => {
       expect(MarkEntryUndone).toHaveBeenCalledWith(42)
     })
   })
+
+  it('shows task bullet symbol in mark undone button', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
+    const undoneButton = screen.getByTitle('Mark undone')
+    expect(undoneButton).toHaveTextContent('•')
+  })
 })
 
 describe('OverviewView - Grouping by Date', () => {

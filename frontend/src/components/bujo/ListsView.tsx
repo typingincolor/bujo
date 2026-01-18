@@ -232,9 +232,9 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
                 <button
                   onClick={(e) => handleTickItem(e, item.id, item.done)}
                   title="Mark as not done"
-                  className="p-1 rounded text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1 rounded text-muted-foreground hover:text-orange-600 hover:bg-orange-500/20 transition-colors opacity-0 group-hover:opacity-100"
                 >
-                  <Circle className="w-3.5 h-3.5" />
+                  <span className="text-sm font-bold leading-none">•</span>
                 </button>
               )}
               {editingItemId === item.id ? (

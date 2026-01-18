@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Check, ChevronDown, ChevronRight, Undo2 } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
 import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
@@ -179,9 +179,9 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkUndone(entry); }}
                                 title="Mark undone"
-                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                                className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600 transition-colors opacity-0 group-hover:opacity-100"
                               >
-                                <Undo2 className="w-4 h-4" />
+                                <span className="text-sm font-bold leading-none">•</span>
                               </button>
                             ) : (
                               <button

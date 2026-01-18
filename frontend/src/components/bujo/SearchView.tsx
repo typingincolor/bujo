@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Search as SearchIcon, Check, Undo2 } from 'lucide-react';
+import { Search as SearchIcon, Check } from 'lucide-react';
 import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -216,9 +216,9 @@ export function SearchView() {
                   <button
                     onClick={(e) => handleMarkUndone(result.id, e)}
                     title="Mark undone"
-                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-bujo-task"
+                    className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600"
                   >
-                    <Undo2 className="w-4 h-4" />
+                    <span className="text-sm font-bold leading-none">•</span>
                   </button>
                 )}
 

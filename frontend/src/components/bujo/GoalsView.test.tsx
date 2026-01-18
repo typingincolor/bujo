@@ -414,6 +414,12 @@ describe('GoalsView - Click and Tick/Untick Behavior', () => {
     expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
   })
+
+  it('shows task bullet symbol in mark as not done button', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Done Goal', status: 'done' })]} />)
+    const undoneButton = screen.getByTitle('Mark as not done')
+    expect(undoneButton).toHaveTextContent('•')
+  })
 })
 
 describe('GoalsView - Cancel Goal', () => {

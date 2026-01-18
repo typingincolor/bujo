@@ -310,9 +310,9 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
                 <button
                   onClick={() => handleToggleGoal(goal)}
                   title="Mark as not done"
-                  className="p-1 rounded text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-1 rounded text-muted-foreground hover:text-orange-600 hover:bg-orange-500/20 transition-colors opacity-0 group-hover:opacity-100"
                 >
-                  <Circle className="w-4 h-4" />
+                  <span className="text-sm font-bold leading-none">•</span>
                 </button>
               )}
               {goal.status !== 'migrated' && (

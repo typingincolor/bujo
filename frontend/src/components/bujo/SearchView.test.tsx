@@ -334,4 +334,21 @@ describe('SearchView - Actions', () => {
       expect(MarkEntryUndone).toHaveBeenCalledWith(42)
     })
   })
+
+  it('shows task bullet symbol in mark undone button', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Done task', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'done')
+
+    await waitFor(() => {
+      const undoneButton = screen.getByTitle('Mark undone')
+      expect(undoneButton).toHaveTextContent('•')
+    })
+  })
 })
