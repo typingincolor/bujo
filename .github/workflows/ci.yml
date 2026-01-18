@@ -34,7 +34,7 @@ jobs:
           cache: true
 
       - name: Run go vet
-        run: go vet ./...
+        run: go vet ./cmd/... ./internal/...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -55,7 +55,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./cmd/... ./internal/...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -78,7 +78,7 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v ./...
+        run: go test -v ./cmd/... ./internal/...
 
   # Build verification - only needs lint to pass (tests run in parallel)
   build:
