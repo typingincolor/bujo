@@ -51,7 +51,7 @@ jobs:
       - name: Create release archive
         run: |
           cd build/bin
-          zip -r bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip bujo.app
+          zip -r bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip bujoapp.app
           shasum -a 256 bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip > bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip.sha256
 
       - name: Upload to release
@@ -83,7 +83,7 @@ jobs:
             desc "Desktop Bullet Journal with AI-powered summaries"
             homepage "https://github.com/typingincolor/bujo"
 
-            app "bujo.app"
+            app "bujoapp.app"
 
             zap trash: [
               "~/Library/Application Support/bujo",
