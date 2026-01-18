@@ -29,10 +29,16 @@ func (r *GoalRepository) Insert(ctx context.Context, goal domain.Goal) (int64, e
 		status = domain.GoalStatusActive
 	}
 
+	var migratedTo *string
+	if goal.MigratedTo != nil {
+		mt := goal.MigratedTo.Format("2006-01")
+		migratedTo = &mt
+	}
+
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO goals (entity_id, content, month, status, created_at, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, entityID.String(), goal.Content, monthKey, string(status), goal.CreatedAt.Format(time.RFC3339),
+		INSERT INTO goals (entity_id, content, month, status, migrated_to, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, entityID.String(), goal.Content, monthKey, string(status), migratedTo, goal.CreatedAt.Format(time.RFC3339),
 		1, now, domain.OpTypeInsert.String())
 
 	if err != nil {
@@ -53,7 +59,7 @@ func (r *GoalRepository) GetByID(ctx context.Context, id int64) (*domain.Goal, e
 	}
 
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, entity_id, content, month, status, created_at
+		SELECT id, entity_id, content, month, status, migrated_to, created_at
 		FROM goals WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 	`, entityID)
 
@@ -64,7 +70,7 @@ func (r *GoalRepository) GetByMonth(ctx context.Context, month time.Time) ([]dom
 	monthKey := month.Format("2006-01")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, entity_id, content, month, status, created_at
+		SELECT id, entity_id, content, month, status, migrated_to, created_at
 		FROM goals WHERE month = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY created_at
 	`, monthKey)
@@ -77,9 +83,10 @@ func (r *GoalRepository) GetByMonth(ctx context.Context, month time.Time) ([]dom
 	for rows.Next() {
 		var goal domain.Goal
 		var entityID sql.NullString
+		var migratedTo sql.NullString
 		var monthStr, statusStr, createdAt string
 
-		err := rows.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &createdAt)
+		err := rows.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &migratedTo, &createdAt)
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +96,10 @@ func (r *GoalRepository) GetByMonth(ctx context.Context, month time.Time) ([]dom
 		}
 		goal.Month, _ = time.Parse("2006-01", monthStr)
 		goal.Status = domain.GoalStatus(statusStr)
+		if migratedTo.Valid {
+			mt, _ := time.Parse("2006-01", migratedTo.String)
+			goal.MigratedTo = &mt
+		}
 		goal.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 
 		goals = append(goals, goal)
@@ -99,7 +110,7 @@ func (r *GoalRepository) GetByMonth(ctx context.Context, month time.Time) ([]dom
 
 func (r *GoalRepository) GetAll(ctx context.Context) ([]domain.Goal, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, entity_id, content, month, status, created_at
+		SELECT id, entity_id, content, month, status, migrated_to, created_at
 		FROM goals WHERE (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY month DESC, created_at
 	`)
@@ -112,9 +123,10 @@ func (r *GoalRepository) GetAll(ctx context.Context) ([]domain.Goal, error) {
 	for rows.Next() {
 		var goal domain.Goal
 		var entityID sql.NullString
+		var migratedTo sql.NullString
 		var monthStr, statusStr, createdAt string
 
-		err := rows.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &createdAt)
+		err := rows.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &migratedTo, &createdAt)
 		if err != nil {
 			return nil, err
 		}
@@ -124,6 +136,10 @@ func (r *GoalRepository) GetAll(ctx context.Context) ([]domain.Goal, error) {
 		}
 		goal.Month, _ = time.Parse("2006-01", monthStr)
 		goal.Status = domain.GoalStatus(statusStr)
+		if migratedTo.Valid {
+			mt, _ := time.Parse("2006-01", migratedTo.String)
+			goal.MigratedTo = &mt
+		}
 		goal.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 
 		goals = append(goals, goal)
@@ -143,6 +159,12 @@ func (r *GoalRepository) Update(ctx context.Context, goal domain.Goal) error {
 
 	now := time.Now().Format(time.RFC3339)
 	monthKey := goal.Month.Format("2006-01")
+
+	var migratedTo *string
+	if goal.MigratedTo != nil {
+		mt := goal.MigratedTo.Format("2006-01")
+		migratedTo = &mt
+	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -166,9 +188,9 @@ func (r *GoalRepository) Update(ctx context.Context, goal domain.Goal) error {
 	}
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO goals (entity_id, content, month, status, created_at, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, current.EntityID.String(), goal.Content, monthKey, string(goal.Status),
+		INSERT INTO goals (entity_id, content, month, status, migrated_to, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, current.EntityID.String(), goal.Content, monthKey, string(goal.Status), migratedTo,
 		current.CreatedAt.Format(time.RFC3339), maxVersion+1, now, domain.OpTypeUpdate.String())
 	if err != nil {
 		return err
@@ -187,6 +209,12 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 	}
 
 	now := time.Now().Format(time.RFC3339)
+
+	var migratedTo *string
+	if goal.MigratedTo != nil {
+		mt := goal.MigratedTo.Format("2006-01")
+		migratedTo = &mt
+	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -211,9 +239,9 @@ func (r *GoalRepository) Delete(ctx context.Context, id int64) error {
 
 	monthKey := goal.Month.Format("2006-01")
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO goals (entity_id, content, month, status, created_at, version, valid_from, op_type)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, goal.EntityID.String(), goal.Content, monthKey, string(goal.Status),
+		INSERT INTO goals (entity_id, content, month, status, migrated_to, created_at, version, valid_from, op_type)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, goal.EntityID.String(), goal.Content, monthKey, string(goal.Status), migratedTo,
 		goal.CreatedAt.Format(time.RFC3339), maxVersion+1, now, domain.OpTypeDelete.String())
 	if err != nil {
 		return err
@@ -229,7 +257,7 @@ func (r *GoalRepository) DeleteAll(ctx context.Context) error {
 
 func (r *GoalRepository) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Goal, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, entity_id, content, month, status, created_at
+		SELECT id, entity_id, content, month, status, migrated_to, created_at
 		FROM goals WHERE entity_id = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 	`, entityID.String())
 
@@ -252,9 +280,10 @@ func (r *GoalRepository) MoveToMonth(ctx context.Context, id int64, newMonth tim
 func (r *GoalRepository) scanGoal(row *sql.Row) (*domain.Goal, error) {
 	var goal domain.Goal
 	var entityID sql.NullString
+	var migratedTo sql.NullString
 	var monthStr, statusStr, createdAt string
 
-	err := row.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &createdAt)
+	err := row.Scan(&goal.ID, &entityID, &goal.Content, &monthStr, &statusStr, &migratedTo, &createdAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -267,6 +296,10 @@ func (r *GoalRepository) scanGoal(row *sql.Row) (*domain.Goal, error) {
 	}
 	goal.Month, _ = time.Parse("2006-01", monthStr)
 	goal.Status = domain.GoalStatus(statusStr)
+	if migratedTo.Valid {
+		mt, _ := time.Parse("2006-01", migratedTo.String)
+		goal.MigratedTo = &mt
+	}
 	goal.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 
 	return &goal, nil

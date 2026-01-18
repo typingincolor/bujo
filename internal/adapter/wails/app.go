@@ -115,6 +115,14 @@ func (a *App) DeleteGoal(goalID int64) error {
 	return a.services.Goal.DeleteGoal(a.ctx, goalID)
 }
 
+func (a *App) MigrateGoal(goalID int64, toMonth time.Time) (int64, error) {
+	return a.services.Goal.MigrateGoal(a.ctx, goalID, toMonth)
+}
+
+func (a *App) UpdateGoal(goalID int64, content string) error {
+	return a.services.Goal.UpdateGoal(a.ctx, goalID, content)
+}
+
 func (a *App) Search(query string) ([]domain.Entry, error) {
 	opts := domain.NewSearchOptions(query)
 	return a.services.Bujo.SearchEntries(a.ctx, opts)

@@ -141,3 +141,45 @@ func TestGoalService_GetCurrentMonthGoals(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, goals, 1)
 }
+
+func TestGoalService_MigrateGoal(t *testing.T) {
+	service := setupGoalService(t)
+	ctx := context.Background()
+	jan := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	feb := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	id, _ := service.CreateGoal(ctx, "Migrate me", jan)
+
+	newID, err := service.MigrateGoal(ctx, id, feb)
+
+	require.NoError(t, err)
+	assert.Greater(t, newID, int64(0))
+	assert.NotEqual(t, id, newID)
+
+	// Original goal should be marked as migrated
+	original, _ := service.GetGoal(ctx, id)
+	assert.True(t, original.IsMigrated())
+	assert.NotNil(t, original.MigratedTo)
+	assert.Equal(t, "2026-02", original.MigratedTo.Format("2006-01"))
+
+	// New goal should exist in target month
+	newGoal, _ := service.GetGoal(ctx, newID)
+	assert.Equal(t, "Migrate me", newGoal.Content)
+	assert.Equal(t, "2026-02", newGoal.MonthKey())
+	assert.Equal(t, domain.GoalStatusActive, newGoal.Status)
+}
+
+func TestGoalService_UpdateGoal(t *testing.T) {
+	service := setupGoalService(t)
+	ctx := context.Background()
+	month := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	id, _ := service.CreateGoal(ctx, "Original content", month)
+
+	err := service.UpdateGoal(ctx, id, "Updated content")
+
+	require.NoError(t, err)
+
+	goal, _ := service.GetGoal(ctx, id)
+	assert.Equal(t, "Updated content", goal.Content)
+}

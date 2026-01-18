@@ -53,11 +53,14 @@ export interface BujoList {
   totalCount: number;
 }
 
+export type GoalStatus = 'active' | 'done' | 'migrated';
+
 export interface Goal {
   id: number;
   content: string;
   month: string; // YYYY-MM
-  completed: boolean;
+  status: GoalStatus;
+  migratedTo?: string; // YYYY-MM if migrated
 }
 
 export const ENTRY_SYMBOLS: Record<EntryType, string> = {

@@ -10,9 +10,11 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   MarkGoalActive: vi.fn().mockResolvedValue(undefined),
   CreateGoal: vi.fn().mockResolvedValue(1),
   DeleteGoal: vi.fn().mockResolvedValue(undefined),
+  MigrateGoal: vi.fn().mockResolvedValue(2),
+  UpdateGoal: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateGoal, DeleteGoal } from '@/wailsjs/go/wails/App'
+import { CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal } from '@/wailsjs/go/wails/App'
 
 const currentMonth = format(new Date(), 'yyyy-MM')
 
@@ -20,7 +22,7 @@ const createTestGoal = (overrides: Partial<Goal> = {}): Goal => ({
   id: 1,
   content: 'Test goal',
   month: currentMonth,
-  completed: false,
+  status: 'active',
   ...overrides,
 })
 
@@ -134,8 +136,8 @@ describe('GoalsView - Toggle Goals', () => {
 
   it('shows progress bar with correct progress', () => {
     render(<GoalsView goals={[
-      createTestGoal({ id: 1, completed: true }),
-      createTestGoal({ id: 2, completed: false }),
+      createTestGoal({ id: 1, status: 'done' }),
+      createTestGoal({ id: 2, status: 'active' }),
     ]} />)
 
     expect(screen.getByText('1/2')).toBeInTheDocument()
@@ -216,5 +218,132 @@ describe('GoalsView - Delete Goal', () => {
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
     expect(DeleteGoal).not.toHaveBeenCalled()
+  })
+})
+
+describe('GoalsView - Migrate Goal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows migrate button on goal item', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+    expect(screen.getByTitle('Migrate goal')).toBeInTheDocument()
+  })
+
+  it('shows month picker dialog when migrate button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Migrate goal'))
+
+    expect(screen.getByText(/migrate goal/i)).toBeInTheDocument()
+  })
+
+  it('calls MigrateGoal binding when confirming migration', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Migrate goal'))
+
+    const confirmButton = screen.getByRole('button', { name: /^migrate$/i })
+    await user.click(confirmButton)
+
+    await waitFor(() => {
+      expect(MigrateGoal).toHaveBeenCalledWith(42, expect.any(String))
+    })
+  })
+
+  it('shows migrated indicator for migrated goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Migrated Goal',
+      status: 'migrated',
+      migratedTo: '2026-02'
+    })]} />)
+
+    expect(screen.getByText(/migrated to/i)).toBeInTheDocument()
+  })
+
+  it('does not show migrate button for migrated goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Migrated Goal',
+      status: 'migrated',
+      migratedTo: '2026-02'
+    })]} />)
+
+    expect(screen.queryByTitle('Migrate goal')).not.toBeInTheDocument()
+  })
+})
+
+describe('GoalsView - Edit Goal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows edit button on goal item', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+    expect(screen.getByTitle('Edit goal')).toBeInTheDocument()
+  })
+
+  it('shows edit input when edit button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Edit goal'))
+
+    expect(screen.getByDisplayValue('My Goal')).toBeInTheDocument()
+  })
+
+  it('calls UpdateGoal binding when saving edit', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Edit goal'))
+    const input = screen.getByDisplayValue('My Goal')
+    await user.clear(input)
+    await user.type(input, 'Updated Goal{Enter}')
+
+    await waitFor(() => {
+      expect(UpdateGoal).toHaveBeenCalledWith(42, 'Updated Goal')
+    })
+  })
+
+  it('calls onGoalChanged after editing goal', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Edit goal'))
+    const input = screen.getByDisplayValue('My Goal')
+    await user.clear(input)
+    await user.type(input, 'Updated Goal{Enter}')
+
+    await waitFor(() => {
+      expect(onGoalChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('cancels edit when Escape is pressed', async () => {
+    const user = userEvent.setup()
+    render(<GoalsView goals={[createTestGoal({ content: 'My Goal' })]} />)
+
+    await user.click(screen.getByTitle('Edit goal'))
+    const input = screen.getByDisplayValue('My Goal')
+    await user.type(input, '{Escape}')
+
+    expect(screen.queryByDisplayValue('My Goal')).not.toBeInTheDocument()
+    expect(screen.getByText('My Goal')).toBeInTheDocument()
+  })
+
+  it('does not show edit button for migrated goals', () => {
+    render(<GoalsView goals={[createTestGoal({
+      content: 'Migrated Goal',
+      status: 'migrated',
+      migratedTo: '2026-02'
+    })]} />)
+
+    expect(screen.queryByTitle('Edit goal')).not.toBeInTheDocument()
   })
 })

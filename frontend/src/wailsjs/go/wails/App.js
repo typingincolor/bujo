@@ -126,6 +126,10 @@ export function MigrateEntry(arg1, arg2) {
   return window['go']['wails']['App']['MigrateEntry'](arg1, arg2);
 }
 
+export function MigrateGoal(arg1, arg2) {
+  return window['go']['wails']['App']['MigrateGoal'](arg1, arg2);
+}
+
 export function RemoveListItem(arg1) {
   return window['go']['wails']['App']['RemoveListItem'](arg1);
 }
@@ -168,4 +172,8 @@ export function UndoHabitLog(arg1) {
 
 export function UndoHabitLogForDate(arg1, arg2) {
   return window['go']['wails']['App']['UndoHabitLogForDate'](arg1, arg2);
+}
+
+export function UpdateGoal(arg1, arg2) {
+  return window['go']['wails']['App']['UpdateGoal'](arg1, arg2);
 }

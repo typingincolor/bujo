@@ -56,6 +56,7 @@ export namespace domain {
 	    Content: string;
 	    Month: time.Time;
 	    Status: string;
+	    MigratedTo?: time.Time;
 	    CreatedAt: time.Time;
 	
 	    static createFrom(source: any = {}) {
@@ -69,6 +70,7 @@ export namespace domain {
 	        this.Content = source["Content"];
 	        this.Month = this.convertValues(source["Month"], time.Time);
 	        this.Status = source["Status"];
+	        this.MigratedTo = this.convertValues(source["MigratedTo"], time.Time);
 	        this.CreatedAt = this.convertValues(source["CreatedAt"], time.Time);
 	    }
 	

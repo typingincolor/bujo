@@ -67,6 +67,8 @@ export function MarkListItemUndone(arg1:number):Promise<void>;
 
 export function MigrateEntry(arg1:number,arg2:time.Time):Promise<number>;
 
+export function MigrateGoal(arg1:number,arg2:time.Time):Promise<number>;
+
 export function RemoveListItem(arg1:number):Promise<void>;
 
 export function RenameList(arg1:number,arg2:string):Promise<void>;
@@ -88,3 +90,5 @@ export function UncancelEntry(arg1:number):Promise<void>;
 export function UndoHabitLog(arg1:number):Promise<void>;
 
 export function UndoHabitLogForDate(arg1:number,arg2:time.Time):Promise<void>;
+
+export function UpdateGoal(arg1:number,arg2:string):Promise<void>;
