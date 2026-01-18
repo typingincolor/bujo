@@ -17,4 +17,4 @@ x Today view - location select - need to be able to add new locations to the lis
 x Monthly goals - need to be able to migrate a goal to another month. Migrate goal should still appear in it's orginial month but marked as migrated.
 x Monthly goals - need to be able to edit an entry.
 x Monthly goals - need to be able to cancel an entry.
-. Add overview tasks view in sidebar. This should work like the overdue secion in the TUI view. Optional context, collapsable etc
+x Add overview tasks view in sidebar. This should work like the overdue secion in the TUI view. Optional context, collapsable etc

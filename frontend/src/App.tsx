@@ -7,6 +7,7 @@ import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
+import { OverviewView } from '@/components/bujo/OverviewView'
 import { SearchView } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
@@ -18,7 +19,7 @@ import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
-import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
+import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import './index.css'
 
@@ -48,6 +49,7 @@ function App() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [lists, setLists] = useState<BujoList[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [overdueEntries, setOverdueEntries] = useState<Entry[]>([])
   const [overdueCount, setOverdueCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +86,9 @@ function App() {
 
       const transformedDays = (agendaData?.Days || []).map(transformDayEntries)
       setDays(transformedDays)
-      setOverdueCount(agendaData?.Overdue?.length || 0)
+      const transformedOverdue = (agendaData?.Overdue || []).map(transformEntry)
+      setOverdueEntries(transformedOverdue)
+      setOverdueCount(transformedOverdue.length)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
@@ -329,6 +333,7 @@ function App() {
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
     week: 'Past Week',
+    overview: 'Overdue Tasks',
     habits: 'Habits',
     lists: 'Lists',
     goals: 'Goals',
@@ -442,6 +447,16 @@ function App() {
               {weekDays.length === 0 && (
                 <p className="text-muted-foreground text-center py-8">No entries this week</p>
               )}
+            </div>
+          )}
+
+          {view === 'overview' && (
+            <div className="max-w-3xl mx-auto">
+              <OverviewView
+                overdueEntries={overdueEntries}
+                onEntryChanged={loadData}
+                onError={setError}
+              />
             </div>
           )}
 
