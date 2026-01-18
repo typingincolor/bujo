@@ -1,9 +1,9 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 
 interface OverviewViewProps {
   overdueEntries: Entry[];
@@ -54,8 +54,8 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
     entriesById.set(entry.id, entry);
   }
 
-  // Filter to only show task entries (type === 'task' or type === 'done')
-  const taskEntries = overdueEntries.filter(e => e.type === 'task' || e.type === 'done');
+  // Filter to only show task-related entries (task, done, or cancelled)
+  const taskEntries = overdueEntries.filter(e => e.type === 'task' || e.type === 'done' || e.type === 'cancelled');
   const grouped = groupByDate(taskEntries);
   const sortedDates = Array.from(grouped.keys()).sort();
 
@@ -88,6 +88,46 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
     } catch (error) {
       console.error('Failed to mark entry undone:', error);
       onError?.(error instanceof Error ? error.message : 'Failed to mark entry undone');
+    }
+  };
+
+  const handleCancel = async (entry: Entry) => {
+    try {
+      await CancelEntry(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cancel entry:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to cancel entry');
+    }
+  };
+
+  const handleUncancel = async (entry: Entry) => {
+    try {
+      await UncancelEntry(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to uncancel entry:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to uncancel entry');
+    }
+  };
+
+  const handleDelete = async (entry: Entry) => {
+    try {
+      await DeleteEntry(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to delete entry');
+    }
+  };
+
+  const handleCyclePriority = async (entry: Entry) => {
+    try {
+      await CyclePriority(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cycle priority:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to cycle priority');
     }
   };
 
@@ -183,7 +223,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               >
                                 <span className="text-sm font-bold leading-none">•</span>
                               </button>
-                            ) : (
+                            ) : entry.type !== 'cancelled' && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleMarkDone(entry); }}
                                 title="Mark done"
@@ -192,6 +232,53 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                                 <Check className="w-4 h-4" />
                               </button>
                             )}
+                            {entry.type !== 'cancelled' ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleCancel(entry); }}
+                                title="Cancel entry"
+                                className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUncancel(entry); }}
+                                title="Uncancel entry"
+                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleCyclePriority(entry); }}
+                              title="Cycle priority"
+                              className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <AlertTriangle className="w-4 h-4" />
+                            </button>
+                            {entry.type === 'task' && (
+                              <button
+                                onClick={(e) => e.stopPropagation()}
+                                title="Migrate entry"
+                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => e.stopPropagation()}
+                              title="Edit entry"
+                              className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(entry); }}
+                              title="Delete entry"
+                              className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       );

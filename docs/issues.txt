@@ -41,7 +41,7 @@ x Rename overdue as outstanding tasks
 x Make sure icons are consistent across all views
 . Update architecture document, remove out of date documents if they are no longer relevant
 x in search results you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
-. outstanding tasks you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
+x outstanding tasks you need all the action actions for an entry migrate, cancel, done, etc (and their undo as well)
 . the orange highlighting does not work well with mouse. Make keyboard usage sensible.:w
 . all views should use indentation as appropriate to show hieracy. Search results is not doing this
 . choose a better icon for cycle priority a ! maybe

@@ -7,6 +7,10 @@ import { Entry } from '@/types/bujo'
 vi.mock('@/wailsjs/go/wails/App', () => ({
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
+  CancelEntry: vi.fn().mockResolvedValue(undefined),
+  UncancelEntry: vi.fn().mockResolvedValue(undefined),
+  DeleteEntry: vi.fn().mockResolvedValue(undefined),
+  CyclePriority: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
@@ -113,6 +117,60 @@ describe('OverviewView - Interactions', () => {
     render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
     const undoneButton = screen.getByTitle('Mark undone')
     expect(undoneButton).toHaveTextContent('•')
+  })
+
+  it('shows cancel button for non-cancelled entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
+  })
+
+  it('shows uncancel button for cancelled entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} />)
+    expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
+  })
+
+  it('calls CancelEntry when cancel button is clicked', async () => {
+    const { CancelEntry } = await import('@/wailsjs/go/wails/App')
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task' })]} />)
+
+    await user.click(screen.getByTitle('Cancel entry'))
+
+    await waitFor(() => {
+      expect(CancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls UncancelEntry when uncancel button is clicked', async () => {
+    const { UncancelEntry } = await import('@/wailsjs/go/wails/App')
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'cancelled' })]} />)
+
+    await user.click(screen.getByTitle('Uncancel entry'))
+
+    await waitFor(() => {
+      expect(UncancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('shows delete button for all entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.getByTitle('Delete entry')).toBeInTheDocument()
+  })
+
+  it('shows edit button for all entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.getByTitle('Edit entry')).toBeInTheDocument()
+  })
+
+  it('shows migrate button for task entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
+  })
+
+  it('shows priority button for all entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
   })
 })
 
