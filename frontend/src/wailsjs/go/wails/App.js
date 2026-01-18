@@ -165,3 +165,7 @@ export function UncancelEntry(arg1) {
 export function UndoHabitLog(arg1) {
   return window['go']['wails']['App']['UndoHabitLog'](arg1);
 }
+
+export function UndoHabitLogForDate(arg1, arg2) {
+  return window['go']['wails']['App']['UndoHabitLogForDate'](arg1, arg2);
+}

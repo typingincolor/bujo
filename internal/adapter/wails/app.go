@@ -148,6 +148,10 @@ func (a *App) UndoHabitLog(habitID int64) error {
 	return a.services.Habit.UndoLastLogByID(a.ctx, habitID)
 }
 
+func (a *App) UndoHabitLogForDate(habitID int64, date time.Time) error {
+	return a.services.Habit.RemoveHabitLogForDateByID(a.ctx, habitID, date)
+}
+
 func (a *App) SetHabitGoal(habitID int64, dailyGoal int) error {
 	return a.services.Habit.SetHabitGoalByID(a.ctx, habitID, dailyGoal)
 }

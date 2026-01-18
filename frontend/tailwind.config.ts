@@ -74,6 +74,7 @@ export default {
           streak: "hsl(var(--bujo-streak))",
           "habit-fill": "hsl(var(--bujo-habit-fill))",
           "habit-empty": "hsl(var(--bujo-habit-empty))",
+          today: "hsl(var(--bujo-today))",
         },
         priority: {
           high: "hsl(var(--priority-high))",

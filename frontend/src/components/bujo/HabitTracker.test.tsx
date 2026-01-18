@@ -9,11 +9,12 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   CreateHabit: vi.fn().mockResolvedValue(1),
   DeleteHabit: vi.fn().mockResolvedValue(undefined),
   UndoHabitLog: vi.fn().mockResolvedValue(undefined),
+  UndoHabitLogForDate: vi.fn().mockResolvedValue(undefined),
   SetHabitGoal: vi.fn().mockResolvedValue(undefined),
   LogHabitForDate: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateHabit, DeleteHabit, UndoHabitLog, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App'
+import { CreateHabit, DeleteHabit, UndoHabitLog, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App'
 
 const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   id: 1,
@@ -264,8 +265,9 @@ describe('HabitTracker - Decrement via Cmd+Click', () => {
     vi.clearAllMocks()
   })
 
-  it('calls UndoHabitLog when Cmd+clicking on a logged day circle', async () => {
+  it('calls UndoHabitLogForDate when Cmd+clicking on a logged day circle', async () => {
     const onHabitChanged = vi.fn()
+    const anchor = new Date('2024-01-01')
     const habit = createTestHabit({
       id: 42,
       dayHistory: [
@@ -278,19 +280,23 @@ describe('HabitTracker - Decrement via Cmd+Click', () => {
         { date: '2024-01-07', completed: false, count: 0 },
       ]
     })
-    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} anchorDate={anchor} />)
 
-    const dayCircles = screen.getAllByRole('button', { name: /for/i })
-    // Cmd+click on the first day circle (which has count: 2)
-    fireEvent.click(dayCircles[0], { metaKey: true })
+    // Find the button with the logged date
+    const loggedButton = screen.getByLabelText(/Logged for 2024-01-01/i)
+    fireEvent.click(loggedButton, { metaKey: true })
 
     await waitFor(() => {
-      expect(UndoHabitLog).toHaveBeenCalledWith(42)
+      expect(UndoHabitLogForDate).toHaveBeenCalledWith(42, expect.any(String))
+      // Verify the date string is for 2024-01-01
+      const call = vi.mocked(UndoHabitLogForDate).mock.calls[0]
+      expect(call[1]).toContain('2024-01-01')
     })
   })
 
   it('does not decrement when Cmd+clicking on a day with count 0', () => {
     const onHabitChanged = vi.fn()
+    const anchor = new Date('2024-01-01')
     const habit = createTestHabit({
       id: 42,
       dayHistory: [
@@ -303,13 +309,34 @@ describe('HabitTracker - Decrement via Cmd+Click', () => {
         { date: '2024-01-07', completed: false, count: 0 },
       ]
     })
-    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} anchorDate={anchor} />)
 
-    const dayCircles = screen.getAllByRole('button', { name: /for/i })
-    // Cmd+click on a day with count 0
-    fireEvent.click(dayCircles[0], { metaKey: true })
+    // Find a button with no logs
+    const dayButton = screen.getByLabelText(/Log for 2024-01-01$/i)
+    fireEvent.click(dayButton, { metaKey: true })
 
-    expect(UndoHabitLog).not.toHaveBeenCalled()
+    expect(UndoHabitLogForDate).not.toHaveBeenCalled()
+  })
+})
+
+describe('HabitTracker - Goal Display', () => {
+  it('shows Target icon with goal number instead of text', () => {
+    const habit = createTestHabit({ goal: 3 })
+    render(<HabitTracker habits={[habit]} />)
+
+    // Should NOT show "Goal: 3/day" text
+    expect(screen.queryByText(/Goal:.*3.*day/i)).not.toBeInTheDocument()
+
+    // Should show Target icon with goal number
+    const goalIndicator = screen.getByLabelText(/daily goal.*3/i)
+    expect(goalIndicator).toBeInTheDocument()
+  })
+
+  it('does not show goal indicator when goal is not set', () => {
+    const habit = createTestHabit({ goal: undefined })
+    render(<HabitTracker habits={[habit]} />)
+
+    expect(screen.queryByLabelText(/daily goal/i)).not.toBeInTheDocument()
   })
 })
 
@@ -361,59 +388,322 @@ describe('HabitTracker - Set Habit Goal', () => {
   })
 })
 
+describe('HabitTracker - Horizontal Scroll Layout', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-07T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('renders day circles in scrollable container', () => {
+    // Jan 7, 2024 is a Sunday, so week is Jan 7-13
+    const anchor = new Date('2024-01-07')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-07', completed: false, count: 0 },
+        { date: '2024-01-08', completed: false, count: 0 },
+        { date: '2024-01-09', completed: false, count: 0 },
+        { date: '2024-01-10', completed: false, count: 0 },
+        { date: '2024-01-11', completed: false, count: 0 },
+        { date: '2024-01-12', completed: false, count: 0 },
+        { date: '2024-01-13', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // Calendar grid is rendered inside an overflow-x-auto container
+    const dayCircles = screen.getAllByRole('button', { name: /Log for 2024-01/i })
+    expect(dayCircles.length).toBe(7)
+    // The parent container should have overflow-x-auto for scrolling
+    const scrollContainer = dayCircles[0].closest('.overflow-x-auto')
+    expect(scrollContainer).toBeInTheDocument()
+  })
+})
+
+describe('HabitTracker - Today Indicator', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-07T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows visible ring around today circle', () => {
+    const anchor = new Date('2024-01-07')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-07', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-01', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // Find today's cell (Jan 7, 2024) - it should have ring-bujo-today class
+    const todayButton = screen.getByLabelText(/Log for 2024-01-07/i)
+    expect(todayButton).toHaveClass('ring-bujo-today')
+  })
+})
+
+describe('HabitTracker - Date Range Indicator', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-07T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('displays date range between period selector and add button', () => {
+    // Anchor to Jan 3, 2024 (Wednesday) - week will be Dec 31, 2023 - Jan 6, 2024
+    const anchor = new Date('2024-01-03')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-07', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-01', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // CalendarNavigation shows the week range containing the anchor date
+    // Jan 3, 2024 is Wednesday, so week is Dec 31 - Jan 6
+    expect(screen.getByText(/Dec 31.*Jan 6.*2024/i)).toBeInTheDocument()
+  })
+})
+
+describe('HabitTracker - Day Order Display', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-07T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('displays days in calendar order (Sunday to Saturday)', () => {
+    const anchor = new Date('2024-01-07')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-07', completed: false, count: 0 }, // Sunday
+        { date: '2024-01-06', completed: false, count: 0 }, // Saturday
+        { date: '2024-01-05', completed: false, count: 0 }, // Friday
+        { date: '2024-01-04', completed: false, count: 0 }, // Thursday
+        { date: '2024-01-03', completed: false, count: 0 }, // Wednesday
+        { date: '2024-01-02', completed: false, count: 0 }, // Tuesday
+        { date: '2024-01-01', completed: false, count: 0 }, // Monday
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    const dayCircles = screen.getAllByRole('button', { name: /Log for 2024-01/i })
+    // Calendar grid orders days Sunday to Saturday
+    // Jan 7 2024 is a Sunday, so week of Jan 7 is Jan 7-13
+    // First circle should be Sunday (Jan 7)
+    expect(dayCircles[0]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-07'))
+  })
+})
+
 describe('HabitTracker - Click to Log', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-07T12:00:00'))
   })
 
-  it('logs habit directly when clicking on a day circle', async () => {
-    const user = userEvent.setup()
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('logs habit directly when clicking on a day circle', () => {
     const onHabitChanged = vi.fn()
+    // Dec 29, 2024 is a Sunday, so week is Dec 29 - Jan 4
+    const anchor = new Date('2024-01-01')
     const habit = createTestHabit({
       id: 42,
       dayHistory: [
+        { date: '2023-12-29', completed: false, count: 0 },
+        { date: '2023-12-30', completed: false, count: 0 },
+        { date: '2023-12-31', completed: false, count: 0 },
         { date: '2024-01-01', completed: false, count: 0 },
         { date: '2024-01-02', completed: false, count: 0 },
         { date: '2024-01-03', completed: false, count: 0 },
         { date: '2024-01-04', completed: false, count: 0 },
-        { date: '2024-01-05', completed: false, count: 0 },
-        { date: '2024-01-06', completed: false, count: 0 },
-        { date: '2024-01-07', completed: false, count: 0 },
       ]
     })
-    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} anchorDate={anchor} />)
 
     // Click on a day circle
-    const dayCircles = screen.getAllByRole('button', { name: /for/i })
-    expect(dayCircles.length).toBeGreaterThan(0)
-    await user.click(dayCircles[0])
+    const dayButton = screen.getByLabelText(/Log for 2024-01-01$/i)
+    fireEvent.click(dayButton)
 
     // Should call LogHabitForDate immediately without confirmation
-    await waitFor(() => {
-      expect(LogHabitForDate).toHaveBeenCalled()
-      const call = vi.mocked(LogHabitForDate).mock.calls[0]
-      expect(call[0]).toBe(42) // habit ID
-      expect(call[1]).toBe(1) // count
-    })
+    expect(LogHabitForDate).toHaveBeenCalled()
+    const call = vi.mocked(LogHabitForDate).mock.calls[0]
+    expect(call[0]).toBe(42) // habit ID
+    expect(call[1]).toBe(1) // count
   })
 
   it('displays count in day circle when habit is logged', () => {
+    const anchor = new Date('2024-01-01')
     const habit = createTestHabit({
       dayHistory: [
-        { date: '2024-01-01', completed: true, count: 3 },
-        { date: '2024-01-02', completed: false, count: 0 },
-        { date: '2024-01-03', completed: true, count: 1 },
-        { date: '2024-01-04', completed: false, count: 0 },
-        { date: '2024-01-05', completed: false, count: 0 },
-        { date: '2024-01-06', completed: false, count: 0 },
         { date: '2024-01-07', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-03', completed: true, count: 1 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-01', completed: true, count: 3 },
       ]
     })
-    render(<HabitTracker habits={[habit]} />)
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
 
-    // Check that the circles show the count
-    const dayCircles = screen.getAllByRole('button', { name: /for/i })
-    expect(dayCircles[0]).toHaveTextContent('3')
-    expect(dayCircles[2]).toHaveTextContent('1')
+    // Find cells by their dates and verify the count is displayed
+    const loggedCell1 = screen.getByLabelText(/Logged for 2024-01-01/i)
+    expect(loggedCell1).toHaveTextContent('3')
+    const loggedCell2 = screen.getByLabelText(/Logged for 2024-01-03/i)
+    expect(loggedCell2).toHaveTextContent('1')
+  })
+})
+
+describe('HabitTracker - Calendar Grid View', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2024-01-15T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('renders CalendarNavigation with correct label for week view', () => {
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Should show navigation with week label
+    expect(screen.getByLabelText('Previous')).toBeInTheDocument()
+    expect(screen.getByLabelText('Next')).toBeInTheDocument()
+    expect(screen.getByText(/Jan 14.*Jan 20.*2024/)).toBeInTheDocument()
+  })
+
+  it('renders CalendarNavigation with correct label for month view', () => {
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} />)
+
+    // Switch to month view using fireEvent (works with fake timers)
+    fireEvent.click(screen.getByRole('button', { name: /week/i }))
+    fireEvent.click(screen.getByRole('button', { name: /month/i }))
+
+    expect(screen.getByText('January 2024')).toBeInTheDocument()
+  })
+
+  it('calls onNavigate when prev button clicked', () => {
+    const onNavigate = vi.fn()
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} onNavigate={onNavigate} />)
+
+    fireEvent.click(screen.getByLabelText('Previous'))
+
+    expect(onNavigate).toHaveBeenCalled()
+    // The new anchor should be 7 days before (week view default)
+    const newAnchor = onNavigate.mock.calls[0][0] as Date
+    expect(newAnchor.getDate()).toBe(8) // Jan 15 - 7 = Jan 8
+  })
+
+  it('calls onNavigate when next button clicked', () => {
+    const onNavigate = vi.fn()
+    const anchor = new Date('2024-01-15')
+    render(<HabitTracker habits={[createTestHabit()]} anchorDate={anchor} onNavigate={onNavigate} />)
+
+    fireEvent.click(screen.getByLabelText('Next'))
+
+    expect(onNavigate).toHaveBeenCalled()
+    // The new anchor should be 7 days after (week view default)
+    const newAnchor = onNavigate.mock.calls[0][0] as Date
+    expect(newAnchor.getDate()).toBe(22) // Jan 15 + 7 = Jan 22
+  })
+
+  it('renders week view as single row calendar grid', () => {
+    const anchor = new Date('2024-01-15')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-14', completed: false, count: 0 },
+        { date: '2024-01-15', completed: true, count: 1 },
+        { date: '2024-01-16', completed: false, count: 0 },
+        { date: '2024-01-17', completed: false, count: 0 },
+        { date: '2024-01-18', completed: false, count: 0 },
+        { date: '2024-01-19', completed: false, count: 0 },
+        { date: '2024-01-20', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // Week view should show day-of-week header
+    expect(screen.getAllByText('S').length).toBeGreaterThanOrEqual(2) // Sunday and Saturday
+    expect(screen.getByText('M')).toBeInTheDocument()
+    expect(screen.getByText('W')).toBeInTheDocument()
+    expect(screen.getByText('F')).toBeInTheDocument()
+  })
+
+  it('renders month view as multi-row calendar grid', () => {
+    const anchor = new Date('2024-01-15')
+    const habit = createTestHabit({
+      dayHistory: Array.from({ length: 31 }, (_, i) => ({
+        date: `2024-01-${String(i + 1).padStart(2, '0')}`,
+        completed: false,
+        count: 0,
+      }))
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // Switch to month view
+    fireEvent.click(screen.getByRole('button', { name: /week/i }))
+    fireEvent.click(screen.getByRole('button', { name: /month/i }))
+
+    // Should show day numbers from the month - use aria-label to be specific
+    expect(screen.getByLabelText(/Log for 2024-01-15/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Log for 2024-01-01/i)).toBeInTheDocument()
+  })
+
+  it('renders quarter view with three month calendars', () => {
+    const anchor = new Date('2024-01-15')
+    const habit = createTestHabit({
+      dayHistory: Array.from({ length: 90 }, (_, i) => {
+        const date = new Date('2024-01-01')
+        date.setDate(date.getDate() + i)
+        return {
+          date: date.toISOString().split('T')[0],
+          completed: false,
+          count: 0,
+        }
+      })
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // Switch to quarter view
+    fireEvent.click(screen.getByRole('button', { name: /week/i }))
+    fireEvent.click(screen.getByRole('button', { name: /quarter/i }))
+
+    // Should show three month names
+    expect(screen.getByText('January')).toBeInTheDocument()
+    expect(screen.getByText('February')).toBeInTheDocument()
+    expect(screen.getByText('March')).toBeInTheDocument()
   })
 })

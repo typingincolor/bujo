@@ -57,8 +57,9 @@ function App() {
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
   const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
-  const [habitDays, setHabitDays] = useState(7)
+  const [habitDays, setHabitDays] = useState(14)
   const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
+  const [habitAnchorDate, setHabitAnchorDate] = useState(() => new Date())
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -130,9 +131,13 @@ function App() {
   }, [])
 
   const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
-    const daysMap = { week: 7, month: 30, quarter: 90 }
+    const daysMap = { week: 14, month: 45, quarter: 120 }
     setHabitDays(daysMap[period])
     setHabitPeriod(period)
+  }, [])
+
+  const handleHabitNavigate = useCallback((newAnchor: Date) => {
+    setHabitAnchorDate(newAnchor)
   }, [])
 
   const cycleHabitPeriod = useCallback(() => {
@@ -407,7 +412,13 @@ function App() {
 
           {view === 'habits' && (
             <div className="max-w-4xl mx-auto">
-              <HabitTracker habits={habits} onHabitChanged={loadData} onPeriodChange={handleHabitPeriodChange} />
+              <HabitTracker
+                habits={habits}
+                onHabitChanged={loadData}
+                onPeriodChange={handleHabitPeriodChange}
+                anchorDate={habitAnchorDate}
+                onNavigate={handleHabitNavigate}
+              />
             </div>
           )}
 

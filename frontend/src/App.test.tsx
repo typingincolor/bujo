@@ -514,7 +514,7 @@ describe('App - Habit View Toggle', () => {
     await user.click(monthButton)
 
     await waitFor(() => {
-      expect(GetHabits).toHaveBeenCalledWith(30)
+      expect(GetHabits).toHaveBeenCalledWith(45)
     })
   })
 })

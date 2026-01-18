@@ -1,9 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Habit, HabitDayStatus } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Flame, Plus, X, Trash2, Target, ChevronDown } from 'lucide-react';
-import { CreateHabit, DeleteHabit, UndoHabitLog, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
+import { CreateHabit, DeleteHabit, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
 import { ConfirmDialog } from './ConfirmDialog';
+import { CalendarNavigation, CalendarGrid, QuarterGrid } from './calendar';
+import {
+  getWeekDates,
+  getMonthCalendar,
+  getQuarterMonths,
+  navigatePeriod,
+  mapDayHistoryToCalendar,
+  formatPeriodLabel,
+} from '@/lib/calendarUtils';
 
 type PeriodView = 'week' | 'month' | 'quarter';
 
@@ -11,6 +20,8 @@ interface HabitTrackerProps {
   habits: Habit[];
   onHabitChanged?: () => void;
   onPeriodChange?: (period: PeriodView) => void;
+  anchorDate?: Date;
+  onNavigate?: (newAnchor: Date) => void;
 }
 
 interface HabitRowProps {
@@ -22,6 +33,8 @@ interface HabitRowProps {
   settingGoalFor: number | null;
   onGoalSubmit: (habitId: number, goal: number) => void;
   onGoalCancel: () => void;
+  currentPeriod: PeriodView;
+  anchorDate: Date;
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -29,6 +42,11 @@ const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 function getDayLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   return DAY_LABELS[date.getDay()];
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function HabitRow({
@@ -39,21 +57,30 @@ function HabitRow({
   onSetGoal,
   settingGoalFor,
   onGoalSubmit,
-  onGoalCancel
+  onGoalCancel,
+  currentPeriod,
+  anchorDate,
 }: HabitRowProps) {
   const [goalInput, setGoalInput] = useState('');
-  const todayStr = new Date().toISOString().split('T')[0];
 
-  const handleDayClick = (e: React.MouseEvent, day: HabitDayStatus) => {
-    e.preventDefault();
-    if (e.metaKey || e.ctrlKey) {
-      if (day.count > 0) {
-        onDecrementForDate(habit.id, day.date);
-      }
-    } else {
-      onLogForDate(habit.id, day.date);
-    }
-  };
+  const dayHistory = useMemo(
+    () => mapDayHistoryToCalendar(habit.dayHistory),
+    [habit.dayHistory]
+  );
+
+  const handleLog = useCallback(
+    (date: string) => {
+      onLogForDate(habit.id, date);
+    },
+    [habit.id, onLogForDate]
+  );
+
+  const handleDecrement = useCallback(
+    (date: string) => {
+      onDecrementForDate(habit.id, date);
+    },
+    [habit.id, onDecrementForDate]
+  );
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -73,10 +100,48 @@ function HabitRow({
     }
   };
 
+  const renderCalendar = () => {
+    switch (currentPeriod) {
+      case 'week': {
+        const weekDays = getWeekDates(anchorDate);
+        return (
+          <CalendarGrid
+            calendar={[weekDays]}
+            dayHistory={dayHistory}
+            onLog={handleLog}
+            onDecrement={handleDecrement}
+          />
+        );
+      }
+      case 'month': {
+        const monthCalendar = getMonthCalendar(anchorDate);
+        return (
+          <CalendarGrid
+            calendar={monthCalendar}
+            dayHistory={dayHistory}
+            onLog={handleLog}
+            onDecrement={handleDecrement}
+          />
+        );
+      }
+      case 'quarter': {
+        const quarterMonths = getQuarterMonths(anchorDate);
+        return (
+          <QuarterGrid
+            quarters={quarterMonths}
+            dayHistory={dayHistory}
+            onLog={handleLog}
+            onDecrement={handleDecrement}
+          />
+        );
+      }
+    }
+  };
+
   return (
     <div className="flex items-center gap-4 py-3 px-4 rounded-lg bg-card hover:bg-secondary/30 transition-colors group animate-slide-in">
       {/* Habit name and streak */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-shrink-0 min-w-0 w-32">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm truncate">{habit.name}</span>
           {habit.streak > 0 && (
@@ -91,38 +156,20 @@ function HabitRow({
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
           <span>{habit.completionRate}% completion</span>
-          {habit.goal && <span>• Goal: {habit.goal}/day</span>}
+          {habit.goal && (
+            <span
+              className="flex items-center gap-0.5"
+              aria-label={`Daily goal: ${habit.goal}`}
+            >
+              • <Target className="w-3 h-3" />{habit.goal}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Day circles */}
-      <div className="flex items-center gap-1">
-        {habit.dayHistory.map((day, i) => {
-          const isToday = day.date === todayStr;
-          return (
-            <div key={i} className="flex flex-col items-center">
-              <button
-                onClick={(e) => handleDayClick(e, day)}
-                aria-label={`${day.completed ? 'Logged' : 'Log'} for ${getDayLabel(day.date)}${day.count > 0 ? ` (${day.count})` : ''}`}
-                title={`Click to add, ${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+click to remove`}
-                className={cn(
-                  'w-6 h-6 rounded-full flex items-center justify-center transition-all text-[10px] font-medium',
-                  day.completed ? 'bg-bujo-habit-fill text-primary-foreground' : 'bg-bujo-habit-empty text-muted-foreground',
-                  isToday && 'ring-2 ring-primary/50',
-                  'hover:scale-110 cursor-pointer'
-                )}
-              >
-                {day.count > 0 ? day.count : ''}
-              </button>
-              <span className={cn(
-                'text-[10px] mt-0.5',
-                isToday ? 'text-primary font-medium' : 'text-muted-foreground'
-              )}>
-                {getDayLabel(day.date)}
-              </span>
-            </div>
-          );
-        })}
+      {/* Calendar grid */}
+      <div className="flex-1 overflow-x-auto">
+        {renderCalendar()}
       </div>
 
       {/* Goal button or input */}
@@ -159,7 +206,7 @@ function HabitRow({
   );
 }
 
-export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTrackerProps) {
+export function HabitTracker({ habits, onHabitChanged, onPeriodChange, anchorDate, onNavigate }: HabitTrackerProps) {
   const [isAddingHabit, setIsAddingHabit] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
@@ -168,6 +215,19 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
   const [settingGoalFor, setSettingGoalFor] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const periodMenuRef = useRef<HTMLDivElement>(null);
+
+  const effectiveAnchor = useMemo(() => anchorDate ?? new Date(), [anchorDate]);
+  const periodLabel = useMemo(() => formatPeriodLabel(effectiveAnchor, currentPeriod), [effectiveAnchor, currentPeriod]);
+
+  const handleNavigatePrev = useCallback(() => {
+    const newAnchor = navigatePeriod(effectiveAnchor, currentPeriod, 'prev');
+    onNavigate?.(newAnchor);
+  }, [effectiveAnchor, currentPeriod, onNavigate]);
+
+  const handleNavigateNext = useCallback(() => {
+    const newAnchor = navigatePeriod(effectiveAnchor, currentPeriod, 'next');
+    onNavigate?.(newAnchor);
+  }, [effectiveAnchor, currentPeriod, onNavigate]);
 
   useEffect(() => {
     if (isAddingHabit) {
@@ -195,9 +255,10 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
     }
   }, [onHabitChanged]);
 
-  const handleDecrementForDate = useCallback(async (habitId: number, _dateStr: string) => {
+  const handleDecrementForDate = useCallback(async (habitId: number, dateStr: string) => {
     try {
-      await UndoHabitLog(habitId);
+      const date = new Date(dateStr + 'T12:00:00');
+      await UndoHabitLogForDate(habitId, date.toISOString());
       onHabitChanged?.();
     } catch (error) {
       console.error('Failed to undo habit log:', error);
@@ -305,6 +366,13 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
           )}
         </div>
 
+        {/* Calendar navigation */}
+        <CalendarNavigation
+          label={periodLabel}
+          onPrev={handleNavigatePrev}
+          onNext={handleNavigateNext}
+        />
+
         <button
           onClick={() => setIsAddingHabit(true)}
           className="ml-auto px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
@@ -348,6 +416,8 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
             settingGoalFor={settingGoalFor}
             onGoalSubmit={handleSetGoal}
             onGoalCancel={() => setSettingGoalFor(null)}
+            currentPeriod={currentPeriod}
+            anchorDate={effectiveAnchor}
           />
         ))}
       </div>

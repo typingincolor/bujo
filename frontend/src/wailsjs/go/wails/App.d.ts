@@ -86,3 +86,5 @@ export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;
 export function UncancelEntry(arg1:number):Promise<void>;
 
 export function UndoHabitLog(arg1:number):Promise<void>;
+
+export function UndoHabitLogForDate(arg1:number,arg2:time.Time):Promise<void>;

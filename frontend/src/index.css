@@ -69,6 +69,7 @@
     --bujo-streak: 28 85% 55%;
     --bujo-habit-fill: 145 45% 50%;
     --bujo-habit-empty: 40 10% 80%;
+    --bujo-today: 35 90% 55%;
 
     /* Priority colors */
     --priority-high: 0 70% 55%;
@@ -131,6 +132,7 @@
     --bujo-streak: 28 75% 60%;
     --bujo-habit-fill: 145 40% 55%;
     --bujo-habit-empty: 25 10% 30%;
+    --bujo-today: 35 85% 60%;
 
     --priority-high: 0 60% 55%;
     --priority-medium: 35 75% 55%;
