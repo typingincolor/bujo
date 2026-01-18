@@ -375,6 +375,33 @@ describe('App - Day Navigation', () => {
     expect(screen.getByRole('button', { name: /next day/i })).toBeInTheDocument()
   })
 
+  it('renders date picker in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByLabelText(/pick date/i)).toBeInTheDocument()
+  })
+
+  it('changing date picker navigates to selected date', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const datePicker = screen.getByLabelText(/pick date/i)
+    fireEvent.change(datePicker, { target: { value: '2026-01-20' } })
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
   it('clicking next day navigates to next day', async () => {
     const user = userEvent.setup()
     render(<App />)
