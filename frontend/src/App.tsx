@@ -349,6 +349,14 @@ function App() {
     }
   }, [flatEntries])
 
+  const handleAddChild = useCallback((entry: Entry) => {
+    const index = flatEntries.findIndex(e => e.id === entry.id)
+    if (index !== -1) {
+      setSelectedIndex(index)
+      setInlineInputMode('child')
+    }
+  }, [flatEntries])
+
   const handleInlineEntrySubmit = useCallback(async (content: string) => {
     const today = startOfDay(new Date())
     try {
@@ -473,6 +481,7 @@ function App() {
                 onEditEntry={(entry) => setEditModalEntry(entry)}
                 onDeleteEntry={handleDeleteEntryRequest}
                 onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
+                onAddChild={handleAddChild}
               />
               {inlineInputMode ? (
                 <InlineEntryInput
@@ -524,6 +533,7 @@ function App() {
                   onEditEntry={(entry) => setEditModalEntry(entry)}
                   onDeleteEntry={handleDeleteEntryRequest}
                   onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
+                  onAddChild={handleAddChild}
                 />
               ))}
               {reviewDays.length === 0 && (

@@ -984,3 +984,43 @@ func TestApp_RetypeEntry_ChangesEntryType(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, domain.EntryTypeNote, updated.Type)
 }
+
+func TestApp_MoveEntryToRoot_RemovesParent(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create parent entry
+	parentIDs, err := wailsApp.AddEntry(". Parent task", today)
+	require.NoError(t, err)
+	parentID := parentIDs[0]
+
+	// Create child entry under parent
+	childIDs, err := wailsApp.AddChildEntry(parentID, ". Child task", today)
+	require.NoError(t, err)
+	childID := childIDs[0]
+
+	// Verify child has parent
+	child, err := wailsApp.GetEntry(childID)
+	require.NoError(t, err)
+	require.NotNil(t, child.ParentID)
+	assert.Equal(t, parentID, *child.ParentID)
+
+	// Move child to root
+	err = wailsApp.MoveEntryToRoot(childID)
+	require.NoError(t, err)
+
+	// Verify child no longer has parent
+	updated, err := wailsApp.GetEntry(childID)
+	require.NoError(t, err)
+	assert.Nil(t, updated.ParentID)
+	assert.Equal(t, 0, updated.Depth)
+}

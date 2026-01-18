@@ -256,6 +256,11 @@ func (a *App) RetypeEntry(id int64, newType string) error {
 	return a.services.Bujo.RetypeEntry(a.ctx, id, domain.EntryType(newType))
 }
 
+func (a *App) MoveEntryToRoot(id int64) error {
+	moveToRoot := true
+	return a.services.Bujo.MoveEntry(a.ctx, id, service.MoveOptions{MoveToRoot: &moveToRoot})
+}
+
 func (a *App) SetLocation(date time.Time, location string) error {
 	return a.services.Bujo.SetLocation(a.ctx, date, location)
 }

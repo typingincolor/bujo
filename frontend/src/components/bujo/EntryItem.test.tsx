@@ -560,6 +560,151 @@ describe('EntryItem', () => {
       fireEvent.keyDown(document, { key: 'Escape' })
       expect(screen.queryByText('Add child')).not.toBeInTheDocument()
     })
+
+    it('shows Move to root option when entry has a parent', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ parentId: 123 })}
+          hasParent={true}
+          onMoveToRoot={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Move to root' })).toBeInTheDocument()
+    })
+
+    it('does not show Move to root option when entry has no parent', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ parentId: null })}
+          hasParent={false}
+          onMoveToRoot={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.queryByRole('menuitem', { name: 'Move to root' })).not.toBeInTheDocument()
+    })
+
+    it('calls onMoveToRoot when Move to root option is clicked', () => {
+      const onMoveToRoot = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ parentId: 123 })}
+          hasParent={true}
+          onMoveToRoot={onMoveToRoot}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to root' }))
+
+      expect(onMoveToRoot).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows Mark done option for task entries in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Mark done' })).toBeInTheDocument()
+    })
+
+    it('shows Mark not done option for done entries in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Mark not done' })).toBeInTheDocument()
+    })
+
+    it('shows Cancel option in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCancel={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Cancel' })).toBeInTheDocument()
+    })
+
+    it('shows Uncancel option for cancelled entries in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onUncancel={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Uncancel' })).toBeInTheDocument()
+    })
+
+    it('shows Migrate option for task entries in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMigrate={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Migrate' })).toBeInTheDocument()
+    })
+
+    it('shows Change type option in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCycleType={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Change type' })).toBeInTheDocument()
+    })
+
+    it('shows Cycle priority option in context menu', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCyclePriority={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Cycle priority' })).toBeInTheDocument()
+    })
   })
 
   describe('cycle type', () => {

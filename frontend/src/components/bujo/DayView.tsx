@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, GetSummary } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, GetSummary, MoveEntryToRoot } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -14,6 +14,7 @@ interface DayViewProps {
   onEditEntry?: (entry: Entry) => void;
   onDeleteEntry?: (entry: Entry) => void;
   onMigrateEntry?: (entry: Entry) => void;
+  onAddChild?: (entry: Entry) => void;
 }
 
 function buildTree(entries: Entry[]): Entry[] {
@@ -59,9 +60,11 @@ interface EntryTreeProps {
   onCyclePriority?: (entry: Entry) => void;
   onMigrate?: (entry: Entry) => void;
   onCycleType?: (entry: Entry) => void;
+  onAddChild?: (entry: Entry) => void;
+  onMoveToRoot?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -75,6 +78,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               depth={depth}
               isCollapsed={isCollapsed}
               hasChildren={hasChildren}
+              hasParent={entry.parentId !== null}
               childCount={entry.children?.length || 0}
               isSelected={entry.id === selectedEntryId}
               onToggleCollapse={() => onToggleCollapse(entry.id)}
@@ -87,6 +91,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
               onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
+              onAddChild={onAddChild ? () => onAddChild(entry) : undefined}
+              onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -104,6 +110,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onCyclePriority={onCyclePriority}
                 onMigrate={onMigrate}
                 onCycleType={onCycleType}
+                onAddChild={onAddChild}
+                onMoveToRoot={onMoveToRoot}
               />
             )}
           </div>
@@ -113,7 +121,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
-export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry, onAddChild }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -186,6 +194,15 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
       onEntryChanged?.();
     } catch (error) {
       console.error('Failed to cycle type:', error);
+    }
+  };
+
+  const handleMoveToRoot = async (entry: Entry) => {
+    try {
+      await MoveEntryToRoot(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to move entry to root:', error);
     }
   };
 
@@ -293,6 +310,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onCyclePriority={handleCyclePriority}
             onMigrate={onMigrateEntry}
             onCycleType={handleCycleType}
+            onAddChild={onAddChild}
+            onMoveToRoot={handleMoveToRoot}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

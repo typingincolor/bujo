@@ -79,6 +79,8 @@ export function MigrateEntry(arg1:number,arg2:time.Time):Promise<number>;
 
 export function MigrateGoal(arg1:number,arg2:time.Time):Promise<number>;
 
+export function MoveEntryToRoot(arg1:number):Promise<void>;
+
 export function MoveListItem(arg1:number,arg2:number):Promise<void>;
 
 export function RemoveListItem(arg1:number):Promise<void>;

@@ -10,6 +10,8 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   UncancelEntry: vi.fn(),
   CyclePriority: vi.fn(),
   GetSummary: vi.fn(),
+  RetypeEntry: vi.fn(),
+  MoveEntryToRoot: vi.fn(),
 }))
 
 const createTestDay = (overrides: Partial<DayEntries> = {}): DayEntries => ({
@@ -91,6 +93,103 @@ describe('DayView', () => {
       const eventEntry = screen.getByText('An event').closest('[data-entry-id]')
       fireEvent.click(eventEntry!)
       expect(onSelectEntry).toHaveBeenCalledWith(3)
+    })
+  })
+
+  describe('context menu actions', () => {
+    it('calls onAddChild when Add child is clicked from context menu', () => {
+      const onAddChild = vi.fn()
+      render(
+        <DayView
+          day={createTestDay()}
+          onAddChild={onAddChild}
+        />
+      )
+
+      const taskEntry = screen.getByText('First task').closest('[data-entry-id]')!
+      fireEvent.contextMenu(taskEntry)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Add child' }))
+
+      expect(onAddChild).toHaveBeenCalledWith(expect.objectContaining({ id: 1, content: 'First task' }))
+    })
+
+    it('shows Move to root option for child entries', async () => {
+      const dayWithChildren = createTestDay({
+        entries: [
+          {
+            id: 1,
+            type: 'task',
+            content: 'Parent task',
+            priority: 'none',
+            parentId: null,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+          {
+            id: 2,
+            type: 'task',
+            content: 'Child task',
+            priority: 'none',
+            parentId: 1,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+        ],
+      })
+
+      render(<DayView day={dayWithChildren} />)
+
+      const childEntry = screen.getByText('Child task').closest('[data-entry-id]')!
+      fireEvent.contextMenu(childEntry)
+
+      expect(screen.getByRole('menuitem', { name: 'Move to root' })).toBeInTheDocument()
+    })
+
+    it('does not show Move to root option for root entries', () => {
+      render(<DayView day={createTestDay()} />)
+
+      const taskEntry = screen.getByText('First task').closest('[data-entry-id]')!
+      fireEvent.contextMenu(taskEntry)
+
+      expect(screen.queryByRole('menuitem', { name: 'Move to root' })).not.toBeInTheDocument()
+    })
+
+    it('calls MoveEntryToRoot when Move to root is clicked', async () => {
+      const { MoveEntryToRoot } = await import('@/wailsjs/go/wails/App')
+      const mockMoveEntryToRoot = vi.mocked(MoveEntryToRoot)
+      mockMoveEntryToRoot.mockResolvedValue()
+
+      const onEntryChanged = vi.fn()
+      const dayWithChildren = createTestDay({
+        entries: [
+          {
+            id: 1,
+            type: 'task',
+            content: 'Parent task',
+            priority: 'none',
+            parentId: null,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+          {
+            id: 2,
+            type: 'task',
+            content: 'Child task',
+            priority: 'none',
+            parentId: 1,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+        ],
+      })
+
+      render(<DayView day={dayWithChildren} onEntryChanged={onEntryChanged} />)
+
+      const childEntry = screen.getByText('Child task').closest('[data-entry-id]')!
+      fireEvent.contextMenu(childEntry)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to root' }))
+
+      expect(mockMoveEntryToRoot).toHaveBeenCalledWith(2)
     })
   })
 })

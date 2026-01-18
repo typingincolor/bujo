@@ -9,6 +9,7 @@ interface EntryItemProps {
   depth?: number;
   isCollapsed?: boolean;
   hasChildren?: boolean;
+  hasParent?: boolean;
   childCount?: number;
   isSelected?: boolean;
   onToggleCollapse?: () => void;
@@ -23,6 +24,7 @@ interface EntryItemProps {
   onMigrate?: () => void;
   onAddChild?: () => void;
   onCycleType?: () => void;
+  onMoveToRoot?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -42,6 +44,7 @@ export function EntryItem({
   depth = 0,
   isCollapsed = false,
   hasChildren = false,
+  hasParent = false,
   childCount = 0,
   isSelected = false,
   onToggleCollapse,
@@ -56,6 +59,7 @@ export function EntryItem({
   onMigrate,
   onAddChild,
   onCycleType,
+  onMoveToRoot,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
@@ -276,6 +280,102 @@ export function EntryItem({
           style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
           onClick={(e) => e.stopPropagation()}
         >
+          {onToggleDone && entry.type === 'task' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onToggleDone();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Mark done
+            </button>
+          )}
+          {onToggleDone && entry.type === 'done' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onToggleDone();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Mark not done
+            </button>
+          )}
+          {onCancel && entry.type !== 'cancelled' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onCancel();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+          {onUncancel && entry.type === 'cancelled' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onUncancel();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Uncancel
+            </button>
+          )}
+          {onMigrate && entry.type === 'task' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onMigrate();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Migrate
+            </button>
+          )}
+          {onCycleType && canChangeType && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onCycleType();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Change type
+            </button>
+          )}
+          {onCyclePriority && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onCyclePriority();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Cycle priority
+            </button>
+          )}
+          {onMoveToRoot && hasParent && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onMoveToRoot();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Move to root
+            </button>
+          )}
           {onAddChild && (
             <button
               role="menuitem"

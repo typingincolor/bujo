@@ -150,6 +150,10 @@ export function MigrateGoal(arg1, arg2) {
   return window['go']['wails']['App']['MigrateGoal'](arg1, arg2);
 }
 
+export function MoveEntryToRoot(arg1) {
+  return window['go']['wails']['App']['MoveEntryToRoot'](arg1);
+}
+
 export function MoveListItem(arg1, arg2) {
   return window['go']['wails']['App']['MoveListItem'](arg1, arg2);
 }
