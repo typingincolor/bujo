@@ -24,7 +24,7 @@ x Past Week view - need to be able to move backwards and forwards in time.
 x Past Week  view - it is still showing the future.
 x Past Week view  - change name to Review
 x list view - need to be able to (un)cancel list items.
-. list view - need to be able to move items between lists.
+x list view - need to be able to move items between lists.
 . list view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
 . goals view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
 . overdue view - by default list only the tasks. Clicking on a task should show it's context. Tasks need a tick/untick icon

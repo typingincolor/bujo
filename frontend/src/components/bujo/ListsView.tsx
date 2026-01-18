@@ -1,8 +1,8 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw } from 'lucide-react'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw, MoveRight } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem } from '@/wailsjs/go/wails/App'
+import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem, MoveListItem } from '@/wailsjs/go/wails/App'
 import { ConfirmDialog } from './ConfirmDialog'
 
 interface ListsViewProps {
@@ -12,6 +12,7 @@ interface ListsViewProps {
 
 interface ListCardProps {
   list: BujoList
+  otherLists: BujoList[]
   isExpanded: boolean
   onToggle: () => void
   onToggleItem: (itemId: number, done: boolean) => void
@@ -22,11 +23,14 @@ interface ListCardProps {
   onEditItem: (itemId: number, content: string) => void
   onCancelItem: (itemId: number) => void
   onUncancelItem: (itemId: number) => void
+  onMoveItem: (itemId: number, targetListId: number) => void
 }
 
-function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem, onCancelItem, onUncancelItem }: ListCardProps) {
+function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem, onCancelItem, onUncancelItem, onMoveItem }: ListCardProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
+  const [movingItemId, setMovingItemId] = useState<number | null>(null)
+  const moveMenuRef = useRef<HTMLDivElement>(null)
   const [renameName, setRenameName] = useState(list.name)
   const [editingItemId, setEditingItemId] = useState<number | null>(null)
   const [editingContent, setEditingContent] = useState('')
@@ -116,6 +120,30 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
     e.stopPropagation()
     onUncancelItem(itemId)
   }
+
+  const handleMoveClick = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation()
+    setMovingItemId(movingItemId === itemId ? null : itemId)
+  }
+
+  const handleMoveToList = (e: React.MouseEvent, itemId: number, targetListId: number) => {
+    e.stopPropagation()
+    onMoveItem(itemId, targetListId)
+    setMovingItemId(null)
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moveMenuRef.current && !moveMenuRef.current.contains(e.target as Node)) {
+        setMovingItemId(null)
+      }
+    }
+
+    if (movingItemId !== null) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [movingItemId])
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden animate-fade-in">
@@ -222,6 +250,30 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
+              )}
+              {otherLists.length > 0 && (
+                <div className="relative" ref={movingItemId === item.id ? moveMenuRef : undefined}>
+                  <button
+                    onClick={(e) => handleMoveClick(e, item.id)}
+                    title="Move item"
+                    className="p-1 rounded text-muted-foreground hover:text-blue-500 hover:bg-blue-500/10 transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <MoveRight className="w-3.5 h-3.5" />
+                  </button>
+                  {movingItemId === item.id && (
+                    <div role="menu" className="absolute right-0 top-full mt-1 z-10 min-w-32 bg-popover border border-border rounded-md shadow-md py-1">
+                      {otherLists.map((targetList) => (
+                        <button
+                          key={targetList.id}
+                          onClick={(e) => handleMoveToList(e, item.id, targetList.id)}
+                          className="w-full px-3 py-1.5 text-sm text-left hover:bg-secondary transition-colors"
+                        >
+                          {targetList.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               <button
                 onClick={(e) => handleEditItemClick(e, item.id, item.content)}
@@ -386,6 +438,15 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
     }
   }
 
+  const handleMoveItem = async (itemId: number, targetListId: number) => {
+    try {
+      await MoveListItem(itemId, targetListId)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to move list item:', error)
+    }
+  }
+
   const handleRequestDeleteList = (listId: number) => {
     const list = lists.find(l => l.id === listId)
     if (list) {
@@ -434,6 +495,7 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
           <ListCard
             key={list.id}
             list={list}
+            otherLists={lists.filter(l => l.id !== list.id)}
             isExpanded={expandedIds.has(list.id)}
             onToggle={() => toggleExpanded(list.id)}
             onToggleItem={handleToggleItem}
@@ -444,6 +506,7 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
             onEditItem={handleEditItem}
             onCancelItem={handleCancelItem}
             onUncancelItem={handleUncancelItem}
+            onMoveItem={handleMoveItem}
           />
         ))}
       </div>

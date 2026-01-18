@@ -204,6 +204,10 @@ func (a *App) UncancelListItem(itemID int64) error {
 	return a.services.List.Uncancel(a.ctx, itemID)
 }
 
+func (a *App) MoveListItem(itemID int64, targetListID int64) error {
+	return a.services.List.MoveItem(a.ctx, itemID, targetListID)
+}
+
 func (a *App) SetMood(date time.Time, mood string) error {
 	return a.services.Bujo.SetMood(a.ctx, date, mood)
 }

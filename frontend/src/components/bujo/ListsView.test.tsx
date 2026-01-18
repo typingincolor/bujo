@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ListsView } from './ListsView'
 import { BujoList } from '@/types/bujo'
@@ -15,9 +15,10 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   EditListItem: vi.fn().mockResolvedValue(undefined),
   CancelListItem: vi.fn().mockResolvedValue(undefined),
   UncancelListItem: vi.fn().mockResolvedValue(undefined),
+  MoveListItem: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem } from '@/wailsjs/go/wails/App'
+import { AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem, MoveListItem } from '@/wailsjs/go/wails/App'
 
 const createTestList = (overrides: Partial<BujoList> = {}): BujoList => ({
   id: 1,
@@ -546,6 +547,97 @@ describe('ListsView - Uncancel List Item', () => {
 
     await waitFor(() => {
       expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('ListsView - Move List Item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows move button on list items when there are multiple lists', () => {
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ content: 'Buy milk' })] }),
+      createTestList({ id: 2, name: 'Work' })
+    ]} />)
+
+    expect(screen.getByTitle('Move item')).toBeInTheDocument()
+  })
+
+  it('does not show move button when there is only one list', () => {
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ content: 'Buy milk' })] })
+    ]} />)
+
+    expect(screen.queryByTitle('Move item')).not.toBeInTheDocument()
+  })
+
+  it('shows target list options when move button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ content: 'Buy milk' })] }),
+      createTestList({ id: 2, name: 'Target List A' }),
+      createTestList({ id: 3, name: 'Target List B' })
+    ]} />)
+
+    await user.click(screen.getByTitle('Move item'))
+
+    // Should show the other lists as options (not the current list)
+    const menu = screen.getByRole('menu')
+    expect(within(menu).getByText('Target List A')).toBeInTheDocument()
+    expect(within(menu).getByText('Target List B')).toBeInTheDocument()
+  })
+
+  it('calls MoveListItem binding when target list is selected', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ id: 42, content: 'Buy milk' })] }),
+      createTestList({ id: 2, name: 'Target List' })
+    ]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Move item'))
+    const menu = screen.getByRole('menu')
+    await user.click(within(menu).getByText('Target List'))
+
+    await waitFor(() => {
+      expect(MoveListItem).toHaveBeenCalledWith(42, 2)
+    })
+  })
+
+  it('calls onListChanged after moving item', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ id: 42, content: 'Buy milk' })] }),
+      createTestList({ id: 2, name: 'Target List' })
+    ]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Move item'))
+    const menu = screen.getByRole('menu')
+    await user.click(within(menu).getByText('Target List'))
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('closes move menu when clicking outside', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[
+      createTestList({ id: 1, name: 'Shopping', items: [createTestItem({ content: 'Buy milk' })] }),
+      createTestList({ id: 2, name: 'Target List' })
+    ]} />)
+
+    await user.click(screen.getByTitle('Move item'))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+
+    // Click elsewhere to close
+    await user.click(document.body)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
     })
   })
 })
