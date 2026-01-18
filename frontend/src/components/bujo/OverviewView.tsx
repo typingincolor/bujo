@@ -291,7 +291,8 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             onClick={() => toggleExpanded(entry.id)}
                             className={cn(
                               'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
-                              'bg-card hover:bg-secondary/30 transition-colors group',
+                              'bg-card transition-colors group',
+                              !isSelected && 'hover:bg-secondary/30',
                               isSelected && 'ring-2 ring-primary'
                             )}
                             style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
