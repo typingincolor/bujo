@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Search, Command } from 'lucide-react';
+import { Calendar, Search, Command, FileEdit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SEARCH_DEBOUNCE_MS = 200;
@@ -17,9 +17,10 @@ interface HeaderProps {
   searchResults?: SearchResult[];
   onSearch?: (query: string) => void;
   onSelectResult?: (result: SearchResult) => void;
+  onCapture?: () => void;
 }
 
-export function Header({ title, searchResults = [], onSearch, onSelectResult }: HeaderProps) {
+export function Header({ title, searchResults = [], onSearch, onSelectResult, onCapture }: HeaderProps) {
   const today = new Date();
   const [query, setQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
@@ -73,6 +74,20 @@ export function Header({ title, searchResults = [], onSearch, onSelectResult }: 
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Capture button */}
+        {onCapture && (
+          <button
+            onClick={onCapture}
+            title="Capture entries"
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <FileEdit className="w-4 h-4" />
+          </button>
+        )}
+
         {/* Search */}
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
