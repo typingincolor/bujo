@@ -1,0 +1,20 @@
+x Habit screen - week view - top and bottom of "today" circle cut off
+x Habit screen - montly view - "today" circle spacing to close to other circles due to increased size. Makes spacing look odd
+x Habit screen - quarterly view - "today" circle increase sized makes it too close to other circles.
+x Habit screen - keyboard shortcuts not appearing on short cut key. Change shortcut to ?
+x Habit screen - any view - flicker when logging a habit, also decrementing counter
+. Today view - mood select - needs more options. Mood icon should change to reflect what mood was chosen
+. Today view - weather select - needs more options. Weather icon should change to reflect what weather was chosen
+. Today view - location select - needs more options. location icon should change to reflect what location was chosen
+. Today view - pending task should be changed to overdue tasks. This should match the behavior of the overdue tasks section of the TUI
+x Today view - text of entries not aligned with the symbol
+x Today view - cancel an entry, undo the cancel, the entry type is always a task should go back to original type
+x Today view - Lets talk about how focus should work between the "Today" section and "what's on your mind". Clicking on things does the unexpected.
+x Today view - The top entry of the "Today" section is highlighted and the highlight never moves (see above)
+x CI build is failing
+x This Week view should be changed to past week view
+. Today view - location select - need to be able to add new locations to the list
+. Monthly goals - need to be able to migrate a goal to another month. Migrate goal should still appear in it's orginial month but marked as migrated.
+. Monthly goals - need to be able to edit an entry.
+. Monthly goals - need to be able to cancel an entry.
+. Add overview tasks view in sidebar. This should work like the overdue secion in the TUI view. Optional context, collapsable etc

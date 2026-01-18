@@ -1226,3 +1226,38 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     expect(GetAgenda).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('App - Sidebar Navigation Labels', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows "Past Week" label in sidebar navigation', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Sidebar should show "Past Week" for the week view
+    expect(screen.getByRole('button', { name: /past week/i })).toBeInTheDocument()
+  })
+
+  it('shows "Past Week" as header title when week view is selected', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click on Past Week in sidebar
+    const pastWeekButton = screen.getByRole('button', { name: /past week/i })
+    await user.click(pastWeekButton)
+
+    // Header title should show "Past Week"
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /past week/i })).toBeInTheDocument()
+    })
+  })
+})

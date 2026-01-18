@@ -20,7 +20,7 @@ interface SidebarProps {
 
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'today', icon: Calendar, label: 'Today' },
-  { view: 'week', icon: CalendarDays, label: 'This Week' },
+  { view: 'week', icon: CalendarDays, label: 'Past Week' },
   { view: 'habits', icon: Flame, label: 'Habits' },
   { view: 'lists', icon: List, label: 'Lists' },
   { view: 'goals', icon: Target, label: 'Goals' },

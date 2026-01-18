@@ -328,7 +328,7 @@ function App() {
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
-    week: 'This Week',
+    week: 'Past Week',
     habits: 'Habits',
     lists: 'Lists',
     goals: 'Goals',
