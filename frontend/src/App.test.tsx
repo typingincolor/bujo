@@ -37,7 +37,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   HasChildren: vi.fn().mockResolvedValue(false),
 }))
 
-import { GetAgenda, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -334,6 +334,179 @@ describe('App - Edit Entry', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Edit Entry')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('App - QuickStats', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('renders QuickStats component in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Tasks Completed')).toBeInTheDocument()
+    expect(screen.getByText('Pending Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Habits Today')).toBeInTheDocument()
+    expect(screen.getByText('Monthly Goals')).toBeInTheDocument()
+  })
+})
+
+describe('App - Day Navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('renders prev/next day navigation buttons in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByRole('button', { name: /previous day/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /next day/i })).toBeInTheDocument()
+  })
+
+  it('renders date picker in today view', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    expect(screen.getByLabelText(/pick date/i)).toBeInTheDocument()
+  })
+
+  it('changing date picker navigates to selected date', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const datePicker = screen.getByLabelText(/pick date/i)
+    fireEvent.change(datePicker, { target: { value: '2026-01-20' } })
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('clicking next day navigates to next day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const nextButton = screen.getByRole('button', { name: /next day/i })
+    await user.click(nextButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('clicking prev day navigates to previous day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const prevButton = screen.getByRole('button', { name: /previous day/i })
+    await user.click(prevButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('pressing h navigates to previous day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    await user.keyboard('h')
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('pressing l navigates to next day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    await user.keyboard('l')
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('App - Habit View Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('refetches habits with different day count when period changes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Switch to habits view
+    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    await user.click(habitsButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetHabits).mockClear()
+
+    // Click on period selector (shows "week" by default) - it's inside the HabitTracker component
+    const periodButton = screen.getByRole('button', { name: /^week$/i })
+    await user.click(periodButton)
+
+    // Click on Month option
+    const monthButton = screen.getByRole('button', { name: /^month$/i })
+    await user.click(monthButton)
+
+    await waitFor(() => {
+      expect(GetHabits).toHaveBeenCalledWith(30)
     })
   })
 })

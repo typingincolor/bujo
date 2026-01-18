@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
@@ -14,6 +15,7 @@ import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
+import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -52,19 +54,20 @@ function App() {
   const [editModalEntry, setEditModalEntry] = useState<Entry | null>(null)
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
+  const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
+  const [habitDays, setHabitDays] = useState(7)
 
   const loadData = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
       const now = new Date()
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      const weekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
+      const weekLater = new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000)
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
       const [agendaData, habitsData, listsData, goalsData] = await Promise.all([
-        GetAgenda(toWailsTime(today), toWailsTime(weekLater)),
-        GetHabits(30),
+        GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
+        GetHabits(habitDays),
         GetLists(),
         GetGoals(toWailsTime(monthStart)),
       ])
@@ -79,7 +82,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currentDate, habitDays])
 
   useEffect(() => {
     loadData()
@@ -99,12 +102,55 @@ function App() {
     }
   }, [])
 
+  const handlePrevDay = useCallback(() => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setDate(newDate.getDate() - 1)
+      return newDate
+    })
+  }, [])
+
+  const handleNextDay = useCallback(() => {
+    setCurrentDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setDate(newDate.getDate() + 1)
+      return newDate
+    })
+  }, [])
+
+  const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const dateValue = e.target.value
+    if (dateValue) {
+      const newDate = new Date(dateValue + 'T00:00:00')
+      setCurrentDate(newDate)
+    }
+  }, [])
+
+  const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
+    const daysMap = { week: 7, month: 30, quarter: 90 }
+    setHabitDays(daysMap[period])
+  }, [])
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      if (view !== 'today' || flatEntries.length === 0) return
-
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      // Day navigation shortcuts (h/l) - always available in today view
+      if (view === 'today') {
+        if (e.key === 'h') {
+          e.preventDefault()
+          handlePrevDay()
+          return
+        }
+        if (e.key === 'l') {
+          e.preventDefault()
+          handleNextDay()
+          return
+        }
+      }
+
+      if (view !== 'today' || flatEntries.length === 0) return
 
       switch (e.key) {
         case 'j':
@@ -151,7 +197,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -271,6 +317,31 @@ function App() {
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && today && (
             <div className="max-w-3xl mx-auto space-y-6">
+              {/* Day Navigation */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={handlePrevDay}
+                  aria-label="Previous day"
+                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <input
+                  type="date"
+                  aria-label="Pick date"
+                  value={currentDate.toISOString().split('T')[0]}
+                  onChange={handleDateChange}
+                  className="px-3 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-sm transition-colors border-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+                <button
+                  onClick={handleNextDay}
+                  aria-label="Next day"
+                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+              <QuickStats days={days} habits={habits} goals={goals} />
               <AddEntryBar onAdd={handleAddEntry} />
               <DayView
                 day={today}
@@ -301,7 +372,7 @@ function App() {
 
           {view === 'habits' && (
             <div className="max-w-4xl mx-auto">
-              <HabitTracker habits={habits} onHabitChanged={loadData} />
+              <HabitTracker habits={habits} onHabitChanged={loadData} onPeriodChange={handleHabitPeriodChange} />
             </div>
           )}
 
