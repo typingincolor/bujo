@@ -51,3 +51,8 @@ x alerttriangle is not an appropriate icon for outstanding tasks
 . look for any other occurances of issue 45 and address them
 . all view - indicate viually that there is context to show if there is context to show if it is not being shown
 x ! icon is not vertically aligned with the other actions
+. cancelled entry is not struck through on search results view. Check cancelled entries are struck through everywhere
+. verify how questions & answers should work. Add Outstanding questions view to sidebar
+. remove red colour from overdue tasks
+. outstanding tasks logic seems screwy. The date they are shown under should be the date the were created. Jan 18 is showing lots of entries and I don't know why. Is it showing goals as well - i should only show tasks?
+. Search View (and maybe others) - click cycle priority does nothing. Check all actions do something!

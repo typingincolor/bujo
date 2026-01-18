@@ -732,3 +732,27 @@ describe('ListsView - Move List Item', () => {
     })
   })
 })
+
+describe('ListsView - Visual Styling', () => {
+  it('renders done items with success color (not strikethrough)', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Done Item', type: 'done', done: true })]
+    })]} />)
+
+    const content = screen.getByText('Done Item')
+    expect(content).toHaveClass('text-bujo-done')
+    expect(content).not.toHaveClass('line-through')
+  })
+
+  it('renders cancelled items with strikethrough styling', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Cancelled Item', type: 'cancelled' })]
+    })]} />)
+
+    const content = screen.getByText('Cancelled Item')
+    expect(content).toHaveClass('line-through')
+    expect(content).toHaveClass('text-muted-foreground')
+  })
+})

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
+import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -12,13 +12,14 @@ import { SearchView } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
-import { AddEntryBar } from '@/components/bujo/AddEntryBar'
+import { CaptureModal } from '@/components/bujo/CaptureModal'
+import { InlineEntryInput } from '@/components/bujo/InlineEntryInput'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
-import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
+import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import './index.css'
@@ -65,6 +66,8 @@ function App() {
   const [reviewAnchorDate, setReviewAnchorDate] = useState(() => startOfDay(new Date()))
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const [showCaptureModal, setShowCaptureModal] = useState(false)
+  const [inlineInputMode, setInlineInputMode] = useState<'root' | 'sibling' | 'child' | null>(null)
   const initialLoadCompleteRef = useRef(false)
 
   const loadData = useCallback(async () => {
@@ -220,6 +223,30 @@ function App() {
         }
       }
 
+      // Entry creation shortcuts (c, r, a, A) - work in today view
+      if (view === 'today') {
+        if (e.key === 'c') {
+          e.preventDefault()
+          setShowCaptureModal(true)
+          return
+        }
+        if (e.key === 'r') {
+          e.preventDefault()
+          setInlineInputMode('root')
+          return
+        }
+        if (e.key === 'a') {
+          e.preventDefault()
+          setInlineInputMode('sibling')
+          return
+        }
+        if (e.key === 'A') {
+          e.preventDefault()
+          setInlineInputMode('child')
+          return
+        }
+      }
+
       if (view !== 'today' || flatEntries.length === 0) return
 
       switch (e.key) {
@@ -278,19 +305,6 @@ function App() {
     setSelectedIndex(0)
   }
 
-  const handleAddEntry = useCallback(async (content: string, type: EntryType) => {
-    const symbol = ENTRY_SYMBOLS[type]
-    const formattedContent = `${symbol} ${content}`
-    const today = startOfDay(new Date())
-    try {
-      await AddEntry(formattedContent, toWailsTime(today))
-      loadData()
-    } catch (err) {
-      console.error('Failed to add entry:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add entry')
-    }
-  }, [loadData])
-
   const handleEditEntry = useCallback(async (newContent: string) => {
     if (!editModalEntry) return
     try {
@@ -334,6 +348,29 @@ function App() {
       setSelectedIndex(index)
     }
   }, [flatEntries])
+
+  const handleInlineEntrySubmit = useCallback(async (content: string) => {
+    const today = startOfDay(new Date())
+    try {
+      const selectedEntry = flatEntries[selectedIndex]
+
+      if (inlineInputMode === 'child' && selectedEntry) {
+        await AddChildEntry(selectedEntry.id, content, toWailsTime(today))
+      } else {
+        await AddEntry(content, toWailsTime(today))
+      }
+
+      setInlineInputMode(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to add entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to add entry')
+    }
+  }, [flatEntries, selectedIndex, inlineInputMode, loadData])
+
+  const handleInlineEntryCancel = useCallback(() => {
+    setInlineInputMode(null)
+  }, [])
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
@@ -419,9 +456,15 @@ function App() {
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
+                <button
+                  onClick={() => setShowCaptureModal(true)}
+                  title="Open capture modal"
+                  className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+                >
+                  <PenLine className="w-5 h-5" />
+                </button>
               </div>
               <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
-              <AddEntryBar onAdd={handleAddEntry} />
               <DayView
                 day={today}
                 selectedEntryId={selectedEntryId}
@@ -431,6 +474,22 @@ function App() {
                 onDeleteEntry={handleDeleteEntryRequest}
                 onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
               />
+              {inlineInputMode ? (
+                <InlineEntryInput
+                  mode={inlineInputMode}
+                  onSubmit={handleInlineEntrySubmit}
+                  onCancel={handleInlineEntryCancel}
+                />
+              ) : (
+                <button
+                  onClick={() => setInlineInputMode('root')}
+                  title="Add new entry"
+                  className="w-full flex items-center justify-center gap-2 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-sm">Add entry</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -562,6 +621,16 @@ function App() {
         entryContent={migrateModalEntry?.content || ''}
         onMigrate={handleMigrateEntry}
         onCancel={() => setMigrateModalEntry(null)}
+      />
+
+      {/* Capture Modal */}
+      <CaptureModal
+        isOpen={showCaptureModal}
+        onClose={() => setShowCaptureModal(false)}
+        onEntriesCreated={() => {
+          setShowCaptureModal(false)
+          loadData()
+        }}
       />
     </div>
   )

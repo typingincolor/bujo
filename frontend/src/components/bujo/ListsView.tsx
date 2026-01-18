@@ -251,7 +251,8 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
               ) : (
                 <span className={cn(
                   'text-sm flex-1',
-                  (item.done || item.type === 'cancelled') && 'line-through text-muted-foreground'
+                  item.type === 'done' && 'text-bujo-done',
+                  item.type === 'cancelled' && 'line-through text-muted-foreground'
                 )}>
                   {item.content}
                 </span>

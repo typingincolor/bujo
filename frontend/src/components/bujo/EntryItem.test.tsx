@@ -470,6 +470,15 @@ describe('EntryItem', () => {
     })
   })
 
+  describe('visual styling', () => {
+    it('renders done entries with success color (not strikethrough)', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'done', content: 'Done task' })} />)
+      const content = screen.getByText('Done task')
+      expect(content).toHaveClass('text-bujo-done')
+      expect(content).not.toHaveClass('line-through')
+    })
+  })
+
   describe('hover and selection highlighting', () => {
     it('shows hover highlight on non-selected items', () => {
       render(<EntryItem entry={createTestEntry()} isSelected={false} />)
@@ -488,6 +497,68 @@ describe('EntryItem', () => {
       const container = screen.getByText('Test entry').closest('[data-entry-id]')
       expect(container).toHaveClass('bg-primary/10')
       expect(container).toHaveClass('ring-1')
+    })
+  })
+
+  describe('context menu', () => {
+    it('shows context menu on right-click', () => {
+      render(<EntryItem entry={createTestEntry()} onAddChild={() => {}} onEdit={() => {}} onDelete={() => {}} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByText('Add child')).toBeInTheDocument()
+    })
+
+    it('shows edit option in context menu when onEdit is provided', () => {
+      render(<EntryItem entry={createTestEntry()} onEdit={() => {}} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
+    })
+
+    it('shows delete option in context menu when onDelete is provided', () => {
+      render(<EntryItem entry={createTestEntry()} onDelete={() => {}} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument()
+    })
+
+    it('calls onAddChild when Add child option is clicked', () => {
+      const onAddChild = vi.fn()
+      render(<EntryItem entry={createTestEntry()} onAddChild={onAddChild} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      fireEvent.click(screen.getByText('Add child'))
+
+      expect(onAddChild).toHaveBeenCalledTimes(1)
+    })
+
+    it('closes context menu when clicking outside', () => {
+      render(<EntryItem entry={createTestEntry()} onAddChild={() => {}} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      expect(screen.getByText('Add child')).toBeInTheDocument()
+
+      fireEvent.click(document.body)
+      expect(screen.queryByText('Add child')).not.toBeInTheDocument()
+    })
+
+    it('closes context menu when pressing Escape', () => {
+      render(<EntryItem entry={createTestEntry()} onAddChild={() => {}} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      expect(screen.getByText('Add child')).toBeInTheDocument()
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByText('Add child')).not.toBeInTheDocument()
     })
   })
 })

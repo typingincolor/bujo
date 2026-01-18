@@ -284,7 +284,7 @@ export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: Goals
               ) : (
                 <span className={cn(
                   'flex-1 text-sm',
-                  goal.status === 'done' && 'line-through text-muted-foreground',
+                  goal.status === 'done' && 'text-bujo-done',
                   goal.status === 'migrated' && 'text-muted-foreground',
                   goal.status === 'cancelled' && 'line-through text-muted-foreground'
                 )}>

@@ -509,3 +509,16 @@ describe('GoalsView - Cancel Goal', () => {
     expect(screen.queryByTitle('Cancel goal')).not.toBeInTheDocument()
   })
 })
+
+describe('GoalsView - Visual Styling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders done goals with success color (not strikethrough)', () => {
+    render(<GoalsView goals={[createTestGoal({ content: 'Done Goal', status: 'done' })]} />)
+    const content = screen.getByText('Done Goal')
+    expect(content).toHaveClass('text-bujo-done')
+    expect(content).not.toHaveClass('line-through')
+  })
+})

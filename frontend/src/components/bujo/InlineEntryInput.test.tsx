@@ -88,4 +88,19 @@ describe('InlineEntryInput', () => {
 
     expect(onCancel).toHaveBeenCalled()
   })
+
+  it('shows contextual placeholder for child mode', () => {
+    render(<InlineEntryInput onSubmit={() => {}} onCancel={() => {}} mode="child" />)
+    expect(screen.getByPlaceholderText(/add child entry/i)).toBeInTheDocument()
+  })
+
+  it('shows contextual placeholder for sibling mode', () => {
+    render(<InlineEntryInput onSubmit={() => {}} onCancel={() => {}} mode="sibling" />)
+    expect(screen.getByPlaceholderText(/add entry/i)).toBeInTheDocument()
+  })
+
+  it('shows default placeholder for root mode', () => {
+    render(<InlineEntryInput onSubmit={() => {}} onCancel={() => {}} mode="root" />)
+    expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+  })
 })

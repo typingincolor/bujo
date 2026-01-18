@@ -42,68 +42,6 @@ vi.mock('./wailsjs/go/wails/App', () => ({
 
 import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
 
-describe('App - AddEntryBar integration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('calls AddEntry binding when adding entry via AddEntryBar', async () => {
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
-    })
-
-    const input = screen.getByPlaceholderText("What's on your mind?")
-    fireEvent.change(input, { target: { value: 'Test task' } })
-
-    const submitButton = screen.getByRole('button', { name: '' })
-    fireEvent.click(submitButton)
-
-    await waitFor(() => {
-      expect(AddEntry).toHaveBeenCalledWith('• Test task', expect.any(String))
-    })
-  })
-
-  it('refreshes data after adding entry', async () => {
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
-    })
-
-    vi.mocked(GetAgenda).mockClear()
-
-    const input = screen.getByPlaceholderText("What's on your mind?")
-    fireEvent.change(input, { target: { value: 'Test task' } })
-
-    const submitButton = screen.getByRole('button', { name: '' })
-    fireEvent.click(submitButton)
-
-    await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
-    })
-  })
-
-  it('clears input after successful add', async () => {
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
-    })
-
-    const input = screen.getByPlaceholderText("What's on your mind?") as HTMLInputElement
-    fireEvent.change(input, { target: { value: 'Test task' } })
-
-    const submitButton = screen.getByRole('button', { name: '' })
-    fireEvent.click(submitButton)
-
-    await waitFor(() => {
-      expect(input.value).toBe('')
-    })
-  })
-})
-
 describe('App - Keyboard Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -1156,6 +1094,215 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
 
     // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
     expect(GetAgenda).toHaveBeenCalledTimes(4)
+  })
+})
+
+describe('App - CaptureModal integration', () => {
+  const localStorageMock = {
+    getItem: vi.fn().mockReturnValue(null),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      writable: true,
+    })
+  })
+
+  it('pressing c opens CaptureModal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('c')
+
+    await waitFor(() => {
+      expect(screen.getByText('Capture Entries')).toBeInTheDocument()
+    })
+  })
+
+  it('clicking capture button opens CaptureModal', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const captureButton = screen.getByTitle('Open capture modal')
+    await user.click(captureButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Capture Entries')).toBeInTheDocument()
+    })
+  })
+
+  it('closing CaptureModal returns focus to main view', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('c')
+
+    await waitFor(() => {
+      expect(screen.getByText('Capture Entries')).toBeInTheDocument()
+    })
+
+    // Press Escape or click Cancel to close
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByText('Capture Entries')).not.toBeInTheDocument()
+    })
+  })
+
+  it('CaptureModal refreshes data after creating entries', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('c')
+
+    await waitFor(() => {
+      expect(screen.getByText('Capture Entries')).toBeInTheDocument()
+    })
+
+    const textarea = screen.getByPlaceholderText(/enter entries/i)
+    await user.type(textarea, '. New task')
+
+    vi.mocked(GetAgenda).mockClear()
+
+    // Click Save Entries button
+    const saveButton = screen.getByRole('button', { name: /save entries/i })
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('pressing r shows inline input for root entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('r')
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+    })
+  })
+
+  it('pressing a shows inline input for sibling entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('a')
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/add entry/i)).toBeInTheDocument()
+    })
+  })
+
+  it('pressing A shows inline input for child entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('A')
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/add child entry/i)).toBeInTheDocument()
+    })
+  })
+
+  it('submitting inline input calls AddEntry and refreshes data', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('r')
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+    })
+
+    const input = screen.getByPlaceholderText(/type entry/i)
+    await user.type(input, '. New root task{Enter}')
+
+    await waitFor(() => {
+      expect(AddEntry).toHaveBeenCalledWith('. New root task', expect.any(String))
+    })
+  })
+
+  it('pressing Escape cancels inline input', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    await user.keyboard('r')
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+    })
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/type entry/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it('clicking + button shows inline input for root entry', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const addButton = screen.getByTitle('Add new entry')
+    await user.click(addButton)
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+    })
   })
 })
 

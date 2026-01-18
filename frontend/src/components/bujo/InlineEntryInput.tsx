@@ -1,13 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 
+type InputMode = 'root' | 'sibling' | 'child'
+
 interface InlineEntryInputProps {
   onSubmit: (content: string) => void
   onCancel: () => void
   depth?: number
+  mode?: InputMode
 }
 
-export function InlineEntryInput({ onSubmit, onCancel, depth = 0 }: InlineEntryInputProps) {
+function getPlaceholder(mode: InputMode): string {
+  switch (mode) {
+    case 'child':
+      return 'Add child entry (. task, - note, o event, ? question)'
+    case 'sibling':
+      return 'Add entry (. task, - note, o event, ? question)'
+    default:
+      return 'Type entry (. task, - note, o event, ? question)'
+  }
+}
+
+export function InlineEntryInput({ onSubmit, onCancel, depth = 0, mode = 'root' }: InlineEntryInputProps) {
   const [content, setContent] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -54,7 +68,7 @@ export function InlineEntryInput({ onSubmit, onCancel, depth = 0 }: InlineEntryI
         value={content}
         onChange={(e) => setContent(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Type entry (. task, - note, o event, ? question)"
+        placeholder={getPlaceholder(mode)}
         className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground"
       />
     </div>

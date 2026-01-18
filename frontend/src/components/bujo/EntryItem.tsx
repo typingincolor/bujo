@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
@@ -20,13 +21,14 @@ interface EntryItemProps {
   onUncancel?: () => void;
   onCyclePriority?: () => void;
   onMigrate?: () => void;
+  onAddChild?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
   task: '',
   note: 'text-muted-foreground italic',
   event: 'font-medium',
-  done: 'line-through text-muted-foreground',
+  done: 'text-bujo-done',
   migrated: 'text-muted-foreground',
   cancelled: 'line-through text-muted-foreground opacity-60',
   question: 'text-bujo-question font-medium',
@@ -51,8 +53,35 @@ export function EntryItem({
   onUncancel,
   onCyclePriority,
   onMigrate,
+  onAddChild,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuPos(null);
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenuPos) return;
+
+    const handleClickOutside = () => closeContextMenu();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeContextMenu();
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [contextMenuPos, closeContextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  };
 
   const handleClick = () => {
     onSelect?.();
@@ -63,7 +92,7 @@ export function EntryItem({
       data-entry-id={entry.id}
       data-selected={isSelected}
       className={cn(
-        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors',
+        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative',
         'animate-fade-in',
         !isSelected && 'hover:bg-secondary/50',
         isToggleable && 'cursor-pointer',
@@ -71,6 +100,7 @@ export function EntryItem({
       )}
       style={{ paddingLeft: `${depth * 20 + 8}px` }}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
       {/* Collapse indicator */}
       {hasChildren ? (
@@ -222,6 +252,53 @@ export function EntryItem({
       <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
         #{entry.id}
       </span>
+
+      {/* Context menu */}
+      {contextMenuPos && (
+        <div
+          role="menu"
+          className="fixed z-50 bg-popover border rounded-md shadow-lg py-1 min-w-[120px]"
+          style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {onAddChild && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onAddChild();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Add child
+            </button>
+          )}
+          {onEdit && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onEdit();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Edit
+            </button>
+          )}
+          {onDelete && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onDelete();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-destructive/20 text-destructive transition-colors"
+            >
+              Delete
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
