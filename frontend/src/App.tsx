@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
@@ -61,9 +61,13 @@ function App() {
   const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
   const [habitAnchorDate, setHabitAnchorDate] = useState(() => new Date())
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
+  const initialLoadCompleteRef = useRef(false)
 
   const loadData = useCallback(async () => {
-    setLoading(true)
+    // Only show loading spinner on initial load, not on refresh
+    if (!initialLoadCompleteRef.current) {
+      setLoading(true)
+    }
     setError(null)
     try {
       const now = new Date()
@@ -86,6 +90,7 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
+      initialLoadCompleteRef.current = true
     }
   }, [currentDate, habitDays])
 

@@ -39,6 +39,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   UncancelEntry: vi.fn().mockResolvedValue(undefined),
   CyclePriority: vi.fn().mockResolvedValue(undefined),
   MigrateEntry: vi.fn().mockResolvedValue(100),
+  CreateHabit: vi.fn().mockResolvedValue(1),
 }))
 
 import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
@@ -945,5 +946,71 @@ describe('App - Task Migration', () => {
     await waitFor(() => {
       expect(GetAgenda).toHaveBeenCalled()
     })
+  })
+})
+
+describe('App - No flicker on data refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('does not show loading spinner when refreshing data after habit action', async () => {
+    // Track loading spinner appearances
+    let loadingSpinnerShownDuringRefresh = false
+    let initialLoadComplete = false
+
+    render(<App />)
+
+    // Wait for initial load to complete
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+    initialLoadComplete = true
+
+    // Navigate to habits view
+    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    fireEvent.click(habitsButton)
+
+    // Verify we're in habits view
+    await waitFor(() => {
+      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+    })
+
+    // Set up delayed mock to observe loading state during refresh
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let resolveGetHabits: (value: any) => void
+    vi.mocked(GetHabits).mockImplementation(() => new Promise(resolve => {
+      resolveGetHabits = resolve
+      // Check loading state while API is in flight
+      setTimeout(() => {
+        if (initialLoadComplete && screen.queryByText('Loading your journal...')) {
+          loadingSpinnerShownDuringRefresh = true
+        }
+      }, 10)
+    }))
+
+    // Trigger loadData by simulating habit creation (which calls onHabitChanged -> loadData)
+    const addButton = screen.getByRole('button', { name: /add habit/i })
+    fireEvent.click(addButton)
+
+    // Find the input and submit a new habit
+    const habitInput = screen.getByPlaceholderText('Habit name')
+    fireEvent.change(habitInput, { target: { value: 'Test habit' } })
+    fireEvent.keyDown(habitInput, { key: 'Enter' })
+
+    // Small delay to let the API call start
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // Resolve the pending API call
+    resolveGetHabits!({ Habits: [] })
+
+    // Wait for everything to settle
+    await waitFor(() => {
+      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+    })
+
+    // CRITICAL: Loading spinner should NOT have appeared during refresh
+    expect(loadingSpinnerShownDuringRefresh).toBe(false)
   })
 })
