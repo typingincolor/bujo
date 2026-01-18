@@ -21,7 +21,7 @@ export function CalendarGrid({
   compact = false,
 }: CalendarGridProps) {
   return (
-    <div className="flex flex-col gap-px">
+    <div className="flex flex-col gap-px p-0.5">
       {showHeader && (
         <div className="grid grid-cols-7 gap-px mb-1">
           {DAY_LABELS.map((label, i) => (

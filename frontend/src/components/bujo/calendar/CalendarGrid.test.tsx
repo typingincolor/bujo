@@ -131,4 +131,14 @@ describe('CalendarGrid', () => {
       });
     });
   });
+
+  describe('today ring visibility', () => {
+    it('has padding to prevent today ring from being clipped', () => {
+      const { container } = render(<CalendarGrid {...defaultProps} />);
+
+      // The outer container should have padding to accommodate the ring-2 on today
+      const grid = container.firstChild;
+      expect(grid).toHaveClass('p-0.5');
+    });
+  });
 });
