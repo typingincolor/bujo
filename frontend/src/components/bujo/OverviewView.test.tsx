@@ -499,3 +499,45 @@ describe('OverviewView - Keyboard Shortcuts', () => {
     })
   })
 })
+
+describe('OverviewView - Context Indicator', () => {
+  it('shows context indicator icon when entry has parent and is not expanded', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+  })
+
+  it('does not show context indicator when entry has no parent', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Root task', type: 'task', parentId: null }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    expect(screen.getByText('Root task')).toBeInTheDocument()
+    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+  })
+
+  it('hides context indicator when entry is expanded', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+
+    // Click to expand
+    await user.click(screen.getByText('Task with parent'))
+
+    await waitFor(() => {
+      // Parent event appears in context chain (not in main list since it's type 'event', not 'task')
+      expect(screen.getByText('Parent event')).toBeInTheDocument()
+    })
+    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+  })
+})

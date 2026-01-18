@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { Clock, Check, ChevronDown, ChevronRight, ChevronUp, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect, useCallback } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
@@ -297,6 +297,13 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             )}
                             style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
                           >
+                            {/* Context indicator - shows when entry has parent and isn't expanded */}
+                            {entry.parentId !== null && !isExpanded && (
+                              <ChevronUp
+                                className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                                title="Has parent context"
+                              />
+                            )}
                             <span
                               data-testid="entry-symbol"
                               className="w-5 text-center text-muted-foreground font-mono"

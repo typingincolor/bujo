@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, ChevronUp } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -348,6 +348,13 @@ export function SearchView() {
                 data-result-id={result.id}
                 style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
               >
+                {/* Context indicator - shows when entry has parent and isn't expanded */}
+                {result.parentId !== null && !isExpanded && (
+                  <ChevronUp
+                    className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                    title="Has parent context"
+                  />
+                )}
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
                   <span className={cn(
                     'text-lg font-mono w-5 text-center',

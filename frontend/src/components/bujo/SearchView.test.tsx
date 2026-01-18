@@ -932,3 +932,69 @@ describe('SearchView - Keyboard Shortcuts', () => {
     expect(MarkEntryDone).not.toHaveBeenCalled()
   })
 })
+
+describe('SearchView - Context Indicator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows context indicator icon when entry has parent and is not expanded', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'child')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show context indicator when entry has no parent', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Root entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z', ParentID: null }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'root')
+
+    await waitFor(() => {
+      expect(screen.getByText('Root entry')).toBeInTheDocument()
+    })
+    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+  })
+
+  it('hides context indicator when entry is expanded', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'child')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+    })
+
+    // Click to expand
+    await user.click(screen.getByText('Child entry'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent entry')).toBeInTheDocument()
+    })
+    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+  })
+})
