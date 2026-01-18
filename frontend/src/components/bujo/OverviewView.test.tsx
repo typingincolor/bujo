@@ -163,3 +163,83 @@ describe('OverviewView - Collapsible', () => {
     expect(screen.getByText('My task')).toBeInTheDocument()
   })
 })
+
+describe('OverviewView - Context Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows only task entries by default, hiding parent context entries', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Task should be visible
+    expect(screen.getByText('Overdue task')).toBeInTheDocument()
+    // Parent event should be hidden by default
+    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
+  })
+
+  it('shows context when clicking on a task', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Click on the task to expand context
+    await user.click(screen.getByText('Overdue task'))
+
+    // Parent event should now be visible
+    expect(screen.getByText('Parent event')).toBeInTheDocument()
+  })
+
+  it('hides context when clicking on an expanded task again', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Click to expand
+    await user.click(screen.getByText('Overdue task'))
+    expect(screen.getByText('Parent event')).toBeInTheDocument()
+
+    // Click again to collapse
+    await user.click(screen.getByText('Overdue task'))
+    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
+  })
+
+  it('shows multi-level context when clicking on a deeply nested task', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      createTestEntry({ id: 1, content: 'Grandparent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Parent note', type: 'note', parentId: 1 }),
+      createTestEntry({ id: 3, content: 'Overdue task', type: 'task', parentId: 2 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Click on the task to expand context
+    await user.click(screen.getByText('Overdue task'))
+
+    // Both parent note and grandparent event should be visible
+    expect(screen.getByText('Parent note')).toBeInTheDocument()
+    expect(screen.getByText('Grandparent event')).toBeInTheDocument()
+  })
+
+  it('counts only task entries in the badge', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task one', type: 'task', parentId: 1 }),
+      createTestEntry({ id: 3, content: 'Task two', type: 'task', parentId: null }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Badge should show 2 (only tasks), not 3 (all entries)
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
+})

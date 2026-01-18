@@ -32,10 +32,44 @@ function formatDateHeader(dateStr: string): string {
   }
 }
 
+function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[] {
+  const chain: Entry[] = [];
+  let current = entry;
+  while (current.parentId !== null) {
+    const parent = entriesById.get(current.parentId);
+    if (!parent) break;
+    chain.unshift(parent);
+    current = parent;
+  }
+  return chain;
+}
+
 export function OverviewView({ overdueEntries, onEntryChanged, onError }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const grouped = groupByDate(overdueEntries);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+  // Build a lookup map for all entries by ID
+  const entriesById = new Map<number, Entry>();
+  for (const entry of overdueEntries) {
+    entriesById.set(entry.id, entry);
+  }
+
+  // Filter to only show task entries (type === 'task' or type === 'done')
+  const taskEntries = overdueEntries.filter(e => e.type === 'task' || e.type === 'done');
+  const grouped = groupByDate(taskEntries);
   const sortedDates = Array.from(grouped.keys()).sort();
+
+  const toggleExpanded = (id: number) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleMarkDone = async (entry: Entry) => {
     try {
@@ -75,14 +109,14 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
         <AlertTriangle className="w-5 h-5 text-warning" />
         <h2 className="font-display text-xl font-semibold flex-1">Overdue Tasks</h2>
         <span className="px-2 py-0.5 text-sm font-medium bg-warning/20 text-warning rounded-full">
-          {overdueEntries.length}
+          {taskEntries.length}
         </span>
       </div>
 
       {/* Content */}
       {!collapsed && (
         <>
-          {overdueEntries.length === 0 ? (
+          {taskEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground italic py-6 text-center">
               No overdue tasks. You're all caught up!
             </p>
@@ -94,50 +128,74 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                     {formatDateHeader(dateStr)}
                   </h3>
                   <div className="space-y-1">
-                    {grouped.get(dateStr)!.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className={cn(
-                          'flex items-center gap-3 p-2 rounded-lg border border-border',
-                          'bg-card hover:bg-secondary/30 transition-colors group'
-                        )}
-                      >
-                        <span
-                          data-testid="entry-symbol"
-                          className="w-5 text-center text-muted-foreground font-mono"
-                        >
-                          {ENTRY_SYMBOLS[entry.type]}
-                        </span>
-                        <span className={cn(
-                          'flex-1 text-sm',
-                          entry.type === 'done' && 'line-through text-muted-foreground'
-                        )}>
-                          {entry.content}
-                        </span>
-                        {entry.priority !== 'none' && (
-                          <span className="text-xs text-warning font-medium">
-                            {PRIORITY_SYMBOLS[entry.priority]}
-                          </span>
-                        )}
-                        {entry.type === 'done' ? (
-                          <button
-                            onClick={() => handleMarkUndone(entry)}
-                            title="Mark undone"
-                            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                    {grouped.get(dateStr)!.map((entry) => {
+                      const isExpanded = expandedIds.has(entry.id);
+                      const parentChain = isExpanded ? buildParentChain(entry, entriesById) : [];
+                      return (
+                        <div key={entry.id} className="space-y-1">
+                          {/* Parent context entries (shown when expanded) */}
+                          {parentChain.map((parent, index) => (
+                            <div
+                              key={parent.id}
+                              className={cn(
+                                'flex items-center gap-3 p-2 rounded-lg border border-border',
+                                'bg-muted/30 text-muted-foreground'
+                              )}
+                              style={{ marginLeft: `${index * 16}px` }}
+                            >
+                              <span className="w-5 text-center font-mono">
+                                {ENTRY_SYMBOLS[parent.type]}
+                              </span>
+                              <span className="flex-1 text-sm">{parent.content}</span>
+                            </div>
+                          ))}
+                          {/* Task entry */}
+                          <div
+                            onClick={() => toggleExpanded(entry.id)}
+                            className={cn(
+                              'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
+                              'bg-card hover:bg-secondary/30 transition-colors group'
+                            )}
+                            style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
                           >
-                            <Undo2 className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleMarkDone(entry)}
-                            title="Mark done"
-                            className="p-1 rounded hover:bg-bujo-done/20 text-muted-foreground hover:text-bujo-done transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                            <span
+                              data-testid="entry-symbol"
+                              className="w-5 text-center text-muted-foreground font-mono"
+                            >
+                              {ENTRY_SYMBOLS[entry.type]}
+                            </span>
+                            <span className={cn(
+                              'flex-1 text-sm',
+                              entry.type === 'done' && 'line-through text-muted-foreground'
+                            )}>
+                              {entry.content}
+                            </span>
+                            {entry.priority !== 'none' && (
+                              <span className="text-xs text-warning font-medium">
+                                {PRIORITY_SYMBOLS[entry.priority]}
+                              </span>
+                            )}
+                            {entry.type === 'done' ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkUndone(entry); }}
+                                title="Mark undone"
+                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Undo2 className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleMarkDone(entry); }}
+                                title="Mark done"
+                                className="p-1 rounded hover:bg-bujo-done/20 text-muted-foreground hover:text-bujo-done transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
