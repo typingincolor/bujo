@@ -1,8 +1,9 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem } from '@/wailsjs/go/wails/App'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem } from '@/wailsjs/go/wails/App'
+import { ConfirmDialog } from './ConfirmDialog'
 
 interface ListsViewProps {
   lists: BujoList[]
@@ -16,13 +17,37 @@ interface ListCardProps {
   onToggleItem: (itemId: number, done: boolean) => void
   onAddItem: (listId: number, content: string) => void
   onDeleteItem: (itemId: number) => void
+  onDeleteList: (listId: number) => void
+  onRenameList: (listId: number, newName: string) => void
+  onEditItem: (itemId: number, content: string) => void
 }
 
-function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem }: ListCardProps) {
+function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem }: ListCardProps) {
   const [newItemContent, setNewItemContent] = useState('')
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [renameName, setRenameName] = useState(list.name)
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [editingContent, setEditingContent] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
+  const editInputRef = useRef<HTMLInputElement>(null)
+
   const progress = list.totalCount > 0
     ? Math.round((list.doneCount / list.totalCount) * 100)
     : 0
+
+  useEffect(() => {
+    if (isRenaming) {
+      renameInputRef.current?.focus()
+      renameInputRef.current?.select()
+    }
+  }, [isRenaming])
+
+  useEffect(() => {
+    if (editingItemId !== null) {
+      editInputRef.current?.focus()
+      editInputRef.current?.select()
+    }
+  }, [editingItemId])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -39,20 +64,73 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
     onDeleteItem(itemId)
   }
 
+  const handleRenameClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setRenameName(list.name)
+    setIsRenaming(true)
+  }
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const trimmed = renameName.trim()
+      if (trimmed && trimmed !== list.name) {
+        onRenameList(list.id, trimmed)
+      }
+      setIsRenaming(false)
+    } else if (e.key === 'Escape') {
+      setIsRenaming(false)
+    }
+  }
+
+  const handleDeleteListClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDeleteList(list.id)
+  }
+
+  const handleEditItemClick = (e: React.MouseEvent, itemId: number, content: string) => {
+    e.stopPropagation()
+    setEditingItemId(itemId)
+    setEditingContent(content)
+  }
+
+  const handleEditKeyDown = (e: React.KeyboardEvent, itemId: number) => {
+    if (e.key === 'Enter') {
+      const trimmed = editingContent.trim()
+      if (trimmed) {
+        onEditItem(itemId, trimmed)
+      }
+      setEditingItemId(null)
+    } else if (e.key === 'Escape') {
+      setEditingItemId(null)
+    }
+  }
+
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden animate-fade-in">
       {/* Header */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 hover:bg-secondary/30 transition-colors"
-      >
-        <ChevronRight
-          className={cn(
-            'w-4 h-4 text-muted-foreground transition-transform',
-            isExpanded && 'rotate-90'
+      <div className="flex items-center gap-3 p-4 hover:bg-secondary/30 transition-colors group">
+        <button onClick={onToggle} className="flex-1 flex items-center gap-3">
+          <ChevronRight
+            className={cn(
+              'w-4 h-4 text-muted-foreground transition-transform',
+              isExpanded && 'rotate-90'
+            )}
+          />
+          {isRenaming ? (
+            <input
+              ref={renameInputRef}
+              type="text"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={handleRenameKeyDown}
+              onBlur={() => setIsRenaming(false)}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium flex-1 text-left bg-transparent border-b border-primary focus:outline-none"
+            />
+          ) : (
+            <span className="font-medium flex-1 text-left">{list.name}</span>
           )}
-        />
-        <span className="font-medium flex-1 text-left">{list.name}</span>
+        </button>
         <span className="text-sm text-muted-foreground">
           {list.doneCount}/{list.totalCount}
         </span>
@@ -63,7 +141,22 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
             style={{ width: `${progress}%` }}
           />
         </div>
-      </button>
+        {/* Action buttons */}
+        <button
+          onClick={handleRenameClick}
+          title="Rename list"
+          className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={handleDeleteListClick}
+          title="Delete list"
+          className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
 
       {/* Items */}
       {isExpanded && (
@@ -71,7 +164,7 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
           {list.items.map((item) => (
             <div
               key={item.id}
-              onClick={() => onToggleItem(item.id, item.done)}
+              onClick={() => editingItemId !== item.id && onToggleItem(item.id, item.done)}
               className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2 cursor-pointer"
             >
               {item.done ? (
@@ -79,12 +172,32 @@ function ListCard({ list, isExpanded, onToggle, onToggleItem, onAddItem, onDelet
               ) : (
                 <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               )}
-              <span className={cn(
-                'text-sm flex-1',
-                item.done && 'line-through text-muted-foreground'
-              )}>
-                {item.content}
-              </span>
+              {editingItemId === item.id ? (
+                <input
+                  ref={editInputRef}
+                  type="text"
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                  onBlur={() => setEditingItemId(null)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-sm flex-1 bg-transparent border-b border-primary focus:outline-none"
+                />
+              ) : (
+                <span className={cn(
+                  'text-sm flex-1',
+                  item.done && 'line-through text-muted-foreground'
+                )}>
+                  {item.content}
+                </span>
+              )}
+              <button
+                onClick={(e) => handleEditItemClick(e, item.id, item.content)}
+                title="Edit item"
+                className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
               <button
                 onClick={(e) => handleDeleteItem(e, item.id)}
                 title="Delete item"
@@ -116,6 +229,16 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(
     () => lists[0]?.id !== undefined ? new Set([lists[0].id]) : new Set()
   )
+  const [isCreatingList, setIsCreatingList] = useState(false)
+  const [newListName, setNewListName] = useState('')
+  const [listToDelete, setListToDelete] = useState<BujoList | null>(null)
+  const createInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isCreatingList) {
+      createInputRef.current?.focus()
+    }
+  }, [isCreatingList])
 
   const toggleExpanded = (id: number) => {
     setExpandedIds(prev => {
@@ -160,12 +283,101 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
     }
   }
 
+  const handleCreateList = async () => {
+    const trimmed = newListName.trim()
+    if (!trimmed) return
+
+    try {
+      await CreateList(trimmed)
+      setNewListName('')
+      setIsCreatingList(false)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to create list:', error)
+    }
+  }
+
+  const handleCreateKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCreateList()
+    } else if (e.key === 'Escape') {
+      setIsCreatingList(false)
+      setNewListName('')
+    }
+  }
+
+  const handleDeleteList = async () => {
+    if (!listToDelete) return
+
+    try {
+      await DeleteList(listToDelete.id, true)
+      setListToDelete(null)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to delete list:', error)
+    }
+  }
+
+  const handleRenameList = async (listId: number, newName: string) => {
+    try {
+      await RenameList(listId, newName)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to rename list:', error)
+    }
+  }
+
+  const handleEditItem = async (itemId: number, content: string) => {
+    try {
+      await EditListItem(itemId, content)
+      onListChanged?.()
+    } catch (error) {
+      console.error('Failed to edit list item:', error)
+    }
+  }
+
+  const handleRequestDeleteList = (listId: number) => {
+    const list = lists.find(l => l.id === listId)
+    if (list) {
+      setListToDelete(list)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 mb-4">
         <List className="w-5 h-5 text-primary" />
         <h2 className="font-display text-xl font-semibold">Lists</h2>
+        <button
+          onClick={() => setIsCreatingList(true)}
+          className="ml-auto px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
+          aria-label="New list"
+        >
+          <Plus className="w-3 h-3" />
+          New List
+        </button>
       </div>
+
+      {isCreatingList && (
+        <div className="flex items-center gap-2 py-2 px-4 rounded-lg bg-card border border-border animate-fade-in">
+          <input
+            ref={createInputRef}
+            type="text"
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            onKeyDown={handleCreateKeyDown}
+            placeholder="List name"
+            className="flex-1 px-2 py-1.5 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+          <button
+            onClick={() => { setIsCreatingList(false); setNewListName('') }}
+            className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+            aria-label="Cancel"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="space-y-2">
         {lists.map((list) => (
@@ -177,9 +389,22 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
             onToggleItem={handleToggleItem}
             onAddItem={handleAddItem}
             onDeleteItem={handleDeleteItem}
+            onDeleteList={handleRequestDeleteList}
+            onRenameList={handleRenameList}
+            onEditItem={handleEditItem}
           />
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!listToDelete}
+        title="Delete List"
+        message={`Are you sure you want to delete "${listToDelete?.name}"? This will also delete all items in this list.`}
+        confirmText="Delete"
+        variant="destructive"
+        onConfirm={handleDeleteList}
+        onCancel={() => setListToDelete(null)}
+      />
     </div>
   )
 }

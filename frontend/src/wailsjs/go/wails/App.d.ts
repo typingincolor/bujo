@@ -58,3 +58,11 @@ export function LogHabitForDate(arg1:number,arg2:number,arg3:time.Time):Promise<
 export function UndoHabitLog(arg1:number):Promise<void>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
+
+export function CreateList(arg1:string):Promise<number>;
+
+export function DeleteList(arg1:number,arg2:boolean):Promise<void>;
+
+export function RenameList(arg1:number,arg2:string):Promise<void>;
+
+export function EditListItem(arg1:number,arg2:string):Promise<void>;
