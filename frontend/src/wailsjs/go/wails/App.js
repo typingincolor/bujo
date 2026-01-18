@@ -97,3 +97,15 @@ export function Search(arg1) {
 export function AnswerQuestion(arg1, arg2) {
   return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
 }
+
+export function LogHabitForDate(arg1, arg2, arg3) {
+  return window['go']['wails']['App']['LogHabitForDate'](arg1, arg2, arg3);
+}
+
+export function UndoHabitLog(arg1) {
+  return window['go']['wails']['App']['UndoHabitLog'](arg1);
+}
+
+export function SetHabitGoal(arg1, arg2) {
+  return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
+}

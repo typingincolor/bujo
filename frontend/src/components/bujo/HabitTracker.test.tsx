@@ -8,9 +8,12 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   LogHabit: vi.fn().mockResolvedValue(undefined),
   CreateHabit: vi.fn().mockResolvedValue(1),
   DeleteHabit: vi.fn().mockResolvedValue(undefined),
+  UndoHabitLog: vi.fn().mockResolvedValue(undefined),
+  SetHabitGoal: vi.fn().mockResolvedValue(undefined),
+  LogHabitForDate: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateHabit, DeleteHabit } from '@/wailsjs/go/wails/App'
+import { CreateHabit, DeleteHabit, UndoHabitLog, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App'
 
 const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   id: 1,
@@ -207,5 +210,178 @@ describe('HabitTracker - Delete Habit', () => {
     await user.click(screen.getByRole('button', { name: /cancel/i }))
 
     expect(DeleteHabit).not.toHaveBeenCalled()
+  })
+})
+
+describe('HabitTracker - Period View Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows period selector with Week as default', () => {
+    render(<HabitTracker habits={[createTestHabit()]} />)
+    expect(screen.getByRole('button', { name: /week/i })).toBeInTheDocument()
+  })
+
+  it('shows Month option in period selector', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByRole('button', { name: /week/i }))
+    expect(screen.getByRole('button', { name: /month/i })).toBeInTheDocument()
+  })
+
+  it('shows Quarter option in period selector', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByRole('button', { name: /week/i }))
+    expect(screen.getByRole('button', { name: /quarter/i })).toBeInTheDocument()
+  })
+
+  it('calls onPeriodChange when selecting Month', async () => {
+    const user = userEvent.setup()
+    const onPeriodChange = vi.fn()
+    render(<HabitTracker habits={[createTestHabit()]} onPeriodChange={onPeriodChange} />)
+
+    await user.click(screen.getByRole('button', { name: /week/i }))
+    await user.click(screen.getByRole('button', { name: /month/i }))
+
+    expect(onPeriodChange).toHaveBeenCalledWith('month')
+  })
+})
+
+describe('HabitTracker - Undo Habit Log', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows undo button on habit row when habit is logged today', () => {
+    render(<HabitTracker habits={[createTestHabit({ todayLogged: true, todayCount: 1 })]} />)
+    expect(screen.getByTitle('Undo last log')).toBeInTheDocument()
+  })
+
+  it('does not show undo button when habit is not logged today', () => {
+    render(<HabitTracker habits={[createTestHabit({ todayLogged: false })]} />)
+    expect(screen.queryByTitle('Undo last log')).not.toBeInTheDocument()
+  })
+
+  it('calls UndoHabitLog binding when undo button is clicked', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ id: 42, todayLogged: true, todayCount: 1 })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Undo last log'))
+
+    await waitFor(() => {
+      expect(UndoHabitLog).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls onHabitChanged after undo', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ todayLogged: true, todayCount: 1 })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Undo last log'))
+
+    await waitFor(() => {
+      expect(onHabitChanged).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('HabitTracker - Set Habit Goal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows goal button on habit row', () => {
+    render(<HabitTracker habits={[createTestHabit()]} />)
+    expect(screen.getByTitle('Set goal')).toBeInTheDocument()
+  })
+
+  it('shows goal input when goal button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+
+    expect(screen.getByPlaceholderText(/daily goal/i)).toBeInTheDocument()
+  })
+
+  it('calls SetHabitGoal binding when submitting goal', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ id: 42 })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    const input = screen.getByPlaceholderText(/daily goal/i)
+    await user.type(input, '3{Enter}')
+
+    await waitFor(() => {
+      expect(SetHabitGoal).toHaveBeenCalledWith(42, 3)
+    })
+  })
+
+  it('calls onHabitChanged after setting goal', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit()]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    const input = screen.getByPlaceholderText(/daily goal/i)
+    await user.type(input, '3{Enter}')
+
+    await waitFor(() => {
+      expect(onHabitChanged).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('HabitTracker - Log Habit For Specific Date', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows date picker when clicking on a past day in sparkline', async () => {
+    const user = userEvent.setup()
+    // Create habit with history array of 7 days
+    const habit = createTestHabit({
+      history: [false, false, false, false, false, false, false]
+    })
+    render(<HabitTracker habits={[habit]} />)
+
+    // Click on a past day (first day in sparkline which is 6 days ago)
+    const sparklineDots = screen.getAllByRole('button', { name: /log for/i })
+    expect(sparklineDots.length).toBeGreaterThan(0)
+    await user.click(sparklineDots[0])
+
+    // Check for the dialog title
+    expect(screen.getByText('Log Habit for Date')).toBeInTheDocument()
+  })
+
+  it('calls LogHabitForDate binding when logging for specific date', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    const habit = createTestHabit({
+      id: 42,
+      history: [false, false, false, false, false, false, false]
+    })
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
+
+    // Click on a past day sparkline dot
+    const sparklineDots = screen.getAllByRole('button', { name: /log for/i })
+    await user.click(sparklineDots[0])
+
+    // Confirm logging
+    await user.click(screen.getByRole('button', { name: /confirm/i }))
+
+    await waitFor(() => {
+      expect(LogHabitForDate).toHaveBeenCalled()
+      const call = vi.mocked(LogHabitForDate).mock.calls[0]
+      expect(call[0]).toBe(42) // habit ID
+      expect(call[1]).toBe(1) // count
+    })
   })
 })
