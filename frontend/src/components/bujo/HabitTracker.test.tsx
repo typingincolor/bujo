@@ -640,6 +640,20 @@ describe('HabitTracker - Week View Header', () => {
   })
 })
 
+describe('HabitTracker - No Re-render Animation', () => {
+  it('habit rows do not have slide-in animation that would flicker on re-render', () => {
+    const habit = createTestHabit({ name: 'Exercise' })
+    const { container } = render(<HabitTracker habits={[habit]} />)
+
+    // Find the habit row container
+    const habitRow = container.querySelector('.group')
+    expect(habitRow).toBeInTheDocument()
+
+    // Should NOT have animate-slide-in class (causes flicker on re-render)
+    expect(habitRow).not.toHaveClass('animate-slide-in')
+  })
+})
+
 describe('HabitTracker - Calendar Grid View', () => {
   beforeEach(() => {
     vi.clearAllMocks()

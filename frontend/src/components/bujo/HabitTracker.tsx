@@ -129,7 +129,7 @@ function HabitRow({
   };
 
   return (
-    <div className="flex items-center gap-4 py-3 px-4 rounded-lg bg-card hover:bg-secondary/30 transition-colors group animate-slide-in">
+    <div className="flex items-center gap-4 py-3 px-4 rounded-lg bg-card hover:bg-secondary/30 transition-colors group">
       {/* Habit name and streak */}
       <div className="flex-shrink-0 min-w-0 w-32">
         <div className="flex items-center gap-2">
