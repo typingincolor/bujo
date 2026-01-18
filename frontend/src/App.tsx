@@ -55,6 +55,7 @@ function App() {
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
+  const [habitDays, setHabitDays] = useState(7)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -66,7 +67,7 @@ function App() {
 
       const [agendaData, habitsData, listsData, goalsData] = await Promise.all([
         GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
-        GetHabits(30),
+        GetHabits(habitDays),
         GetLists(),
         GetGoals(toWailsTime(monthStart)),
       ])
@@ -81,7 +82,7 @@ function App() {
     } finally {
       setLoading(false)
     }
-  }, [currentDate])
+  }, [currentDate, habitDays])
 
   useEffect(() => {
     loadData()
@@ -123,6 +124,11 @@ function App() {
       const newDate = new Date(dateValue + 'T00:00:00')
       setCurrentDate(newDate)
     }
+  }, [])
+
+  const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
+    const daysMap = { week: 7, month: 30, quarter: 90 }
+    setHabitDays(daysMap[period])
   }, [])
 
   useEffect(() => {
@@ -366,7 +372,7 @@ function App() {
 
           {view === 'habits' && (
             <div className="max-w-4xl mx-auto">
-              <HabitTracker habits={habits} onHabitChanged={loadData} />
+              <HabitTracker habits={habits} onHabitChanged={loadData} onPeriodChange={handleHabitPeriodChange} />
             </div>
           )}
 

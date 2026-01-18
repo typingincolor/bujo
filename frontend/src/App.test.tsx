@@ -37,7 +37,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   HasChildren: vi.fn().mockResolvedValue(false),
 }))
 
-import { GetAgenda, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -469,6 +469,44 @@ describe('App - Day Navigation', () => {
 
     await waitFor(() => {
       expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('App - Habit View Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('refetches habits with different day count when period changes', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Switch to habits view
+    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    await user.click(habitsButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetHabits).mockClear()
+
+    // Click on period selector (shows "week" by default) - it's inside the HabitTracker component
+    const periodButton = screen.getByRole('button', { name: /^week$/i })
+    await user.click(periodButton)
+
+    // Click on Month option
+    const monthButton = screen.getByRole('button', { name: /^month$/i })
+    await user.click(monthButton)
+
+    await waitFor(() => {
+      expect(GetHabits).toHaveBeenCalledWith(30)
     })
   })
 })
