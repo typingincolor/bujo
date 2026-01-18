@@ -261,7 +261,7 @@ describe('EntryItem', () => {
       expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
     })
 
-    it('cycle priority button shows exclamation mark icon', () => {
+    it('cycle priority button shows Flag icon', () => {
       render(
         <EntryItem
           entry={createTestEntry({ type: 'task' })}
@@ -269,20 +269,8 @@ describe('EntryItem', () => {
         />
       )
       const button = screen.getByTitle('Cycle priority')
-      expect(button).toHaveTextContent('!')
-    })
-
-    it('cycle priority icon has fixed dimensions for alignment', () => {
-      render(
-        <EntryItem
-          entry={createTestEntry({ type: 'task' })}
-          onCyclePriority={() => {}}
-        />
-      )
-      const button = screen.getByTitle('Cycle priority')
-      const iconSpan = button.querySelector('span')
-      expect(iconSpan).toHaveClass('w-3.5')
-      expect(iconSpan).toHaveClass('h-3.5')
+      const icon = button.querySelector('svg')
+      expect(icon).toBeInTheDocument()
     })
 
     it('calls onCyclePriority when priority button is clicked', () => {

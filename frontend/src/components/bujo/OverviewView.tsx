@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight } from 'lucide-react';
+import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
@@ -254,7 +254,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               title="Cycle priority"
                               className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
                             >
-                              <span className="w-4 h-4 inline-flex items-center justify-center text-base font-bold leading-none">!</span>
+                              <Flag className="w-4 h-4" />
                             </button>
                             {entry.type === 'task' && (
                               <button
