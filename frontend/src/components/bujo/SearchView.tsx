@@ -352,6 +352,7 @@ export function SearchView() {
                 {result.parentId !== null && !isExpanded && (
                   <ChevronUp
                     className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                    aria-label="Has parent context"
                     title="Has parent context"
                   />
                 )}

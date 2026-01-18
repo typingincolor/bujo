@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { HelpCircle, ChevronDown, ChevronRight, ChevronUp, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useState, useEffect } from 'react'
-import { AnswerQuestion, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
+import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
 import { AnswerQuestionModal } from './AnswerQuestionModal'
 
 interface QuestionsViewProps {
@@ -291,6 +291,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                             {entry.parentId !== null && !isExpanded && (
                               <ChevronUp
                                 className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                                aria-label="Has parent context"
                                 title="Has parent context"
                               />
                             )}

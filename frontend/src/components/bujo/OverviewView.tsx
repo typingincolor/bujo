@@ -2,7 +2,7 @@ import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Clock, Check, ChevronDown, ChevronRight, ChevronUp, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 
 interface OverviewViewProps {
@@ -301,6 +301,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             {entry.parentId !== null && !isExpanded && (
                               <ChevronUp
                                 className="w-4 h-4 text-muted-foreground flex-shrink-0"
+                                aria-label="Has parent context"
                                 title="Has parent context"
                               />
                             )}
