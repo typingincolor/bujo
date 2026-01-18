@@ -558,6 +558,68 @@ describe('App - Habit View Toggle', () => {
   })
 })
 
+describe('App - Keyboard Shortcuts Panel Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('keyboard shortcuts panel is hidden by default', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Keyboard shortcuts panel should not be visible by default
+    expect(screen.queryByText('Keyboard Shortcuts')).not.toBeInTheDocument()
+  })
+
+  it('cmd-? toggles keyboard shortcuts panel visibility', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Initially hidden
+    expect(screen.queryByText('Keyboard Shortcuts')).not.toBeInTheDocument()
+
+    // Press Cmd+? (Cmd+Shift+/) to show
+    const showEvent = new KeyboardEvent('keydown', {
+      key: '?',
+      metaKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    await act(async () => {
+      window.dispatchEvent(showEvent)
+    })
+
+    // Should now be visible
+    await waitFor(() => {
+      expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument()
+    })
+
+    // Press Cmd+? again to hide
+    const hideEvent = new KeyboardEvent('keydown', {
+      key: '?',
+      metaKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    await act(async () => {
+      window.dispatchEvent(hideEvent)
+    })
+
+    // Should be hidden again
+    await waitFor(() => {
+      expect(screen.queryByText('Keyboard Shortcuts')).not.toBeInTheDocument()
+    })
+  })
+})
+
 describe('App - Cancel/Uncancel Entry', () => {
   const mockWithCancelledEntry = createMockAgenda({
     Days: [createMockDayEntries({

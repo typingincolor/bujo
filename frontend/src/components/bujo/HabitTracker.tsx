@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Habit, HabitDayStatus } from '@/types/bujo';
+import { Habit } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Flame, Plus, X, Trash2, Target, ChevronDown } from 'lucide-react';
 import { CreateHabit, DeleteHabit, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
@@ -36,18 +36,6 @@ interface HabitRowProps {
   onGoalCancel: () => void;
   currentPeriod: PeriodView;
   anchorDate: Date;
-}
-
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-
-function getDayLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return DAY_LABELS[date.getDay()];
-}
-
-function formatShortDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function HabitRow({

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HabitTracker } from './HabitTracker'
@@ -14,7 +14,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   LogHabitForDate: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { CreateHabit, DeleteHabit, UndoHabitLog, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App'
+import { CreateHabit, DeleteHabit, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App'
 
 const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   id: 1,

@@ -60,6 +60,7 @@ function App() {
   const [habitDays, setHabitDays] = useState(14)
   const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
   const [habitAnchorDate, setHabitAnchorDate] = useState(() => new Date())
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -149,6 +150,13 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // Cmd+? (Cmd+Shift+/) toggles keyboard shortcuts panel
+      if (e.key === '?' && e.metaKey) {
+        e.preventDefault()
+        setShowKeyboardShortcuts(prev => !prev)
+        return
+      }
+
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
 
@@ -454,10 +462,12 @@ function App() {
           )}
         </main>
 
-        {/* Keyboard shortcuts hint */}
-        <div className="hidden lg:block fixed bottom-4 right-4 w-72">
-          <KeyboardShortcuts view={view} />
-        </div>
+        {/* Keyboard shortcuts hint - toggle with Cmd+? */}
+        {showKeyboardShortcuts && (
+          <div className="fixed bottom-4 right-4 w-72 z-50">
+            <KeyboardShortcuts view={view} />
+          </div>
+        )}
       </div>
 
       {/* Edit Entry Modal */}

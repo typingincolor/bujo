@@ -6,7 +6,6 @@ import {
   navigatePeriod,
   mapDayHistoryToCalendar,
   formatPeriodLabel,
-  CalendarDay,
 } from './calendarUtils';
 import { HabitDayStatus } from '@/types/bujo';
 
