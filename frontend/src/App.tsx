@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -54,7 +54,6 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [searchResults, setSearchResults] = useState<Array<{ id: number; content: string; type: string; date: string }>>([])
   const [editModalEntry, setEditModalEntry] = useState<Entry | null>(null)
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
@@ -279,25 +278,6 @@ function App() {
     setSelectedIndex(0)
   }
 
-  const handleSearch = useCallback(async (query: string) => {
-    if (!query) {
-      setSearchResults([])
-      return
-    }
-    try {
-      const results = await Search(query)
-      setSearchResults((results || []).map(entry => ({
-        id: entry.ID,
-        content: entry.Content,
-        type: entry.Type,
-        date: (entry.CreatedAt as unknown as string)?.split('T')[0] || '',
-      })))
-    } catch (err) {
-      console.error('Search failed:', err)
-      setSearchResults([])
-    }
-  }, [])
-
   const handleAddEntry = useCallback(async (content: string, type: EntryType) => {
     const symbol = ENTRY_SYMBOLS[type]
     const formattedContent = `${symbol} ${content}`
@@ -405,8 +385,6 @@ function App() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           title={viewTitles[view]}
-          searchResults={searchResults}
-          onSearch={handleSearch}
           currentMood={today?.mood}
           currentWeather={today?.weather}
           currentLocation={today?.location}

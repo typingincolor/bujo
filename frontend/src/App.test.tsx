@@ -15,11 +15,6 @@ const mockEntriesAgenda = createMockAgenda({
   Overdue: [],
 })
 
-const mockSearchResults = [
-  createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Buy groceries', CreatedAt: '2026-01-15T10:00:00Z' }),
-  createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Note', Content: 'Grocery list ideas', CreatedAt: '2026-01-14T10:00:00Z' }),
-]
-
 vi.mock('./wailsjs/go/wails/App', () => ({
   GetAgenda: vi.fn().mockResolvedValue({
     Overdue: [],
@@ -31,7 +26,6 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   AddEntry: vi.fn().mockResolvedValue([1]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
-  Search: vi.fn().mockResolvedValue([]),
   EditEntry: vi.fn().mockResolvedValue(undefined),
   DeleteEntry: vi.fn().mockResolvedValue(undefined),
   HasChildren: vi.fn().mockResolvedValue(false),
@@ -46,7 +40,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
 }))
 
-import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -253,68 +247,6 @@ describe('App - Click Selection', () => {
     fireEvent.click(secondTask!)
 
     expect(secondTask).toHaveAttribute('data-selected', 'true')
-  })
-})
-
-describe('App - Search functionality', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
-    vi.mocked(Search).mockResolvedValue(mockSearchResults)
-  })
-
-  it('calls Search binding when typing in search input', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    const searchInput = screen.getByPlaceholderText('Search entries...')
-    await user.type(searchInput, 'groceries')
-
-    await waitFor(() => {
-      expect(Search).toHaveBeenCalledWith('groceries')
-    }, { timeout: 1000 })
-  })
-
-  it('displays search results in dropdown', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    const searchInput = screen.getByPlaceholderText('Search entries...')
-    await user.type(searchInput, 'groceries')
-
-    await waitFor(() => {
-      expect(screen.getByText('Buy groceries')).toBeInTheDocument()
-    })
-  })
-
-  it('clears search results when input is cleared', async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    const searchInput = screen.getByPlaceholderText('Search entries...')
-    await user.type(searchInput, 'groceries')
-
-    await waitFor(() => {
-      expect(screen.getByText('Buy groceries')).toBeInTheDocument()
-    })
-
-    await user.clear(searchInput)
-
-    await waitFor(() => {
-      expect(screen.queryByText('Buy groceries')).not.toBeInTheDocument()
-    })
   })
 })
 

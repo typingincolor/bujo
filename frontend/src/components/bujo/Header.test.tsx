@@ -18,9 +18,9 @@ describe('Header', () => {
     expect(screen.getByText('Today')).toBeInTheDocument()
   })
 
-  it('renders search input', () => {
+  it('does not render search input', () => {
     render(<Header title="Today" />)
-    expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/search entries/i)).not.toBeInTheDocument()
   })
 
   it('renders current date', () => {
