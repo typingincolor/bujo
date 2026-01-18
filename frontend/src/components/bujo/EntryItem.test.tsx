@@ -561,4 +561,49 @@ describe('EntryItem', () => {
       expect(screen.queryByText('Add child')).not.toBeInTheDocument()
     })
   })
+
+  describe('cycle type', () => {
+    it('shows cycle type button when onCycleType callback is provided', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'task' })} onCycleType={() => {}} />)
+      expect(screen.getByTitle('Change type')).toBeInTheDocument()
+    })
+
+    it('calls onCycleType when cycle type button is clicked', () => {
+      const onCycleType = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'task' })} onCycleType={onCycleType} />)
+
+      fireEvent.click(screen.getByTitle('Change type'))
+      expect(onCycleType).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show cycle type button for done entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'done' })} onCycleType={() => {}} />)
+      expect(screen.queryByTitle('Change type')).not.toBeInTheDocument()
+    })
+
+    it('does not show cycle type button for cancelled entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'cancelled' })} onCycleType={() => {}} />)
+      expect(screen.queryByTitle('Change type')).not.toBeInTheDocument()
+    })
+
+    it('does not show cycle type button for migrated entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'migrated' })} onCycleType={() => {}} />)
+      expect(screen.queryByTitle('Change type')).not.toBeInTheDocument()
+    })
+
+    it('shows cycle type button for note entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'note' })} onCycleType={() => {}} />)
+      expect(screen.getByTitle('Change type')).toBeInTheDocument()
+    })
+
+    it('shows cycle type button for event entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'event' })} onCycleType={() => {}} />)
+      expect(screen.getByTitle('Change type')).toBeInTheDocument()
+    })
+
+    it('shows cycle type button for question entries', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'question' })} onCycleType={() => {}} />)
+      expect(screen.getByTitle('Change type')).toBeInTheDocument()
+    })
+  })
 })

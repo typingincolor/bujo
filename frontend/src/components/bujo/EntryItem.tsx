@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Check, Flag } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Check, Flag, RefreshCw } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -22,6 +22,7 @@ interface EntryItemProps {
   onCyclePriority?: () => void;
   onMigrate?: () => void;
   onAddChild?: () => void;
+  onCycleType?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -54,8 +55,10 @@ export function EntryItem({
   onCyclePriority,
   onMigrate,
   onAddChild,
+  onCycleType,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
+  const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const closeContextMenu = useCallback(() => {
@@ -208,6 +211,18 @@ export function EntryItem({
             className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
           >
             <Flag className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onCycleType && canChangeType && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCycleType();
+            }}
+            title="Change type"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         )}
         {onMigrate && entry.type === 'task' && (

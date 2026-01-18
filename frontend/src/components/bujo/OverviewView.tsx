@@ -1,9 +1,9 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag } from 'lucide-react';
+import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 
 interface OverviewViewProps {
   overdueEntries: Entry[];
@@ -128,6 +128,20 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
     } catch (error) {
       console.error('Failed to cycle priority:', error);
       onError?.(error instanceof Error ? error.message : 'Failed to cycle priority');
+    }
+  };
+
+  const handleCycleType = async (entry: Entry) => {
+    const cycleOrder = ['task', 'note', 'event', 'question'] as const;
+    const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number]);
+    if (currentIndex === -1) return;
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length];
+    try {
+      await RetypeEntry(entry.id, nextType);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cycle type:', error);
+      onError?.(error instanceof Error ? error.message : 'Failed to cycle type');
     }
   };
 
@@ -257,6 +271,15 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             >
                               <Flag className="w-4 h-4" />
                             </button>
+                            {entry.type === 'task' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleCycleType(entry); }}
+                                title="Change type"
+                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                            )}
                             {entry.type === 'task' && (
                               <button
                                 onClick={(e) => e.stopPropagation()}

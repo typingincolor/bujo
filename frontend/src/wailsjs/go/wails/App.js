@@ -162,6 +162,10 @@ export function RenameList(arg1, arg2) {
   return window['go']['wails']['App']['RenameList'](arg1, arg2);
 }
 
+export function RetypeEntry(arg1, arg2) {
+  return window['go']['wails']['App']['RetypeEntry'](arg1, arg2);
+}
+
 export function Search(arg1) {
   return window['go']['wails']['App']['Search'](arg1);
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag } from 'lucide-react';
-import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
@@ -158,6 +158,20 @@ export function SearchView() {
       await refreshEntry(id);
     } catch (error) {
       console.error('Failed to cycle priority:', error);
+    }
+  }, [refreshEntry]);
+
+  const handleCycleType = useCallback(async (id: number, currentType: EntryType, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const cycleOrder: EntryType[] = ['task', 'note', 'event', 'question'];
+    const currentIndex = cycleOrder.indexOf(currentType);
+    if (currentIndex === -1) return;
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length];
+    try {
+      await RetypeEntry(id, nextType);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to cycle type:', error);
     }
   }, [refreshEntry]);
 
@@ -322,6 +336,15 @@ export function SearchView() {
                 >
                   <Flag className="w-4 h-4" />
                 </button>
+                {(result.type === 'task' || result.type === 'note' || result.type === 'event' || result.type === 'question') && (
+                  <button
+                    onClick={(e) => handleCycleType(result.id, result.type, e)}
+                    title="Change type"
+                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                )}
                 {result.type === 'task' && (
                   <button
                     onClick={(e) => e.stopPropagation()}

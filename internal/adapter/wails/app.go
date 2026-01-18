@@ -252,6 +252,10 @@ func (a *App) MigrateEntry(id int64, toDate time.Time) (int64, error) {
 	return a.services.Bujo.MigrateEntry(a.ctx, id, toDate)
 }
 
+func (a *App) RetypeEntry(id int64, newType string) error {
+	return a.services.Bujo.RetypeEntry(a.ctx, id, domain.EntryType(newType))
+}
+
 func (a *App) SetLocation(date time.Time, location string) error {
 	return a.services.Bujo.SetLocation(a.ctx, date, location)
 }

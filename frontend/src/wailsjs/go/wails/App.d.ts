@@ -85,6 +85,8 @@ export function RemoveListItem(arg1:number):Promise<void>;
 
 export function RenameList(arg1:number,arg2:string):Promise<void>;
 
+export function RetypeEntry(arg1:number,arg2:string):Promise<void>;
+
 export function Search(arg1:string):Promise<Array<domain.Entry>>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;

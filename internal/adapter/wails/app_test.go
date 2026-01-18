@@ -956,3 +956,31 @@ func TestApp_AddChildEntry_SupportsMultipleChildren(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, parentID, *child2.ParentID)
 }
+
+func TestApp_RetypeEntry_ChangesEntryType(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := wailsApp.AddEntry(". Task to retype", today)
+	require.NoError(t, err)
+	entryID := ids[0]
+
+	entry, err := wailsApp.GetEntry(entryID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+
+	err = wailsApp.RetypeEntry(entryID, "note")
+	require.NoError(t, err)
+
+	updated, err := wailsApp.GetEntry(entryID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeNote, updated.Type)
+}

@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, GetSummary } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, GetSummary } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -58,9 +58,10 @@ interface EntryTreeProps {
   onUncancel?: (entry: Entry) => void;
   onCyclePriority?: (entry: Entry) => void;
   onMigrate?: (entry: Entry) => void;
+  onCycleType?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -85,6 +86,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
               onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
               onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+              onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -101,6 +103,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onUncancel={onUncancel}
                 onCyclePriority={onCyclePriority}
                 onMigrate={onMigrate}
+                onCycleType={onCycleType}
               />
             )}
           </div>
@@ -170,6 +173,19 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
       onEntryChanged?.();
     } catch (error) {
       console.error('Failed to cycle priority:', error);
+    }
+  };
+
+  const handleCycleType = async (entry: Entry) => {
+    const cycleOrder = ['task', 'note', 'event', 'question'] as const;
+    const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number]);
+    if (currentIndex === -1) return;
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length];
+    try {
+      await RetypeEntry(entry.id, nextType);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cycle type:', error);
     }
   };
 
@@ -276,6 +292,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onUncancel={handleUncancelEntry}
             onCyclePriority={handleCyclePriority}
             onMigrate={onMigrateEntry}
+            onCycleType={handleCycleType}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">
