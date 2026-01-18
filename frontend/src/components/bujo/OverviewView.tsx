@@ -2,7 +2,7 @@ import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 
 interface OverviewViewProps {
@@ -47,6 +47,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
 export function OverviewView({ overdueEntries, onEntryChanged, onError }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   // Build a lookup map for all entries by ID
   const entriesById = new Map<number, Entry>();
@@ -58,6 +59,18 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
   const taskEntries = overdueEntries.filter(e => e.type === 'task' || e.type === 'done' || e.type === 'cancelled');
   const grouped = groupByDate(taskEntries);
   const sortedDates = Array.from(grouped.keys()).sort();
+
+  // Build flat list of entries in display order for keyboard navigation
+  const flatEntries: Entry[] = [];
+  for (const dateStr of sortedDates) {
+    flatEntries.push(...grouped.get(dateStr)!);
+  }
+
+  // Map entry ID to flat index for selection
+  const entryToFlatIndex = new Map<number, number>();
+  flatEntries.forEach((entry, index) => {
+    entryToFlatIndex.set(entry.id, index);
+  });
 
   const toggleExpanded = (id: number) => {
     setExpandedIds(prev => {
@@ -145,6 +158,75 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
     }
   };
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      if (isInputFocused) return;
+      if (flatEntries.length === 0) return;
+
+      switch (e.key) {
+        case 'j':
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, flatEntries.length - 1));
+          break;
+        case 'k':
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+          break;
+        case ' ':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex];
+            if (selected.type === 'task') {
+              await handleMarkDone(selected);
+            } else if (selected.type === 'done') {
+              await handleMarkUndone(selected);
+            }
+          }
+          break;
+        case 'x':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex];
+            if (selected.type === 'cancelled') {
+              await handleUncancel(selected);
+            } else {
+              await handleCancel(selected);
+            }
+          }
+          break;
+        case 'p':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex];
+            await handleCyclePriority(selected);
+          }
+          break;
+        case 't':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex];
+            await handleCycleType(selected);
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex];
+            toggleExpanded(selected.id);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [flatEntries, selectedIndex]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -185,6 +267,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                     {grouped.get(dateStr)!.map((entry) => {
                       const isExpanded = expandedIds.has(entry.id);
                       const parentChain = isExpanded ? buildParentChain(entry, entriesById) : [];
+                      const isSelected = entryToFlatIndex.get(entry.id) === selectedIndex;
                       return (
                         <div key={entry.id} className="space-y-1">
                           {/* Parent context entries (shown when expanded) */}
@@ -208,7 +291,8 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             onClick={() => toggleExpanded(entry.id)}
                             className={cn(
                               'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
-                              'bg-card hover:bg-secondary/30 transition-colors group'
+                              'bg-card hover:bg-secondary/30 transition-colors group',
+                              isSelected && 'ring-2 ring-primary'
                             )}
                             style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
                           >

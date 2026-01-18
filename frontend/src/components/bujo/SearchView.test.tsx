@@ -15,6 +15,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   DeleteEntry: vi.fn().mockResolvedValue(undefined),
   MigrateEntry: vi.fn().mockResolvedValue(1),
   CyclePriority: vi.fn().mockResolvedValue(undefined),
+  RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
@@ -635,5 +636,299 @@ describe('SearchView - Actions', () => {
       expect(CyclePriority).toHaveBeenCalledWith(42)
       expect(screen.getByText('!')).toBeInTheDocument()
     })
+  })
+})
+
+describe('SearchView - Keyboard Shortcuts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('selects first result with j key when search results exist', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'First result', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Second result', Type: 'task', CreatedAt: '2024-01-14T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('First result')).toBeInTheDocument()
+    })
+
+    // Blur the input to allow keyboard navigation
+    await user.tab()
+    await user.keyboard('j')
+
+    await waitFor(() => {
+      const firstResult = screen.getByText('First result').closest('[data-result-id]')
+      expect(firstResult?.parentElement).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates down with j key', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'First result', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Second result', Type: 'task', CreatedAt: '2024-01-14T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('First result')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jj') // Press j twice to select second result
+
+    await waitFor(() => {
+      const secondResult = screen.getByText('Second result').closest('[data-result-id]')
+      expect(secondResult?.parentElement).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates up with k key', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'First result', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Second result', Type: 'task', CreatedAt: '2024-01-14T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('First result')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jjk') // Go down twice, then up once
+
+    await waitFor(() => {
+      const firstResult = screen.getByText('First result').closest('[data-result-id]')
+      expect(firstResult?.parentElement).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates with arrow keys', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'First result', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, Content: 'Second result', Type: 'task', CreatedAt: '2024-01-14T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('First result')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('{ArrowDown}{ArrowDown}')
+
+    await waitFor(() => {
+      const secondResult = screen.getByText('Second result').closest('[data-result-id]')
+      expect(secondResult?.parentElement).toHaveClass('ring-2')
+    })
+  })
+
+  it('toggles done with Space key for selected task', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('j ') // Select first, then Space
+
+    await waitFor(() => {
+      expect(MarkEntryDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('toggles undone with Space key for selected done entry', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Done task', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'done')
+
+    await waitFor(() => {
+      expect(screen.getByText('Done task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('j ') // Select first, then Space
+
+    await waitFor(() => {
+      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cancels entry with x key', async () => {
+    const { CancelEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jx') // Select first, then x
+
+    await waitFor(() => {
+      expect(CancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('uncancels entry with x key when cancelled', async () => {
+    const { UncancelEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Cancelled task', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'cancelled')
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancelled task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jx') // Select first, then x
+
+    await waitFor(() => {
+      expect(UncancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cycles priority with p key', async () => {
+    const { CyclePriority } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jp') // Select first, then p
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cycles type with t key', async () => {
+    const { RetypeEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('jt') // Select first, then t
+
+    await waitFor(() => {
+      expect(RetypeEntry).toHaveBeenCalledWith(42, 'note')
+    })
+  })
+
+  it('expands context with Enter key', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 2, Content: 'Child task', Type: 'task', ParentID: 1, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Parent event', Type: 'event', ParentID: null, CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'child')
+
+    await waitFor(() => {
+      expect(screen.getByText('Child task')).toBeInTheDocument()
+    })
+
+    await user.tab()
+    await user.keyboard('j{Enter}') // Select first, then Enter
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent event')).toBeInTheDocument()
+    })
+  })
+
+  it('does not trigger shortcuts when typing in search input', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'jjjpptx') // These should be part of the search query, not shortcuts
+
+    await waitFor(() => {
+      expect(Search).toHaveBeenLastCalledWith('jjjpptx')
+    })
+
+    // No actions should have been triggered
+    expect(MarkEntryDone).not.toHaveBeenCalled()
   })
 })

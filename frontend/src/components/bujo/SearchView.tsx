@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
@@ -26,11 +26,13 @@ export function SearchView() {
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [ancestorsMap, setAncestorsMap] = useState<Map<number, AncestorEntry[]>>(new Map());
+  const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
     setExpandedIds(new Set());
     setAncestorsMap(new Map());
+    setSelectedIndex(-1);
 
     if (!searchQuery.trim()) {
       setResults([]);
@@ -175,6 +177,92 @@ export function SearchView() {
     }
   }, [refreshEntry]);
 
+  const handleCycleTypeKeyboard = useCallback(async (id: number, currentType: EntryType) => {
+    const cycleOrder: EntryType[] = ['task', 'note', 'event', 'question'];
+    const currentIdx = cycleOrder.indexOf(currentType);
+    if (currentIdx === -1) return;
+    const nextType = cycleOrder[(currentIdx + 1) % cycleOrder.length];
+    try {
+      await RetypeEntry(id, nextType);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to cycle type:', error);
+    }
+  }, [refreshEntry]);
+
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA';
+      if (isInputFocused) return;
+
+      if (results.length === 0) return;
+
+      switch (e.key) {
+        case 'j':
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
+          break;
+        case 'k':
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex(prev => Math.max(prev - 1, 0));
+          break;
+        case ' ':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            const selected = results[selectedIndex];
+            if (selected.type === 'task') {
+              await MarkEntryDone(selected.id);
+              await refreshEntry(selected.id);
+            } else if (selected.type === 'done') {
+              await MarkEntryUndone(selected.id);
+              await refreshEntry(selected.id);
+            }
+          }
+          break;
+        case 'x':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            const selected = results[selectedIndex];
+            if (selected.type === 'cancelled') {
+              await UncancelEntry(selected.id);
+              await refreshEntry(selected.id);
+            } else {
+              await CancelEntry(selected.id);
+              await refreshEntry(selected.id);
+            }
+          }
+          break;
+        case 'p':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            const selected = results[selectedIndex];
+            await CyclePriority(selected.id);
+            await refreshEntry(selected.id);
+          }
+          break;
+        case 't':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            const selected = results[selectedIndex];
+            await handleCycleTypeKeyboard(selected.id, selected.type);
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            toggleExpanded(results[selectedIndex]);
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [results, selectedIndex, refreshEntry, toggleExpanded, handleCycleTypeKeyboard]);
+
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -222,9 +310,10 @@ export function SearchView() {
           </p>
         )}
 
-        {results.map((result) => {
+        {results.map((result, index) => {
           const isExpanded = expandedIds.has(result.id);
           const ancestors = ancestorsMap.get(result.id) || [];
+          const isSelected = index === selectedIndex;
 
           return (
             <div
@@ -232,7 +321,8 @@ export function SearchView() {
               onClick={() => toggleExpanded(result)}
               className={cn(
                 'p-3 rounded-lg border border-border cursor-pointer',
-                'bg-card hover:bg-secondary/30 transition-colors group'
+                'bg-card hover:bg-secondary/30 transition-colors group',
+                isSelected && 'ring-2 ring-primary'
               )}
             >
               {/* Ancestors context */}

@@ -11,6 +11,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   UncancelEntry: vi.fn().mockResolvedValue(undefined),
   DeleteEntry: vi.fn().mockResolvedValue(undefined),
   CyclePriority: vi.fn().mockResolvedValue(undefined),
+  RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
@@ -335,5 +336,166 @@ describe('OverviewView - Context Display', () => {
 
     // Badge should show 2 (only tasks), not 3 (all entries)
     expect(screen.getByText('2')).toBeInTheDocument()
+  })
+})
+
+describe('OverviewView - Keyboard Shortcuts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('selects first entry with j key', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'First task' }),
+      createTestEntry({ id: 2, content: 'Second task' }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('j')
+
+    await waitFor(() => {
+      const firstTask = screen.getByText('First task').closest('.cursor-pointer')
+      expect(firstTask).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates down with j key', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'First task' }),
+      createTestEntry({ id: 2, content: 'Second task' }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jj') // Press j twice to select second
+
+    await waitFor(() => {
+      const secondTask = screen.getByText('Second task').closest('.cursor-pointer')
+      expect(secondTask).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates up with k key', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'First task' }),
+      createTestEntry({ id: 2, content: 'Second task' }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jjk') // Down twice, up once
+
+    await waitFor(() => {
+      const firstTask = screen.getByText('First task').closest('.cursor-pointer')
+      expect(firstTask).toHaveClass('ring-2')
+    })
+  })
+
+  it('navigates with arrow keys', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'First task' }),
+      createTestEntry({ id: 2, content: 'Second task' }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('{ArrowDown}{ArrowDown}')
+
+    await waitFor(() => {
+      const secondTask = screen.getByText('Second task').closest('.cursor-pointer')
+      expect(secondTask).toHaveClass('ring-2')
+    })
+  })
+
+  it('toggles done with Space key for selected task', async () => {
+    const entries = [createTestEntry({ id: 42, content: 'Test task', type: 'task' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('j ') // Select first, then Space
+
+    await waitFor(() => {
+      expect(MarkEntryDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('toggles undone with Space key for selected done entry', async () => {
+    const entries = [createTestEntry({ id: 42, content: 'Done task', type: 'done' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('j ') // Select first, then Space
+
+    await waitFor(() => {
+      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cancels entry with x key', async () => {
+    const { CancelEntry } = await import('@/wailsjs/go/wails/App')
+    const entries = [createTestEntry({ id: 42, content: 'Test task', type: 'task' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jx') // Select first, then x
+
+    await waitFor(() => {
+      expect(CancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('uncancels entry with x key when cancelled', async () => {
+    const { UncancelEntry } = await import('@/wailsjs/go/wails/App')
+    const entries = [createTestEntry({ id: 42, content: 'Cancelled task', type: 'cancelled' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jx') // Select first, then x
+
+    await waitFor(() => {
+      expect(UncancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cycles priority with p key', async () => {
+    const { CyclePriority } = await import('@/wailsjs/go/wails/App')
+    const entries = [createTestEntry({ id: 42, content: 'Test task', type: 'task' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jp') // Select first, then p
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('cycles type with t key', async () => {
+    const { RetypeEntry } = await import('@/wailsjs/go/wails/App')
+    const entries = [createTestEntry({ id: 42, content: 'Test task', type: 'task' })]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('jt') // Select first, then t
+
+    await waitFor(() => {
+      expect(RetypeEntry).toHaveBeenCalledWith(42, 'note')
+    })
+  })
+
+  it('expands context with Enter key', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    await user.keyboard('j{Enter}') // Select first visible task, then Enter
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent event')).toBeInTheDocument()
+    })
   })
 })
