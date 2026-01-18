@@ -18,3 +18,22 @@ x Monthly goals - need to be able to migrate a goal to another month. Migrate go
 x Monthly goals - need to be able to edit an entry.
 x Monthly goals - need to be able to cancel an entry.
 x Add overview tasks view in sidebar. This should work like the overdue secion in the TUI view. Optional context, collapsable etc
+x Today view - click on a task should not mark it as complete. It should hightlight the row and move focus. Task can be marked as completed by pressing "tick". You need to be able to untick a task.
+x Past Week view - click on a task should not mark it as complete. It should hightlight the row and move focus. Task can be marked as completed by pressing "tick". You need to be able to untick a task.
+x Past Week view - need to be able to move backwards and forwards in time.
+x Past Week  view - it is still showing the future.
+x Past Week view  - change name to Review
+. list view - need to be able to (un)cancel list items.
+. list view - need to be able to move items between lists.
+. list view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
+. goals view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
+. overdue view - by default list only the tasks. Clicking on a task should show it's context. Tasks need a tick/untick icon
+. In general - just click on an item should not change it's state, user should not be able to accidently complete something.
+x Change "Past Week" view to "Review"
+. Search results: clicking on a search result should show it's context. Should be able to do all the actions on an entry on the search page.
+. remove search entries... box from the header
+. Let's revamp the documentation, readme should be shorter and link to specific pages for cli, tui and frontend.
+. need to think about how the app refreshes. The database can be updated by the CLI / TUI and the Frontend does not change. Some sort of optimistic locking maybe?
+. Today view - use unicode characters to indicate entry types (see tui and bujo today). The entry text is not aligned with the entry type. The should be vertical centre aligned
+. CI build failing
+. Today/Review view - chose a better icon for un-complete icon, it should be the . we use to represent a task

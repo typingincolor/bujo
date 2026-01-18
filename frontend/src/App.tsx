@@ -63,6 +63,8 @@ function App() {
   const [habitDays, setHabitDays] = useState(14)
   const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
   const [habitAnchorDate, setHabitAnchorDate] = useState(() => new Date())
+  const [reviewAnchorDate, setReviewAnchorDate] = useState(() => startOfDay(new Date()))
+  const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const initialLoadCompleteRef = useRef(false)
 
@@ -77,8 +79,13 @@ function App() {
       const weekLater = new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000)
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-      const [agendaData, habitsData, listsData, goalsData] = await Promise.all([
+      // Review view: past 7 days ending at reviewAnchorDate
+      const reviewEnd = new Date(reviewAnchorDate.getTime() + 24 * 60 * 60 * 1000) // Include anchor date
+      const reviewStart = new Date(reviewAnchorDate.getTime() - 6 * 24 * 60 * 60 * 1000)
+
+      const [agendaData, reviewData, habitsData, listsData, goalsData] = await Promise.all([
         GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
+        GetAgenda(toWailsTime(reviewStart), toWailsTime(reviewEnd)),
         GetHabits(habitDays),
         GetLists(),
         GetGoals(toWailsTime(monthStart)),
@@ -86,6 +93,8 @@ function App() {
 
       const transformedDays = (agendaData?.Days || []).map(transformDayEntries)
       setDays(transformedDays)
+      const transformedReviewDays = (reviewData?.Days || []).map(transformDayEntries)
+      setReviewDays(transformedReviewDays)
       const transformedOverdue = (agendaData?.Overdue || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
       setOverdueCount(transformedOverdue.length)
@@ -98,7 +107,7 @@ function App() {
       setLoading(false)
       initialLoadCompleteRef.current = true
     }
-  }, [currentDate, habitDays])
+  }, [currentDate, habitDays, reviewAnchorDate])
 
   useEffect(() => {
     loadData()
@@ -130,6 +139,22 @@ function App() {
     setCurrentDate(prev => {
       const newDate = new Date(prev)
       newDate.setDate(newDate.getDate() + 1)
+      return newDate
+    })
+  }, [])
+
+  const handlePrevWeek = useCallback(() => {
+    setReviewAnchorDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setDate(newDate.getDate() - 7)
+      return newDate
+    })
+  }, [])
+
+  const handleNextWeek = useCallback(() => {
+    setReviewAnchorDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setDate(newDate.getDate() + 7)
       return newDate
     })
   }, [])
@@ -332,7 +357,7 @@ function App() {
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
-    week: 'Past Week',
+    week: 'Review',
     overview: 'Overdue Tasks',
     habits: 'Habits',
     lists: 'Lists',
@@ -372,7 +397,6 @@ function App() {
 
   const today = days[0]
   const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
-  const weekDays = days.slice(0, 7)
 
   return (
     <div className="flex h-screen bg-background">
@@ -434,7 +458,28 @@ function App() {
 
           {view === 'week' && (
             <div className="max-w-4xl mx-auto space-y-8">
-              {weekDays.map((day, i) => (
+              {/* Week Navigation */}
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={handlePrevWeek}
+                  title="Previous week"
+                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm text-muted-foreground">
+                  {reviewDays.length > 0 && reviewDays[0]?.date} - {reviewDays.length > 0 && reviewDays[reviewDays.length - 1]?.date}
+                </span>
+                <button
+                  onClick={handleNextWeek}
+                  title="Next week"
+                  disabled={reviewAnchorDate >= startOfDay(new Date())}
+                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+              {reviewDays.map((day, i) => (
                 <DayView
                   key={i}
                   day={day}
@@ -444,7 +489,7 @@ function App() {
                   onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                 />
               ))}
-              {weekDays.length === 0 && (
+              {reviewDays.length === 0 && (
                 <p className="text-muted-foreground text-center py-8">No entries this week</p>
               )}
             </div>

@@ -1173,8 +1173,8 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetMood).toHaveBeenCalled()
     })
 
-    // Data should be refreshed
-    expect(GetAgenda).toHaveBeenCalledTimes(2)
+    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
+    expect(GetAgenda).toHaveBeenCalledTimes(4)
   })
 
   it('calls SetWeather and refreshes data when selecting weather', async () => {
@@ -1197,8 +1197,8 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetWeather).toHaveBeenCalled()
     })
 
-    // Data should be refreshed
-    expect(GetAgenda).toHaveBeenCalledTimes(2)
+    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
+    expect(GetAgenda).toHaveBeenCalledTimes(4)
   })
 
   it('calls SetLocation and refreshes data when setting location', async () => {
@@ -1222,28 +1222,28 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetLocation).toHaveBeenCalled()
     })
 
-    // Data should be refreshed
-    expect(GetAgenda).toHaveBeenCalledTimes(2)
+    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
+    expect(GetAgenda).toHaveBeenCalledTimes(4)
   })
 })
 
-describe('App - Sidebar Navigation Labels', () => {
+describe('App - Review View (formerly Past Week)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows "Past Week" label in sidebar navigation', async () => {
+  it('shows "Review" label in sidebar navigation', async () => {
     render(<App />)
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Sidebar should show "Past Week" for the week view
-    expect(screen.getByRole('button', { name: /past week/i })).toBeInTheDocument()
+    // Sidebar should show "Review" for the week/review view
+    expect(screen.getByRole('button', { name: /^review$/i })).toBeInTheDocument()
   })
 
-  it('shows "Past Week" as header title when week view is selected', async () => {
+  it('shows "Review" as header title when review view is selected', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -1251,13 +1251,51 @@ describe('App - Sidebar Navigation Labels', () => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Click on Past Week in sidebar
-    const pastWeekButton = screen.getByRole('button', { name: /past week/i })
-    await user.click(pastWeekButton)
+    // Click on Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    await user.click(reviewButton)
 
-    // Header title should show "Past Week"
+    // Header title should show "Review"
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /past week/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /^review$/i })).toBeInTheDocument()
+    })
+  })
+
+  it('shows navigation controls in review view', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click on Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    await user.click(reviewButton)
+
+    // Should show prev/next navigation buttons
+    await waitFor(() => {
+      expect(screen.getByTitle('Previous week')).toBeInTheDocument()
+      expect(screen.getByTitle('Next week')).toBeInTheDocument()
+    })
+  })
+
+  it('disables next week button when viewing current week', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Click on Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    await user.click(reviewButton)
+
+    // Next week button should be disabled when at current week
+    await waitFor(() => {
+      const nextButton = screen.getByTitle('Next week')
+      expect(nextButton).toBeDisabled()
     })
   })
 })
