@@ -457,4 +457,25 @@ describe('EntryItem', () => {
       expect(screen.queryByTitle('Migrate entry')).not.toBeInTheDocument()
     })
   })
+
+  describe('hover and selection highlighting', () => {
+    it('shows hover highlight on non-selected items', () => {
+      render(<EntryItem entry={createTestEntry()} isSelected={false} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      expect(container).toHaveClass('hover:bg-secondary/50')
+    })
+
+    it('does not show hover highlight on selected items', () => {
+      render(<EntryItem entry={createTestEntry()} isSelected={true} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      expect(container).not.toHaveClass('hover:bg-secondary/50')
+    })
+
+    it('shows selection highlight on selected items', () => {
+      render(<EntryItem entry={createTestEntry()} isSelected={true} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')
+      expect(container).toHaveClass('bg-primary/10')
+      expect(container).toHaveClass('ring-1')
+    })
+  })
 })

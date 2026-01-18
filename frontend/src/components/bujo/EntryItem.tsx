@@ -64,7 +64,8 @@ export function EntryItem({
       data-selected={isSelected}
       className={cn(
         'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors',
-        'hover:bg-secondary/50 animate-fade-in',
+        'animate-fade-in',
+        !isSelected && 'hover:bg-secondary/50',
         isToggleable && 'cursor-pointer',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
