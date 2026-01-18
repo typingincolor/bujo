@@ -272,6 +272,19 @@ describe('EntryItem', () => {
       expect(button).toHaveTextContent('!')
     })
 
+    it('cycle priority icon has fixed dimensions for alignment', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCyclePriority={() => {}}
+        />
+      )
+      const button = screen.getByTitle('Cycle priority')
+      const iconSpan = button.querySelector('span')
+      expect(iconSpan).toHaveClass('w-3.5')
+      expect(iconSpan).toHaveClass('h-3.5')
+    })
+
     it('calls onCyclePriority when priority button is clicked', () => {
       const onCyclePriority = vi.fn()
       render(

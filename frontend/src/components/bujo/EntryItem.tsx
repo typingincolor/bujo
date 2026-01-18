@@ -177,7 +177,7 @@ export function EntryItem({
             title="Cycle priority"
             className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
           >
-            <span className="text-sm font-bold leading-none">!</span>
+            <span className="w-3.5 h-3.5 inline-flex items-center justify-center text-sm font-bold leading-none">!</span>
           </button>
         )}
         {onMigrate && entry.type === 'task' && (
