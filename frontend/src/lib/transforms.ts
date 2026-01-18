@@ -3,13 +3,18 @@ import { service, domain, wails } from '../wailsjs/go/models'
 import { DayEntries, Entry, Habit, BujoList, Goal, EntryType, Priority } from '@/types/bujo'
 
 export function transformEntry(e: domain.Entry): Entry {
+  const loggedDate = e.ScheduledDate
+    ? String(e.ScheduledDate)
+    : e.CreatedAt
+      ? String(e.CreatedAt)
+      : new Date().toISOString()
   return {
     id: e.ID,
     content: e.Content,
     type: e.Type.toLowerCase() as EntryType,
     priority: (e.Priority?.toLowerCase() || 'none') as Priority,
     parentId: e.ParentID ?? null,
-    loggedDate: e.CreatedAt ? String(e.CreatedAt) : new Date().toISOString(),
+    loggedDate,
   }
 }
 

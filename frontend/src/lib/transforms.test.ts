@@ -79,6 +79,38 @@ describe('transformEntry', () => {
     expect(result.loggedDate).toBeDefined()
     expect(new Date(result.loggedDate).getTime()).not.toBeNaN()
   })
+
+  it('uses ScheduledDate for loggedDate when available', () => {
+    const input = {
+      ID: 5,
+      Type: 'Task',
+      Content: 'Scheduled task',
+      Priority: 'Medium',
+      ParentID: undefined,
+      ScheduledDate: '2026-01-10T00:00:00Z',
+      CreatedAt: '2026-01-18T10:00:00Z',
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.loggedDate).toBe('2026-01-10T00:00:00Z')
+  })
+
+  it('falls back to CreatedAt when ScheduledDate is missing', () => {
+    const input = {
+      ID: 6,
+      Type: 'Note',
+      Content: 'Quick note',
+      Priority: '',
+      ParentID: undefined,
+      ScheduledDate: undefined,
+      CreatedAt: '2026-01-18T10:00:00Z',
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.loggedDate).toBe('2026-01-18T10:00:00Z')
+  })
 })
 
 describe('transformDayEntries', () => {
