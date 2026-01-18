@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/typingincolor/bujo/internal/app"
+	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
 
@@ -652,4 +653,63 @@ func TestApp_UncancelEntry_RevertsToTask(t *testing.T) {
 	require.Len(t, agenda.Days, 1)
 	require.Len(t, agenda.Days[0].Entries, 1)
 	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+}
+
+func TestApp_SetPriority_SetsPriorityOnEntry(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.SetPriority(ids[0], "high")
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, domain.PriorityHigh, agenda.Days[0].Entries[0].Priority)
+}
+
+func TestApp_CyclePriority_CyclesThroughPriorities(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	// Initial priority is none, cycle to low
+	err = wailsApp.CyclePriority(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, agenda.Days[0].Entries[0].Priority)
+
+	// Cycle to medium
+	err = wailsApp.CyclePriority(ids[0])
+	require.NoError(t, err)
+
+	agenda, err = wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityMedium, agenda.Days[0].Entries[0].Priority)
 }

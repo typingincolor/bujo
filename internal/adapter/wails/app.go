@@ -191,3 +191,15 @@ func (a *App) CancelEntry(id int64) error {
 func (a *App) UncancelEntry(id int64) error {
 	return a.services.Bujo.UncancelEntry(a.ctx, id)
 }
+
+func (a *App) SetPriority(id int64, priority string) error {
+	p, err := domain.ParsePriority(priority)
+	if err != nil {
+		return err
+	}
+	return a.services.Bujo.EditEntryPriority(a.ctx, id, p)
+}
+
+func (a *App) CyclePriority(id int64) error {
+	return a.services.Bujo.CyclePriority(a.ctx, id)
+}

@@ -37,9 +37,10 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   HasChildren: vi.fn().mockResolvedValue(false),
   CancelEntry: vi.fn().mockResolvedValue(undefined),
   UncancelEntry: vi.fn().mockResolvedValue(undefined),
+  CyclePriority: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -594,6 +595,45 @@ describe('App - Cancel/Uncancel Entry', () => {
 
     const uncancelButton = screen.getByTitle('Uncancel entry')
     fireEvent.click(uncancelButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('App - Priority Cycling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('clicking priority button calls CyclePriority binding', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const priorityButton = screen.getAllByTitle('Cycle priority')[0]
+    fireEvent.click(priorityButton)
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('refreshes data after cycling priority', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const priorityButton = screen.getAllByTitle('Cycle priority')[0]
+    fireEvent.click(priorityButton)
 
     await waitFor(() => {
       expect(GetAgenda).toHaveBeenCalled()

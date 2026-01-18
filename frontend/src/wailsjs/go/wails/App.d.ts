@@ -19,6 +19,8 @@ export function CreateHabit(arg1:string):Promise<number>;
 
 export function CreateList(arg1:string):Promise<number>;
 
+export function CyclePriority(arg1:number):Promise<void>;
+
 export function DeleteEntry(arg1:number):Promise<void>;
 
 export function DeleteGoal(arg1:number):Promise<void>;
@@ -68,6 +70,8 @@ export function Search(arg1:string):Promise<Array<domain.Entry>>;
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
 
 export function SetMood(arg1:time.Time,arg2:string):Promise<void>;
+
+export function SetPriority(arg1:number,arg2:string):Promise<void>;
 
 export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;
 

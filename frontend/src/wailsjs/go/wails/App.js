@@ -30,6 +30,10 @@ export function CreateList(arg1) {
   return window['go']['wails']['App']['CreateList'](arg1);
 }
 
+export function CyclePriority(arg1) {
+  return window['go']['wails']['App']['CyclePriority'](arg1);
+}
+
 export function DeleteEntry(arg1) {
   return window['go']['wails']['App']['DeleteEntry'](arg1);
 }
@@ -128,6 +132,10 @@ export function SetHabitGoal(arg1, arg2) {
 
 export function SetMood(arg1, arg2) {
   return window['go']['wails']['App']['SetMood'](arg1, arg2);
+}
+
+export function SetPriority(arg1, arg2) {
+  return window['go']['wails']['App']['SetPriority'](arg1, arg2);
 }
 
 export function SetWeather(arg1, arg2) {

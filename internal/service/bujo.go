@@ -405,6 +405,16 @@ func (s *BujoService) EditEntryPriority(ctx context.Context, id int64, priority 
 	return s.entryRepo.Update(ctx, *entry)
 }
 
+func (s *BujoService) CyclePriority(ctx context.Context, id int64) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Priority = entry.Priority.Cycle()
+	return s.entryRepo.Update(ctx, *entry)
+}
+
 func (s *BujoService) DeleteEntry(ctx context.Context, id int64) error {
 	if _, err := s.getEntry(ctx, id); err != nil {
 		return err

@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -53,9 +53,10 @@ interface EntryTreeProps {
   onDelete?: (entry: Entry) => void;
   onCancel?: (entry: Entry) => void;
   onUncancel?: (entry: Entry) => void;
+  onCyclePriority?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel, onCyclePriority }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -77,6 +78,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onDelete={onDelete ? () => onDelete(entry) : undefined}
               onCancel={onCancel ? () => onCancel(entry) : undefined}
               onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
+              onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -90,6 +92,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onDelete={onDelete}
                 onCancel={onCancel}
                 onUncancel={onUncancel}
+                onCyclePriority={onCyclePriority}
               />
             )}
           </div>
@@ -150,6 +153,15 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
     }
   };
 
+  const handleCyclePriority = async (entry: Entry) => {
+    try {
+      await CyclePriority(entry.id);
+      onEntryChanged?.();
+    } catch (error) {
+      console.error('Failed to cycle priority:', error);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       {/* Day Header */}
@@ -203,6 +215,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
             onDelete={onDeleteEntry}
             onCancel={handleCancelEntry}
             onUncancel={handleUncancelEntry}
+            onCyclePriority={handleCyclePriority}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">
