@@ -125,3 +125,11 @@ export function RenameList(arg1, arg2) {
 export function EditListItem(arg1, arg2) {
   return window['go']['wails']['App']['EditListItem'](arg1, arg2);
 }
+
+export function SetMood(arg1, arg2) {
+  return window['go']['wails']['App']['SetMood'](arg1, arg2);
+}
+
+export function SetWeather(arg1, arg2) {
+  return window['go']['wails']['App']['SetWeather'](arg1, arg2);
+}

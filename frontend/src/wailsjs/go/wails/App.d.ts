@@ -66,3 +66,7 @@ export function DeleteList(arg1:number,arg2:boolean):Promise<void>;
 export function RenameList(arg1:number,arg2:string):Promise<void>;
 
 export function EditListItem(arg1:number,arg2:string):Promise<void>;
+
+export function SetMood(arg1:time.Time,arg2:string):Promise<void>;
+
+export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;

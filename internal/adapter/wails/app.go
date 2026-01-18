@@ -175,3 +175,11 @@ func (a *App) RenameList(listID int64, newName string) error {
 func (a *App) EditListItem(itemID int64, content string) error {
 	return a.services.List.EditItem(a.ctx, itemID, content)
 }
+
+func (a *App) SetMood(date time.Time, mood string) error {
+	return a.services.Bujo.SetMood(a.ctx, date, mood)
+}
+
+func (a *App) SetWeather(date time.Time, weather string) error {
+	return a.services.Bujo.SetWeather(a.ctx, date, weather)
+}
