@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight } from 'lucide-react';
+import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useState } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
@@ -146,7 +146,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
             <ChevronDown className="w-4 h-4" />
           )}
         </button>
-        <AlertTriangle className="w-5 h-5 text-warning" />
+        <Clock className="w-5 h-5 text-warning" data-testid="outstanding-icon" />
         <h2 className="font-display text-xl font-semibold flex-1">Outstanding Tasks</h2>
         <span className="px-2 py-0.5 text-sm font-medium bg-warning/20 text-warning rounded-full">
           {taskEntries.length}

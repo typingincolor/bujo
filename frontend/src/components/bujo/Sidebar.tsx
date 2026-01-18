@@ -9,7 +9,7 @@ import {
   BookOpen,
   Search,
   BarChart3,
-  AlertTriangle
+  Clock
 } from 'lucide-react';
 
 export type ViewType = 'today' | 'week' | 'overview' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
@@ -22,7 +22,7 @@ interface SidebarProps {
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'today', icon: Calendar, label: 'Today' },
   { view: 'week', icon: CalendarDays, label: 'Review' },
-  { view: 'overview', icon: AlertTriangle, label: 'Outstanding' },
+  { view: 'overview', icon: Clock, label: 'Outstanding' },
   { view: 'habits', icon: Flame, label: 'Habits' },
   { view: 'lists', icon: List, label: 'Lists' },
   { view: 'goals', icon: Target, label: 'Goals' },

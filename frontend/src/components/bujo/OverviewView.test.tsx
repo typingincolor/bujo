@@ -36,6 +36,11 @@ describe('OverviewView - Display', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
+  it('uses Clock icon in header (not AlertTriangle)', () => {
+    render(<OverviewView overdueEntries={[createTestEntry()]} />)
+    expect(screen.getByTestId('outstanding-icon')).toBeInTheDocument()
+  })
+
   it('renders multiple overdue entries', () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Task one' }),
