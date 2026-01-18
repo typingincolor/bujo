@@ -9,9 +9,13 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   MarkListItemUndone: vi.fn().mockResolvedValue(undefined),
   AddListItem: vi.fn().mockResolvedValue(1),
   RemoveListItem: vi.fn().mockResolvedValue(undefined),
+  CreateList: vi.fn().mockResolvedValue(1),
+  DeleteList: vi.fn().mockResolvedValue(undefined),
+  RenameList: vi.fn().mockResolvedValue(undefined),
+  EditListItem: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { AddListItem, RemoveListItem } from '@/wailsjs/go/wails/App'
+import { AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem } from '@/wailsjs/go/wails/App'
 
 const createTestList = (overrides: Partial<BujoList> = {}): BujoList => ({
   id: 1,
@@ -171,5 +175,276 @@ describe('ListsView - Delete List Item', () => {
     await waitFor(() => {
       expect(onListChanged).toHaveBeenCalled()
     })
+  })
+})
+
+describe('ListsView - Create List', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows create list button', () => {
+    render(<ListsView lists={[]} />)
+    expect(screen.getByRole('button', { name: /new list/i })).toBeInTheDocument()
+  })
+
+  it('shows input when create list button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[]} />)
+
+    await user.click(screen.getByRole('button', { name: /new list/i }))
+
+    expect(screen.getByPlaceholderText(/list name/i)).toBeInTheDocument()
+  })
+
+  it('calls CreateList binding when submitting new list', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByRole('button', { name: /new list/i }))
+    const input = screen.getByPlaceholderText(/list name/i)
+    await user.type(input, 'Shopping{Enter}')
+
+    await waitFor(() => {
+      expect(CreateList).toHaveBeenCalledWith('Shopping')
+    })
+  })
+
+  it('calls onListChanged after creating list', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByRole('button', { name: /new list/i }))
+    const input = screen.getByPlaceholderText(/list name/i)
+    await user.type(input, 'Shopping{Enter}')
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('hides input after creating list', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[]} />)
+
+    await user.click(screen.getByRole('button', { name: /new list/i }))
+    const input = screen.getByPlaceholderText(/list name/i)
+    await user.type(input, 'Shopping{Enter}')
+
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/list name/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it('does not create list with empty name', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[]} />)
+
+    await user.click(screen.getByRole('button', { name: /new list/i }))
+    const input = screen.getByPlaceholderText(/list name/i)
+    await user.type(input, '{Enter}')
+
+    expect(CreateList).not.toHaveBeenCalled()
+  })
+})
+
+describe('ListsView - Delete List', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows delete button on list card', () => {
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+    expect(screen.getByTitle('Delete list')).toBeInTheDocument()
+  })
+
+  it('shows confirmation dialog when delete list button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+
+    await user.click(screen.getByTitle('Delete list'))
+
+    expect(screen.getByText('Delete List')).toBeInTheDocument()
+    expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+  })
+
+  it('calls DeleteList binding when confirming delete', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({ id: 42, name: 'Shopping' })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Delete list'))
+    await user.click(screen.getByRole('button', { name: /^delete$/i }))
+
+    await waitFor(() => {
+      expect(DeleteList).toHaveBeenCalledWith(42, true)
+    })
+  })
+
+  it('calls onListChanged after deleting list', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Delete list'))
+    await user.click(screen.getByRole('button', { name: /^delete$/i }))
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('closes dialog on cancel', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+
+    await user.click(screen.getByTitle('Delete list'))
+    expect(screen.getByText('Delete List')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+
+    expect(screen.queryByText('Delete List')).not.toBeInTheDocument()
+  })
+})
+
+describe('ListsView - Rename List', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows rename button on list card', () => {
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+    expect(screen.getByTitle('Rename list')).toBeInTheDocument()
+  })
+
+  it('shows input when rename button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+
+    await user.click(screen.getByTitle('Rename list'))
+
+    expect(screen.getByDisplayValue('Shopping')).toBeInTheDocument()
+  })
+
+  it('calls RenameList binding when submitting new name', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({ id: 42, name: 'Shopping' })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Rename list'))
+    const input = screen.getByDisplayValue('Shopping')
+    await user.clear(input)
+    await user.type(input, 'Groceries{Enter}')
+
+    await waitFor(() => {
+      expect(RenameList).toHaveBeenCalledWith(42, 'Groceries')
+    })
+  })
+
+  it('calls onListChanged after renaming list', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Rename list'))
+    const input = screen.getByDisplayValue('Shopping')
+    await user.clear(input)
+    await user.type(input, 'Groceries{Enter}')
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('cancels rename on Escape', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({ name: 'Shopping' })]} />)
+
+    await user.click(screen.getByTitle('Rename list'))
+    const input = screen.getByDisplayValue('Shopping')
+    await user.type(input, '{Escape}')
+
+    expect(screen.queryByDisplayValue('Shopping')).not.toBeInTheDocument()
+    expect(RenameList).not.toHaveBeenCalled()
+  })
+})
+
+describe('ListsView - Edit List Item', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows edit button on list items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} />)
+
+    expect(screen.getByTitle('Edit item')).toBeInTheDocument()
+  })
+
+  it('shows input when edit button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} />)
+
+    await user.click(screen.getByTitle('Edit item'))
+
+    expect(screen.getByDisplayValue('Buy milk')).toBeInTheDocument()
+  })
+
+  it('calls EditListItem binding when submitting edit', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ id: 42, content: 'Buy milk' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Edit item'))
+    const input = screen.getByDisplayValue('Buy milk')
+    await user.clear(input)
+    await user.type(input, 'Buy cheese{Enter}')
+
+    await waitFor(() => {
+      expect(EditListItem).toHaveBeenCalledWith(42, 'Buy cheese')
+    })
+  })
+
+  it('calls onListChanged after editing item', async () => {
+    const user = userEvent.setup()
+    const onListChanged = vi.fn()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} onListChanged={onListChanged} />)
+
+    await user.click(screen.getByTitle('Edit item'))
+    const input = screen.getByDisplayValue('Buy milk')
+    await user.clear(input)
+    await user.type(input, 'Buy cheese{Enter}')
+
+    await waitFor(() => {
+      expect(onListChanged).toHaveBeenCalled()
+    })
+  })
+
+  it('cancels edit on Escape', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [createTestItem({ content: 'Buy milk' })]
+    })]} />)
+
+    await user.click(screen.getByTitle('Edit item'))
+    const input = screen.getByDisplayValue('Buy milk')
+    await user.type(input, '{Escape}')
+
+    expect(screen.queryByDisplayValue('Buy milk')).not.toBeInTheDocument()
+    expect(EditListItem).not.toHaveBeenCalled()
   })
 })

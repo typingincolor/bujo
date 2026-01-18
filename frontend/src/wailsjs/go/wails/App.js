@@ -109,3 +109,19 @@ export function UndoHabitLog(arg1) {
 export function SetHabitGoal(arg1, arg2) {
   return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
 }
+
+export function CreateList(arg1) {
+  return window['go']['wails']['App']['CreateList'](arg1);
+}
+
+export function DeleteList(arg1, arg2) {
+  return window['go']['wails']['App']['DeleteList'](arg1, arg2);
+}
+
+export function RenameList(arg1, arg2) {
+  return window['go']['wails']['App']['RenameList'](arg1, arg2);
+}
+
+export function EditListItem(arg1, arg2) {
+  return window['go']['wails']['App']['EditListItem'](arg1, arg2);
+}

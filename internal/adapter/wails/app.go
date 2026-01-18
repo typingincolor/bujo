@@ -155,3 +155,23 @@ func (a *App) SetHabitGoal(habitID int64, dailyGoal int) error {
 func (a *App) AnswerQuestion(questionID int64, answerText string) error {
 	return a.services.Bujo.MarkAnswered(a.ctx, questionID, answerText)
 }
+
+func (a *App) CreateList(name string) (int64, error) {
+	list, err := a.services.List.CreateList(a.ctx, name)
+	if err != nil {
+		return 0, err
+	}
+	return list.ID, nil
+}
+
+func (a *App) DeleteList(listID int64, force bool) error {
+	return a.services.List.DeleteList(a.ctx, listID, force)
+}
+
+func (a *App) RenameList(listID int64, newName string) error {
+	return a.services.List.RenameList(a.ctx, listID, newName)
+}
+
+func (a *App) EditListItem(itemID int64, content string) error {
+	return a.services.List.EditItem(a.ctx, itemID, content)
+}
