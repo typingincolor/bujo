@@ -104,3 +104,29 @@ func TestNewListItem_SetsEntityIDAndCreatedAt(t *testing.T) {
 	assert.Equal(t, 1, item.Version)
 	assert.Equal(t, OpTypeInsert, item.OpType)
 }
+
+func TestListItemType_Cancelled_IsValid(t *testing.T) {
+	assert.True(t, ListItemTypeCancelled.IsValid())
+}
+
+func TestListItemType_Cancelled_Symbol_ReturnsX(t *testing.T) {
+	assert.Equal(t, "X", ListItemTypeCancelled.Symbol())
+}
+
+func TestListItem_IsCancelled_WhenCancelled_ReturnsTrue(t *testing.T) {
+	item := ListItem{Type: ListItemTypeCancelled}
+
+	assert.True(t, item.IsCancelled())
+}
+
+func TestListItem_IsCancelled_WhenTask_ReturnsFalse(t *testing.T) {
+	item := ListItem{Type: ListItemTypeTask}
+
+	assert.False(t, item.IsCancelled())
+}
+
+func TestListItem_IsCancelled_WhenDone_ReturnsFalse(t *testing.T) {
+	item := ListItem{Type: ListItemTypeDone}
+
+	assert.False(t, item.IsCancelled())
+}

@@ -20,9 +20,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Fast feedback: lint runs in parallel with tests
+  # Lint - runs on all PRs and pushes
   lint:
-    name: Lint
+    name: Lint Go
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,16 +34,17 @@ jobs:
           cache: true
 
       - name: Run go vet
-        run: go vet ./...
+        run: go vet ./cmd/... ./internal/...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+          args: ./cmd/... ./internal/...
 
-  # Primary test job - ubuntu only for PRs (fast), both OS for main
-  test:
-    name: Test
+  # Go tests - Linux (primary for PRs, fast feedback)
+  test-go-linux:
+    name: Test Go (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,16 +56,17 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./...
+        run: go test -v -coverprofile=coverage.out ./cmd/... ./internal/...
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          flags: backend
 
-  # macOS test - only on main branch pushes and tags
-  test-macos:
-    name: Test (macOS)
+  # Go tests - macOS (push only, primary platform)
+  test-go-macos:
+    name: Test Go (macOS)
     if: github.event_name == 'push'
     runs-on: macos-latest
     steps:
@@ -77,11 +79,28 @@ jobs:
           cache: true
 
       - name: Run tests
-        run: go test -v ./...
+        run: go test -v ./cmd/... ./internal/...
 
-  # Build verification - only needs lint to pass (tests run in parallel)
-  build:
-    name: Build
+  # Go tests - Windows (push only)
+  test-go-windows:
+    name: Test Go (Windows)
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: go test -v ./cmd/... ./internal/...
+
+  # CLI build - Linux
+  build-cli-linux:
+    name: Build CLI (Linux)
     needs: [lint]
     runs-on: ubuntu-latest
     steps:
@@ -93,12 +112,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build
+      - name: Build CLI
         run: go build -v ./cmd/bujo
 
-  # macOS build - only on main branch
-  build-macos:
-    name: Build (macOS)
+  # CLI build - macOS (push only, primary platform)
+  build-cli-macos:
+    name: Build CLI (macOS)
     if: github.event_name == 'push'
     needs: [lint]
     runs-on: macos-latest
@@ -111,5 +130,92 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build
+      - name: Build CLI
         run: go build -v ./cmd/bujo
+
+  # CLI build - Windows (push only)
+  build-cli-windows:
+    name: Build CLI (Windows)
+    if: github.event_name == 'push'
+    needs: [lint]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build CLI
+        run: go build -v ./cmd/bujo
+
+  # Frontend - lint, test, build (runs on all PRs)
+  frontend:
+    name: Frontend (Lint, Test, Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npm run test:coverage
+
+      - name: Upload frontend coverage
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: frontend/coverage/lcov.info
+          flags: frontend
+
+      - name: Build
+        run: npm run build
+
+  # Desktop app - macOS (push only, primary platform)
+  build-desktop-macos:
+    name: Build Desktop App (macOS)
+    if: github.event_name == 'push'
+    needs: [lint, frontend]
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build Wails app
+        run: wails build -platform darwin/universal -tags wails
+
+      - name: Verify app bundle
+        run: |
+          test -d build/bin/bujoapp.app
+          echo "✅ App bundle created successfully"

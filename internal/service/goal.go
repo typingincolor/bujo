@@ -111,7 +111,7 @@ func (s *GoalService) DeleteGoal(ctx context.Context, id int64) error {
 	return s.goalRepo.Delete(ctx, id)
 }
 
-func (s *GoalService) UpdateContent(ctx context.Context, id int64, content string) error {
+func (s *GoalService) UpdateGoal(ctx context.Context, id int64, content string) error {
 	goal, err := s.goalRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
@@ -120,6 +120,56 @@ func (s *GoalService) UpdateContent(ctx context.Context, id int64, content strin
 		return fmt.Errorf("goal not found: %d", id)
 	}
 
-	goal.Content = content
-	return s.goalRepo.Update(ctx, *goal)
+	updated := goal.UpdateContent(content)
+	return s.goalRepo.Update(ctx, updated)
+}
+
+func (s *GoalService) MigrateGoal(ctx context.Context, id int64, toMonth time.Time) (int64, error) {
+	goal, err := s.goalRepo.GetByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	if goal == nil {
+		return 0, fmt.Errorf("goal not found: %d", id)
+	}
+
+	migrated := goal.MarkMigrated(toMonth)
+	if err := s.goalRepo.Update(ctx, migrated); err != nil {
+		return 0, err
+	}
+
+	newGoal := domain.Goal{
+		Content:   goal.Content,
+		Month:     toMonth,
+		Status:    domain.GoalStatusActive,
+		CreatedAt: time.Now(),
+	}
+
+	return s.goalRepo.Insert(ctx, newGoal)
+}
+
+func (s *GoalService) CancelGoal(ctx context.Context, id int64) error {
+	goal, err := s.goalRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if goal == nil {
+		return fmt.Errorf("goal not found: %d", id)
+	}
+
+	updated := goal.MarkCancelled()
+	return s.goalRepo.Update(ctx, updated)
+}
+
+func (s *GoalService) UncancelGoal(ctx context.Context, id int64) error {
+	goal, err := s.goalRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if goal == nil {
+		return fmt.Errorf("goal not found: %d", id)
+	}
+
+	updated := goal.MarkActive()
+	return s.goalRepo.Update(ctx, updated)
 }

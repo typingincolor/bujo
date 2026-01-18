@@ -375,6 +375,49 @@ func TestBujoService_GetEntryContext_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_GetEntry(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	entry, err := service.GetEntry(ctx, ids[0])
+
+	require.NoError(t, err)
+	assert.Equal(t, "Buy groceries", entry.Content)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_GetEntry_NotFound(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	_, err := service.GetEntry(ctx, 99999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestBujoService_GetEntry_ReturnsCurrentVersionAfterUpdate(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	originalID := ids[0]
+
+	err = service.MarkDone(ctx, originalID)
+	require.NoError(t, err)
+
+	entry, err := service.GetEntry(ctx, originalID)
+
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeDone, entry.Type)
+}
+
 func TestBujoService_EditEntry(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
@@ -415,6 +458,47 @@ func TestBujoService_EditEntryPriority(t *testing.T) {
 	entry, err := entryRepo.GetByID(ctx, ids[0])
 	require.NoError(t, err)
 	assert.Equal(t, domain.PriorityHigh, entry.Priority)
+}
+
+func TestBujoService_CyclePriority(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Default priority is none, cycle to low
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, entry.Priority)
+
+	// Cycle to medium
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityMedium, entry.Priority)
+
+	// Cycle to high
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityHigh, entry.Priority)
+
+	// Cycle back to none
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityNone, entry.Priority)
 }
 
 func TestBujoService_DeleteEntry(t *testing.T) {
@@ -1243,7 +1327,7 @@ func TestBujoService_CancelEntry_AlreadyCancelledNoOp(t *testing.T) {
 	assert.Equal(t, domain.EntryTypeCancelled, entry.Type)
 }
 
-func TestBujoService_UncancelEntry_CancelledBecomesTask(t *testing.T) {
+func TestBujoService_UncancelEntry_CancelledTaskBecomesTask(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
 
@@ -1260,6 +1344,44 @@ func TestBujoService_UncancelEntry_CancelledBecomesTask(t *testing.T) {
 	entry, err := entryRepo.GetByID(ctx, ids[0])
 	require.NoError(t, err)
 	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_CancelledNoteBecomesNote(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "- This is a note", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeNote, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_CancelledEventBecomesEvent(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "o Meeting at 3pm", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeEvent, entry.Type)
 }
 
 func TestBujoService_UncancelEntry_NotCancelledNoOp(t *testing.T) {
@@ -1589,6 +1711,27 @@ func TestBujoService_LogEntries_WithParentID_NotFound(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "parent")
+}
+
+func TestBujoService_LogEntries_CannotAddChildToQuestion(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 18, 0, 0, 0, 0, time.UTC)
+
+	// Create a question entry
+	questionIDs, err := service.LogEntries(ctx, "? What is the answer", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, questionIDs, 1)
+
+	// Try to add a child to the question - should fail
+	_, err = service.LogEntries(ctx, ". Child task", LogEntriesOptions{
+		Date:     today,
+		ParentID: &questionIDs[0],
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot add children to questions")
 }
 
 func TestBujoService_GetEntryAncestors_ReturnsParentChain(t *testing.T) {

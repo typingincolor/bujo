@@ -729,3 +729,32 @@ func TestHabitService_RemoveHabitLogForDateByID_HabitNotFound(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
+
+func TestHabitService_CreateHabit_ReturnsHabitID(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	habitID, err := service.CreateHabit(ctx, "Morning Run")
+
+	require.NoError(t, err)
+	assert.Greater(t, habitID, int64(0))
+
+	status, err := service.GetTrackerStatus(ctx, time.Now(), 7)
+	require.NoError(t, err)
+	require.Len(t, status.Habits, 1)
+	assert.Equal(t, "Morning Run", status.Habits[0].Name)
+	assert.Equal(t, habitID, status.Habits[0].ID)
+}
+
+func TestHabitService_CreateHabit_ExistingHabitReturnsID(t *testing.T) {
+	service := setupHabitService(t)
+	ctx := context.Background()
+
+	firstID, err := service.CreateHabit(ctx, "Workout")
+	require.NoError(t, err)
+
+	secondID, err := service.CreateHabit(ctx, "Workout")
+	require.NoError(t, err)
+
+	assert.Equal(t, firstID, secondID)
+}

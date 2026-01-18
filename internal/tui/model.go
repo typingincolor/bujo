@@ -843,7 +843,7 @@ func (m Model) editGoalCmd(goalID int64, content string) tea.Cmd {
 			return errMsg{fmt.Errorf("goal service not available")}
 		}
 		ctx := context.Background()
-		err := m.goalService.UpdateContent(ctx, goalID, content)
+		err := m.goalService.UpdateGoal(ctx, goalID, content)
 		if err != nil {
 			return errMsg{err}
 		}

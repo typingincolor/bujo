@@ -8,17 +8,20 @@ import (
 type GoalStatus string
 
 const (
-	GoalStatusActive GoalStatus = "active"
-	GoalStatusDone   GoalStatus = "done"
+	GoalStatusActive    GoalStatus = "active"
+	GoalStatusDone      GoalStatus = "done"
+	GoalStatusMigrated  GoalStatus = "migrated"
+	GoalStatusCancelled GoalStatus = "cancelled"
 )
 
 type Goal struct {
-	ID        int64
-	EntityID  EntityID
-	Content   string
-	Month     time.Time
-	Status    GoalStatus
-	CreatedAt time.Time
+	ID         int64
+	EntityID   EntityID
+	Content    string
+	Month      time.Time
+	Status     GoalStatus
+	MigratedTo *time.Time
+	CreatedAt  time.Time
 }
 
 func (g Goal) Validate() error {
@@ -45,6 +48,30 @@ func (g Goal) MarkActive() Goal {
 	return g
 }
 
+func (g Goal) IsMigrated() bool {
+	return g.Status == GoalStatusMigrated
+}
+
+func (g Goal) MarkMigrated(toMonth time.Time) Goal {
+	g.Status = GoalStatusMigrated
+	g.MigratedTo = &toMonth
+	return g
+}
+
 func (g Goal) MonthKey() string {
 	return g.Month.Format("2006-01")
+}
+
+func (g Goal) UpdateContent(content string) Goal {
+	g.Content = content
+	return g
+}
+
+func (g Goal) IsCancelled() bool {
+	return g.Status == GoalStatusCancelled
+}
+
+func (g Goal) MarkCancelled() Goal {
+	g.Status = GoalStatusCancelled
+	return g
 }

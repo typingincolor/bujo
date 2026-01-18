@@ -18,6 +18,7 @@ type EntryRepository interface {
 	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
 	GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error)
 	GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error)
+	GetHistory(ctx context.Context, entityID domain.EntityID) ([]domain.Entry, error)
 	Update(ctx context.Context, entry domain.Entry) error
 	Delete(ctx context.Context, id int64) error
 	DeleteWithChildren(ctx context.Context, id int64) error
@@ -67,6 +68,9 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 		}
 		if parent == nil {
 			return nil, fmt.Errorf("parent entry %d not found", *opts.ParentID)
+		}
+		if parent.Type == domain.EntryTypeQuestion {
+			return nil, fmt.Errorf("cannot add children to questions, use answer instead")
 		}
 		parentDepth = parent.Depth + 1
 	}
@@ -218,6 +222,10 @@ func (s *BujoService) getEntry(ctx context.Context, id int64) (*domain.Entry, er
 	return entry, nil
 }
 
+func (s *BujoService) GetEntry(ctx context.Context, id int64) (*domain.Entry, error) {
+	return s.getEntry(ctx, id)
+}
+
 func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location string) error {
 	dayCtx := domain.DayContext{
 		Date:     date,
@@ -363,7 +371,24 @@ func (s *BujoService) UncancelEntry(ctx context.Context, id int64) error {
 		return err
 	}
 
-	entry.Type = domain.EntryTypeTask
+	if entry.Type != domain.EntryTypeCancelled {
+		return nil
+	}
+
+	history, err := s.entryRepo.GetHistory(ctx, entry.EntityID)
+	if err != nil {
+		return err
+	}
+
+	previousType := domain.EntryTypeTask
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].Type != domain.EntryTypeCancelled {
+			previousType = history[i].Type
+			break
+		}
+	}
+
+	entry.Type = previousType
 	return s.entryRepo.Update(ctx, *entry)
 }
 
@@ -402,6 +427,16 @@ func (s *BujoService) EditEntryPriority(ctx context.Context, id int64, priority 
 	}
 
 	entry.Priority = priority
+	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) CyclePriority(ctx context.Context, id int64) error {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	entry.Priority = entry.Priority.Cycle()
 	return s.entryRepo.Update(ctx, *entry)
 }
 
