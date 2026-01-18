@@ -804,3 +804,22 @@ func TestApp_GetLocationHistory_ReturnsUniqueLocations(t *testing.T) {
 	assert.Contains(t, locations, "Manchester Office")
 	assert.Contains(t, locations, "Home")
 }
+
+func TestApp_GetSummary_ReturnsUnavailableWhenNoAIService(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Should return unavailable message when no AI service is configured
+	summary, err := wailsApp.GetSummary(today)
+	require.NoError(t, err)
+	assert.Equal(t, "", summary)
+}

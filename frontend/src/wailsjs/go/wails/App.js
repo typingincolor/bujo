@@ -78,6 +78,10 @@ export function GetLocationHistory() {
   return window['go']['wails']['App']['GetLocationHistory']();
 }
 
+export function GetSummary(arg1) {
+  return window['go']['wails']['App']['GetSummary'](arg1);
+}
+
 export function Greet(arg1) {
   return window['go']['wails']['App']['Greet'](arg1);
 }
