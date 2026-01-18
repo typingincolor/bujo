@@ -1284,7 +1284,7 @@ func TestBujoService_CancelEntry_AlreadyCancelledNoOp(t *testing.T) {
 	assert.Equal(t, domain.EntryTypeCancelled, entry.Type)
 }
 
-func TestBujoService_UncancelEntry_CancelledBecomesTask(t *testing.T) {
+func TestBujoService_UncancelEntry_CancelledTaskBecomesTask(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
 
@@ -1301,6 +1301,44 @@ func TestBujoService_UncancelEntry_CancelledBecomesTask(t *testing.T) {
 	entry, err := entryRepo.GetByID(ctx, ids[0])
 	require.NoError(t, err)
 	assert.Equal(t, domain.EntryTypeTask, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_CancelledNoteBecomesNote(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "- This is a note", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeNote, entry.Type)
+}
+
+func TestBujoService_UncancelEntry_CancelledEventBecomesEvent(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "o Meeting at 3pm", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.UncancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeEvent, entry.Type)
 }
 
 func TestBujoService_UncancelEntry_NotCancelledNoOp(t *testing.T) {

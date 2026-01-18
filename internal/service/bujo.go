@@ -18,6 +18,7 @@ type EntryRepository interface {
 	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
 	GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error)
 	GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error)
+	GetHistory(ctx context.Context, entityID domain.EntityID) ([]domain.Entry, error)
 	Update(ctx context.Context, entry domain.Entry) error
 	Delete(ctx context.Context, id int64) error
 	DeleteWithChildren(ctx context.Context, id int64) error
@@ -363,7 +364,24 @@ func (s *BujoService) UncancelEntry(ctx context.Context, id int64) error {
 		return err
 	}
 
-	entry.Type = domain.EntryTypeTask
+	if entry.Type != domain.EntryTypeCancelled {
+		return nil
+	}
+
+	history, err := s.entryRepo.GetHistory(ctx, entry.EntityID)
+	if err != nil {
+		return err
+	}
+
+	previousType := domain.EntryTypeTask
+	for i := len(history) - 1; i >= 0; i-- {
+		if history[i].Type != domain.EntryTypeCancelled {
+			previousType = history[i].Type
+			break
+		}
+	}
+
+	entry.Type = previousType
 	return s.entryRepo.Update(ctx, *entry)
 }
 
