@@ -8,14 +8,14 @@ bujo follows **Hexagonal Architecture** (also known as Ports and Adapters), ensu
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Adapters                              │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │   CLI        │  │    TUI       │  │     AI       │       │
-│  │  (Cobra)     │  │ (Bubbletea)  │  │  (Gemini)    │       │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
-└─────────┼─────────────────┼─────────────────┼───────────────┘
-          │                 │                 │
-          ▼                 ▼                 ▼
+│                        Adapters                             │
+│  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐            │
+│  │  CLI   │  │  TUI   │  │ Wails  │  │   AI   │            │
+│  │(Cobra) │  │(Bubble)│  │(Desktop│  │(Gemini)│            │
+│  └───┬────┘  └───┬────┘  └───┬────┘  └───┬────┘            │
+└──────┼───────────┼───────────┼───────────┼─────────────────┘
+       │           │           │           │
+       ▼           ▼           ▼           ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     Service Layer                            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
@@ -104,7 +104,9 @@ bujo/
 │   │
 │   ├── adapter/
 │   │   ├── cli/                 # CLI adapter helpers
-│   │   └── ai/                  # Gemini AI integration
+│   │   ├── ai/                  # Gemini AI integration
+│   │   └── wails/               # Desktop app adapter
+│   │       └── app.go           # Wails bindings to services
 │   │
 │   └── tui/                     # Terminal UI (Bubbletea)
 │       ├── model.go             # TUI state model
@@ -114,9 +116,19 @@ bujo/
 │       ├── styles.go            # Lipgloss styles
 │       └── draft.go             # Draft persistence
 │
+├── frontend/                    # Desktop app React frontend
+│   ├── src/
+│   │   ├── App.tsx              # Main application component
+│   │   ├── components/bujo/     # UI components
+│   │   ├── lib/                 # Utilities and transforms
+│   │   └── wailsjs/             # Generated Wails bindings
+│   └── package.json
+│
 └── docs/                        # Documentation
-    ├── ARCHITECTURE.md          # This file
-    └── issue-event-sourcing-refactor.md
+    ├── CLI.md                   # CLI command reference
+    ├── TUI.md                   # TUI keyboard shortcuts
+    ├── FRONTEND.md              # Desktop app guide
+    └── ARCHITECTURE.md          # This file
 ```
 
 ## Layers
@@ -177,6 +189,21 @@ Features:
 - Capture mode for multi-entry input
 - Incremental search (Ctrl+S/R)
 - Draft persistence
+
+#### Wails Adapter (`internal/adapter/wails/`)
+
+Desktop application adapter using [Wails](https://wails.io/). Exposes service methods to the React frontend via Go bindings.
+
+**Architecture:**
+- `app.go`: Main App struct with bound methods
+- Methods receive frontend calls and delegate to services
+- Returns domain types (auto-serialized to JSON)
+
+**Frontend** (`frontend/`):
+- React with TypeScript
+- Tailwind CSS for styling
+- Generated bindings in `wailsjs/` directory
+- Components mirror TUI functionality
 
 #### AI Adapter (`internal/adapter/ai/`)
 
@@ -319,6 +346,7 @@ All code follows TDD: tests written before implementation.
 | `github.com/spf13/cobra` | CLI framework |
 | `github.com/charmbracelet/bubbletea` | TUI framework |
 | `github.com/charmbracelet/lipgloss` | TUI styling |
+| `github.com/wailsapp/wails/v2` | Desktop app framework |
 | `github.com/mattn/go-sqlite3` | SQLite driver |
 | `github.com/golang-migrate/migrate` | Schema migrations |
 | `github.com/google/uuid` | Entity ID generation |

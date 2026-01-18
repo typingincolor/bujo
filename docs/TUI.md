@@ -1,0 +1,144 @@
+# TUI Guide
+
+The Terminal User Interface provides an interactive way to manage your Bullet Journal entries.
+
+## Launching
+
+```bash
+bujo tui
+```
+
+## Views
+
+Navigate between views using number keys:
+
+| Key | View | Description |
+|-----|------|-------------|
+| `1` | Journal | Daily entries with overdue tasks |
+| `2` | Habits | Habit tracker with streaks |
+| `3` | Lists | Collection lists with progress |
+| `4` | Search | Search through entries |
+| `5` | Stats | Usage statistics |
+| `6` | Goals | Monthly goals |
+| `7` | Settings | Configuration options |
+
+## Navigation
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move down |
+| `k` / `↑` | Move up |
+| `g` | Go to top |
+| `G` | Go to bottom |
+| `Enter` | Select / Expand |
+| `Esc` | Back / Cancel |
+
+## Journal View
+
+### Date Navigation
+
+| Key | Action |
+|-----|--------|
+| `t` | Jump to today |
+| `/` | Go to specific date |
+| `v` | Toggle day/week view |
+
+### Entry Operations
+
+| Key | Action |
+|-----|--------|
+| `Space` | Mark task done |
+| `x` | Cancel task |
+| `e` | Edit entry |
+| `a` | Add new entry |
+| `A` | Add child entry |
+| `d` | Delete entry |
+| `m` | Migrate task to future date |
+| `p` | Cycle priority (none → low → medium → high) |
+| `Tab` | Toggle collapse/expand |
+
+### Entry Types
+
+When adding entries, prefix with:
+- `. ` Task (todo item)
+- `- ` Note (information)
+- `o ` Event (scheduled occurrence)
+
+## Habits View
+
+| Key | Action |
+|-----|--------|
+| `Space` | Log habit for today |
+| `h` / `←` | Previous day |
+| `l` / `→` | Next day |
+| `v` | Cycle view (week → month → quarter) |
+| `n` | Add new habit |
+
+## Lists View
+
+| Key | Action |
+|-----|--------|
+| `Enter` | View list items |
+| `Space` | Toggle item done |
+| `a` | Add new item |
+| `n` | Create new list |
+| `e` | Edit item |
+| `d` | Delete item |
+
+## Goals View
+
+| Key | Action |
+|-----|--------|
+| `Space` | Toggle goal done |
+| `a` | Add new goal |
+| `e` | Edit goal |
+| `d` | Delete goal |
+
+## Search View
+
+| Key | Action |
+|-----|--------|
+| Type | Enter search query |
+| `Enter` | Execute search |
+| `j`/`k` | Navigate results |
+| `Enter` | View selected entry |
+
+## Global Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `?` | Show help |
+| `q` | Quit |
+| `c` | Quick capture (add entry) |
+| `Ctrl+P` or `:` | Command palette |
+
+## Command Palette
+
+Press `Ctrl+P` or `:` to open the command palette. Type to filter available commands:
+
+- Navigation commands (go to view)
+- Entry operations
+- System commands (quit, help)
+
+## View Modes
+
+### Journal View Modes
+- **Day View**: Shows entries for a single day
+- **Week View**: Shows entries for the past 7 days
+
+Toggle with `v` key.
+
+### Habit View Modes
+- **Week**: Last 7 days with daily completion
+- **Month**: Last 30 days calendar view
+- **Quarter**: Last 90 days overview
+
+Cycle with `v` key in habits view.
+
+## Tips
+
+1. **Quick Entry**: Press `c` from any view to quickly add an entry
+2. **Keyboard Navigation**: Use vim-style `j`/`k` for fast navigation
+3. **Collapse Trees**: Use `Tab` to collapse/expand nested entries
+4. **Priority Management**: Press `p` to cycle through priority levels
+5. **Date Jumping**: Press `/` and enter a date like "yesterday" or "2026-01-15"
