@@ -261,6 +261,17 @@ describe('EntryItem', () => {
       expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
     })
 
+    it('cycle priority button shows exclamation mark icon', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCyclePriority={() => {}}
+        />
+      )
+      const button = screen.getByTitle('Cycle priority')
+      expect(button).toHaveTextContent('!')
+    })
+
     it('calls onCyclePriority when priority button is clicked', () => {
       const onCyclePriority = vi.fn()
       render(

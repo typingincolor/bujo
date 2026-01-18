@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle, ArrowRight, Check } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Check } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -177,7 +177,7 @@ export function EntryItem({
             title="Cycle priority"
             className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
           >
-            <AlertTriangle className="w-3.5 h-3.5" />
+            <span className="text-sm font-bold leading-none">!</span>
           </button>
         )}
         {onMigrate && entry.type === 'task' && (

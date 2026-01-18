@@ -254,7 +254,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               title="Cycle priority"
                               className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
                             >
-                              <AlertTriangle className="w-4 h-4" />
+                              <span className="text-sm font-bold leading-none">!</span>
                             </button>
                             {entry.type === 'task' && (
                               <button

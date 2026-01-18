@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight } from 'lucide-react';
 import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -295,7 +295,7 @@ export function SearchView() {
                   title="Cycle priority"
                   className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
                 >
-                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm font-bold leading-none">!</span>
                 </button>
                 {result.type === 'task' && (
                   <button
