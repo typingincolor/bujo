@@ -48,6 +48,7 @@ function App() {
   const [habits, setHabits] = useState<Habit[]>([])
   const [lists, setLists] = useState<BujoList[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
+  const [overdueCount, setOverdueCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -83,6 +84,7 @@ function App() {
 
       const transformedDays = (agendaData?.Days || []).map(transformDayEntries)
       setDays(transformedDays)
+      setOverdueCount(agendaData?.Overdue?.length || 0)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
@@ -404,7 +406,7 @@ function App() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-              <QuickStats days={days} habits={habits} goals={goals} />
+              <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
               <AddEntryBar onAdd={handleAddEntry} />
               <DayView
                 day={today}

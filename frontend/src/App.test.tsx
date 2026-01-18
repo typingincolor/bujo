@@ -365,9 +365,35 @@ describe('App - QuickStats', () => {
     })
 
     expect(screen.getByText('Tasks Completed')).toBeInTheDocument()
-    expect(screen.getByText('Pending Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Overdue Tasks')).toBeInTheDocument()
     expect(screen.getByText('Habits Today')).toBeInTheDocument()
     expect(screen.getByText('Monthly Goals')).toBeInTheDocument()
+  })
+
+  it('displays overdue count from agenda', async () => {
+    const agendaWithOverdue = createMockAgenda({
+      Days: [createMockDayEntries({
+        Entries: [createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task' })],
+      })],
+      Overdue: [
+        createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
+        createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+        createMockEntry({ ID: 12, EntityID: 'e12', Type: 'Task', Content: 'Overdue task 3' }),
+      ],
+    })
+    vi.mocked(GetAgenda).mockResolvedValue(agendaWithOverdue)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Today task')).toBeInTheDocument()
+    })
+
+    // Should show 3 overdue tasks - the value is in a sibling div
+    // Find the outer card by going up from the label
+    const overdueLabel = screen.getByText('Overdue Tasks')
+    const overdueCard = overdueLabel.closest('.rounded-lg')
+    expect(overdueCard).toHaveTextContent('3')
   })
 })
 

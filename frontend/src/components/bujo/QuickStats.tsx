@@ -7,13 +7,13 @@ interface QuickStatsProps {
   days: DayEntries[];
   habits: Habit[];
   goals: Goal[];
+  overdueCount: number;
 }
 
-export function QuickStats({ days, habits, goals }: QuickStatsProps) {
+export function QuickStats({ days, habits, goals, overdueCount }: QuickStatsProps) {
   const today = days[0];
   const todayEntries = today?.entries || [];
   const tasksDone = todayEntries.filter(e => e.type === 'done').length;
-  const tasksPending = todayEntries.filter(e => e.type === 'task').length;
   
   const habitsLoggedToday = habits.filter(h => h.todayLogged).length;
   const longestStreak = Math.max(...habits.map(h => h.streak), 0);
@@ -28,14 +28,14 @@ export function QuickStats({ days, habits, goals }: QuickStatsProps) {
         icon={CheckCircle2}
         label="Tasks Completed"
         value={tasksDone}
-        subtext={`${tasksPending} pending`}
+        subtext="today"
         color="text-bujo-done"
       />
       <StatCard
         icon={AlertCircle}
-        label="Pending Tasks"
-        value={tasksPending}
-        subtext="today"
+        label="Overdue Tasks"
+        value={overdueCount}
+        subtext="need attention"
         color="text-bujo-task"
       />
       <StatCard
