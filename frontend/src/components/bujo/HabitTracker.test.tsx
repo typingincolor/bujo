@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { HabitTracker } from './HabitTracker'
 import { Habit } from '@/types/bujo'
@@ -23,7 +23,15 @@ const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   completionRate: 0,
   todayLogged: false,
   todayCount: 0,
-  history: [false, false, false, false, false, false, false],
+  dayHistory: [
+    { date: '2024-01-01', completed: false, count: 0 },
+    { date: '2024-01-02', completed: false, count: 0 },
+    { date: '2024-01-03', completed: false, count: 0 },
+    { date: '2024-01-04', completed: false, count: 0 },
+    { date: '2024-01-05', completed: false, count: 0 },
+    { date: '2024-01-06', completed: false, count: 0 },
+    { date: '2024-01-07', completed: false, count: 0 },
+  ],
   ...overrides,
 })
 
@@ -251,43 +259,57 @@ describe('HabitTracker - Period View Toggle', () => {
   })
 })
 
-describe('HabitTracker - Undo Habit Log', () => {
+describe('HabitTracker - Decrement via Cmd+Click', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows undo button on habit row when habit is logged today', () => {
-    render(<HabitTracker habits={[createTestHabit({ todayLogged: true, todayCount: 1 })]} />)
-    expect(screen.getByTitle('Undo last log')).toBeInTheDocument()
-  })
-
-  it('does not show undo button when habit is not logged today', () => {
-    render(<HabitTracker habits={[createTestHabit({ todayLogged: false })]} />)
-    expect(screen.queryByTitle('Undo last log')).not.toBeInTheDocument()
-  })
-
-  it('calls UndoHabitLog binding when undo button is clicked', async () => {
-    const user = userEvent.setup()
+  it('calls UndoHabitLog when Cmd+clicking on a logged day circle', async () => {
     const onHabitChanged = vi.fn()
-    render(<HabitTracker habits={[createTestHabit({ id: 42, todayLogged: true, todayCount: 1 })]} onHabitChanged={onHabitChanged} />)
+    const habit = createTestHabit({
+      id: 42,
+      dayHistory: [
+        { date: '2024-01-01', completed: true, count: 2 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-07', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
 
-    await user.click(screen.getByTitle('Undo last log'))
+    const dayCircles = screen.getAllByRole('button', { name: /for/i })
+    // Cmd+click on the first day circle (which has count: 2)
+    fireEvent.click(dayCircles[0], { metaKey: true })
 
     await waitFor(() => {
       expect(UndoHabitLog).toHaveBeenCalledWith(42)
     })
   })
 
-  it('calls onHabitChanged after undo', async () => {
-    const user = userEvent.setup()
+  it('does not decrement when Cmd+clicking on a day with count 0', () => {
     const onHabitChanged = vi.fn()
-    render(<HabitTracker habits={[createTestHabit({ todayLogged: true, todayCount: 1 })]} onHabitChanged={onHabitChanged} />)
-
-    await user.click(screen.getByTitle('Undo last log'))
-
-    await waitFor(() => {
-      expect(onHabitChanged).toHaveBeenCalled()
+    const habit = createTestHabit({
+      id: 42,
+      dayHistory: [
+        { date: '2024-01-01', completed: false, count: 0 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-07', completed: false, count: 0 },
+      ]
     })
+    render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
+
+    const dayCircles = screen.getAllByRole('button', { name: /for/i })
+    // Cmd+click on a day with count 0
+    fireEvent.click(dayCircles[0], { metaKey: true })
+
+    expect(UndoHabitLog).not.toHaveBeenCalled()
   })
 })
 
@@ -339,49 +361,59 @@ describe('HabitTracker - Set Habit Goal', () => {
   })
 })
 
-describe('HabitTracker - Log Habit For Specific Date', () => {
+describe('HabitTracker - Click to Log', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows date picker when clicking on a past day in sparkline', async () => {
-    const user = userEvent.setup()
-    // Create habit with history array of 7 days
-    const habit = createTestHabit({
-      history: [false, false, false, false, false, false, false]
-    })
-    render(<HabitTracker habits={[habit]} />)
-
-    // Click on a past day (first day in sparkline which is 6 days ago)
-    const sparklineDots = screen.getAllByRole('button', { name: /log for/i })
-    expect(sparklineDots.length).toBeGreaterThan(0)
-    await user.click(sparklineDots[0])
-
-    // Check for the dialog title
-    expect(screen.getByText('Log Habit for Date')).toBeInTheDocument()
-  })
-
-  it('calls LogHabitForDate binding when logging for specific date', async () => {
+  it('logs habit directly when clicking on a day circle', async () => {
     const user = userEvent.setup()
     const onHabitChanged = vi.fn()
     const habit = createTestHabit({
       id: 42,
-      history: [false, false, false, false, false, false, false]
+      dayHistory: [
+        { date: '2024-01-01', completed: false, count: 0 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-07', completed: false, count: 0 },
+      ]
     })
     render(<HabitTracker habits={[habit]} onHabitChanged={onHabitChanged} />)
 
-    // Click on a past day sparkline dot
-    const sparklineDots = screen.getAllByRole('button', { name: /log for/i })
-    await user.click(sparklineDots[0])
+    // Click on a day circle
+    const dayCircles = screen.getAllByRole('button', { name: /for/i })
+    expect(dayCircles.length).toBeGreaterThan(0)
+    await user.click(dayCircles[0])
 
-    // Confirm logging
-    await user.click(screen.getByRole('button', { name: /confirm/i }))
-
+    // Should call LogHabitForDate immediately without confirmation
     await waitFor(() => {
       expect(LogHabitForDate).toHaveBeenCalled()
       const call = vi.mocked(LogHabitForDate).mock.calls[0]
       expect(call[0]).toBe(42) // habit ID
       expect(call[1]).toBe(1) // count
     })
+  })
+
+  it('displays count in day circle when habit is logged', () => {
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2024-01-01', completed: true, count: 3 },
+        { date: '2024-01-02', completed: false, count: 0 },
+        { date: '2024-01-03', completed: true, count: 1 },
+        { date: '2024-01-04', completed: false, count: 0 },
+        { date: '2024-01-05', completed: false, count: 0 },
+        { date: '2024-01-06', completed: false, count: 0 },
+        { date: '2024-01-07', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} />)
+
+    // Check that the circles show the count
+    const dayCircles = screen.getAllByRole('button', { name: /for/i })
+    expect(dayCircles[0]).toHaveTextContent('3')
+    expect(dayCircles[2]).toHaveTextContent('1')
   })
 })

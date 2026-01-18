@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { Habit } from '@/types/bujo';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Habit, HabitDayStatus } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Flame, Check, Plus, X, Trash2, Undo2, Target, ChevronDown } from 'lucide-react';
-import { LogHabit, CreateHabit, DeleteHabit, UndoHabitLog, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
+import { Flame, Plus, X, Trash2, Target, ChevronDown } from 'lucide-react';
+import { CreateHabit, DeleteHabit, UndoHabitLog, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
 import { ConfirmDialog } from './ConfirmDialog';
 
 type PeriodView = 'week' | 'month' | 'quarter';
@@ -15,55 +15,49 @@ interface HabitTrackerProps {
 
 interface HabitRowProps {
   habit: Habit;
-  onLogHabit: (habitId: number) => void;
+  onLogForDate: (habitId: number, date: string) => void;
+  onDecrementForDate: (habitId: number, date: string) => void;
   onDeleteHabit: (habitId: number) => void;
-  onUndoLog: (habitId: number) => void;
   onSetGoal: (habitId: number) => void;
-  onLogForDate: (habitId: number, dayIndex: number) => void;
   settingGoalFor: number | null;
   onGoalSubmit: (habitId: number, goal: number) => void;
   onGoalCancel: () => void;
 }
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-const DAYS_TO_SHOW = 7
 
-function getRecentDays(): string[] {
-  const days: string[] = []
-  for (let i = DAYS_TO_SHOW - 1; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    days.push(DAY_LABELS[d.getDay()])
-  }
-  return days
+function getDayLabel(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return DAY_LABELS[date.getDay()];
 }
 
 function HabitRow({
   habit,
-  onLogHabit,
-  onDeleteHabit,
-  onUndoLog,
-  onSetGoal,
   onLogForDate,
+  onDecrementForDate,
+  onDeleteHabit,
+  onSetGoal,
   settingGoalFor,
   onGoalSubmit,
   onGoalCancel
 }: HabitRowProps) {
-  const recentDays = getRecentDays();
   const [goalInput, setGoalInput] = useState('');
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  const handleLog = () => {
-    onLogHabit(habit.id);
+  const handleDayClick = (e: React.MouseEvent, day: HabitDayStatus) => {
+    e.preventDefault();
+    if (e.metaKey || e.ctrlKey) {
+      if (day.count > 0) {
+        onDecrementForDate(habit.id, day.date);
+      }
+    } else {
+      onLogForDate(habit.id, day.date);
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDeleteHabit(habit.id);
-  };
-
-  const handleUndo = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUndoLog(habit.id);
   };
 
   const handleGoalKeyDown = (e: React.KeyboardEvent) => {
@@ -97,62 +91,39 @@ function HabitRow({
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
           <span>{habit.completionRate}% completion</span>
-          {habit.goal && <span>• Goal: {habit.goal}</span>}
+          {habit.goal && <span>• Goal: {habit.goal}/day</span>}
         </div>
       </div>
 
-      {/* Sparkline */}
+      {/* Day circles */}
       <div className="flex items-center gap-1">
-        {habit.history.map((completed, i) => {
-          const isToday = i === habit.history.length - 1;
+        {habit.dayHistory.map((day, i) => {
+          const isToday = day.date === todayStr;
           return (
             <div key={i} className="flex flex-col items-center">
               <button
-                onClick={() => !isToday && onLogForDate(habit.id, i)}
-                aria-label={isToday ? undefined : `Log for ${recentDays[i]}`}
-                disabled={isToday}
+                onClick={(e) => handleDayClick(e, day)}
+                aria-label={`${day.completed ? 'Logged' : 'Log'} for ${getDayLabel(day.date)}${day.count > 0 ? ` (${day.count})` : ''}`}
+                title={`Click to add, ${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+click to remove`}
                 className={cn(
-                  'w-5 h-5 rounded-full flex items-center justify-center transition-all',
-                  completed ? 'bg-bujo-habit-fill' : 'bg-bujo-habit-empty',
-                  isToday && 'ring-2 ring-primary/30',
-                  !isToday && !completed && 'hover:bg-bujo-habit-empty/80 cursor-pointer'
+                  'w-6 h-6 rounded-full flex items-center justify-center transition-all text-[10px] font-medium',
+                  day.completed ? 'bg-bujo-habit-fill text-primary-foreground' : 'bg-bujo-habit-empty text-muted-foreground',
+                  isToday && 'ring-2 ring-primary/50',
+                  'hover:scale-110 cursor-pointer'
                 )}
               >
-                {completed && (
-                  <Check className="w-3 h-3 text-primary-foreground" />
-                )}
+                {day.count > 0 ? day.count : ''}
               </button>
-              <span className="text-[10px] text-muted-foreground mt-0.5">
-                {recentDays[i]}
+              <span className={cn(
+                'text-[10px] mt-0.5',
+                isToday ? 'text-primary font-medium' : 'text-muted-foreground'
+              )}>
+                {getDayLabel(day.date)}
               </span>
             </div>
           );
         })}
       </div>
-
-      {/* Today status */}
-      <button
-        onClick={handleLog}
-        className={cn(
-          'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-          habit.todayLogged
-            ? 'bg-bujo-done text-primary-foreground hover:bg-bujo-done/90'
-            : 'bg-primary text-primary-foreground hover:bg-primary/90'
-        )}
-      >
-        {habit.todayLogged ? `+1 (${habit.todayCount})` : 'Log'}
-      </button>
-
-      {/* Undo button - only show when habit is logged today */}
-      {habit.todayLogged && (
-        <button
-          onClick={handleUndo}
-          title="Undo last log"
-          className="p-1.5 rounded-md text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors"
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-      )}
 
       {/* Goal button or input */}
       {settingGoalFor === habit.id ? (
@@ -195,7 +166,6 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
   const [currentPeriod, setCurrentPeriod] = useState<PeriodView>('week');
   const [showPeriodMenu, setShowPeriodMenu] = useState(false);
   const [settingGoalFor, setSettingGoalFor] = useState<number | null>(null);
-  const [logForDateInfo, setLogForDateInfo] = useState<{ habitId: number; dayIndex: number; date: Date } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const periodMenuRef = useRef<HTMLDivElement>(null);
 
@@ -215,14 +185,24 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogHabit = async (habitId: number) => {
+  const handleLogForDate = useCallback(async (habitId: number, dateStr: string) => {
     try {
-      await LogHabit(habitId, 1);
+      const date = new Date(dateStr + 'T12:00:00');
+      await LogHabitForDate(habitId, 1, date.toISOString());
       onHabitChanged?.();
     } catch (error) {
       console.error('Failed to log habit:', error);
     }
-  };
+  }, [onHabitChanged]);
+
+  const handleDecrementForDate = useCallback(async (habitId: number, _dateStr: string) => {
+    try {
+      await UndoHabitLog(habitId);
+      onHabitChanged?.();
+    } catch (error) {
+      console.error('Failed to undo habit log:', error);
+    }
+  }, [onHabitChanged]);
 
   const handleCreateHabit = async () => {
     const trimmedName = newHabitName.trim();
@@ -249,15 +229,6 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
     }
   };
 
-  const handleUndoLog = async (habitId: number) => {
-    try {
-      await UndoHabitLog(habitId);
-      onHabitChanged?.();
-    } catch (error) {
-      console.error('Failed to undo habit log:', error);
-    }
-  };
-
   const handleSetGoal = async (habitId: number, goal: number) => {
     try {
       await SetHabitGoal(habitId, goal);
@@ -265,24 +236,6 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
       onHabitChanged?.();
     } catch (error) {
       console.error('Failed to set habit goal:', error);
-    }
-  };
-
-  const handleLogForDate = (habitId: number, dayIndex: number) => {
-    const date = new Date();
-    const daysAgo = DAYS_TO_SHOW - 1 - dayIndex;
-    date.setDate(date.getDate() - daysAgo);
-    setLogForDateInfo({ habitId, dayIndex, date });
-  };
-
-  const handleConfirmLogForDate = async () => {
-    if (!logForDateInfo) return;
-    try {
-      await LogHabitForDate(logForDateInfo.habitId, 1, logForDateInfo.date.toISOString());
-      setLogForDateInfo(null);
-      onHabitChanged?.();
-    } catch (error) {
-      console.error('Failed to log habit for date:', error);
     }
   };
 
@@ -388,11 +341,10 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
           <HabitRow
             key={habit.id}
             habit={habit}
-            onLogHabit={handleLogHabit}
-            onDeleteHabit={handleRequestDelete}
-            onUndoLog={handleUndoLog}
-            onSetGoal={(id) => setSettingGoalFor(id)}
             onLogForDate={handleLogForDate}
+            onDecrementForDate={handleDecrementForDate}
+            onDeleteHabit={handleRequestDelete}
+            onSetGoal={(id) => setSettingGoalFor(id)}
             settingGoalFor={settingGoalFor}
             onGoalSubmit={handleSetGoal}
             onGoalCancel={() => setSettingGoalFor(null)}
@@ -408,15 +360,6 @@ export function HabitTracker({ habits, onHabitChanged, onPeriodChange }: HabitTr
         variant="destructive"
         onConfirm={handleDeleteHabit}
         onCancel={() => setHabitToDelete(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!logForDateInfo}
-        title="Log Habit for Date"
-        message={`Log habit for ${logForDateInfo?.date.toLocaleDateString()}?`}
-        confirmText="Confirm"
-        onConfirm={handleConfirmLogForDate}
-        onCancel={() => setLogForDateInfo(null)}
       />
     </div>
   );

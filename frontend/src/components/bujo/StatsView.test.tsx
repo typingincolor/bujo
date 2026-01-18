@@ -18,7 +18,7 @@ const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   todayCount: 0,
   streak: 0,
   completionRate: 0,
-  history: [],
+  dayHistory: [],
   ...overrides,
 })
 

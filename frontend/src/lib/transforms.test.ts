@@ -142,13 +142,13 @@ describe('transformHabit', () => {
       CompletionPercent: 80,
       TodayCount: 1,
       DayHistory: [
-        { Completed: true },
-        { Completed: true },
-        { Completed: false },
-        { Completed: true },
-        { Completed: true },
-        { Completed: true },
-        { Completed: false },
+        { Date: '2024-01-01T00:00:00Z', Completed: true, Count: 1 },
+        { Date: '2024-01-02T00:00:00Z', Completed: true, Count: 1 },
+        { Date: '2024-01-03T00:00:00Z', Completed: false, Count: 0 },
+        { Date: '2024-01-04T00:00:00Z', Completed: true, Count: 1 },
+        { Date: '2024-01-05T00:00:00Z', Completed: true, Count: 2 },
+        { Date: '2024-01-06T00:00:00Z', Completed: true, Count: 1 },
+        { Date: '2024-01-07T00:00:00Z', Completed: false, Count: 0 },
       ],
     } as unknown as service.HabitStatus
 
@@ -160,7 +160,15 @@ describe('transformHabit', () => {
       streak: 5,
       completionRate: 80,
       goal: 1,
-      history: [true, true, false, true, true, true, false],
+      dayHistory: [
+        { date: '2024-01-01', completed: true, count: 1 },
+        { date: '2024-01-02', completed: true, count: 1 },
+        { date: '2024-01-03', completed: false, count: 0 },
+        { date: '2024-01-04', completed: true, count: 1 },
+        { date: '2024-01-05', completed: true, count: 2 },
+        { date: '2024-01-06', completed: true, count: 1 },
+        { date: '2024-01-07', completed: false, count: 0 },
+      ],
       todayLogged: true,
       todayCount: 1,
     })
@@ -195,7 +203,7 @@ describe('transformHabit', () => {
 
     const result = transformHabit(input)
 
-    expect(result.history).toEqual([])
+    expect(result.dayHistory).toEqual([])
   })
 })
 

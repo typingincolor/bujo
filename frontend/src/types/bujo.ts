@@ -21,13 +21,19 @@ export interface DayEntries {
   entries: Entry[];
 }
 
+export interface HabitDayStatus {
+  date: string;
+  completed: boolean;
+  count: number;
+}
+
 export interface Habit {
   id: number;
   name: string;
   streak: number;
   completionRate: number;
   goal?: number;
-  history: boolean[]; // last 7 or 30 days
+  dayHistory: HabitDayStatus[];
   todayLogged: boolean;
   todayCount: number;
 }

@@ -58,6 +58,7 @@ function App() {
   const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
   const [habitDays, setHabitDays] = useState(7)
+  const [habitPeriod, setHabitPeriod] = useState<'week' | 'month' | 'quarter'>('week')
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -131,7 +132,15 @@ function App() {
   const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
     const daysMap = { week: 7, month: 30, quarter: 90 }
     setHabitDays(daysMap[period])
+    setHabitPeriod(period)
   }, [])
+
+  const cycleHabitPeriod = useCallback(() => {
+    const periods: Array<'week' | 'month' | 'quarter'> = ['week', 'month', 'quarter']
+    const currentIndex = periods.indexOf(habitPeriod)
+    const nextPeriod = periods[(currentIndex + 1) % periods.length]
+    handleHabitPeriodChange(nextPeriod)
+  }, [habitPeriod, handleHabitPeriodChange])
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -148,6 +157,15 @@ function App() {
         if (e.key === 'l') {
           e.preventDefault()
           handleNextDay()
+          return
+        }
+      }
+
+      // Habit view shortcuts
+      if (view === 'habits') {
+        if (e.key === 'w') {
+          e.preventDefault()
+          cycleHabitPeriod()
           return
         }
       }
@@ -199,7 +217,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, cycleHabitPeriod])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -426,7 +444,7 @@ function App() {
 
         {/* Keyboard shortcuts hint */}
         <div className="hidden lg:block fixed bottom-4 right-4 w-72">
-          <KeyboardShortcuts />
+          <KeyboardShortcuts view={view} />
         </div>
       </div>
 
