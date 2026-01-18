@@ -8,6 +8,7 @@ import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
 import { OverviewView } from '@/components/bujo/OverviewView'
+import { QuestionsView } from '@/components/bujo/QuestionsView'
 import { SearchView } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
@@ -546,6 +547,16 @@ function App() {
             <div className="max-w-3xl mx-auto">
               <OverviewView
                 overdueEntries={overdueEntries}
+                onEntryChanged={loadData}
+                onError={setError}
+              />
+            </div>
+          )}
+
+          {view === 'questions' && (
+            <div className="max-w-3xl mx-auto">
+              <QuestionsView
+                questions={overdueEntries}
                 onEntryChanged={loadData}
                 onError={setError}
               />
