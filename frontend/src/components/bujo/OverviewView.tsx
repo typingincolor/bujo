@@ -5,6 +5,10 @@ import { format, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 
+function ActionPlaceholder() {
+  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
+}
+
 interface OverviewViewProps {
   overdueEntries: Entry[];
   onEntryChanged?: () => void;
@@ -288,6 +292,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                           ))}
                           {/* Task entry */}
                           <div
+                            data-entry-id={entry.id}
                             onClick={() => toggleExpanded(entry.id)}
                             className={cn(
                               'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
@@ -325,23 +330,28 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             )}
                             {entry.type === 'done' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleMarkUndone(entry); }}
                                 title="Mark undone"
                                 className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600 transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <span className="text-sm font-bold leading-none">•</span>
                               </button>
-                            ) : entry.type !== 'cancelled' && (
+                            ) : entry.type !== 'cancelled' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleMarkDone(entry); }}
                                 title="Mark done"
                                 className="p-1 rounded hover:bg-bujo-done/20 text-muted-foreground hover:text-bujo-done transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <Check className="w-4 h-4" />
                               </button>
+                            ) : (
+                              <ActionPlaceholder />
                             )}
                             {entry.type !== 'cancelled' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleCancel(entry); }}
                                 title="Cancel entry"
                                 className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
@@ -350,6 +360,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               </button>
                             ) : (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleUncancel(entry); }}
                                 title="Uncancel entry"
                                 className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
@@ -358,31 +369,39 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               </button>
                             )}
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleCyclePriority(entry); }}
                               title="Cycle priority"
                               className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
                             >
                               <Flag className="w-4 h-4" />
                             </button>
-                            {entry.type === 'task' && (
+                            {entry.type === 'task' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleCycleType(entry); }}
                                 title="Change type"
                                 className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <RefreshCw className="w-4 h-4" />
                               </button>
+                            ) : (
+                              <ActionPlaceholder />
                             )}
-                            {entry.type === 'task' && (
+                            {entry.type === 'task' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => e.stopPropagation()}
                                 title="Migrate entry"
                                 className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <ArrowRight className="w-4 h-4" />
                               </button>
+                            ) : (
+                              <ActionPlaceholder />
                             )}
                             <button
+                              data-action-slot
                               onClick={(e) => e.stopPropagation()}
                               title="Edit entry"
                               className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
@@ -390,6 +409,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleDelete(entry); }}
                               title="Delete entry"
                               className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"

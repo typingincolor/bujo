@@ -541,3 +541,41 @@ describe('OverviewView - Context Indicator', () => {
     expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
   })
 })
+
+describe('OverviewView - Action Icon Placeholders', () => {
+  it('renders same number of action slots for task and cancelled entries', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Task entry', type: 'task' }),
+      createTestEntry({ id: 2, content: 'Cancelled entry', type: 'cancelled' }),
+    ]
+
+    render(<OverviewView overdueEntries={entries} />)
+
+    const taskRow = screen.getByText('Task entry').closest('[data-entry-id]')
+    const cancelledRow = screen.getByText('Cancelled entry').closest('[data-entry-id]')
+
+    const taskActionSlots = taskRow?.querySelectorAll('[data-action-slot]')
+    const cancelledActionSlots = cancelledRow?.querySelectorAll('[data-action-slot]')
+
+    expect(taskActionSlots?.length).toBeGreaterThan(0)
+    expect(taskActionSlots?.length).toBe(cancelledActionSlots?.length)
+  })
+
+  it('renders same number of action slots for task and done entries', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Task entry', type: 'task' }),
+      createTestEntry({ id: 2, content: 'Done entry', type: 'done' }),
+    ]
+
+    render(<OverviewView overdueEntries={entries} />)
+
+    const taskRow = screen.getByText('Task entry').closest('[data-entry-id]')
+    const doneRow = screen.getByText('Done entry').closest('[data-entry-id]')
+
+    const taskActionSlots = taskRow?.querySelectorAll('[data-action-slot]')
+    const doneActionSlots = doneRow?.querySelectorAll('[data-action-slot]')
+
+    expect(taskActionSlots?.length).toBeGreaterThan(0)
+    expect(taskActionSlots?.length).toBe(doneActionSlots?.length)
+  })
+})

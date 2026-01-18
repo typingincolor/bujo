@@ -5,6 +5,10 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
 
+function ActionPlaceholder() {
+  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
+}
+
 interface SearchResult {
   id: number;
   content: string;
@@ -392,35 +396,39 @@ export function SearchView() {
                 </div>
 
                 {/* Action buttons */}
-                {result.type === 'task' && (
+                {result.type === 'task' ? (
                   <button
+                    data-action-slot
                     onClick={(e) => handleMarkDone(result.id, e)}
                     title="Mark done"
                     className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-bujo-done"
                   >
                     <Check className="w-4 h-4" />
                   </button>
-                )}
-                {result.type === 'done' && (
+                ) : result.type === 'done' ? (
                   <button
+                    data-action-slot
                     onClick={(e) => handleMarkUndone(result.id, e)}
                     title="Mark undone"
                     className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600"
                   >
                     <span className="text-sm font-bold leading-none">•</span>
                   </button>
+                ) : (
+                  <ActionPlaceholder />
                 )}
-                {result.type !== 'cancelled' && (
+                {result.type !== 'cancelled' ? (
                   <button
+                    data-action-slot
                     onClick={(e) => handleCancel(result.id, e)}
                     title="Cancel entry"
                     className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
                   >
                     <X className="w-4 h-4" />
                   </button>
-                )}
-                {result.type === 'cancelled' && (
+                ) : (
                   <button
+                    data-action-slot
                     onClick={(e) => handleUncancel(result.id, e)}
                     title="Uncancel entry"
                     className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
@@ -429,31 +437,39 @@ export function SearchView() {
                   </button>
                 )}
                 <button
+                  data-action-slot
                   onClick={(e) => handleCyclePriority(result.id, e)}
                   title="Cycle priority"
                   className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
                 >
                   <Flag className="w-4 h-4" />
                 </button>
-                {(result.type === 'task' || result.type === 'note' || result.type === 'event' || result.type === 'question') && (
+                {(result.type === 'task' || result.type === 'note' || result.type === 'event' || result.type === 'question') ? (
                   <button
+                    data-action-slot
                     onClick={(e) => handleCycleType(result.id, result.type, e)}
                     title="Change type"
                     className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
                   >
                     <RefreshCw className="w-4 h-4" />
                   </button>
+                ) : (
+                  <ActionPlaceholder />
                 )}
-                {result.type === 'task' && (
+                {result.type === 'task' ? (
                   <button
+                    data-action-slot
                     onClick={(e) => e.stopPropagation()}
                     title="Migrate entry"
                     className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
                   >
                     <ArrowRight className="w-4 h-4" />
                   </button>
+                ) : (
+                  <ActionPlaceholder />
                 )}
                 <button
+                  data-action-slot
                   onClick={(e) => e.stopPropagation()}
                   title="Edit entry"
                   className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
@@ -461,6 +477,7 @@ export function SearchView() {
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
+                  data-action-slot
                   onClick={(e) => handleDelete(result.id, e)}
                   title="Delete entry"
                   className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"

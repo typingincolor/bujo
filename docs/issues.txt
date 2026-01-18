@@ -48,14 +48,15 @@ x choose a better icon for cycle priority a ! maybe
 x alerttriangle is not an appropriate icon for outstanding tasks
 x today/review view - right click on entry give you the option to add a child or move to root
 x all views - need keyboard shortcuts for all actions, shortcuts should be consistent across all views
-. look for any other occurances of issue 45 and address them
-. all view - indicate viually that there is context to show if there is context to show if it is not being shown
+x look for any other occurances of issue 45 and address them
+x all view - indicate viually that there is context to show if there is context to show if it is not being shown
 x ! icon is not vertically aligned with the other actions
 x cancelled entry is not struck through on search results view. Check cancelled entries are struck through everywhere
-. verify how questions & answers should work. Add Outstanding questions view to sidebar
+x verify how questions & answers should work. Add Outstanding questions view to sidebar
 x remove red colour from overdue tasks
 x outstanding tasks logic seems screwy. The date they are shown under should be the date the were created. Jan 18 is showing lots of entries and I don't know why. Is it showing goals as well - i should only show tasks?
 x Search View (and maybe others) - click cycle priority does nothing. Check all actions do something!
 x Cannot change type on Today view and probably review review
-. The action icons should stay in the same places. Use empty placeholders for icons that are missing.
+x The action icons should stay in the same places. Use empty placeholders for icons that are missing.
 . Complete work on file upload / drag and drop
+. Outstanding questions view is not working. I have an outstanding question and I cannot see it.

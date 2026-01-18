@@ -6,6 +6,10 @@ import { useState, useEffect } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
 import { AnswerQuestionModal } from './AnswerQuestionModal'
 
+function ActionPlaceholder() {
+  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />
+}
+
 interface QuestionsViewProps {
   questions: Entry[]
   onEntryChanged?: () => void
@@ -313,6 +317,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               </span>
                             )}
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleAnswer(entry); }}
                               title="Answer question"
                               className="p-1 rounded hover:bg-bujo-question/20 text-muted-foreground hover:text-bujo-question transition-colors opacity-0 group-hover:opacity-100"
@@ -321,6 +326,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                             </button>
                             {entry.type !== 'cancelled' ? (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleCancel(entry); }}
                                 title="Cancel entry"
                                 className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
@@ -329,6 +335,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               </button>
                             ) : (
                               <button
+                                data-action-slot
                                 onClick={(e) => { e.stopPropagation(); handleUncancel(entry); }}
                                 title="Uncancel entry"
                                 className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
@@ -337,6 +344,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               </button>
                             )}
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleCyclePriority(entry); }}
                               title="Cycle priority"
                               className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
@@ -344,6 +352,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               <Flag className="w-4 h-4" />
                             </button>
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleCycleType(entry); }}
                               title="Change type"
                               className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
@@ -351,6 +360,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               <RefreshCw className="w-4 h-4" />
                             </button>
                             <button
+                              data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleDelete(entry); }}
                               title="Delete entry"
                               className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
