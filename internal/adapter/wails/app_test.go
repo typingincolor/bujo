@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/typingincolor/bujo/internal/app"
+	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
 
@@ -597,4 +598,228 @@ func TestApp_DeleteHabit_RemovesHabit(t *testing.T) {
 	status, err := wailsApp.GetHabits(7)
 	require.NoError(t, err)
 	assert.Empty(t, status.Habits)
+}
+
+func TestApp_CancelEntry_CancelsTask(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.CancelEntry(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "✗", agenda.Days[0].Entries[0].Type.Symbol())
+}
+
+func TestApp_UncancelEntry_RevertsToTask(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.CancelEntry(ids[0])
+	require.NoError(t, err)
+
+	err = wailsApp.UncancelEntry(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+}
+
+func TestApp_SetPriority_SetsPriorityOnEntry(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = wailsApp.SetPriority(ids[0], "high")
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, domain.PriorityHigh, agenda.Days[0].Entries[0].Priority)
+}
+
+func TestApp_CyclePriority_CyclesThroughPriorities(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	// Initial priority is none, cycle to low
+	err = wailsApp.CyclePriority(ids[0])
+	require.NoError(t, err)
+
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, agenda.Days[0].Entries[0].Priority)
+
+	// Cycle to medium
+	err = wailsApp.CyclePriority(ids[0])
+	require.NoError(t, err)
+
+	agenda, err = wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityMedium, agenda.Days[0].Entries[0].Priority)
+}
+
+func TestApp_MigrateEntry_MovesTaskToFutureDate(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	tomorrow := today.AddDate(0, 0, 1)
+	ids, err := services.Bujo.LogEntries(ctx, ". Test task", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	newID, err := wailsApp.MigrateEntry(ids[0], tomorrow)
+	require.NoError(t, err)
+	assert.Greater(t, newID, int64(0))
+
+	// Original entry should be marked as migrated
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "→", agenda.Days[0].Entries[0].Type.Symbol())
+
+	// New entry should exist on tomorrow
+	agenda, err = wailsApp.GetAgenda(tomorrow, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.Len(t, agenda.Days[0].Entries, 1)
+	assert.Equal(t, "Test task", agenda.Days[0].Entries[0].Content)
+}
+
+func TestApp_SetLocation_SetsLocationForDate(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	err = wailsApp.SetLocation(today, "Manchester Office")
+	require.NoError(t, err)
+
+	// Verify location is set by checking the agenda
+	agenda, err := wailsApp.GetAgenda(today, today)
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 1)
+	require.NotNil(t, agenda.Days[0].Location)
+	assert.Equal(t, "Manchester Office", *agenda.Days[0].Location)
+}
+
+func TestApp_GetLocationHistory_ReturnsUniqueLocations(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	dayBefore := today.AddDate(0, 0, -2)
+
+	// Set locations for different days, with a duplicate
+	err = wailsApp.SetLocation(today, "Manchester Office")
+	require.NoError(t, err)
+	err = wailsApp.SetLocation(yesterday, "Home")
+	require.NoError(t, err)
+	err = wailsApp.SetLocation(dayBefore, "Manchester Office") // Duplicate
+	require.NoError(t, err)
+
+	locations, err := wailsApp.GetLocationHistory()
+	require.NoError(t, err)
+
+	// Should have 2 unique locations
+	assert.Len(t, locations, 2)
+	assert.Contains(t, locations, "Manchester Office")
+	assert.Contains(t, locations, "Home")
+}
+
+func TestApp_GetSummary_ReturnsUnavailableWhenNoAIService(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Should return unavailable message when no AI service is configured
+	summary, err := wailsApp.GetSummary(today)
+	require.NoError(t, err)
+	assert.Equal(t, "", summary)
 }

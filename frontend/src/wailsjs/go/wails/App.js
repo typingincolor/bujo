@@ -10,6 +10,14 @@ export function AddListItem(arg1, arg2) {
   return window['go']['wails']['App']['AddListItem'](arg1, arg2);
 }
 
+export function AnswerQuestion(arg1, arg2) {
+  return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
+}
+
+export function CancelEntry(arg1) {
+  return window['go']['wails']['App']['CancelEntry'](arg1);
+}
+
 export function CreateGoal(arg1, arg2) {
   return window['go']['wails']['App']['CreateGoal'](arg1, arg2);
 }
@@ -18,20 +26,36 @@ export function CreateHabit(arg1) {
   return window['go']['wails']['App']['CreateHabit'](arg1);
 }
 
-export function DeleteEntry(arg1) {
-  return window['go']['wails']['App']['DeleteEntry'](arg1);
+export function CreateList(arg1) {
+  return window['go']['wails']['App']['CreateList'](arg1);
 }
 
-export function DeleteHabit(arg1) {
-  return window['go']['wails']['App']['DeleteHabit'](arg1);
+export function CyclePriority(arg1) {
+  return window['go']['wails']['App']['CyclePriority'](arg1);
+}
+
+export function DeleteEntry(arg1) {
+  return window['go']['wails']['App']['DeleteEntry'](arg1);
 }
 
 export function DeleteGoal(arg1) {
   return window['go']['wails']['App']['DeleteGoal'](arg1);
 }
 
+export function DeleteHabit(arg1) {
+  return window['go']['wails']['App']['DeleteHabit'](arg1);
+}
+
+export function DeleteList(arg1, arg2) {
+  return window['go']['wails']['App']['DeleteList'](arg1, arg2);
+}
+
 export function EditEntry(arg1, arg2) {
   return window['go']['wails']['App']['EditEntry'](arg1, arg2);
+}
+
+export function EditListItem(arg1, arg2) {
+  return window['go']['wails']['App']['EditListItem'](arg1, arg2);
 }
 
 export function GetAgenda(arg1, arg2) {
@@ -50,6 +74,14 @@ export function GetLists() {
   return window['go']['wails']['App']['GetLists']();
 }
 
+export function GetLocationHistory() {
+  return window['go']['wails']['App']['GetLocationHistory']();
+}
+
+export function GetSummary(arg1) {
+  return window['go']['wails']['App']['GetSummary'](arg1);
+}
+
 export function Greet(arg1) {
   return window['go']['wails']['App']['Greet'](arg1);
 }
@@ -60,6 +92,10 @@ export function HasChildren(arg1) {
 
 export function LogHabit(arg1, arg2) {
   return window['go']['wails']['App']['LogHabit'](arg1, arg2);
+}
+
+export function LogHabitForDate(arg1, arg2, arg3) {
+  return window['go']['wails']['App']['LogHabitForDate'](arg1, arg2, arg3);
 }
 
 export function MarkEntryDone(arg1) {
@@ -86,50 +122,46 @@ export function MarkListItemUndone(arg1) {
   return window['go']['wails']['App']['MarkListItemUndone'](arg1);
 }
 
+export function MigrateEntry(arg1, arg2) {
+  return window['go']['wails']['App']['MigrateEntry'](arg1, arg2);
+}
+
 export function RemoveListItem(arg1) {
   return window['go']['wails']['App']['RemoveListItem'](arg1);
-}
-
-export function Search(arg1) {
-  return window['go']['wails']['App']['Search'](arg1);
-}
-
-export function AnswerQuestion(arg1, arg2) {
-  return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
-}
-
-export function LogHabitForDate(arg1, arg2, arg3) {
-  return window['go']['wails']['App']['LogHabitForDate'](arg1, arg2, arg3);
-}
-
-export function UndoHabitLog(arg1) {
-  return window['go']['wails']['App']['UndoHabitLog'](arg1);
-}
-
-export function SetHabitGoal(arg1, arg2) {
-  return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
-}
-
-export function CreateList(arg1) {
-  return window['go']['wails']['App']['CreateList'](arg1);
-}
-
-export function DeleteList(arg1, arg2) {
-  return window['go']['wails']['App']['DeleteList'](arg1, arg2);
 }
 
 export function RenameList(arg1, arg2) {
   return window['go']['wails']['App']['RenameList'](arg1, arg2);
 }
 
-export function EditListItem(arg1, arg2) {
-  return window['go']['wails']['App']['EditListItem'](arg1, arg2);
+export function Search(arg1) {
+  return window['go']['wails']['App']['Search'](arg1);
+}
+
+export function SetHabitGoal(arg1, arg2) {
+  return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
+}
+
+export function SetLocation(arg1, arg2) {
+  return window['go']['wails']['App']['SetLocation'](arg1, arg2);
 }
 
 export function SetMood(arg1, arg2) {
   return window['go']['wails']['App']['SetMood'](arg1, arg2);
 }
 
+export function SetPriority(arg1, arg2) {
+  return window['go']['wails']['App']['SetPriority'](arg1, arg2);
+}
+
 export function SetWeather(arg1, arg2) {
   return window['go']['wails']['App']['SetWeather'](arg1, arg2);
+}
+
+export function UncancelEntry(arg1) {
+  return window['go']['wails']['App']['UncancelEntry'](arg1);
+}
+
+export function UndoHabitLog(arg1) {
+  return window['go']['wails']['App']['UndoHabitLog'](arg1);
 }

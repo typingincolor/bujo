@@ -417,6 +417,47 @@ func TestBujoService_EditEntryPriority(t *testing.T) {
 	assert.Equal(t, domain.PriorityHigh, entry.Priority)
 }
 
+func TestBujoService_CyclePriority(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Default priority is none, cycle to low
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, entry.Priority)
+
+	// Cycle to medium
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityMedium, entry.Priority)
+
+	// Cycle to high
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityHigh, entry.Priority)
+
+	// Cycle back to none
+	err = service.CyclePriority(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityNone, entry.Priority)
+}
+
 func TestBujoService_DeleteEntry(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

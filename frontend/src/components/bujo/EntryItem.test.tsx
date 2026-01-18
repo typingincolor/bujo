@@ -169,4 +169,171 @@ describe('EntryItem', () => {
       expect(screen.queryByTitle('Answer question')).not.toBeInTheDocument()
     })
   })
+
+  describe('cancel/uncancel functionality', () => {
+    it('shows cancel button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCancel={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
+    })
+
+    it('shows uncancel button for cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onUncancel={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
+    })
+
+    it('calls onCancel when cancel button is clicked', () => {
+      const onCancel = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCancel={onCancel}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Cancel entry'))
+      expect(onCancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onUncancel when uncancel button is clicked', () => {
+      const onUncancel = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onUncancel={onUncancel}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Uncancel entry'))
+      expect(onUncancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders cancelled entry with strikethrough style', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'cancelled', content: 'Cancelled task' })} />)
+      const content = screen.getByText('Cancelled task')
+      expect(content).toHaveClass('line-through')
+    })
+
+    it('does not show cancel button for cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'cancelled' })}
+          onCancel={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Cancel entry')).not.toBeInTheDocument()
+    })
+
+    it('does not show uncancel button for non-cancelled entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onUncancel={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Uncancel entry')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('priority functionality', () => {
+    it('shows priority button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCyclePriority={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
+    })
+
+    it('calls onCyclePriority when priority button is clicked', () => {
+      const onCyclePriority = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onCyclePriority={onCyclePriority}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Cycle priority'))
+      expect(onCyclePriority).toHaveBeenCalledTimes(1)
+    })
+
+    it('displays priority indicator for high priority', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'task', priority: 'high' })} />)
+      expect(screen.getByText('!!!')).toBeInTheDocument()
+    })
+
+    it('displays priority indicator for medium priority', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'task', priority: 'medium' })} />)
+      expect(screen.getByText('!!')).toBeInTheDocument()
+    })
+
+    it('displays priority indicator for low priority', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'task', priority: 'low' })} />)
+      expect(screen.getByText('!')).toBeInTheDocument()
+    })
+
+    it('does not display priority indicator for none priority', () => {
+      render(<EntryItem entry={createTestEntry({ type: 'task', priority: 'none' })} />)
+      // None priority shouldn't show any indicator
+      expect(screen.queryByText('!')).not.toBeInTheDocument()
+      expect(screen.queryByText('!!')).not.toBeInTheDocument()
+      expect(screen.queryByText('!!!')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('migration functionality', () => {
+    it('shows migrate button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
+    })
+
+    it('calls onMigrate when migrate button is clicked', () => {
+      const onMigrate = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMigrate={onMigrate}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Migrate entry'))
+      expect(onMigrate).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show migrate button for non-task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Migrate entry')).not.toBeInTheDocument()
+    })
+
+    it('does not show migrate button for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Migrate entry')).not.toBeInTheDocument()
+    })
+  })
 })

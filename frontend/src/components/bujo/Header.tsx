@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Search, Command, FileEdit, Smile, Cloud } from 'lucide-react';
+import { Calendar, Search, Command, FileEdit, Smile, Cloud, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SetMood, SetWeather } from '@/wailsjs/go/wails/App';
+import { SetMood, SetWeather, SetLocation, GetLocationHistory } from '@/wailsjs/go/wails/App';
 
 const SEARCH_DEBOUNCE_MS = 200;
 
@@ -36,8 +36,10 @@ interface HeaderProps {
   onCapture?: () => void;
   currentMood?: MoodValue;
   currentWeather?: WeatherValue;
+  currentLocation?: string;
   onMoodChanged?: () => void;
   onWeatherChanged?: () => void;
+  onLocationChanged?: () => void;
 }
 
 export function Header({
@@ -48,18 +50,24 @@ export function Header({
   onCapture,
   currentMood,
   currentWeather,
+  currentLocation,
   onMoodChanged,
   onWeatherChanged,
+  onLocationChanged,
 }: HeaderProps) {
   const today = new Date();
   const [query, setQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showWeatherPicker, setShowWeatherPicker] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [locationInput, setLocationInput] = useState('');
+  const [locationHistory, setLocationHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const moodPickerRef = useRef<HTMLDivElement>(null);
   const weatherPickerRef = useRef<HTMLDivElement>(null);
+  const locationPickerRef = useRef<HTMLDivElement>(null);
   const searchRequestRef = useRef(0);
 
   useEffect(() => {
@@ -91,11 +99,20 @@ export function Header({
       if (weatherPickerRef.current && !weatherPickerRef.current.contains(e.target as Node)) {
         setShowWeatherPicker(false);
       }
+      if (locationPickerRef.current && !locationPickerRef.current.contains(e.target as Node)) {
+        setShowLocationPicker(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (showLocationPicker) {
+      GetLocationHistory().then(setLocationHistory).catch(() => setLocationHistory([]));
+    }
+  }, [showLocationPicker]);
 
   const handleResultClick = (result: SearchResult) => {
     onSelectResult?.(result);
@@ -113,6 +130,21 @@ export function Header({
     await SetWeather(today.toISOString(), weather);
     setShowWeatherPicker(false);
     onWeatherChanged?.();
+  };
+
+  const handleLocationSelect = async (location: string) => {
+    if (!location.trim()) return;
+    await SetLocation(today.toISOString(), location);
+    setShowLocationPicker(false);
+    setLocationInput('');
+    onLocationChanged?.();
+  };
+
+  const handleLocationKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleLocationSelect(locationInput);
+    }
   };
 
   const getMoodEmoji = (mood: MoodValue) => {
@@ -182,6 +214,50 @@ export function Header({
                   {option.emoji}
                 </button>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Location button */}
+        <div className="relative" ref={locationPickerRef}>
+          <button
+            onClick={() => setShowLocationPicker(!showLocationPicker)}
+            title="Set location"
+            className={cn(
+              'p-2 rounded-lg transition-colors flex items-center gap-1',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {currentLocation ? (
+              <span className="text-sm">{currentLocation}</span>
+            ) : (
+              <MapPin className="w-4 h-4" />
+            )}
+          </button>
+          {showLocationPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 w-48">
+              <input
+                type="text"
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onKeyDown={handleLocationKeyDown}
+                placeholder="Enter location..."
+                className="w-full px-2 py-1 text-sm rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 mb-2"
+                autoFocus
+              />
+              {locationHistory.length > 0 && (
+                <div className="space-y-1">
+                  {locationHistory.map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => handleLocationSelect(loc)}
+                      className="w-full text-left px-2 py-1 text-sm hover:bg-secondary/50 rounded transition-colors"
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

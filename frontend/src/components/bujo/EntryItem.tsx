@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle, ArrowRight } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -15,6 +15,10 @@ interface EntryItemProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onAnswer?: () => void;
+  onCancel?: () => void;
+  onUncancel?: () => void;
+  onCyclePriority?: () => void;
+  onMigrate?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -41,6 +45,10 @@ export function EntryItem({
   onEdit,
   onDelete,
   onAnswer,
+  onCancel,
+  onUncancel,
+  onCyclePriority,
+  onMigrate,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
 
@@ -103,6 +111,54 @@ export function EntryItem({
             className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
           >
             <MessageCircle className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onCancel && entry.type !== 'cancelled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCancel();
+            }}
+            title="Cancel entry"
+            className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onUncancel && entry.type === 'cancelled' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onUncancel();
+            }}
+            title="Uncancel entry"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onCyclePriority && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCyclePriority();
+            }}
+            title="Cycle priority"
+            className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onMigrate && entry.type === 'task' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMigrate();
+            }}
+            title="Migrate entry"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
         {onEdit && (

@@ -35,9 +35,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   EditEntry: vi.fn().mockResolvedValue(undefined),
   DeleteEntry: vi.fn().mockResolvedValue(undefined),
   HasChildren: vi.fn().mockResolvedValue(false),
+  CancelEntry: vi.fn().mockResolvedValue(undefined),
+  UncancelEntry: vi.fn().mockResolvedValue(undefined),
+  CyclePriority: vi.fn().mockResolvedValue(undefined),
+  MigrateEntry: vi.fn().mockResolvedValue(100),
 }))
 
-import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -330,7 +334,11 @@ describe('App - Edit Entry', () => {
       expect(screen.getByText('Edit Entry')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    // Find the Cancel button in the modal (not the Cancel entry buttons)
+    const cancelButtons = screen.getAllByRole('button', { name: /cancel/i })
+    const modalCancelButton = cancelButtons.find(btn => btn.textContent === 'Cancel')
+    expect(modalCancelButton).toBeDefined()
+    fireEvent.click(modalCancelButton!)
 
     await waitFor(() => {
       expect(screen.queryByText('Edit Entry')).not.toBeInTheDocument()
@@ -511,6 +519,129 @@ describe('App - Habit View Toggle', () => {
   })
 })
 
+describe('App - Cancel/Uncancel Entry', () => {
+  const mockWithCancelledEntry = createMockAgenda({
+    Days: [createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Active task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Cancelled', Content: 'Cancelled task', CreatedAt: '2026-01-17T11:00:00Z' }),
+      ],
+    })],
+    Overdue: [],
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('clicking cancel button calls CancelEntry binding', async () => {
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const cancelButton = screen.getAllByTitle('Cancel entry')[0]
+    fireEvent.click(cancelButton)
+
+    await waitFor(() => {
+      expect(CancelEntry).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('clicking uncancel button calls UncancelEntry binding', async () => {
+    vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancelled task')).toBeInTheDocument()
+    })
+
+    const uncancelButton = screen.getByTitle('Uncancel entry')
+    fireEvent.click(uncancelButton)
+
+    await waitFor(() => {
+      expect(UncancelEntry).toHaveBeenCalledWith(2)
+    })
+  })
+
+  it('refreshes data after cancelling entry', async () => {
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const cancelButton = screen.getAllByTitle('Cancel entry')[0]
+    fireEvent.click(cancelButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+
+  it('refreshes data after uncancelling entry', async () => {
+    vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancelled task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const uncancelButton = screen.getByTitle('Uncancel entry')
+    fireEvent.click(uncancelButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
+describe('App - Priority Cycling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('clicking priority button calls CyclePriority binding', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const priorityButton = screen.getAllByTitle('Cycle priority')[0]
+    fireEvent.click(priorityButton)
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('refreshes data after cycling priority', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    const priorityButton = screen.getAllByTitle('Cycle priority')[0]
+    fireEvent.click(priorityButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+  })
+})
+
 describe('App - Delete Entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -587,10 +718,135 @@ describe('App - Delete Entry', () => {
       expect(screen.getByText('Delete Entry')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+    // Find the Cancel button in the dialog (not the Cancel entry buttons)
+    const cancelButtons = screen.getAllByRole('button', { name: /cancel/i })
+    const dialogCancelButton = cancelButtons.find(btn => btn.textContent === 'Cancel')
+    expect(dialogCancelButton).toBeDefined()
+    fireEvent.click(dialogCancelButton!)
 
     await waitFor(() => {
       expect(screen.queryByText('Delete Entry')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('App - Task Migration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('clicking migrate button opens migrate modal', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows entry content in migrate modal', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+      // The modal shows the entry content in its message (uses smart quotes)
+      expect(screen.getByText(/Migrate.*First task.*to a future date/)).toBeInTheDocument()
+    })
+  })
+
+  it('calls MigrateEntry binding when confirming migration', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    // Find the date input and modal buttons within the modal
+    const modal = document.querySelector('.fixed.inset-0')
+    expect(modal).toBeTruthy()
+
+    const dateInput = modal!.querySelector('input[type="date"]') as HTMLInputElement
+    fireEvent.change(dateInput, { target: { value: '2026-01-25' } })
+
+    // Click the Migrate submit button in the modal
+    const migrateSubmitButton = modal!.querySelector('button[type="submit"]') as HTMLButtonElement
+    fireEvent.click(migrateSubmitButton)
+
+    await waitFor(() => {
+      expect(MigrateEntry).toHaveBeenCalledWith(1, expect.any(String))
+    })
+  })
+
+  it('closes migrate modal on cancel', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    // Find the Cancel button in the modal
+    const cancelButtons = screen.getAllByRole('button', { name: /cancel/i })
+    const modalCancelButton = cancelButtons.find(btn => btn.textContent === 'Cancel')
+    expect(modalCancelButton).toBeDefined()
+    fireEvent.click(modalCancelButton!)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Migrate Entry')).not.toBeInTheDocument()
+    })
+  })
+
+  it('refreshes data after migrating entry', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    // Find and click the submit button in the modal
+    const modal = document.querySelector('.fixed.inset-0')
+    expect(modal).toBeTruthy()
+    const migrateSubmitButton = modal!.querySelector('button[type="submit"]') as HTMLButtonElement
+    fireEvent.click(migrateSubmitButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
     })
   })
 })

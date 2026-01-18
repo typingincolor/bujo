@@ -6,9 +6,11 @@ import { Header } from './Header'
 vi.mock('@/wailsjs/go/wails/App', () => ({
   SetMood: vi.fn().mockResolvedValue(undefined),
   SetWeather: vi.fn().mockResolvedValue(undefined),
+  SetLocation: vi.fn().mockResolvedValue(undefined),
+  GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office', 'Coffee Shop']),
 }))
 
-import { SetMood, SetWeather } from '@/wailsjs/go/wails/App'
+import { SetMood, SetWeather, SetLocation, GetLocationHistory } from '@/wailsjs/go/wails/App'
 
 describe('Header', () => {
   it('renders title', () => {
@@ -124,5 +126,90 @@ describe('Header - Day Context', () => {
   it('displays current weather when set', () => {
     render(<Header title="Today" currentWeather="sunny" />)
     expect(screen.getByText('☀️')).toBeInTheDocument()
+  })
+})
+
+describe('Header - Location', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders location button', () => {
+    render(<Header title="Today" />)
+    expect(screen.getByTitle('Set location')).toBeInTheDocument()
+  })
+
+  it('shows location input when location button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    expect(screen.getByPlaceholderText('Enter location...')).toBeInTheDocument()
+  })
+
+  it('loads location history for suggestions', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    await waitFor(() => {
+      expect(GetLocationHistory).toHaveBeenCalled()
+    })
+  })
+
+  it('shows location suggestions from history', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Home')).toBeInTheDocument()
+      expect(screen.getByText('Office')).toBeInTheDocument()
+      expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
+    })
+  })
+
+  it('calls SetLocation binding when selecting a suggestion', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Office')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Office'))
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+      const call = vi.mocked(SetLocation).mock.calls[0]
+      expect(call[1]).toBe('Office')
+    })
+  })
+
+  it('calls SetLocation binding when typing and pressing enter', async () => {
+    const user = userEvent.setup()
+    render(<Header title="Today" />)
+
+    await user.click(screen.getByTitle('Set location'))
+
+    const input = screen.getByPlaceholderText('Enter location...')
+    await user.type(input, 'New Location{Enter}')
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+      const call = vi.mocked(SetLocation).mock.calls[0]
+      expect(call[1]).toBe('New Location')
+    })
+  })
+
+  it('displays current location when set', () => {
+    render(<Header title="Today" currentLocation="Home Office" />)
+    // The location should be shown in the button text
+    expect(screen.getByText('Home Office')).toBeInTheDocument()
   })
 })
