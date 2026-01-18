@@ -11,6 +11,9 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   CancelEntry: vi.fn().mockResolvedValue(undefined),
   UncancelEntry: vi.fn().mockResolvedValue(undefined),
   EditEntry: vi.fn().mockResolvedValue(undefined),
+  DeleteEntry: vi.fn().mockResolvedValue(undefined),
+  MigrateEntry: vi.fn().mockResolvedValue(1),
+  CyclePriority: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
@@ -349,6 +352,148 @@ describe('SearchView - Actions', () => {
     await waitFor(() => {
       const undoneButton = screen.getByTitle('Mark undone')
       expect(undoneButton).toHaveTextContent('•')
+    })
+  })
+
+  it('shows cancel button for non-cancelled entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows uncancel button for cancelled entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Cancelled task', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'cancelled')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
+    })
+  })
+
+  it('calls CancelEntry when cancel button is clicked', async () => {
+    const { CancelEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Cancel entry'))
+
+    await waitFor(() => {
+      expect(CancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls UncancelEntry when uncancel button is clicked', async () => {
+    const { UncancelEntry } = await import('@/wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Cancelled task', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'cancelled')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Uncancel entry'))
+
+    await waitFor(() => {
+      expect(UncancelEntry).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('shows delete button for all entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Delete entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows edit button for all entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Edit entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows migrate button for task entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows priority button for all entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
     })
   })
 })

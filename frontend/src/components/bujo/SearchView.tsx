@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Search as SearchIcon, Check } from 'lucide-react';
-import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType } from '@/types/bujo';
@@ -104,6 +104,49 @@ export function SearchView() {
       ));
     } catch (error) {
       console.error('Failed to mark undone:', error);
+    }
+  }, []);
+
+  const handleCancel = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await CancelEntry(id);
+      setResults(prev => prev.map(r =>
+        r.id === id ? { ...r, type: 'cancelled' as EntryType } : r
+      ));
+    } catch (error) {
+      console.error('Failed to cancel entry:', error);
+    }
+  }, []);
+
+  const handleUncancel = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await UncancelEntry(id);
+      setResults(prev => prev.map(r =>
+        r.id === id ? { ...r, type: 'task' as EntryType } : r
+      ));
+    } catch (error) {
+      console.error('Failed to uncancel entry:', error);
+    }
+  }, []);
+
+  const handleDelete = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await DeleteEntry(id);
+      setResults(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+    }
+  }, []);
+
+  const handleCyclePriority = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await CyclePriority(id);
+    } catch (error) {
+      console.error('Failed to cycle priority:', error);
     }
   }, []);
 
@@ -221,6 +264,54 @@ export function SearchView() {
                     <span className="text-sm font-bold leading-none">•</span>
                   </button>
                 )}
+                {result.type !== 'cancelled' && (
+                  <button
+                    onClick={(e) => handleCancel(result.id, e)}
+                    title="Cancel entry"
+                    className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+                {result.type === 'cancelled' && (
+                  <button
+                    onClick={(e) => handleUncancel(result.id, e)}
+                    title="Uncancel entry"
+                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => handleCyclePriority(result.id, e)}
+                  title="Cycle priority"
+                  className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
+                >
+                  <AlertTriangle className="w-4 h-4" />
+                </button>
+                {result.type === 'task' && (
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    title="Migrate entry"
+                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => e.stopPropagation()}
+                  title="Edit entry"
+                  className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => handleDelete(result.id, e)}
+                  title="Delete entry"
+                  className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
 
                 <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
                   #{result.id}
