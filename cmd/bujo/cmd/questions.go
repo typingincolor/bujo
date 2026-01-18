@@ -37,7 +37,7 @@ Examples:
 			opts = opts.WithType(domain.EntryTypeQuestion)
 		}
 
-		results, err := services.Bujo.SearchEntries(cmd.Context(), opts)
+		results, err := bujoService.SearchEntries(cmd.Context(), opts)
 		if err != nil {
 			return fmt.Errorf("failed to list questions: %w", err)
 		}

@@ -18,7 +18,7 @@ Examples:
   bujo deleted
   bujo restore abc123  # restore using entity ID from list`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		entries, err := services.Bujo.GetDeletedEntries(cmd.Context())
+		entries, err := bujoService.GetDeletedEntries(cmd.Context())
 		if err != nil {
 			return fmt.Errorf("failed to get deleted entries: %w", err)
 		}

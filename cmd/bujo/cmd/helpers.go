@@ -58,7 +58,7 @@ func resolveListID(ctx context.Context, s string) (int64, error) {
 	if isID {
 		return id, nil
 	}
-	list, err := services.List.GetListByName(ctx, name)
+	list, err := listService.GetListByName(ctx, name)
 	if err != nil {
 		return 0, err
 	}

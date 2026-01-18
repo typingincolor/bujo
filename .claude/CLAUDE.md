@@ -12,38 +12,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API. Also includes a Wails desktop app with React frontend.
+bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API.
 
-**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API, Wails v2, React 19, TypeScript, Tailwind CSS
+**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API
 
 ## Build Commands
 
-### Go Backend
 ```bash
-go build -o bujo ./cmd/bujo     # Build CLI binary
-go test ./...                    # Run all Go tests
+go build -o bujo ./cmd/bujo     # Build binary
+go test ./...                    # Run all tests
 go test ./internal/domain/...   # Run domain tests only
 go test -v -run TestName ./...  # Run specific test
 go test -cover ./...            # Run with coverage
 go vet ./...                    # Static analysis
-```
-
-### Frontend (React/TypeScript)
-```bash
-cd frontend
-npm install                      # Install dependencies
-npm test                         # Run frontend tests (Vitest)
-npm run test:watch               # Run tests in watch mode
-npm run build                    # Build for production
-npm run dev                      # Development server (for standalone testing)
-npm run lint                     # ESLint
-```
-
-### Wails Desktop App
-```bash
-wails dev                        # Development mode with hot reload
-wails build                      # Build production app
-wails generate module            # Regenerate Go bindings for frontend
 ```
 
 ## DATABASE SAFETY (CRITICAL)
@@ -72,30 +53,21 @@ wails generate module            # Regenerate Go bindings for frontend
 Hexagonal Architecture with clear separation:
 
 ```
-cmd/bujo/              CLI entry point (Cobra adapter)
-main.go                Wails desktop app entry point
-frontend/              React frontend for Wails app
-  src/
-    components/bujo/   Domain-specific UI components
-    lib/               Utilities (cn, transforms)
-    types/             TypeScript type definitions
-    wailsjs/           Auto-generated Wails bindings (do not edit)
+cmd/bujo/           CLI entry point (Cobra adapter)
 internal/
-  domain/              Core business logic (100% TDD coverage required)
-    entry.go           Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
-    habit.go           Habit tracking with multi-log support
-    summary.go         AI summary types
-    parser.go          TreeParser for hierarchical input
-  service/             Stateless services (BujoService, HabitService)
-  repository/          SQLite repository implementations
+  domain/           Core business logic (100% TDD coverage required)
+    entry.go        Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
+    habit.go        Habit tracking with multi-log support
+    summary.go      AI summary types
+    parser.go       TreeParser for hierarchical input
+  service/          Stateless services (BujoService, HabitService)
+  repository/       SQLite repository implementations
   adapter/
-    cli/               Cobra command handlers
-    wails/             Wails Go bindings (App struct with exported methods)
-    ai/                Gemini integration
-  app/                 ServiceFactory for dependency injection
+    cli/            Cobra command handlers
+    ai/             Gemini integration
 ```
 
-**Key Principle:** Business logic isolated in `internal/domain`. CLI and Wails desktop app are adapters to shared service layer.
+**Key Principle:** Business logic isolated in `internal/domain`. CLI and future web server are adapters to shared logic.
 
 ## Data Model
 

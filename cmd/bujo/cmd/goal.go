@@ -29,7 +29,7 @@ Examples:
 			return err
 		}
 
-		goals, err := services.Goal.GetGoalsForMonth(cmd.Context(), month)
+		goals, err := goalService.GetGoalsForMonth(cmd.Context(), month)
 		if err != nil {
 			return fmt.Errorf("failed to get goals: %w", err)
 		}

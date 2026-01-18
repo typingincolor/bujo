@@ -27,7 +27,7 @@ allowing you to see previous versions and restore them if needed.`,
 		if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
 			return err
 		}
-		listItemRepo = sqlite.NewListItemRepository(services.DB)
+		listItemRepo = sqlite.NewListItemRepository(db)
 		historyService = service.NewHistoryService(listItemRepo)
 		return nil
 	},

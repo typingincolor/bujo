@@ -28,7 +28,7 @@ Examples:
 			return err
 		}
 
-		err = services.List.MoveItem(ctx, itemID, targetListID)
+		err = listService.MoveItem(ctx, itemID, targetListID)
 		if err != nil {
 			return fmt.Errorf("failed to move item: %w", err)
 		}

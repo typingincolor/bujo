@@ -22,7 +22,7 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		entityID := domain.EntityID(args[0])
 
-		newID, err := services.Bujo.RestoreEntry(cmd.Context(), entityID)
+		newID, err := bujoService.RestoreEntry(cmd.Context(), entityID)
 		if err != nil {
 			return fmt.Errorf("failed to restore entry: %w", err)
 		}

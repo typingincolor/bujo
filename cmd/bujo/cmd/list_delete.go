@@ -25,12 +25,12 @@ If the list has items, use --force to delete them too:
 			return err
 		}
 
-		list, err := services.List.GetListByID(ctx, listID)
+		list, err := listService.GetListByID(ctx, listID)
 		if err != nil {
 			return err
 		}
 
-		err = services.List.DeleteList(ctx, listID, listDeleteForce)
+		err = listService.DeleteList(ctx, listID, listDeleteForce)
 		if err != nil {
 			return fmt.Errorf("failed to delete list: %w", err)
 		}

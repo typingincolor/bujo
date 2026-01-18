@@ -50,9 +50,9 @@ Examples:
 		}
 
 		if isID {
-			err = services.Habit.SetHabitWeeklyGoalByID(cmd.Context(), id, goal)
+			err = habitService.SetHabitWeeklyGoalByID(cmd.Context(), id, goal)
 		} else {
-			err = services.Habit.SetHabitWeeklyGoal(cmd.Context(), name, goal)
+			err = habitService.SetHabitWeeklyGoal(cmd.Context(), name, goal)
 		}
 
 		if err != nil {

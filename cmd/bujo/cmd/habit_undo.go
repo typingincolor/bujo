@@ -44,9 +44,9 @@ Examples:
 		}
 
 		if isID {
-			err = services.Habit.UndoLastLogByID(cmd.Context(), id)
+			err = habitService.UndoLastLogByID(cmd.Context(), id)
 		} else {
-			err = services.Habit.UndoLastLog(cmd.Context(), name)
+			err = habitService.UndoLastLog(cmd.Context(), name)
 		}
 
 		if err != nil {

@@ -77,45 +77,45 @@ else
     echo "✅ golangci-lint passed"
 fi
 
-# 7. Frontend lint
-echo "Running frontend lint..."
-if ! (cd frontend && npm run lint); then
-    echo "❌ Frontend lint failed. Push aborted."
-    exit 1
-fi
-echo "✅ Frontend lint passed"
+# 7-11. Frontend checks (only if frontend directory exists)
+if [ -d "frontend" ]; then
+    echo "Running frontend lint..."
+    if ! (cd frontend && npm run lint); then
+        echo "❌ Frontend lint failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ Frontend lint passed"
 
-# 8. Frontend TypeScript check
-echo "Running TypeScript check..."
-if ! (cd frontend && npx tsc --noEmit); then
-    echo "❌ TypeScript check failed. Push aborted."
-    exit 1
-fi
-echo "✅ TypeScript check passed"
+    echo "Running TypeScript check..."
+    if ! (cd frontend && npx tsc --noEmit); then
+        echo "❌ TypeScript check failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ TypeScript check passed"
 
-# 9. Frontend tests
-echo "Running frontend tests..."
-if ! (cd frontend && npm test); then
-    echo "❌ Frontend tests failed. Push aborted."
-    exit 1
-fi
-echo "✅ Frontend tests passed"
+    echo "Running frontend tests..."
+    if ! (cd frontend && npm test); then
+        echo "❌ Frontend tests failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ Frontend tests passed"
 
-# 10. Frontend build
-echo "Running frontend build..."
-if ! (cd frontend && npm run build); then
-    echo "❌ Frontend build failed. Push aborted."
-    exit 1
-fi
-echo "✅ Frontend build passed"
+    echo "Running frontend build..."
+    if ! (cd frontend && npm run build); then
+        echo "❌ Frontend build failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ Frontend build passed"
 
-# 11. npm audit (security check)
-echo "Running npm audit..."
-if ! (cd frontend && npm audit --audit-level=high); then
-    echo "❌ npm audit found high severity vulnerabilities. Push aborted."
-    exit 1
+    echo "Running npm audit..."
+    if ! (cd frontend && npm audit --audit-level=high); then
+        echo "❌ npm audit found high severity vulnerabilities. Push aborted."
+        exit 1
+    fi
+    echo "✅ npm audit passed"
+else
+    echo "ℹ️  Frontend directory not found, skipping frontend checks"
 fi
-echo "✅ npm audit passed"
 
 echo ""
 echo "✅ All pre-push checks passed. Proceeding with push."

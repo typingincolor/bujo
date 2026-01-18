@@ -39,7 +39,7 @@ Examples:
 			}
 		}
 
-		err = services.Bujo.SetWeather(cmd.Context(), targetDate, weather)
+		err = bujoService.SetWeather(cmd.Context(), targetDate, weather)
 		if err != nil {
 			return fmt.Errorf("failed to set weather: %w", err)
 		}

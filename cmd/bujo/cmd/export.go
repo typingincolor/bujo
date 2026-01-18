@@ -47,14 +47,14 @@ func runExport(cmd *cobra.Command, args []string) error {
 		return runMarkdownExport(cmd, args[0])
 	}
 
-	entryRepo := sqlite.NewEntryRepository(services.DB)
-	habitRepo := sqlite.NewHabitRepository(services.DB)
-	habitLogRepo := sqlite.NewHabitLogRepository(services.DB)
-	dayContextRepo := sqlite.NewDayContextRepository(services.DB)
-	summaryRepo := sqlite.NewSummaryRepository(services.DB)
-	listRepo := sqlite.NewListRepository(services.DB)
-	listItemRepo := sqlite.NewListItemRepository(services.DB)
-	goalRepo := sqlite.NewGoalRepository(services.DB)
+	entryRepo := sqlite.NewEntryRepository(db)
+	habitRepo := sqlite.NewHabitRepository(db)
+	habitLogRepo := sqlite.NewHabitLogRepository(db)
+	dayContextRepo := sqlite.NewDayContextRepository(db)
+	summaryRepo := sqlite.NewSummaryRepository(db)
+	listRepo := sqlite.NewListRepository(db)
+	listItemRepo := sqlite.NewListItemRepository(db)
+	goalRepo := sqlite.NewGoalRepository(db)
 
 	exportSvc := service.NewExportService(
 		entryRepo, habitRepo, habitLogRepo, dayContextRepo,
@@ -98,7 +98,7 @@ func runMarkdownExport(cmd *cobra.Command, entryIDStr string) error {
 		return err
 	}
 
-	markdown, err := services.Bujo.ExportEntryMarkdown(cmd.Context(), entryID)
+	markdown, err := bujoService.ExportEntryMarkdown(cmd.Context(), entryID)
 	if err != nil {
 		return fmt.Errorf("failed to export entry: %w", err)
 	}

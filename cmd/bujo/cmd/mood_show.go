@@ -52,7 +52,7 @@ Examples:
 			return err
 		}
 
-		history, err := services.Bujo.GetMoodHistory(cmd.Context(), from, to)
+		history, err := bujoService.GetMoodHistory(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get mood history: %w", err)
 		}
