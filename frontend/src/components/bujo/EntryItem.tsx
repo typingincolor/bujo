@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle, ArrowRight, Check, Circle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle, ArrowRight, Check } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -128,7 +128,7 @@ export function EntryItem({
             title="Mark as not done"
             className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600 transition-colors"
           >
-            <Circle className="w-3.5 h-3.5" />
+            <span className="text-sm font-bold leading-none">•</span>
           </button>
         )}
         {onAnswer && entry.type === 'question' && (

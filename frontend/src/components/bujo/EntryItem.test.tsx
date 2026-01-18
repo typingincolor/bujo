@@ -364,6 +364,17 @@ describe('EntryItem', () => {
       expect(screen.getByTitle('Mark as not done')).toBeInTheDocument()
     })
 
+    it('shows task bullet symbol in untick button', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={() => {}}
+        />
+      )
+      const untickButton = screen.getByTitle('Mark as not done')
+      expect(untickButton).toHaveTextContent('•')
+    })
+
     it('calls onToggleDone when tick button is clicked', () => {
       const onToggleDone = vi.fn()
       render(
