@@ -43,9 +43,9 @@ const createTestDay = (overrides: Partial<DayEntries> = {}): DayEntries => ({
       children: [],
     },
   ],
-  mood: null,
-  weather: null,
-  location: null,
+  mood: undefined,
+  weather: undefined,
+  location: undefined,
   ...overrides,
 })
 

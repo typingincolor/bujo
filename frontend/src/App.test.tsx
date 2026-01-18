@@ -1089,7 +1089,7 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset GetHabits mock that may have been changed by previous tests
-    vi.mocked(GetHabits).mockResolvedValue({ Habits: [] })
+    vi.mocked(GetHabits).mockResolvedValue({ Habits: [] } as unknown as Awaited<ReturnType<typeof GetHabits>>)
   })
 
   it('displays current mood emoji in header when mood is set', async () => {

@@ -36,7 +36,6 @@ const LOCATION_OPTIONS = [
 
 type MoodValue = typeof MOOD_OPTIONS[number]['value'];
 type WeatherValue = typeof WEATHER_OPTIONS[number]['value'];
-type LocationValue = typeof LOCATION_OPTIONS[number]['value'];
 
 interface SearchResult {
   id: number;
