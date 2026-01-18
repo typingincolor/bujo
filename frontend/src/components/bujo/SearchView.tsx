@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { Search as SearchIcon } from 'lucide-react';
-import { Search } from '@/wailsjs/go/wails/App';
+import { Search as SearchIcon, Check, Undo2 } from 'lucide-react';
+import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType } from '@/types/bujo';
@@ -10,15 +10,26 @@ interface SearchResult {
   content: string;
   type: EntryType;
   date: string;
+  parentId: number | null;
+}
+
+interface AncestorEntry {
+  id: number;
+  content: string;
+  type: EntryType;
 }
 
 export function SearchView() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [ancestorsMap, setAncestorsMap] = useState<Map<number, AncestorEntry[]>>(new Map());
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
+    setExpandedIds(new Set());
+    setAncestorsMap(new Map());
 
     if (!searchQuery.trim()) {
       setResults([]);
@@ -33,12 +44,66 @@ export function SearchView() {
         content: entry.Content,
         type: entry.Type as EntryType,
         date: (entry.CreatedAt as unknown as string) || '',
+        parentId: entry.ParentID ?? null,
       })));
       setHasSearched(true);
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);
       setHasSearched(true);
+    }
+  }, []);
+
+  const toggleExpanded = useCallback(async (result: SearchResult) => {
+    const newExpanded = new Set(expandedIds);
+
+    if (newExpanded.has(result.id)) {
+      newExpanded.delete(result.id);
+    } else {
+      newExpanded.add(result.id);
+
+      if (!ancestorsMap.has(result.id) && result.parentId !== null) {
+        try {
+          const ancestors = await GetEntryAncestors(result.id);
+          setAncestorsMap(prev => {
+            const next = new Map(prev);
+            next.set(result.id, (ancestors || []).map(a => ({
+              id: a.ID,
+              content: a.Content,
+              type: a.Type as EntryType,
+            })));
+            return next;
+          });
+        } catch (error) {
+          console.error('Failed to load ancestors:', error);
+        }
+      }
+    }
+
+    setExpandedIds(newExpanded);
+  }, [expandedIds, ancestorsMap]);
+
+  const handleMarkDone = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await MarkEntryDone(id);
+      setResults(prev => prev.map(r =>
+        r.id === id ? { ...r, type: 'done' as EntryType } : r
+      ));
+    } catch (error) {
+      console.error('Failed to mark done:', error);
+    }
+  }, []);
+
+  const handleMarkUndone = useCallback(async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await MarkEntryUndone(id);
+      setResults(prev => prev.map(r =>
+        r.id === id ? { ...r, type: 'task' as EntryType } : r
+      ));
+    } catch (error) {
+      console.error('Failed to mark undone:', error);
     }
   }, []);
 
@@ -89,39 +154,81 @@ export function SearchView() {
           </p>
         )}
 
-        {results.map((result) => (
-          <div
-            key={result.id}
-            className={cn(
-              'flex items-start gap-3 p-3 rounded-lg border border-border',
-              'bg-card hover:bg-secondary/30 transition-colors group'
-            )}
-          >
-            <span className={cn(
-              'text-lg font-mono flex-shrink-0 w-5 text-center',
-              result.type === 'done' && 'text-bujo-done',
-              result.type === 'task' && 'text-bujo-task',
-              result.type === 'note' && 'text-bujo-note',
-              result.type === 'event' && 'text-bujo-event',
-            )}>
-              {getSymbol(result.type)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className={cn(
-                'text-sm',
-                result.type === 'done' && 'line-through text-muted-foreground'
-              )}>
-                {result.content}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatDate(result.date)}
-              </p>
+        {results.map((result) => {
+          const isExpanded = expandedIds.has(result.id);
+          const ancestors = ancestorsMap.get(result.id) || [];
+
+          return (
+            <div
+              key={result.id}
+              onClick={() => toggleExpanded(result)}
+              className={cn(
+                'p-3 rounded-lg border border-border cursor-pointer',
+                'bg-card hover:bg-secondary/30 transition-colors group'
+              )}
+            >
+              {/* Ancestors context */}
+              {isExpanded && ancestors.length > 0 && (
+                <div className="mb-2 pb-2 border-b border-border/50 space-y-1">
+                  {ancestors.map((ancestor) => (
+                    <div key={ancestor.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono">{getSymbol(ancestor.type)}</span>
+                      <span>{ancestor.content}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Main result row */}
+              <div className="flex items-start gap-3">
+                <span className={cn(
+                  'text-lg font-mono flex-shrink-0 w-5 text-center',
+                  result.type === 'done' && 'text-bujo-done',
+                  result.type === 'task' && 'text-bujo-task',
+                  result.type === 'note' && 'text-bujo-note',
+                  result.type === 'event' && 'text-bujo-event',
+                )}>
+                  {getSymbol(result.type)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className={cn(
+                    'text-sm',
+                    result.type === 'done' && 'line-through text-muted-foreground'
+                  )}>
+                    {result.content}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDate(result.date)}
+                  </p>
+                </div>
+
+                {/* Action buttons */}
+                {result.type === 'task' && (
+                  <button
+                    onClick={(e) => handleMarkDone(result.id, e)}
+                    title="Mark done"
+                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-bujo-done"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                )}
+                {result.type === 'done' && (
+                  <button
+                    onClick={(e) => handleMarkUndone(result.id, e)}
+                    title="Mark undone"
+                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-bujo-task"
+                  >
+                    <Undo2 className="w-4 h-4" />
+                  </button>
+                )}
+
+                <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
+                  #{result.id}
+                </span>
+              </div>
             </div>
-            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
-              #{result.id}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

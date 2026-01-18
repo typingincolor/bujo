@@ -70,6 +70,10 @@ export function GetAgenda(arg1, arg2) {
   return window['go']['wails']['App']['GetAgenda'](arg1, arg2);
 }
 
+export function GetEntryAncestors(arg1) {
+  return window['go']['wails']['App']['GetEntryAncestors'](arg1);
+}
+
 export function GetGoals(arg1) {
   return window['go']['wails']['App']['GetGoals'](arg1);
 }

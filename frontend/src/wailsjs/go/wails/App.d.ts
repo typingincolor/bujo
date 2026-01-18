@@ -39,6 +39,8 @@ export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
 export function GetAgenda(arg1:time.Time,arg2:time.Time):Promise<service.MultiDayAgenda>;
 
+export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;
+
 export function GetGoals(arg1:time.Time):Promise<Array<domain.Goal>>;
 
 export function GetHabits(arg1:number):Promise<service.TrackerStatus>;

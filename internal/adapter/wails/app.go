@@ -136,6 +136,10 @@ func (a *App) Search(query string) ([]domain.Entry, error) {
 	return a.services.Bujo.SearchEntries(a.ctx, opts)
 }
 
+func (a *App) GetEntryAncestors(id int64) ([]domain.Entry, error) {
+	return a.services.Bujo.GetEntryAncestors(a.ctx, id)
+}
+
 func (a *App) EditEntry(id int64, newContent string) error {
 	return a.services.Bujo.EditEntry(a.ctx, id, newContent)
 }

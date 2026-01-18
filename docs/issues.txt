@@ -28,9 +28,9 @@ x list view - need to be able to move items between lists.
 x list view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
 x goals view - clicking on an item should not mark as complete. There needs to be a separate tick/untick icon
 x overdue view - by default list only the tasks. Clicking on a task should show it's context. Tasks need a tick/untick icon
-. In general - just click on an item should not change it's state, user should not be able to accidently complete something.
+x In general - just click on an item should not change it's state, user should not be able to accidently complete something.
 x Change "Past Week" view to "Review"
-. Search results: clicking on a search result should show it's context. Should be able to do all the actions on an entry on the search page.
+x Search results: clicking on a search result should show it's context. Should be able to do all the actions on an entry on the search page.
 . remove search entries... box from the header
 . Let's revamp the documentation, readme should be shorter and link to specific pages for cli, tui and frontend.
 . need to think about how the app refreshes. The database can be updated by the CLI / TUI and the Frontend does not change. Some sort of optimistic locking maybe?
