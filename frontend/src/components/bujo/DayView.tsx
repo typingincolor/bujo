@@ -4,7 +4,7 @@ import { Calendar, MapPin, Cloud, Heart } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -12,6 +12,7 @@ interface DayViewProps {
   onEntryChanged?: () => void;
   onEditEntry?: (entry: Entry) => void;
   onDeleteEntry?: (entry: Entry) => void;
+  onMigrateEntry?: (entry: Entry) => void;
 }
 
 function buildTree(entries: Entry[]): Entry[] {
@@ -54,9 +55,10 @@ interface EntryTreeProps {
   onCancel?: (entry: Entry) => void;
   onUncancel?: (entry: Entry) => void;
   onCyclePriority?: (entry: Entry) => void;
+  onMigrate?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel, onCyclePriority }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -79,6 +81,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onCancel={onCancel ? () => onCancel(entry) : undefined}
               onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
               onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
+              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -93,6 +96,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onCancel={onCancel}
                 onUncancel={onUncancel}
                 onCyclePriority={onCyclePriority}
+                onMigrate={onMigrate}
               />
             )}
           </div>
@@ -102,7 +106,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
-export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onDeleteEntry }: DayViewProps) {
+export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onDeleteEntry, onMigrateEntry }: DayViewProps) {
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
   const tree = buildTree(day.entries);
   const dateObj = new Date(day.date + 'T00:00:00');
@@ -216,6 +220,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onEditEntry, onD
             onCancel={handleCancelEntry}
             onUncancel={handleUncancelEntry}
             onCyclePriority={handleCyclePriority}
+            onMigrate={onMigrateEntry}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

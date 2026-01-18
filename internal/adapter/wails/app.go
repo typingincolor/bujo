@@ -203,3 +203,7 @@ func (a *App) SetPriority(id int64, priority string) error {
 func (a *App) CyclePriority(id int64) error {
 	return a.services.Bujo.CyclePriority(a.ctx, id)
 }
+
+func (a *App) MigrateEntry(id int64, toDate time.Time) (int64, error) {
+	return a.services.Bujo.MigrateEntry(a.ctx, id, toDate)
+}

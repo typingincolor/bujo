@@ -1,7 +1,7 @@
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, AlertTriangle, ArrowRight } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -18,6 +18,7 @@ interface EntryItemProps {
   onCancel?: () => void;
   onUncancel?: () => void;
   onCyclePriority?: () => void;
+  onMigrate?: () => void;
 }
 
 const contentStyles: Record<EntryType, string> = {
@@ -47,6 +48,7 @@ export function EntryItem({
   onCancel,
   onUncancel,
   onCyclePriority,
+  onMigrate,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
 
@@ -145,6 +147,18 @@ export function EntryItem({
             className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
           >
             <AlertTriangle className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {onMigrate && entry.type === 'task' && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMigrate();
+            }}
+            title="Migrate entry"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+          >
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
         {onEdit && (

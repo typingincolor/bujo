@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, AddEntry, MarkEntryDone, MarkEntryUndone, Search, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
 import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -15,6 +15,7 @@ import { AddEntryBar } from '@/components/bujo/AddEntryBar'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
+import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, EntryType, ENTRY_SYMBOLS, Entry } from '@/types/bujo'
 import { transformDayEntries, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -54,6 +55,7 @@ function App() {
   const [editModalEntry, setEditModalEntry] = useState<Entry | null>(null)
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
+  const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
   const [habitDays, setHabitDays] = useState(7)
 
@@ -264,6 +266,19 @@ function App() {
     }
   }, [deleteDialogEntry, loadData])
 
+  const handleMigrateEntry = useCallback(async (dateStr: string) => {
+    if (!migrateModalEntry) return
+    try {
+      const migrateDate = new Date(dateStr + 'T00:00:00')
+      await MigrateEntry(migrateModalEntry.id, toWailsTime(migrateDate))
+      setMigrateModalEntry(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to migrate entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to migrate entry')
+    }
+  }, [migrateModalEntry, loadData])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Today',
     week: 'This Week',
@@ -349,6 +364,7 @@ function App() {
                 onEntryChanged={loadData}
                 onEditEntry={(entry) => setEditModalEntry(entry)}
                 onDeleteEntry={handleDeleteEntryRequest}
+                onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
               />
             </div>
           )}
@@ -362,6 +378,7 @@ function App() {
                   onEntryChanged={loadData}
                   onEditEntry={(entry) => setEditModalEntry(entry)}
                   onDeleteEntry={handleDeleteEntryRequest}
+                  onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                 />
               ))}
               {weekDays.length === 0 && (
@@ -432,6 +449,14 @@ function App() {
         variant="destructive"
         onConfirm={handleDeleteEntry}
         onCancel={() => setDeleteDialogEntry(null)}
+      />
+
+      {/* Migrate Entry Modal */}
+      <MigrateModal
+        isOpen={migrateModalEntry !== null}
+        entryContent={migrateModalEntry?.content || ''}
+        onMigrate={handleMigrateEntry}
+        onCancel={() => setMigrateModalEntry(null)}
       />
     </div>
   )

@@ -38,9 +38,10 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   CancelEntry: vi.fn().mockResolvedValue(undefined),
   UncancelEntry: vi.fn().mockResolvedValue(undefined),
   CyclePriority: vi.fn().mockResolvedValue(undefined),
+  MigrateEntry: vi.fn().mockResolvedValue(100),
 }))
 
-import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, Search, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
 
 describe('App - AddEntryBar integration', () => {
   beforeEach(() => {
@@ -725,6 +726,127 @@ describe('App - Delete Entry', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Delete Entry')).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('App - Task Migration', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('clicking migrate button opens migrate modal', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+  })
+
+  it('shows entry content in migrate modal', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+      // The modal shows the entry content in its message (uses smart quotes)
+      expect(screen.getByText(/Migrate.*First task.*to a future date/)).toBeInTheDocument()
+    })
+  })
+
+  it('calls MigrateEntry binding when confirming migration', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    // Find the date input and modal buttons within the modal
+    const modal = document.querySelector('.fixed.inset-0')
+    expect(modal).toBeTruthy()
+
+    const dateInput = modal!.querySelector('input[type="date"]') as HTMLInputElement
+    fireEvent.change(dateInput, { target: { value: '2026-01-25' } })
+
+    // Click the Migrate submit button in the modal
+    const migrateSubmitButton = modal!.querySelector('button[type="submit"]') as HTMLButtonElement
+    fireEvent.click(migrateSubmitButton)
+
+    await waitFor(() => {
+      expect(MigrateEntry).toHaveBeenCalledWith(1, expect.any(String))
+    })
+  })
+
+  it('closes migrate modal on cancel', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    // Find the Cancel button in the modal
+    const cancelButtons = screen.getAllByRole('button', { name: /cancel/i })
+    const modalCancelButton = cancelButtons.find(btn => btn.textContent === 'Cancel')
+    expect(modalCancelButton).toBeDefined()
+    fireEvent.click(modalCancelButton!)
+
+    await waitFor(() => {
+      expect(screen.queryByText('Migrate Entry')).not.toBeInTheDocument()
+    })
+  })
+
+  it('refreshes data after migrating entry', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    const migrateButton = screen.getAllByTitle('Migrate entry')[0]
+    fireEvent.click(migrateButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    // Find and click the submit button in the modal
+    const modal = document.querySelector('.fixed.inset-0')
+    expect(modal).toBeTruthy()
+    const migrateSubmitButton = modal!.querySelector('button[type="submit"]') as HTMLButtonElement
+    fireEvent.click(migrateSubmitButton)
+
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
     })
   })
 })

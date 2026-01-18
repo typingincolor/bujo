@@ -114,6 +114,10 @@ export function MarkListItemUndone(arg1) {
   return window['go']['wails']['App']['MarkListItemUndone'](arg1);
 }
 
+export function MigrateEntry(arg1, arg2) {
+  return window['go']['wails']['App']['MigrateEntry'](arg1, arg2);
+}
+
 export function RemoveListItem(arg1) {
   return window['go']['wails']['App']['RemoveListItem'](arg1);
 }

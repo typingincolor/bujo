@@ -61,6 +61,8 @@ export function MarkListItemDone(arg1:number):Promise<void>;
 
 export function MarkListItemUndone(arg1:number):Promise<void>;
 
+export function MigrateEntry(arg1:number,arg2:time.Time):Promise<number>;
+
 export function RemoveListItem(arg1:number):Promise<void>;
 
 export function RenameList(arg1:number,arg2:string):Promise<void>;

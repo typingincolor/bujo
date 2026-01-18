@@ -291,4 +291,49 @@ describe('EntryItem', () => {
       expect(screen.queryByText('!!!')).not.toBeInTheDocument()
     })
   })
+
+  describe('migration functionality', () => {
+    it('shows migrate button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
+    })
+
+    it('calls onMigrate when migrate button is clicked', () => {
+      const onMigrate = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMigrate={onMigrate}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Migrate entry'))
+      expect(onMigrate).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show migrate button for non-task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Migrate entry')).not.toBeInTheDocument()
+    })
+
+    it('does not show migrate button for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onMigrate={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Migrate entry')).not.toBeInTheDocument()
+    })
+  })
 })
