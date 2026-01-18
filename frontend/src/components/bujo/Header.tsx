@@ -1,9 +1,25 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Calendar, Search, Command, FileEdit } from 'lucide-react';
+import { Calendar, Search, Command, FileEdit, Smile, Cloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SetMood, SetWeather } from '@/wailsjs/go/wails/App';
 
 const SEARCH_DEBOUNCE_MS = 200;
+
+const MOOD_OPTIONS = [
+  { emoji: '😊', value: 'happy' },
+  { emoji: '😐', value: 'neutral' },
+  { emoji: '😢', value: 'sad' },
+] as const;
+
+const WEATHER_OPTIONS = [
+  { emoji: '☀️', value: 'sunny' },
+  { emoji: '☁️', value: 'cloudy' },
+  { emoji: '🌧️', value: 'rainy' },
+] as const;
+
+type MoodValue = typeof MOOD_OPTIONS[number]['value'];
+type WeatherValue = typeof WEATHER_OPTIONS[number]['value'];
 
 interface SearchResult {
   id: number;
@@ -18,14 +34,32 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   onSelectResult?: (result: SearchResult) => void;
   onCapture?: () => void;
+  currentMood?: MoodValue;
+  currentWeather?: WeatherValue;
+  onMoodChanged?: () => void;
+  onWeatherChanged?: () => void;
 }
 
-export function Header({ title, searchResults = [], onSearch, onSelectResult, onCapture }: HeaderProps) {
+export function Header({
+  title,
+  searchResults = [],
+  onSearch,
+  onSelectResult,
+  onCapture,
+  currentMood,
+  currentWeather,
+  onMoodChanged,
+  onWeatherChanged,
+}: HeaderProps) {
   const today = new Date();
   const [query, setQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
+  const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const [showWeatherPicker, setShowWeatherPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const moodPickerRef = useRef<HTMLDivElement>(null);
+  const weatherPickerRef = useRef<HTMLDivElement>(null);
   const searchRequestRef = useRef(0);
 
   useEffect(() => {
@@ -51,6 +85,12 @@ export function Header({ title, searchResults = [], onSearch, onSelectResult, on
           inputRef.current && !inputRef.current.contains(e.target as Node)) {
         setShowResults(false);
       }
+      if (moodPickerRef.current && !moodPickerRef.current.contains(e.target as Node)) {
+        setShowMoodPicker(false);
+      }
+      if (weatherPickerRef.current && !weatherPickerRef.current.contains(e.target as Node)) {
+        setShowWeatherPicker(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -63,6 +103,26 @@ export function Header({ title, searchResults = [], onSearch, onSelectResult, on
     setShowResults(false);
   };
 
+  const handleMoodSelect = async (mood: MoodValue) => {
+    await SetMood(today.toISOString(), mood);
+    setShowMoodPicker(false);
+    onMoodChanged?.();
+  };
+
+  const handleWeatherSelect = async (weather: WeatherValue) => {
+    await SetWeather(today.toISOString(), weather);
+    setShowWeatherPicker(false);
+    onWeatherChanged?.();
+  };
+
+  const getMoodEmoji = (mood: MoodValue) => {
+    return MOOD_OPTIONS.find(m => m.value === mood)?.emoji;
+  };
+
+  const getWeatherEmoji = (weather: WeatherValue) => {
+    return WEATHER_OPTIONS.find(w => w.value === weather)?.emoji;
+  };
+
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50">
       <div className="flex items-center gap-4">
@@ -71,6 +131,60 @@ export function Header({ title, searchResults = [], onSearch, onSelectResult, on
           <Calendar className="w-4 h-4" />
           {format(today, 'EEEE, MMMM d, yyyy')}
         </span>
+
+        {/* Mood button */}
+        <div className="relative" ref={moodPickerRef}>
+          <button
+            onClick={() => setShowMoodPicker(!showMoodPicker)}
+            title="Set mood"
+            className={cn(
+              'p-2 rounded-lg transition-colors flex items-center gap-1',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {currentMood ? getMoodEmoji(currentMood) : <Smile className="w-4 h-4" />}
+          </button>
+          {showMoodPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
+              {MOOD_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleMoodSelect(option.value)}
+                  className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
+                >
+                  {option.emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Weather button */}
+        <div className="relative" ref={weatherPickerRef}>
+          <button
+            onClick={() => setShowWeatherPicker(!showWeatherPicker)}
+            title="Set weather"
+            className={cn(
+              'p-2 rounded-lg transition-colors flex items-center gap-1',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {currentWeather ? getWeatherEmoji(currentWeather) : <Cloud className="w-4 h-4" />}
+          </button>
+          {showWeatherPicker && (
+            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
+              {WEATHER_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleWeatherSelect(option.value)}
+                  className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
+                >
+                  {option.emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
