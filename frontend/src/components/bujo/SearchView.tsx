@@ -295,7 +295,7 @@ export function SearchView() {
                   title="Cycle priority"
                   className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
                 >
-                  <span className="w-4 h-4 inline-flex items-center justify-center text-sm font-bold leading-none">!</span>
+                  <span className="w-4 h-4 inline-flex items-center justify-center text-base font-bold leading-none">!</span>
                 </button>
                 {result.type === 'task' && (
                   <button
