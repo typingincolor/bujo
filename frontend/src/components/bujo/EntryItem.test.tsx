@@ -327,7 +327,7 @@ describe('EntryItem', () => {
       expect(onSelect).toHaveBeenCalledTimes(1)
     })
 
-    it('calls both onSelect and onToggleDone for task entries', () => {
+    it('calls only onSelect (not onToggleDone) when clicking task entry', () => {
       const onSelect = vi.fn()
       const onToggleDone = vi.fn()
       render(
@@ -341,7 +341,64 @@ describe('EntryItem', () => {
       const container = screen.getByText('A task').closest('[data-entry-id]')
       fireEvent.click(container!)
       expect(onSelect).toHaveBeenCalledTimes(1)
+      expect(onToggleDone).not.toHaveBeenCalled()
+    })
+
+    it('shows tick button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Mark as done')).toBeInTheDocument()
+    })
+
+    it('shows untick button for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Mark as not done')).toBeInTheDocument()
+    })
+
+    it('calls onToggleDone when tick button is clicked', () => {
+      const onToggleDone = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={onToggleDone}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Mark as done'))
       expect(onToggleDone).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onToggleDone when untick button is clicked', () => {
+      const onToggleDone = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={onToggleDone}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Mark as not done'))
+      expect(onToggleDone).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show tick button for note entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onToggleDone={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
+      expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
     })
   })
 
