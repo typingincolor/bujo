@@ -21,15 +21,15 @@ interface SidebarProps {
 }
 
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
-  { view: 'today', icon: Calendar, label: 'Today' },
-  { view: 'week', icon: CalendarDays, label: 'Review' },
-  { view: 'overview', icon: Clock, label: 'Outstanding' },
-  { view: 'questions', icon: HelpCircle, label: 'Questions' },
-  { view: 'habits', icon: Flame, label: 'Habits' },
+  { view: 'today', icon: Calendar, label: 'Journal' },
+  { view: 'week', icon: CalendarDays, label: 'Weekly Review' },
+  { view: 'overview', icon: Clock, label: 'Pending Tasks' },
+  { view: 'questions', icon: HelpCircle, label: 'Open Questions' },
+  { view: 'habits', icon: Flame, label: 'Habit Tracker' },
   { view: 'lists', icon: List, label: 'Lists' },
-  { view: 'goals', icon: Target, label: 'Goals' },
+  { view: 'goals', icon: Target, label: 'Monthly Goals' },
   { view: 'search', icon: Search, label: 'Search' },
-  { view: 'stats', icon: BarChart3, label: 'Stats' },
+  { view: 'stats', icon: BarChart3, label: 'Insights' },
 ];
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {
@@ -41,7 +41,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           <BookOpen className="w-6 h-6 text-primary" />
           <h1 className="font-display text-xl font-bold tracking-tight">bujo</h1>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Your digital bullet journal</p>
+        <p className="text-xs text-muted-foreground mt-1">Capture. Track. Reflect.</p>
       </div>
       
       {/* Navigation */}

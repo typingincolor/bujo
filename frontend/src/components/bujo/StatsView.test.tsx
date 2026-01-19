@@ -33,7 +33,7 @@ const createTestGoal = (overrides: Partial<Goal> = {}): Goal => ({
 describe('StatsView', () => {
   it('renders stats title', () => {
     render(<StatsView days={[]} habits={[]} goals={[]} />)
-    expect(screen.getByText(/statistics/i)).toBeInTheDocument()
+    expect(screen.getByText(/insights/i)).toBeInTheDocument()
   })
 
   it('displays total entry count', () => {

@@ -46,7 +46,7 @@ export function StatsView({ days, habits, goals }: StatsViewProps) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-primary" />
-        <h2 className="font-display text-xl font-semibold">Statistics</h2>
+        <h2 className="font-display text-xl font-semibold">Insights</h2>
       </div>
 
       {/* Entry Stats */}

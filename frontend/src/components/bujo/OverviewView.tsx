@@ -248,7 +248,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
           )}
         </button>
         <Clock className="w-5 h-5 text-warning" data-testid="outstanding-icon" />
-        <h2 className="font-display text-xl font-semibold flex-1">Outstanding Tasks</h2>
+        <h2 className="font-display text-xl font-semibold flex-1">Pending Tasks</h2>
         <span className="px-2 py-0.5 text-sm font-medium bg-warning/20 text-warning rounded-full">
           {taskEntries.length}
         </span>
@@ -259,7 +259,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
         <>
           {taskEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground italic py-6 text-center">
-              No outstanding tasks. You're all caught up!
+              No pending tasks. You're all caught up!
             </p>
           ) : (
             <div className="space-y-4">

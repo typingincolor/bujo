@@ -33,7 +33,7 @@ export function QuickStats({ days, habits, goals, overdueCount }: QuickStatsProp
       />
       <StatCard
         icon={AlertCircle}
-        label="Outstanding Tasks"
+        label="Pending Tasks"
         value={overdueCount}
         subtext="need attention"
         color="text-bujo-task"
@@ -65,8 +65,9 @@ interface StatCardProps {
 }
 
 function StatCard({ icon: Icon, label, value, subtext, color }: StatCardProps) {
+  const testId = `stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <div className="rounded-lg border border-border bg-card p-4 hover:bg-secondary/30 transition-colors">
+    <div className="rounded-lg border border-border bg-card p-4 hover:bg-secondary/30 transition-colors" data-testid={testId}>
       <div className="flex items-center gap-2 mb-2">
         <Icon className={cn('w-4 h-4', color)} />
         <span className="text-xs text-muted-foreground">{label}</span>

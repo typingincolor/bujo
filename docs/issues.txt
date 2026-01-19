@@ -70,4 +70,5 @@ x today view - bottom of screen shows events from yesterday (bug)
 . need to be able to move tasks to a list in TUI
 . use > to migrate tasks rather than m (TUI and check FE)
 x remove warning message "failed to initialize AI: AI features are disabled (set BUJO_AI_ENABLED=true to enable)"
-. need goto today option in journal view of frontend
+x need goto today option in journal view of frontend
+x the descriptions in the sidebar of the frontend are not very good, suggest better alternatives.

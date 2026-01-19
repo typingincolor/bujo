@@ -282,9 +282,9 @@ describe('App - QuickStats', () => {
     })
 
     expect(screen.getByText('Tasks Completed')).toBeInTheDocument()
-    expect(screen.getByText('Outstanding Tasks')).toBeInTheDocument()
+    expect(screen.getAllByText('Pending Tasks').length).toBeGreaterThan(0)
     expect(screen.getByText('Habits Today')).toBeInTheDocument()
-    expect(screen.getByText('Monthly Goals')).toBeInTheDocument()
+    expect(screen.getAllByText(/monthly goals/i).length).toBeGreaterThan(0)
   })
 
   it('displays overdue count from agenda', async () => {
@@ -306,11 +306,9 @@ describe('App - QuickStats', () => {
       expect(screen.getByText('Today task')).toBeInTheDocument()
     })
 
-    // Should show 3 overdue tasks - the value is in a sibling div
-    // Find the outer card by going up from the label
-    const overdueLabel = screen.getByText('Outstanding Tasks')
-    const overdueCard = overdueLabel.closest('.rounded-lg')
-    expect(overdueCard).toHaveTextContent('3')
+    // Should show 3 overdue tasks in the QuickStats card
+    const pendingTasksCard = screen.getByTestId('stat-card-pending-tasks')
+    expect(pendingTasksCard).toHaveTextContent('3')
   })
 })
 
@@ -444,11 +442,11 @@ describe('App - Habit View Toggle', () => {
     })
 
     // Switch to habits view
-    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    const habitsButton = screen.getByRole('button', { name: /habit tracker/i })
     await user.click(habitsButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+      expect(screen.getAllByRole('heading', { name: /habit tracker/i }).length).toBeGreaterThan(0)
     })
 
     vi.mocked(GetHabits).mockClear()
@@ -475,11 +473,11 @@ describe('App - Habit View Toggle', () => {
     })
 
     // Switch to habits view
-    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    const habitsButton = screen.getByRole('button', { name: /habit tracker/i })
     await user.click(habitsButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+      expect(screen.getAllByRole('heading', { name: /habit tracker/i }).length).toBeGreaterThan(0)
     })
 
     // Verify we're in week view
@@ -916,12 +914,12 @@ describe('App - No flicker on data refresh', () => {
     initialLoadComplete = true
 
     // Navigate to habits view
-    const habitsButton = screen.getByRole('button', { name: /habits/i })
+    const habitsButton = screen.getByRole('button', { name: /habit tracker/i })
     fireEvent.click(habitsButton)
 
     // Verify we're in habits view
     await waitFor(() => {
-      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+      expect(screen.getAllByRole('heading', { name: /habit tracker/i }).length).toBeGreaterThan(0)
     })
 
     // Set up delayed mock to observe loading state during refresh
@@ -954,7 +952,7 @@ describe('App - No flicker on data refresh', () => {
 
     // Wait for everything to settle
     await waitFor(() => {
-      expect(screen.getByText('Habit Tracker')).toBeInTheDocument()
+      expect(screen.getAllByRole('heading', { name: /habit tracker/i }).length).toBeGreaterThan(0)
     })
 
     // CRITICAL: Loading spinner should NOT have appeared during refresh
@@ -1419,18 +1417,18 @@ describe('App - Review View (formerly Past Week)', () => {
     vi.clearAllMocks()
   })
 
-  it('shows "Review" label in sidebar navigation', async () => {
+  it('shows "Weekly Review" label in sidebar navigation', async () => {
     render(<App />)
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Sidebar should show "Review" for the week/review view
-    expect(screen.getByRole('button', { name: /^review$/i })).toBeInTheDocument()
+    // Sidebar should show "Weekly Review" for the week/review view
+    expect(screen.getByRole('button', { name: /weekly review/i })).toBeInTheDocument()
   })
 
-  it('shows "Review" as header title when review view is selected', async () => {
+  it('shows "Weekly Review" as header title when review view is selected', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -1438,13 +1436,13 @@ describe('App - Review View (formerly Past Week)', () => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Click on Review in sidebar
-    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    // Click on Weekly Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /weekly review/i })
     await user.click(reviewButton)
 
-    // Header title should show "Review"
+    // Header title should show "Weekly Review"
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /^review$/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /weekly review/i })).toBeInTheDocument()
     })
   })
 
@@ -1456,8 +1454,8 @@ describe('App - Review View (formerly Past Week)', () => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Click on Review in sidebar
-    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    // Click on Weekly Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /weekly review/i })
     await user.click(reviewButton)
 
     // Should show prev/next navigation buttons
@@ -1475,8 +1473,8 @@ describe('App - Review View (formerly Past Week)', () => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Click on Review in sidebar
-    const reviewButton = screen.getByRole('button', { name: /^review$/i })
+    // Click on Weekly Review in sidebar
+    const reviewButton = screen.getByRole('button', { name: /weekly review/i })
     await user.click(reviewButton)
 
     // Next week button should be disabled when at current week
