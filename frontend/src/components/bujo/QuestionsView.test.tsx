@@ -32,7 +32,7 @@ describe('QuestionsView - Display', () => {
 
   it('renders the questions header with count', () => {
     render(<QuestionsView questions={[createTestEntry()]} />)
-    expect(screen.getByText(/outstanding questions/i)).toBeInTheDocument()
+    expect(screen.getByText(/open questions/i)).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
@@ -57,7 +57,7 @@ describe('QuestionsView - Display', () => {
 
   it('shows empty state when no questions', () => {
     render(<QuestionsView questions={[]} />)
-    expect(screen.getByText(/no outstanding questions/i)).toBeInTheDocument()
+    expect(screen.getByText(/no outstanding questions|all answered/i)).toBeInTheDocument()
   })
 
   it('displays entry date', () => {

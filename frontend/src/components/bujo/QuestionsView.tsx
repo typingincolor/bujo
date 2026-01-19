@@ -234,7 +234,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
           )}
         </button>
         <HelpCircle className="w-5 h-5 text-bujo-question" data-testid="questions-icon" />
-        <h2 className="font-display text-xl font-semibold flex-1">Outstanding Questions</h2>
+        <h2 className="font-display text-xl font-semibold flex-1">Open Questions</h2>
         <span className="px-2 py-0.5 text-sm font-medium bg-bujo-question/20 text-bujo-question rounded-full">
           {questionEntries.length}
         </span>

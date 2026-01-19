@@ -33,7 +33,7 @@ export function QuickStats({ days, habits, goals, overdueCount }: QuickStatsProp
       />
       <StatCard
         icon={AlertCircle}
-        label="Outstanding Tasks"
+        label="Pending Tasks"
         value={overdueCount}
         subtext="need attention"
         color="text-bujo-task"

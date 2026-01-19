@@ -396,15 +396,15 @@ function App() {
   }, [])
 
   const viewTitles: Record<ViewType, string> = {
-    today: 'Today',
-    week: 'Review',
-    overview: 'Outstanding Tasks',
-    questions: 'Outstanding Questions',
-    habits: 'Habits',
+    today: 'Journal',
+    week: 'Weekly Review',
+    overview: 'Pending Tasks',
+    questions: 'Open Questions',
+    habits: 'Habit Tracker',
     lists: 'Lists',
-    goals: 'Goals',
+    goals: 'Monthly Goals',
     search: 'Search',
-    stats: 'Statistics',
+    stats: 'Insights',
     settings: 'Settings',
   }
 
