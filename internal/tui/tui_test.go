@@ -71,6 +71,124 @@ func TestDefaultKeyMap_FullHelp(t *testing.T) {
 	}
 }
 
+func TestDefaultKeyMap_MigrateKey(t *testing.T) {
+	km := DefaultKeyMap()
+
+	if !key.Matches(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'>'}}, km.Migrate) {
+		t.Error("Migrate key should be bound to '>'")
+	}
+
+	if km.Migrate.Help().Key != ">" {
+		t.Errorf("Migrate help key should be '>', got %s", km.Migrate.Help().Key)
+	}
+}
+
+func TestDefaultKeyMap_FullHelp_IncludesAllActions(t *testing.T) {
+	km := DefaultKeyMap()
+	help := km.FullHelp()
+
+	requiredKeys := []string{
+		"t", // Retype (change type)
+		"L", // MoveToList
+		"X", // UncancelEntry
+		"u", // Undo
+		"R", // Answer
+	}
+
+	allHelpKeys := make(map[string]bool)
+	for _, group := range help {
+		for _, binding := range group {
+			allHelpKeys[binding.Help().Key] = true
+		}
+	}
+
+	for _, required := range requiredKeys {
+		if !allHelpKeys[required] {
+			t.Errorf("FullHelp should include key '%s'", required)
+		}
+	}
+}
+
+func TestDefaultKeyMap_ViewKeyBindings(t *testing.T) {
+	km := DefaultKeyMap()
+
+	tests := []struct {
+		name    string
+		key     string
+		binding key.Binding
+	}{
+		{"Journal", "1", km.ViewJournal},
+		{"Review", "2", km.ViewReview},
+		{"Pending Tasks", "3", km.ViewPendingTasks},
+		{"Questions", "4", km.ViewQuestions},
+		{"Habits", "5", km.ViewHabits},
+		{"Lists", "6", km.ViewLists},
+		{"Goals", "7", km.ViewGoals},
+		{"Search", "8", km.ViewSearch},
+		{"Stats", "9", km.ViewStats},
+		{"Settings", "0", km.ViewSettings},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(tt.key)}
+			if !key.Matches(msg, tt.binding) {
+				t.Errorf("%s view should be bound to key '%s'", tt.name, tt.key)
+			}
+		})
+	}
+}
+
+func TestDefaultKeyMap_GotoTodayKey(t *testing.T) {
+	km := DefaultKeyMap()
+
+	if !key.Matches(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}}, km.GotoToday) {
+		t.Error("GotoToday key should be bound to 'T'")
+	}
+
+	if km.GotoToday.Help().Key != "T" {
+		t.Errorf("GotoToday help key should be 'T', got %s", km.GotoToday.Help().Key)
+	}
+}
+
+func TestModel_GotoToday_ResetsViewDateToToday(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeJournal
+	model.viewMode = ViewModeDay
+	// Set view date to 5 days ago
+	model.viewDate = time.Now().AddDate(0, 0, -5)
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}}
+	m, _ := model.Update(msg)
+	updated := m.(Model)
+
+	today := time.Now()
+	if updated.viewDate.Year() != today.Year() ||
+		updated.viewDate.Month() != today.Month() ||
+		updated.viewDate.Day() != today.Day() {
+		t.Errorf("GotoToday should reset viewDate to today, got %v", updated.viewDate)
+	}
+}
+
+func TestModel_GotoToday_WorksInReviewView(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypeReview
+	model.viewMode = ViewModeWeek
+	// Set view date to 2 weeks ago
+	model.viewDate = time.Now().AddDate(0, 0, -14)
+
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'T'}}
+	m, _ := model.Update(msg)
+	updated := m.(Model)
+
+	today := time.Now()
+	if updated.viewDate.Year() != today.Year() ||
+		updated.viewDate.Month() != today.Month() ||
+		updated.viewDate.Day() != today.Day() {
+		t.Errorf("GotoToday should reset viewDate to today in Review view, got %v", updated.viewDate)
+	}
+}
+
 func TestNew(t *testing.T) {
 	model := New(nil)
 
@@ -701,31 +819,6 @@ func TestModel_DefaultViewDate_IsToday(t *testing.T) {
 	}
 }
 
-func TestModel_Update_ToggleViewMode(t *testing.T) {
-	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
-
-	// Start in day mode
-	if model.viewMode != ViewModeDay {
-		t.Fatal("should start in day mode")
-	}
-
-	// Toggle to week
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'w'}}
-	newModel, _ := model.Update(msg)
-	m := newModel.(Model)
-	if m.viewMode != ViewModeWeek {
-		t.Errorf("pressing 'w' should switch to week mode, got %v", m.viewMode)
-	}
-
-	// Toggle back to day
-	newModel, _ = m.Update(msg)
-	m = newModel.(Model)
-	if m.viewMode != ViewModeDay {
-		t.Errorf("pressing 'w' again should switch back to day mode, got %v", m.viewMode)
-	}
-}
-
 func TestModel_Update_GoToDate(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
@@ -1187,6 +1280,7 @@ func TestModel_DayView_Search_MultipleMatches_NextFindsDifferent(t *testing.T) {
 func TestModel_WeekView_Search_AcrossMultipleDays(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
 	// Simulate entries from different days
@@ -1224,6 +1318,7 @@ func TestModel_WeekView_Search_AcrossMultipleDays(t *testing.T) {
 func TestModel_WeekView_Search_WithDayHeaders_ScrollsCorrectly(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 	model.width = 80
 	model.height = 12 // Small height to force scrolling
@@ -1268,6 +1363,7 @@ func TestModel_WeekView_Search_WithDayHeaders_ScrollsCorrectly(t *testing.T) {
 func TestModel_WeekView_Search_BackwardFromDifferentDay(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
 	model.entries = []EntryItem{
@@ -1293,6 +1389,7 @@ func TestModel_WeekView_Search_BackwardFromDifferentDay(t *testing.T) {
 func TestModel_WeekView_Search_NestedEntries(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
 	// Entries with different indent levels (parent-child)
@@ -1331,6 +1428,7 @@ func TestModel_WeekView_Search_NestedEntries(t *testing.T) {
 func TestModel_WeekView_Search_WithOverdueEntries(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
 	model.entries = []EntryItem{
@@ -1896,33 +1994,35 @@ func TestModel_View_ScrollIndicators_ShowMoreBelow(t *testing.T) {
 	}
 }
 
-func TestModel_View_Toolbar_ShowsViewMode(t *testing.T) {
+func TestModel_View_Toolbar_ShowsJournalView(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
 	model.width = 80
 	model.height = 24
+	model.currentView = ViewTypeJournal
 	model.viewMode = ViewModeDay
 	model.entries = []EntryItem{}
 
 	view := model.View()
 
-	if !strings.Contains(view, "Day") {
-		t.Error("view should show Day in toolbar")
+	if !strings.Contains(view, "Journal") {
+		t.Error("view should show Journal in toolbar")
 	}
 }
 
-func TestModel_View_Toolbar_ShowsWeekMode(t *testing.T) {
+func TestModel_View_Toolbar_ShowsReviewView(t *testing.T) {
 	model := New(nil)
 	model.agenda = &service.MultiDayAgenda{}
 	model.width = 80
 	model.height = 24
+	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 	model.entries = []EntryItem{}
 
 	view := model.View()
 
-	if !strings.Contains(view, "Week") {
-		t.Error("view should show Week in toolbar")
+	if !strings.Contains(view, "Review") {
+		t.Error("view should show Review in toolbar")
 	}
 }
 
@@ -3227,7 +3327,7 @@ func TestNavigationStack_PushWhenSwitchingViews(t *testing.T) {
 	model := New(nil)
 	model.currentView = ViewTypeJournal
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 

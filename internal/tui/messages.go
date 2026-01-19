@@ -144,6 +144,14 @@ type searchResultsMsg struct {
 	query   string
 }
 
+type pendingTasksLoadedMsg struct {
+	entries []domain.Entry
+}
+
+type questionsLoadedMsg struct {
+	entries []domain.Entry
+}
+
 type statsLoadedMsg struct {
 	stats *domain.Stats
 }

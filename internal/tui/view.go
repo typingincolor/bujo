@@ -40,6 +40,10 @@ func (m Model) View() string {
 		sb.WriteString(m.renderGoalsContent())
 	case ViewTypeSettings:
 		sb.WriteString(m.renderSettingsContent())
+	case ViewTypePendingTasks:
+		sb.WriteString(m.renderPendingTasksContent())
+	case ViewTypeQuestions:
+		sb.WriteString(m.renderQuestionsContent())
 	default:
 		sb.WriteString(m.renderJournalContent())
 	}
@@ -131,15 +135,21 @@ func (m Model) View() string {
 func (m Model) renderContextHelp() string {
 	switch m.currentView {
 	case ViewTypeHabits:
-		return "j/k: navigate  ←/→: day  space: log  ⌫: remove  a: add  d: delete habit  w: view  esc: back  q: quit"
-	case ViewTypeLists, ViewTypeListItems:
-		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  esc: back  q: quit"
+		return "j/k: navigate  ←/→: day  [/]: period  space: log  ⌫: remove  a: add  d: delete  w: view  esc: back  q: quit"
+	case ViewTypeLists:
+		return "j/k: navigate  enter: open  a: add list  esc: back  q: quit"
+	case ViewTypeListItems:
+		return "j/k: navigate  space: toggle  a: add  e: edit  d: delete  M: move  esc: back  q: quit"
 	case ViewTypeGoals:
-		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  m: move  esc: back  q: quit"
+		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  >: move  esc: back  q: quit"
 	case ViewTypeSearch:
-		return "j/k: navigate  /: search  esc: back  q: quit"
+		return "j/k: navigate  /: search  enter: go to  esc: back  q: quit"
 	case ViewTypeStats:
 		return "esc: back  q: quit"
+	case ViewTypePendingTasks:
+		return "j/k: navigate  esc: back  q: quit"
+	case ViewTypeQuestions:
+		return "j/k: navigate  esc: back  q: quit"
 	default:
 		return m.help.View(m.keyMap)
 	}
@@ -698,6 +708,12 @@ func (m Model) renderToolbar() string {
 	switch m.currentView {
 	case ViewTypeJournal:
 		viewTypeStr = "Journal"
+	case ViewTypeReview:
+		viewTypeStr = "Review"
+	case ViewTypePendingTasks:
+		viewTypeStr = "Outstanding Tasks"
+	case ViewTypeQuestions:
+		viewTypeStr = "Open Questions"
 	case ViewTypeHabits:
 		viewTypeStr = "Habits"
 	case ViewTypeLists:
@@ -716,14 +732,17 @@ func (m Model) renderToolbar() string {
 		viewTypeStr = "Journal"
 	}
 
-	viewModeStr := "Day"
-	if m.viewMode == ViewModeWeek {
-		viewModeStr = "Week"
+	var dateStr string
+	if m.currentView == ViewTypeReview {
+		// For Review view, show the week range
+		weekStart := m.viewDate.AddDate(0, 0, -int(m.viewDate.Weekday()))
+		weekEnd := weekStart.AddDate(0, 0, 6)
+		dateStr = fmt.Sprintf("%s - %s", weekStart.Format("Jan 2"), weekEnd.Format("Jan 2, 2006"))
+	} else {
+		dateStr = m.viewDate.Format("Mon, Jan 2 2006")
 	}
 
-	dateStr := m.viewDate.Format("Mon, Jan 2 2006")
-
-	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s | %s", viewTypeStr, viewModeStr, dateStr))
+	return ToolbarStyle.Render(fmt.Sprintf("📓 bujo | %s | %s", viewTypeStr, dateStr))
 }
 
 func (m Model) renderQuitConfirm() string {
@@ -999,6 +1018,85 @@ func (m Model) renderSettingsContent() string {
 	sb.WriteString(HelpStyle.Render("Edit ~/.config/bujo/config.yaml to change settings"))
 	sb.WriteString("\n\n")
 
+	return sb.String()
+}
+
+func (m Model) renderPendingTasksContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("📋 Outstanding Tasks\n\n")
+
+	if m.pendingTasksState.loading {
+		sb.WriteString("Loading...")
+		return sb.String()
+	}
+
+	if len(m.pendingTasksState.entries) == 0 {
+		sb.WriteString(HelpStyle.Render("No outstanding tasks. All caught up!"))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString(fmt.Sprintf("Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries)))
+
+	for i, entry := range m.pendingTasksState.entries {
+		line := m.renderEntryLine(entry, i == m.pendingTasksState.selectedIdx)
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func (m Model) renderEntryLine(entry domain.Entry, selected bool) string {
+	dateStr := "no date"
+	if entry.ScheduledDate != nil {
+		dateStr = entry.ScheduledDate.Format("2006-01-02")
+	}
+
+	symbol := entry.Type.Symbol()
+	content := entry.Content
+
+	prefix := "  "
+	if selected {
+		prefix = "> "
+	}
+
+	line := fmt.Sprintf("%s[%s] %s %s", prefix, dateStr, symbol, content)
+
+	if selected {
+		return SelectedStyle.Render(line)
+	}
+
+	return line
+}
+
+func (m Model) renderQuestionsContent() string {
+	var sb strings.Builder
+
+	sb.WriteString("❓ Open Questions\n\n")
+
+	if m.questionsState.loading {
+		sb.WriteString("Loading...")
+		return sb.String()
+	}
+
+	if len(m.questionsState.entries) == 0 {
+		sb.WriteString(HelpStyle.Render("No open questions."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString(fmt.Sprintf("Found %d open question(s)\n\n", len(m.questionsState.entries)))
+
+	for i, entry := range m.questionsState.entries {
+		line := m.renderEntryLine(entry, i == m.questionsState.selectedIdx)
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString("\n")
 	return sb.String()
 }
 

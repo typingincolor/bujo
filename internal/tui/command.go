@@ -98,20 +98,6 @@ func DefaultCommands() *CommandRegistry {
 	})
 
 	registry.Register(Command{
-		Name:        "Toggle Day/Week View",
-		Description: "Switch between day and week view",
-		Keybinding:  "w",
-		Action: func(m Model) (Model, tea.Cmd) {
-			if m.viewMode == ViewModeDay {
-				m.viewMode = ViewModeWeek
-			} else {
-				m.viewMode = ViewModeDay
-			}
-			return m, m.loadAgendaCmd()
-		},
-	})
-
-	registry.Register(Command{
 		Name:        "Capture",
 		Description: "Open external editor for entry capture",
 		Keybinding:  "c",

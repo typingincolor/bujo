@@ -32,11 +32,14 @@ type KeyMap struct {
 	Back                 key.Binding
 	Help                 key.Binding
 	ViewJournal          key.Binding
+	ViewReview           key.Binding
+	ViewPendingTasks     key.Binding
+	ViewQuestions        key.Binding
 	ViewHabits           key.Binding
 	ViewLists            key.Binding
+	ViewGoals            key.Binding
 	ViewSearch           key.Binding
 	ViewStats            key.Binding
-	ViewGoals            key.Binding
 	ViewSettings         key.Binding
 	CommandPalette       key.Binding
 	LogHabit             key.Binding
@@ -51,6 +54,7 @@ type KeyMap struct {
 	ToggleSummary        key.Binding
 	SetLocation          key.Binding
 	ToggleOverdueContext key.Binding
+	GotoToday            key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -104,8 +108,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("r", "add root"),
 		),
 		Migrate: key.NewBinding(
-			key.WithKeys("m"),
-			key.WithHelp("m", "migrate"),
+			key.WithKeys(">"),
+			key.WithHelp(">", "migrate"),
 		),
 		MigrateToGoal: key.NewBinding(
 			key.WithKeys("M"),
@@ -171,29 +175,41 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("1"),
 			key.WithHelp("1", "journal"),
 		),
-		ViewHabits: key.NewBinding(
+		ViewReview: key.NewBinding(
 			key.WithKeys("2"),
-			key.WithHelp("2", "habits"),
+			key.WithHelp("2", "review"),
+		),
+		ViewPendingTasks: key.NewBinding(
+			key.WithKeys("3"),
+			key.WithHelp("3", "pending"),
+		),
+		ViewQuestions: key.NewBinding(
+			key.WithKeys("4"),
+			key.WithHelp("4", "questions"),
+		),
+		ViewHabits: key.NewBinding(
+			key.WithKeys("5"),
+			key.WithHelp("5", "habits"),
 		),
 		ViewLists: key.NewBinding(
-			key.WithKeys("3"),
-			key.WithHelp("3", "lists"),
-		),
-		ViewSearch: key.NewBinding(
-			key.WithKeys("4"),
-			key.WithHelp("4", "search"),
-		),
-		ViewStats: key.NewBinding(
-			key.WithKeys("5"),
-			key.WithHelp("5", "stats"),
+			key.WithKeys("6"),
+			key.WithHelp("6", "lists"),
 		),
 		ViewGoals: key.NewBinding(
-			key.WithKeys("6"),
-			key.WithHelp("6", "goals"),
+			key.WithKeys("7"),
+			key.WithHelp("7", "goals"),
+		),
+		ViewSearch: key.NewBinding(
+			key.WithKeys("8"),
+			key.WithHelp("8", "search"),
+		),
+		ViewStats: key.NewBinding(
+			key.WithKeys("9"),
+			key.WithHelp("9", "stats"),
 		),
 		ViewSettings: key.NewBinding(
-			key.WithKeys("7"),
-			key.WithHelp("7", "settings"),
+			key.WithKeys("0"),
+			key.WithHelp("0", "settings"),
 		),
 		CommandPalette: key.NewBinding(
 			key.WithKeys("ctrl+p", ":"),
@@ -247,6 +263,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("C"),
 			key.WithHelp("C", "toggle context"),
 		),
+		GotoToday: key.NewBinding(
+			key.WithKeys("T"),
+			key.WithHelp("T", "go to today"),
+		),
 	}
 }
 
@@ -257,7 +277,8 @@ func (k KeyMap) ShortHelp() []key.Binding {
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom},
-		{k.Done, k.CancelEntry, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Migrate, k.Priority, k.Capture, k.Delete},
-		{k.ToggleView, k.GotoDate, k.Quit, k.Help},
+		{k.Done, k.CancelEntry, k.UncancelEntry, k.Edit, k.Add, k.AddChild, k.AddRoot, k.Delete},
+		{k.Migrate, k.MoveToList, k.Retype, k.Priority, k.Answer, k.Capture, k.Undo},
+		{k.ToggleView, k.GotoDate, k.GotoToday, k.Quit, k.Help},
 	}
 }
