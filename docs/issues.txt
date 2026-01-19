@@ -80,3 +80,4 @@ x the descriptions in the sidebar of the frontend are not very good, suggest bet
 . Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
 . If you cancel or delete and answer to a question, you should be able to answer it again
 . How do you add an answer to a question using the capture modal?
+. You should be able to click on the circle on the goals in the monthly goals to mark it as completed
