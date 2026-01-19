@@ -16,8 +16,8 @@ Read and display issues from `docs/issues.txt`.
 
 The command accepts an optional filter argument: `$ARGUMENTS`
 
-- No argument or `all`: Show all issues
-- `open`: Show only open issues (`.`)
+- No argument or `open`: Show only open issues (`.`) **(default)**
+- `all`: Show all issues
 - `done`: Show only completed issues (`x`)
 - `closed`: Show only won't-fix issues (`~`)
 
@@ -29,31 +29,32 @@ The command accepts an optional filter argument: `$ARGUMENTS`
 
 ## Output Format
 
+Use the actual markers from the file (`.`, `x`, `~`) in the output.
+
+**Default (no argument or `open`):**
 ```
-## Issues (filter: [FILTER])
+## Open Issues (N)
+
+. [line#] [description]
+...
+```
+
+**For `all` filter:**
+```
+## Issues (filter: all)
 
 ### Open (N)
-[line#]. [description]
+. [line#] [description]
 ...
 
 ### Done (N)
-[line#]. [description]
+x [line#] [description]
 ...
 
 ### Won't Fix (N)
-[line#]. [description]
+~ [line#] [description]
 ...
 
 ---
 Total: N issues (N open, N done, N won't fix)
-```
-
-If filtered, only show the relevant section.
-
-For `open` filter, just show:
-```
-## Open Issues (N)
-
-[line#]. [description]
-...
 ```
