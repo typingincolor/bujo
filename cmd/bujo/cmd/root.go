@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"errors"
+
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/adapter/ai"
@@ -74,9 +76,10 @@ var rootCmd = &cobra.Command{
 
 		summaryRepo := sqlite.NewSummaryRepository(db)
 		aiClient, err := ai.NewAIClient(cmd.Context())
-		if err != nil {
+		if err != nil && !errors.Is(err, ai.ErrAIDisabled) {
 			fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
-		} else {
+		}
+		if err == nil {
 			promptsDir := getDefaultPromptsDir()
 			promptLoader := ai.NewPromptLoader(promptsDir)
 			if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
