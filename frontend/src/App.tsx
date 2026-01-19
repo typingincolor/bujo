@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
 import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
-import { time } from './wailsjs/go/models'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -24,13 +23,8 @@ import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
+import { toWailsTime } from '@/lib/wailsTime'
 import './index.css'
-
-// Wails serializes Go time.Time as ISO strings over JSON.
-// This helper provides type-safe conversion from Date to the expected binding type.
-function toWailsTime(date: Date): time.Time {
-  return date.toISOString() as unknown as time.Time
-}
 
 function flattenEntries(entries: Entry[]): Entry[] {
   const result: Entry[] = []

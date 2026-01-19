@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, startOfDay } from '@/lib/utils'
 import { AddEntry } from '@/wailsjs/go/wails/App'
-import { time } from '@/wailsjs/go/models'
-import { startOfDay } from '@/lib/utils'
+import { toWailsTime } from '@/lib/wailsTime'
 
 interface CaptureModalProps {
   isOpen: boolean
@@ -11,10 +10,6 @@ interface CaptureModalProps {
 }
 
 const DRAFT_KEY = 'bujo-capture-draft'
-
-function toWailsTime(date: Date): time.Time {
-  return date.toISOString() as unknown as time.Time
-}
 
 export function CaptureModal({
   isOpen,
