@@ -16,11 +16,12 @@ import (
 )
 
 const (
-	toolbarHeight         = 2
-	helpBarHeight         = 2
-	verticalPadding       = 2
-	minAvailableLines     = 5
-	locationHistoryMonths = 6
+	toolbarHeight             = 2
+	helpBarHeight             = 2
+	verticalPadding           = 2
+	minAvailableLines         = 5
+	locationHistoryMonths     = 6
+	pendingTasksLookbackYears = 1
 )
 
 type Config struct {
@@ -80,6 +81,8 @@ type Model struct {
 	setLocationMode          setLocationState
 	commandPalette           commandPaletteState
 	commandRegistry          *CommandRegistry
+	pendingTasksState        pendingTasksState
+	questionsState           questionsState
 	undoState                undoState
 	help                     help.Model
 	keyMap                   KeyMap
@@ -268,6 +271,18 @@ type commandPaletteState struct {
 	filtered    []Command
 }
 
+type pendingTasksState struct {
+	entries     []domain.Entry
+	selectedIdx int
+	loading     bool
+}
+
+type questionsState struct {
+	entries     []domain.Entry
+	selectedIdx int
+	loading     bool
+}
+
 type ViewMode int
 
 const (
@@ -278,14 +293,17 @@ const (
 type ViewType int
 
 const (
-	ViewTypeJournal ViewType = iota
-	ViewTypeHabits
-	ViewTypeLists
-	ViewTypeListItems
-	ViewTypeSearch
-	ViewTypeStats
-	ViewTypeGoals
-	ViewTypeSettings
+	ViewTypeJournal      ViewType = iota // key 1
+	ViewTypeReview                       // key 2
+	ViewTypePendingTasks                 // key 3
+	ViewTypeQuestions                    // key 4
+	ViewTypeHabits                       // key 5
+	ViewTypeLists                        // key 6
+	ViewTypeGoals                        // key 7
+	ViewTypeSearch                       // key 8
+	ViewTypeStats                        // key 9
+	ViewTypeSettings                     // key 0
+	ViewTypeListItems                    // internal (accessed via Lists)
 )
 
 type HabitViewMode int
@@ -1038,6 +1056,37 @@ func (m Model) loadStatsCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return statsLoadedMsg{stats}
+	}
+}
+
+func (m Model) loadPendingTasksCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		from := now.AddDate(-pendingTasksLookbackYears, 0, 0)
+		tasks, err := m.bujoService.GetOutstandingTasks(ctx, from, now)
+		if err != nil {
+			return errMsg{err}
+		}
+		return pendingTasksLoadedMsg{entries: tasks}
+	}
+}
+
+func (m Model) loadQuestionsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+		opts := domain.NewSearchOptions("").WithType(domain.EntryTypeQuestion)
+		questions, err := m.bujoService.SearchEntries(ctx, opts)
+		if err != nil {
+			return errMsg{err}
+		}
+		return questionsLoadedMsg{entries: questions}
 	}
 }
 

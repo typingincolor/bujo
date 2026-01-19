@@ -33,12 +33,15 @@ func TestUAT_Navigation_NumberKeys_SwitchViews(t *testing.T) {
 		name     string
 	}{
 		{'1', ViewTypeJournal, "Journal"},
-		{'2', ViewTypeHabits, "Habits"},
-		{'3', ViewTypeLists, "Lists"},
-		{'4', ViewTypeSearch, "Search"},
-		{'5', ViewTypeStats, "Stats"},
-		{'6', ViewTypeGoals, "Goals"},
-		{'7', ViewTypeSettings, "Settings"},
+		{'2', ViewTypeReview, "Review"},
+		{'3', ViewTypePendingTasks, "PendingTasks"},
+		{'4', ViewTypeQuestions, "Questions"},
+		{'5', ViewTypeHabits, "Habits"},
+		{'6', ViewTypeLists, "Lists"},
+		{'7', ViewTypeGoals, "Goals"},
+		{'8', ViewTypeSearch, "Search"},
+		{'9', ViewTypeStats, "Stats"},
+		{'0', ViewTypeSettings, "Settings"},
 	}
 
 	for _, tt := range tests {
@@ -201,9 +204,9 @@ func TestUAT_Navigation_Esc_GoesBackFromNestedView(t *testing.T) {
 	model.currentView = ViewTypeJournal
 	model.viewStack = []ViewType{} // empty stack
 
-	// Navigate to habits (simulates pressing 2)
-	msg2 := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
-	newModel, _ := model.Update(msg2)
+	// Navigate to habits (simulates pressing 5)
+	msg5 := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
+	newModel, _ := model.Update(msg5)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeHabits {
@@ -968,8 +971,8 @@ func TestUAT_HabitsView_ShowsHabitDetails(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -1015,7 +1018,7 @@ func TestUAT_HabitsView_DeletedHabitsNotShown(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1048,8 +1051,8 @@ func TestUAT_HabitsView_LogHabitFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view and load (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1112,7 +1115,7 @@ func TestUAT_HabitsView_MonthlyHistoryShown(t *testing.T) {
 	model.height = 24
 	model.habitState.viewMode = HabitViewModeMonth // Monthly view by default per UAT
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1149,7 +1152,7 @@ func TestUAT_HabitsView_Navigation(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1211,7 +1214,7 @@ func TestUAT_ListsView_ShowsAllLists(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1263,7 +1266,7 @@ func TestUAT_ListsView_ShowsAccurateCompletionCounts(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1302,7 +1305,7 @@ func TestUAT_ListsView_DeletedListsNotShown(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1340,7 +1343,7 @@ func TestUAT_ListsView_EnterOpensItems(t *testing.T) {
 	model.height = 24
 
 	// Go to lists view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1369,7 +1372,7 @@ func TestUAT_ListsView_CreateListWithAddKey(t *testing.T) {
 	model.height = 24
 
 	// Navigate to lists view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -1538,7 +1541,7 @@ func TestUAT_ListItemsView_ShowsAllItems(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1585,7 +1588,7 @@ func TestUAT_ListItemsView_ToggleDone(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1653,7 +1656,7 @@ func TestUAT_ListItemsView_AddItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1700,7 +1703,7 @@ func TestUAT_ListItemsView_DeleteItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1744,7 +1747,7 @@ func TestUAT_ListItemsView_EscapeReturnsToLists(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1787,7 +1790,7 @@ func TestUAT_ListItemsView_EditItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1842,7 +1845,7 @@ func TestUAT_ListItemsView_EditItem_PersistsChange(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1918,7 +1921,7 @@ func TestUAT_ListItemsView_MoveItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items (Shopping list)
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -1990,12 +1993,12 @@ func TestUAT_SearchView_Accessible(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'8'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeSearch {
-		t.Errorf("'4' should switch to search view, got %v", m.currentView)
+		t.Errorf("'8' should switch to search view, got %v", m.currentView)
 	}
 }
 
@@ -2034,12 +2037,12 @@ func TestUAT_StatsView_Accessible(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'9'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeStats {
-		t.Errorf("'5' should switch to stats view, got %v", m.currentView)
+		t.Errorf("'9' should switch to stats view, got %v", m.currentView)
 	}
 }
 
@@ -2094,12 +2097,12 @@ func TestUAT_SettingsView_Accessible(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'0'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeSettings {
-		t.Errorf("'7' should switch to settings view, got %v", m.currentView)
+		t.Errorf("'0' should switch to settings view, got %v", m.currentView)
 	}
 }
 
@@ -2221,8 +2224,8 @@ func TestUAT_DataAccuracy_DeletedItemsNeverAppear(t *testing.T) {
 		t.Error("deleted entry should not appear in journal")
 	}
 
-	// Check habits
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Check habits (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd = model.Update(msg)
 	model = newModel.(Model)
 	loadMsg = cmd()
@@ -2234,8 +2237,8 @@ func TestUAT_DataAccuracy_DeletedItemsNeverAppear(t *testing.T) {
 		t.Error("deleted habit should not appear in habits view")
 	}
 
-	// Check lists
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	// Check lists (key 6)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd = model.Update(msg)
 	model = newModel.(Model)
 	loadMsg = cmd()
@@ -2286,7 +2289,7 @@ func TestUAT_DataAccuracy_CountsAreAccurate(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -2322,7 +2325,7 @@ func TestUAT_DataAccuracy_ChangesAppearImmediately(t *testing.T) {
 	model.height = 24
 
 	// Navigate to list items
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -2831,8 +2834,8 @@ func TestUAT_HabitsView_ShowsWeeklyProgress(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -2873,8 +2876,8 @@ func TestUAT_HabitsView_ShowsMonthlyProgress(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -2912,8 +2915,8 @@ func TestUAT_HabitsView_HidesProgressWhenNoGoalsSet(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -2951,8 +2954,8 @@ func TestUAT_HabitsView_MatchesCLIStyle(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3003,8 +3006,8 @@ func TestUAT_HabitsView_DayNavigation(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3062,8 +3065,8 @@ func TestUAT_HabitsView_LogOnSelectedDay(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3130,8 +3133,8 @@ func TestUAT_HabitsView_DeleteHabitFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3196,8 +3199,8 @@ func TestUAT_HabitsView_AddHabitFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3278,12 +3281,12 @@ func TestUAT_GoalsView_Accessible(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
 	if m.currentView != ViewTypeGoals {
-		t.Errorf("'6' should switch to goals view, got %v", m.currentView)
+		t.Errorf("'7' should switch to goals view, got %v", m.currentView)
 	}
 }
 
@@ -3327,8 +3330,8 @@ func TestUAT_GoalsView_ShowsGoalContent(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3384,8 +3387,8 @@ func TestUAT_GoalsView_NavigationUpDown(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3435,8 +3438,8 @@ func TestUAT_GoalsView_ToggleDoneWithSpace(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3493,8 +3496,8 @@ func TestUAT_GoalsView_ShowsDoneStatus(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3528,8 +3531,8 @@ func TestUAT_GoalsView_ShowsGoalID(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3610,8 +3613,8 @@ func TestUAT_GoalsView_MonthNavigation_PreviousMonth(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3666,8 +3669,8 @@ func TestUAT_GoalsView_MonthNavigation_NextMonth(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view and load (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -3707,8 +3710,8 @@ func TestUAT_GoalsView_AddGoalFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3792,8 +3795,8 @@ func TestUAT_GoalsView_EditGoalFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3873,8 +3876,8 @@ func TestUAT_GoalsView_DeleteGoalFromTUI(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3948,8 +3951,8 @@ func TestUAT_GoalsView_MoveGoalToMonth(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -3964,14 +3967,14 @@ func TestUAT_GoalsView_MoveGoalToMonth(t *testing.T) {
 		t.Fatalf("expected 1 goal, got %d", len(model.goalState.goals))
 	}
 
-	// Press 'm' to move
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
+	// Press '>' to move (migrate key)
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'>'}}
 	newModel, _ = model.Update(msg)
 	model = newModel.(Model)
 
 	// Should be in move goal mode
 	if !model.moveGoalMode.active {
-		t.Fatal("pressing 'm' should activate move goal mode")
+		t.Fatal("pressing '>' should activate move goal mode")
 	}
 
 	// Type target month (next month)
@@ -4041,8 +4044,8 @@ func TestUAT_GoalsView_ShowsMonthInHeader(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	// Switch to goals view (key 7)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -4783,8 +4786,8 @@ func TestUAT_HabitsView_BackspaceRemovesOccurrence(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	// Switch to habits view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	// Switch to habits view and load (key 5)
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()

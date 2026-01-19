@@ -59,7 +59,7 @@ func TestIntegration_HabitsView_LoadsDataFromService(t *testing.T) {
 	model.height = 24
 
 	// Switch to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -124,7 +124,7 @@ func TestIntegration_ListsView_LoadsDataFromService(t *testing.T) {
 	model.height = 24
 
 	// Switch to lists view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -183,7 +183,7 @@ func TestIntegration_ListItemsView_LoadsItemsFromService(t *testing.T) {
 	model.height = 24
 
 	// Switch to lists view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -312,7 +312,7 @@ func TestIntegration_SwitchBetweenViews_MaintainsData(t *testing.T) {
 	model = newModel.(Model)
 
 	// Switch to habits, load data
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd = model.Update(msg)
 	model = newModel.(Model)
 	loadMsg = cmd()
@@ -324,7 +324,7 @@ func TestIntegration_SwitchBetweenViews_MaintainsData(t *testing.T) {
 	}
 
 	// Switch to lists, load data
-	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg = tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd = model.Update(msg)
 	model = newModel.(Model)
 	loadMsg = cmd()
@@ -373,7 +373,7 @@ func TestIntegration_GoalsView_LoadsDataFromService(t *testing.T) {
 	model.height = 24
 
 	// Switch to goals view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -428,7 +428,7 @@ func TestIntegration_GoalsView_ToggleGoalDone(t *testing.T) {
 	model.height = 24
 
 	// Switch to goals view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'7'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	loadMsg := cmd()
@@ -492,7 +492,7 @@ func TestIntegration_ListItems_AddItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to lists view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -606,7 +606,7 @@ func TestIntegration_ListItems_DeleteItem(t *testing.T) {
 	model.height = 24
 
 	// Navigate to lists view and load
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'6'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {
@@ -691,7 +691,7 @@ func TestIntegration_HabitsView_ShowsStreakAndCompletion(t *testing.T) {
 	model.height = 24
 
 	// Navigate to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 
@@ -727,6 +727,148 @@ func TestIntegration_HabitsView_ShowsStreakAndCompletion(t *testing.T) {
 	}
 }
 
+func TestIntegration_PendingTasksView_LoadsOutstandingTasks(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create test entries: a task, a done task, and a note
+	today := time.Now()
+	opts := service.LogEntriesOptions{Date: today}
+
+	// Add an outstanding task
+	if _, err := bujoSvc.LogEntries(ctx, ". Outstanding task 1", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+	// Add another outstanding task
+	if _, err := bujoSvc.LogEntries(ctx, ". Outstanding task 2", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+	// Add a done task (should not appear)
+	if _, err := bujoSvc.LogEntries(ctx, "x Done task", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+	// Add a note (should not appear)
+	if _, err := bujoSvc.LogEntries(ctx, "- Just a note", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+
+	// Create model with real services
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to pending tasks view (key '3')
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	if model.currentView != ViewTypePendingTasks {
+		t.Fatalf("expected ViewTypePendingTasks, got %v", model.currentView)
+	}
+
+	// Execute the command to load pending tasks
+	if cmd == nil {
+		t.Fatal("expected a command to load pending tasks")
+	}
+	loadMsg := cmd()
+
+	// Process the loaded message
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Verify only outstanding tasks were loaded (2 tasks, not the done one or note)
+	if len(model.pendingTasksState.entries) != 2 {
+		t.Errorf("expected 2 pending tasks, got %d", len(model.pendingTasksState.entries))
+	}
+
+	// Verify the view renders the pending tasks
+	view := model.View()
+	if !strings.Contains(view, "Outstanding task 1") {
+		t.Error("view should contain 'Outstanding task 1'")
+	}
+	if !strings.Contains(view, "Outstanding task 2") {
+		t.Error("view should contain 'Outstanding task 2'")
+	}
+	// Done task and note should NOT appear
+	if strings.Contains(view, "Done task") {
+		t.Error("view should NOT contain done task")
+	}
+	if strings.Contains(view, "Just a note") {
+		t.Error("view should NOT contain note")
+	}
+}
+
+func TestIntegration_QuestionsView_LoadsOpenQuestions(t *testing.T) {
+	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
+	ctx := context.Background()
+
+	// Create test entries: questions and other types
+	today := time.Now()
+	opts := service.LogEntriesOptions{Date: today}
+
+	// Add open questions
+	if _, err := bujoSvc.LogEntries(ctx, "? Open question 1", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+	if _, err := bujoSvc.LogEntries(ctx, "? Open question 2", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+	// Add a task (should not appear)
+	if _, err := bujoSvc.LogEntries(ctx, ". Some task", opts); err != nil {
+		t.Fatalf("failed to add entry: %v", err)
+	}
+
+	// Create model with real services
+	model := NewWithConfig(Config{
+		BujoService:  bujoSvc,
+		HabitService: habitSvc,
+		ListService:  listSvc,
+	})
+	model.width = 80
+	model.height = 24
+
+	// Switch to questions view (key '4')
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'4'}}
+	newModel, cmd := model.Update(msg)
+	model = newModel.(Model)
+
+	if model.currentView != ViewTypeQuestions {
+		t.Fatalf("expected ViewTypeQuestions, got %v", model.currentView)
+	}
+
+	// Execute the command to load questions
+	if cmd == nil {
+		t.Fatal("expected a command to load questions")
+	}
+	loadMsg := cmd()
+
+	// Process the loaded message
+	newModel, _ = model.Update(loadMsg)
+	model = newModel.(Model)
+
+	// Verify only open questions were loaded
+	if len(model.questionsState.entries) != 2 {
+		t.Errorf("expected 2 open questions, got %d", len(model.questionsState.entries))
+	}
+
+	// Verify the view renders the questions
+	view := model.View()
+	if !strings.Contains(view, "Open question 1") {
+		t.Error("view should contain 'Open question 1'")
+	}
+	if !strings.Contains(view, "Open question 2") {
+		t.Error("view should contain 'Open question 2'")
+	}
+	// Task should NOT appear
+	if strings.Contains(view, "Some task") {
+		t.Error("view should NOT contain task")
+	}
+}
+
 func TestIntegration_HabitsView_LogHabitIncrementsCount(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
@@ -746,7 +888,7 @@ func TestIntegration_HabitsView_LogHabitIncrementsCount(t *testing.T) {
 	model.height = 24
 
 	// Navigate to habits view
-	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'2'}}
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'5'}}
 	newModel, cmd := model.Update(msg)
 	model = newModel.(Model)
 	if cmd != nil {

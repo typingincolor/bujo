@@ -230,6 +230,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.searchView.selectedIdx = 0
 		return m, nil
 
+	case pendingTasksLoadedMsg:
+		m.pendingTasksState.loading = false
+		m.pendingTasksState.entries = msg.entries
+		m.pendingTasksState.selectedIdx = 0
+		return m, nil
+
+	case questionsLoadedMsg:
+		m.questionsState.loading = false
+		m.questionsState.entries = msg.entries
+		m.questionsState.selectedIdx = 0
+		return m, nil
+
 	case locationsLoadedMsg:
 		m.setLocationMode.locations = msg.locations
 		return m, nil
@@ -633,14 +645,6 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		newPriority := entry.Priority.Cycle()
 		return m, m.cyclePriorityCmd(entry.ID, newPriority)
 
-	case key.Matches(msg, m.keyMap.ToggleView):
-		if m.viewMode == ViewModeDay {
-			m.viewMode = ViewModeWeek
-		} else {
-			m.viewMode = ViewModeDay
-		}
-		return m, m.loadAgendaCmd()
-
 	case key.Matches(msg, m.keyMap.GotoDate):
 		ti := textinput.New()
 		ti.Placeholder = "today, yesterday, 2026-01-15"
@@ -668,6 +672,11 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		} else {
 			m.viewDate = m.viewDate.AddDate(0, 0, 7)
 		}
+		m.selectedIdx = 0
+		return m, m.loadAgendaCmd()
+
+	case key.Matches(msg, m.keyMap.GotoToday):
+		m.viewDate = time.Now()
 		m.selectedIdx = 0
 		return m, m.loadAgendaCmd()
 
@@ -1977,7 +1986,26 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	switch {
 	case key.Matches(msg, m.keyMap.ViewJournal):
 		newView = ViewTypeJournal
+		m.viewMode = ViewModeDay
 		cmd = m.loadAgendaCmd()
+		switched = true
+
+	case key.Matches(msg, m.keyMap.ViewReview):
+		newView = ViewTypeReview
+		m.viewMode = ViewModeWeek
+		cmd = m.loadAgendaCmd()
+		switched = true
+
+	case key.Matches(msg, m.keyMap.ViewPendingTasks):
+		newView = ViewTypePendingTasks
+		m.pendingTasksState.loading = true
+		cmd = m.loadPendingTasksCmd()
+		switched = true
+
+	case key.Matches(msg, m.keyMap.ViewQuestions):
+		newView = ViewTypeQuestions
+		m.questionsState.loading = true
+		cmd = m.loadQuestionsCmd()
 		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewHabits):
