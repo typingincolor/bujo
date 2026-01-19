@@ -69,5 +69,5 @@ x outstanding tasks view - the indicator for context works but doesn't look grea
 . today view - bottom of screen shows events from yesterday (bug)
 . need to be able to move tasks to a list in TUI
 . use > to migrate tasks rather than m (TUI and check FE)
-. remove warning message "failed to initialize AI: AI features are disabled (set BUJO_AI_ENABLED=true to enable)"
+x remove warning message "failed to initialize AI: AI features are disabled (set BUJO_AI_ENABLED=true to enable)"
 . need goto today option in journal view of frontend
