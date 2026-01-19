@@ -1,6 +1,6 @@
 ---
 description: List issues from docs/issues.txt with optional filtering
-allowed-tools: Read, Bash(grep:*), Bash(wc:*)
+allowed-tools: Read
 ---
 
 # List Issues

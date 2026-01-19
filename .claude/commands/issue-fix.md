@@ -1,6 +1,6 @@
 ---
 description: Start fixing an issue with TDD workflow
-allowed-tools: Read, Edit, Bash(git:*), Glob, Grep
+allowed-tools: Read, Edit, Bash(git status), Bash(git checkout *), Bash(git pull), Bash(git branch *), Glob, Grep
 ---
 
 # Fix Issue
