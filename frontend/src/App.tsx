@@ -151,6 +151,10 @@ function App() {
     })
   }, [])
 
+  const handleGoToToday = useCallback(() => {
+    setCurrentDate(startOfDay(new Date()))
+  }, [])
+
   const handlePrevWeek = useCallback(() => {
     setReviewAnchorDate(prev => {
       const newDate = new Date(prev)
@@ -206,7 +210,7 @@ function App() {
 
       if (isInputFocused) return
 
-      // Day navigation shortcuts (h/l) - always available in today view
+      // Day navigation shortcuts (h/l/T) - always available in today view
       if (view === 'today') {
         if (e.key === 'h') {
           e.preventDefault()
@@ -216,6 +220,11 @@ function App() {
         if (e.key === 'l') {
           e.preventDefault()
           handleNextDay()
+          return
+        }
+        if (e.key === 'T') {
+          e.preventDefault()
+          handleGoToToday()
           return
         }
       }
@@ -306,7 +315,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, cycleHabitPeriod])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -435,6 +444,7 @@ function App() {
 
   const today = days[0]
   const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
+  const isViewingToday = currentDate.toDateString() === new Date().toDateString()
 
   return (
     <div className="flex h-screen bg-background">
@@ -477,6 +487,15 @@ function App() {
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
+                {!isViewingToday && (
+                  <button
+                    onClick={handleGoToToday}
+                    aria-label="Go to today"
+                    className="px-3 py-2 text-sm rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
                 <button
                   onClick={() => setShowCaptureModal(true)}
                   title="Open capture modal"

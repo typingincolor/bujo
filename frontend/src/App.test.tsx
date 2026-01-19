@@ -1313,6 +1313,107 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
   })
 })
 
+describe('App - Go to Today', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+  })
+
+  it('shows Go to today button when viewing a different day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    // Navigate to previous day
+    const prevButton = screen.getByRole('button', { name: /previous day/i })
+    await user.click(prevButton)
+
+    // Go to today button should appear (distinct from sidebar Today nav button)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+    })
+  })
+
+  it('hides Go to today button when viewing today', async () => {
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    // Go to today button should NOT be visible when viewing today
+    expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+  })
+
+  it('clicking Go to today button navigates back to today', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    // Navigate to previous day
+    const prevButton = screen.getByRole('button', { name: /previous day/i })
+    await user.click(prevButton)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    // Click Go to today button
+    const todayButton = screen.getByRole('button', { name: /go to today/i })
+    await user.click(todayButton)
+
+    // Should trigger data refresh
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+
+    // Go to today button should disappear after navigating back to today
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+    })
+  })
+
+  it('pressing T navigates to today when viewing a different day', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('First task')).toBeInTheDocument()
+    })
+
+    // Navigate to previous day
+    const prevButton = screen.getByRole('button', { name: /previous day/i })
+    await user.click(prevButton)
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+    })
+
+    vi.mocked(GetAgenda).mockClear()
+
+    // Press T to go to today
+    await user.keyboard('T')
+
+    // Should trigger data refresh
+    await waitFor(() => {
+      expect(GetAgenda).toHaveBeenCalled()
+    })
+
+    // Go to today button should disappear
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+    })
+  })
+})
+
 describe('App - Review View (formerly Past Week)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
