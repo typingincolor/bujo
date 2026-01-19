@@ -24,13 +24,13 @@ describe('toWailsTime', () => {
     expect(result).toContain('2026-01-19')
   })
 
-  it('returns a string that Go can parse as RFC3339', () => {
+  it('returns a string that Go can parse as RFC3339 with timezone offset', () => {
     const date = new Date(2026, 0, 19, 14, 30, 0, 0) // 2:30 PM local
 
     const result = toWailsTime(date)
 
-    // Should be a valid ISO 8601 / RFC3339 format string
-    // Go's time.Time expects this format for JSON unmarshaling
-    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+    // Should be a valid ISO 8601 / RFC3339 format string with timezone offset
+    // Format: YYYY-MM-DDTHH:mm:ss+HH:MM or YYYY-MM-DDTHH:mm:ss-HH:MM
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/)
   })
 })

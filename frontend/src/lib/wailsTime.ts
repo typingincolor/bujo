@@ -8,5 +8,9 @@ export function toWailsTime(date: Date): time.Time {
   const hours = pad(date.getHours())
   const minutes = pad(date.getMinutes())
   const seconds = pad(date.getSeconds())
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z` as unknown as time.Time
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const offsetHours = pad(Math.floor(Math.abs(offset) / 60))
+  const offsetMins = pad(Math.abs(offset) % 60)
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}` as unknown as time.Time
 }
