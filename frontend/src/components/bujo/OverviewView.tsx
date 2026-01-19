@@ -1,6 +1,7 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { ContextPill } from './ContextPill';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
@@ -305,14 +306,10 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                           >
                             {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
                             {ancestorCount > 0 && !isExpanded && (
-                              <button
-                                data-testid="context-pill"
-                                onClick={(e) => { e.stopPropagation(); toggleExpanded(entry.id); }}
-                                title={`Show ${ancestorCount} parent${ancestorCount > 1 ? 's' : ''}`}
-                                className="px-1.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full hover:bg-secondary transition-colors flex-shrink-0"
-                              >
-                                {ancestorCount}
-                              </button>
+                              <ContextPill
+                                count={ancestorCount}
+                                onClick={() => toggleExpanded(entry.id)}
+                              />
                             )}
                             <span
                               data-testid="entry-symbol"
