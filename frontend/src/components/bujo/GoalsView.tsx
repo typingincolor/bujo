@@ -4,7 +4,7 @@ import { Target, CheckCircle2, Circle, ChevronLeft, ChevronRight, Plus, X, Trash
 import { format, parse, addMonths } from 'date-fns';
 import { useState, useRef } from 'react';
 import { MarkGoalDone, MarkGoalActive, CreateGoal, DeleteGoal, MigrateGoal, UpdateGoal, CancelGoal, UncancelGoal } from '@/wailsjs/go/wails/App';
-import { time } from '@/wailsjs/go/models';
+import { toWailsTime } from '@/lib/wailsTime';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface GoalsViewProps {
@@ -16,10 +16,6 @@ interface GoalsViewProps {
 function getMonthLabel(monthStr: string): string {
   const date = parse(monthStr, 'yyyy-MM', new Date());
   return format(date, 'MMMM yyyy');
-}
-
-function toWailsTime(date: Date): time.Time {
-  return date.toISOString() as unknown as time.Time
 }
 
 export function GoalsView({ goals: initialGoals, onGoalChanged, onError }: GoalsViewProps) {
