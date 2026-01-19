@@ -19,9 +19,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Lint - runs on all PRs and pushes
+  # Detect what changed to run only relevant jobs
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - '**.go'
+              - 'go.mod'
+              - 'go.sum'
+            frontend:
+              - 'frontend/**'
+
+  # Lint - runs when Go files change
   lint:
     name: Lint Go
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,10 +63,12 @@ jobs:
           version: latest
           args: ./cmd/... ./internal/...
 
-  # Go tests - Linux (primary for PRs, fast feedback)
-  test-go-linux:
-    name: Test Go (Linux)
-    runs-on: ubuntu-latest
+  # Go tests - macOS (PRIMARY, runs on all PRs and pushes)
+  test-go-macos:
+    name: Test Go (macOS)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true'
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -63,11 +87,12 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: backend
 
-  # Go tests - macOS (push only, primary platform)
-  test-go-macos:
-    name: Test Go (macOS)
-    if: github.event_name == 'push'
-    runs-on: macos-latest
+  # Go tests - Linux (secondary, push only)
+  test-go-linux:
+    name: Test Go (Linux)
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' && github.event_name == 'push'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +108,8 @@ jobs:
   # Go tests - Windows (push only)
   test-go-windows:
     name: Test Go (Windows)
-    if: github.event_name == 'push'
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' && github.event_name == 'push'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -97,11 +123,11 @@ jobs:
       - name: Run tests
         run: go test -v ./cmd/... ./internal/...
 
-  # CLI build - Linux
-  build-cli-linux:
-    name: Build CLI (Linux)
+  # CLI build - macOS (PRIMARY, runs on all PRs and pushes)
+  build-cli-macos:
+    name: Build CLI (macOS)
     needs: [lint]
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -114,12 +140,12 @@ jobs:
       - name: Build CLI
         run: go build -v ./cmd/bujo
 
-  # CLI build - macOS (push only, primary platform)
-  build-cli-macos:
-    name: Build CLI (macOS)
-    if: github.event_name == 'push'
+  # CLI build - Linux (secondary, push only)
+  build-cli-linux:
+    name: Build CLI (Linux)
     needs: [lint]
-    runs-on: macos-latest
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -135,8 +161,8 @@ jobs:
   # CLI build - Windows (push only)
   build-cli-windows:
     name: Build CLI (Windows)
-    if: github.event_name == 'push'
     needs: [lint]
+    if: github.event_name == 'push'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -150,9 +176,11 @@ jobs:
       - name: Build CLI
         run: go build -v ./cmd/bujo
 
-  # Frontend - lint, test, build (runs on all PRs)
+  # Frontend - lint, test, build (when frontend files change)
   frontend:
     name: Frontend (Lint, Test, Build)
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -186,11 +214,11 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Desktop app - macOS (push only, primary platform)
+  # Desktop app - macOS (push only, requires both Go and frontend changes)
   build-desktop-macos:
     name: Build Desktop App (macOS)
-    if: github.event_name == 'push'
     needs: [lint, frontend]
+    if: github.event_name == 'push'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
