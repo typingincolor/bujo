@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, ChevronUp, MessageCircle } from 'lucide-react';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, MessageCircle } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -378,14 +378,16 @@ export function SearchView() {
                 data-result-id={result.id}
                 style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
               >
-                {/* Context indicator - shows when entry has parent and isn't expanded */}
+                {/* Context pill - shows when entry has parent and isn't expanded */}
                 {result.parentId !== null && !isExpanded && (
-                  <span title="Has parent context">
-                    <ChevronUp
-                      className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                      aria-label="Has parent context"
-                    />
-                  </span>
+                  <button
+                    data-testid="context-pill"
+                    onClick={(e) => { e.stopPropagation(); toggleExpanded(result); }}
+                    title="Show parent context"
+                    className="px-1.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full hover:bg-secondary transition-colors flex-shrink-0"
+                  >
+                    ⋯
+                  </button>
                 )}
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
                   <span className={cn(

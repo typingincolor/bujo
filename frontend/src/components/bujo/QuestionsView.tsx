@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { HelpCircle, ChevronDown, ChevronRight, ChevronUp, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
+import { HelpCircle, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useState, useEffect } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
@@ -256,12 +256,13 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                   <div className="space-y-1">
                     {grouped.get(dateStr)!.map((entry) => {
                       const isExpanded = expandedIds.has(entry.id)
-                      const parentChain = isExpanded ? buildParentChain(entry, entriesById) : []
+                      const parentChain = buildParentChain(entry, entriesById)
+                      const ancestorCount = parentChain.length
                       const isSelected = entryToFlatIndex.get(entry.id) === selectedIndex
                       return (
                         <div key={entry.id} className="space-y-1">
                           {/* Parent context entries (shown when expanded) */}
-                          {parentChain.map((parent, index) => (
+                          {isExpanded && parentChain.map((parent, index) => (
                             <div
                               key={parent.id}
                               className={cn(
@@ -287,14 +288,16 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                             )}
                             style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
                           >
-                            {/* Context indicator - shows when entry has parent and isn't expanded */}
-                            {entry.parentId !== null && !isExpanded && (
-                              <span title="Has parent context">
-                                <ChevronUp
-                                  className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                                  aria-label="Has parent context"
-                                />
-                              </span>
+                            {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
+                            {ancestorCount > 0 && !isExpanded && (
+                              <button
+                                data-testid="context-pill"
+                                onClick={(e) => { e.stopPropagation(); toggleExpanded(entry.id); }}
+                                title={`Show ${ancestorCount} parent${ancestorCount > 1 ? 's' : ''}`}
+                                className="px-1.5 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full hover:bg-secondary transition-colors flex-shrink-0"
+                              >
+                                {ancestorCount}
+                              </button>
                             )}
                             <span
                               data-testid="entry-symbol"

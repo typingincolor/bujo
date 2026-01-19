@@ -933,12 +933,12 @@ describe('SearchView - Keyboard Shortcuts', () => {
   })
 })
 
-describe('SearchView - Context Indicator', () => {
+describe('SearchView - Context Pill', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows context indicator icon when entry has parent and is not expanded', async () => {
+  it('shows context pill when entry has parent and is not expanded', async () => {
     vi.mocked(Search).mockResolvedValue([
       { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
     ] as never)
@@ -950,11 +950,12 @@ describe('SearchView - Context Indicator', () => {
     await user.type(input, 'child')
 
     await waitFor(() => {
-      expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+      const pill = screen.getByTestId('context-pill')
+      expect(pill).toBeInTheDocument()
     })
   })
 
-  it('does not show context indicator when entry has no parent', async () => {
+  it('does not show context pill when entry has no parent', async () => {
     vi.mocked(Search).mockResolvedValue([
       createMockEntry({ ID: 1, Content: 'Root entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z', ParentID: null }),
     ] as never)
@@ -968,10 +969,10 @@ describe('SearchView - Context Indicator', () => {
     await waitFor(() => {
       expect(screen.getByText('Root entry')).toBeInTheDocument()
     })
-    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
   })
 
-  it('hides context indicator when entry is expanded', async () => {
+  it('hides context pill when entry is expanded', async () => {
     vi.mocked(Search).mockResolvedValue([
       { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
     ] as never)
@@ -986,7 +987,7 @@ describe('SearchView - Context Indicator', () => {
     await user.type(input, 'child')
 
     await waitFor(() => {
-      expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
     })
 
     // Click to expand
@@ -995,6 +996,59 @@ describe('SearchView - Context Indicator', () => {
     await waitFor(() => {
       expect(screen.getByText('Parent entry')).toBeInTheDocument()
     })
-    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
+  })
+
+  it('clicking context pill toggles expand/collapse', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'child')
+
+    await waitFor(() => {
+      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+    })
+
+    // Click pill to expand
+    await user.click(screen.getByTestId('context-pill'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent entry')).toBeInTheDocument()
+    })
+  })
+
+  it('context pill click does not trigger other entry actions', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      { ...createMockEntry({ ID: 1, Content: 'Child task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
+    ] as never)
+    vi.mocked(GetEntryAncestors).mockResolvedValue([
+      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'child')
+
+    await waitFor(() => {
+      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+    })
+
+    // Click pill - should only expand, not mark done
+    await user.click(screen.getByTestId('context-pill'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent entry')).toBeInTheDocument()
+    })
+    expect(MarkEntryDone).not.toHaveBeenCalled()
   })
 })
