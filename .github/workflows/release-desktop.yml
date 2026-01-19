@@ -8,9 +8,21 @@ permissions:
   contents: write
 
 jobs:
-  release-desktop:
-    name: Release Desktop App
-    runs-on: macos-latest
+  build:
+    name: Build ${{ matrix.platform.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: macOS
+            os: macos-latest
+            build-platform: darwin/universal
+            artifact-name: darwin-universal
+          - name: Windows
+            os: windows-latest
+            build-platform: windows/amd64
+            artifact-name: windows-amd64
+    runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,37 +47,78 @@ jobs:
 
       - name: Get version
         id: version
+        shell: bash
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building version: $VERSION"
 
-      - name: Build Wails app (universal)
-        run: wails build -platform darwin/universal
+      - name: Build Wails app
+        run: wails build -platform ${{ matrix.platform.build-platform }}
 
-      - name: Create release archive
+      - name: Create release archive (macOS)
+        if: matrix.platform.os == 'macos-latest'
         run: |
           cd build/bin
-          zip -r bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip bujoapp.app
-          shasum -a 256 bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip > bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip.sha256
+          zip -r bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip bujoapp.app
+          shasum -a 256 bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip > bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip.sha256
+
+      - name: Create release archive (Windows)
+        if: matrix.platform.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          cd build/bin
+          Compress-Archive -Path bujoapp.exe -DestinationPath bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip
+          $hash = (Get-FileHash -Algorithm SHA256 bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip).Hash.ToLower()
+          "$hash  bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip" | Out-File -Encoding ASCII bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip.sha256
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
           files: |
-            build/bin/bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip
-            build/bin/bujo-desktop-${{ steps.version.outputs.version }}-darwin-universal.zip.sha256
+            build/bin/bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip
+            build/bin/bujo-desktop-${{ steps.version.outputs.version }}-${{ matrix.platform.artifact-name }}.zip.sha256
+
+  update-homebrew:
+    name: Update Homebrew Cask
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - name: Get version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get SHA256 from release
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Retry logic to handle brief delay in release asset availability
+          for i in 1 2 3 4 5; do
+            SHA256=$(gh release download "${VERSION}" --repo "${{ github.repository }}" --pattern "*darwin-universal.zip.sha256" --output - 2>/dev/null | awk '{print $1}')
+            if [ -n "$SHA256" ]; then
+              echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt $i: Release asset not yet available, waiting 10s..."
+            sleep 10
+          done
+          echo "Failed to download SHA256 after 5 attempts"
+          exit 1
 
       - name: Update Homebrew cask
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          VERSION_NUM=${VERSION#v}
-          SHA256=$(cat build/bin/bujo-desktop-${VERSION}-darwin-universal.zip.sha256 | awk '{print $1}')
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_NUM="${VERSION#v}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
 
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/typingincolor/homebrew-tap.git tap
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/typingincolor/homebrew-tap.git" tap
           mkdir -p tap/Casks
 
           cat > tap/Casks/bujo-desktop.rb << EOF
