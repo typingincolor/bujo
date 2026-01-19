@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Pre-push hook for bujo
-# Runs quality checks before allowing push
+# Runs quality checks appropriate to the files being pushed
 #
 # Installation:
 #   cp scripts/pre-push .git/hooks/pre-push
@@ -9,76 +9,179 @@
 
 set -e  # Exit on first error
 
+# Read push info from stdin
+# Format: <local ref> <local sha1> <remote ref> <remote sha1>
+ZERO_SHA="0000000000000000000000000000000000000000"
+has_code_changes=false
+changed_files=""
+
+while read local_ref local_sha remote_ref remote_sha; do
+    # Skip deletions (local sha is all zeros)
+    if [ "$local_sha" = "$ZERO_SHA" ]; then
+        continue
+    fi
+
+    # Skip tag pushes
+    case "$local_ref" in
+        refs/tags/*)
+            continue
+            ;;
+    esac
+
+    # Determine the range of commits being pushed
+    if [ "$remote_sha" = "$ZERO_SHA" ]; then
+        # New branch - compare against merge-base with main/master
+        base=$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD origin/master 2>/dev/null || echo "")
+        if [ -n "$base" ]; then
+            range="$base..$local_sha"
+        else
+            # Fallback: just check the last commit
+            range="$local_sha~1..$local_sha"
+        fi
+    else
+        range="$remote_sha..$local_sha"
+    fi
+
+    # Get list of changed files
+    files=$(git diff --name-only "$range" 2>/dev/null || echo "")
+    if [ -n "$files" ]; then
+        has_code_changes=true
+        changed_files="$changed_files
+$files"
+    fi
+done
+
+if [ "$has_code_changes" = "false" ]; then
+    echo "ℹ️  No code changes to validate (tag push or branch deletion). Skipping checks."
+    exit 0
+fi
+
+# Deduplicate changed files
+changed_files=$(echo "$changed_files" | sort -u | grep -v '^$' || true)
+
+if [ -z "$changed_files" ]; then
+    echo "ℹ️  No file changes detected. Skipping checks."
+    exit 0
+fi
+
+# Detect what types of changes we have
+has_go_changes=false
+has_frontend_changes=false
+has_code_changes=false
+
+for file in $changed_files; do
+    case "$file" in
+        *.go|go.mod|go.sum)
+            has_go_changes=true
+            has_code_changes=true
+            ;;
+        frontend/*)
+            has_frontend_changes=true
+            has_code_changes=true
+            ;;
+        *.md|docs/*|.github/*|LICENSE|.gitignore|.claude/*|scripts/*)
+            # Documentation/config - doesn't set has_code_changes
+            ;;
+        *)
+            # Unknown file type - treat as code change to be safe
+            has_code_changes=true
+            ;;
+    esac
+done
+
+# If only docs/config changed, skip all checks
+if [ "$has_code_changes" = "false" ]; then
+    echo "ℹ️  Only documentation/config changes. Skipping code checks."
+    exit 0
+fi
+
 echo "🔍 Running pre-push checks..."
-
-# 1. Check formatting
-echo "Checking gofmt..."
-unformatted=$(gofmt -l .)
-if [ -n "$unformatted" ]; then
-    echo "❌ Files need formatting:"
-    echo "$unformatted"
-    echo ""
-    echo "Run: gofmt -w ."
-    exit 1
+echo "   Changed files:"
+echo "$changed_files" | head -10 | sed 's/^/     /'
+total=$(echo "$changed_files" | wc -l | tr -d ' ')
+if [ "$total" -gt 10 ]; then
+    echo "     ... and $((total - 10)) more"
 fi
-echo "✅ gofmt passed"
+echo ""
 
-# 2. Check go.mod tidy
-echo "Checking go.mod is tidy..."
-cp go.mod go.mod.backup
-cp go.sum go.sum.backup
-go mod tidy
-if ! diff -q go.mod go.mod.backup > /dev/null 2>&1 || ! diff -q go.sum go.sum.backup > /dev/null 2>&1; then
-    echo "❌ go.mod or go.sum is not tidy. Run 'go mod tidy' and commit changes."
-    mv go.mod.backup go.mod
-    mv go.sum.backup go.sum
-    exit 1
-fi
-rm go.mod.backup go.sum.backup
-echo "✅ go.mod is tidy"
+# Go checks (only if Go files changed)
+if [ "$has_go_changes" = "true" ]; then
+    echo "📦 Go changes detected - running Go checks..."
 
-# 3. Build all Go code (CLI and internal packages including TUI)
-echo "Building Go code..."
-if ! go build ./cmd/bujo; then
-    echo "❌ CLI build failed. Push aborted."
-    exit 1
-fi
-if ! go build ./internal/...; then
-    echo "❌ Internal packages build failed. Push aborted."
-    exit 1
-fi
-echo "✅ Go build passed"
-
-# 4. Run tests
-echo "Running tests..."
-if ! go test ./...; then
-    echo "❌ Tests failed. Push aborted."
-    exit 1
-fi
-echo "✅ Tests passed"
-
-# 5. Run go vet
-echo "Running go vet..."
-if ! go vet ./...; then
-    echo "❌ go vet failed. Push aborted."
-    exit 1
-fi
-echo "✅ go vet passed"
-
-# 6. Run golangci-lint
-echo "Running golangci-lint..."
-if ! command -v golangci-lint &> /dev/null; then
-    echo "⚠️  golangci-lint not found, skipping"
-else
-    if ! golangci-lint run; then
-        echo "❌ golangci-lint failed. Push aborted."
+    # 1. Check formatting
+    echo "Checking gofmt..."
+    unformatted=$(gofmt -l .)
+    if [ -n "$unformatted" ]; then
+        echo "❌ Files need formatting:"
+        echo "$unformatted"
+        echo ""
+        echo "Run: gofmt -w ."
         exit 1
     fi
-    echo "✅ golangci-lint passed"
+    echo "✅ gofmt passed"
+
+    # 2. Check go.mod tidy
+    echo "Checking go.mod is tidy..."
+    cp go.mod go.mod.backup
+    cp go.sum go.sum.backup
+    go mod tidy
+    if ! diff -q go.mod go.mod.backup > /dev/null 2>&1 || ! diff -q go.sum go.sum.backup > /dev/null 2>&1; then
+        echo "❌ go.mod or go.sum is not tidy. Run 'go mod tidy' and commit changes."
+        mv go.mod.backup go.mod
+        mv go.sum.backup go.sum
+        exit 1
+    fi
+    rm go.mod.backup go.sum.backup
+    echo "✅ go.mod is tidy"
+
+    # 3. Build all Go code
+    echo "Building Go code..."
+    if ! go build ./cmd/bujo; then
+        echo "❌ CLI build failed. Push aborted."
+        exit 1
+    fi
+    if ! go build ./internal/...; then
+        echo "❌ Internal packages build failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ Go build passed"
+
+    # 4. Run tests
+    echo "Running Go tests..."
+    if ! go test ./...; then
+        echo "❌ Tests failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ Go tests passed"
+
+    # 5. Run go vet
+    echo "Running go vet..."
+    if ! go vet ./...; then
+        echo "❌ go vet failed. Push aborted."
+        exit 1
+    fi
+    echo "✅ go vet passed"
+
+    # 6. Run golangci-lint
+    echo "Running golangci-lint..."
+    if ! command -v golangci-lint &> /dev/null; then
+        echo "⚠️  golangci-lint not found, skipping"
+    else
+        if ! golangci-lint run; then
+            echo "❌ golangci-lint failed. Push aborted."
+            exit 1
+        fi
+        echo "✅ golangci-lint passed"
+    fi
+else
+    echo "ℹ️  No Go changes - skipping Go checks"
 fi
 
-# 7-11. Frontend checks (only if frontend directory exists)
-if [ -d "frontend" ]; then
+# Frontend checks (only if frontend files changed)
+if [ "$has_frontend_changes" = "true" ] && [ -d "frontend" ]; then
+    echo ""
+    echo "🌐 Frontend changes detected - running frontend checks..."
+
     echo "Running frontend lint..."
     if ! (cd frontend && npm run lint); then
         echo "❌ Frontend lint failed. Push aborted."
@@ -113,8 +216,10 @@ if [ -d "frontend" ]; then
         exit 1
     fi
     echo "✅ npm audit passed"
+elif [ "$has_frontend_changes" = "true" ]; then
+    echo "ℹ️  Frontend changes but no frontend directory - skipping frontend checks"
 else
-    echo "ℹ️  Frontend directory not found, skipping frontend checks"
+    echo "ℹ️  No frontend changes - skipping frontend checks"
 fi
 
 echo ""
