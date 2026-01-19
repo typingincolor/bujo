@@ -62,7 +62,7 @@ x The action icons should stay in the same places. Use empty placeholders for ic
 x Outstanding questions view is not working. I have an outstanding question and I cannot see it.
 x Context indicator is showing, but clicking on it does not show the context
 x outstanding tasks view - the indicator for context works but doesn't look great. Use a pill instead. Need to be able to collapse context as well
-. produce a windows build of the desktop app
+x produce a windows build of the desktop app
 . ability to tag people (@mentions with surname support), searchable by tagged person
 x change views in tui / cli to match those in frontend
 x need to be able to change entry type in tui
