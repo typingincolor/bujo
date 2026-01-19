@@ -18,12 +18,10 @@ jobs:
             os: macos-latest
             build-platform: darwin/universal
             artifact-name: darwin-universal
-            archive-ext: zip
           - name: Windows
             os: windows-latest
             build-platform: windows/amd64
             artifact-name: windows-amd64
-            archive-ext: zip
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout
@@ -93,21 +91,24 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          pattern: '*darwin-universal*'
-          merge-multiple: true
-        continue-on-error: true
-
       - name: Get SHA256 from release
         id: sha
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          SHA256=$(gh release download "${VERSION}" --repo "${{ github.repository }}" --pattern "*darwin-universal.zip.sha256" --output - | awk '{print $1}')
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          # Retry logic to handle brief delay in release asset availability
+          for i in 1 2 3 4 5; do
+            SHA256=$(gh release download "${VERSION}" --repo "${{ github.repository }}" --pattern "*darwin-universal.zip.sha256" --output - 2>/dev/null | awk '{print $1}')
+            if [ -n "$SHA256" ]; then
+              echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt $i: Release asset not yet available, waiting 10s..."
+            sleep 10
+          done
+          echo "Failed to download SHA256 after 5 attempts"
+          exit 1
 
       - name: Update Homebrew cask
         env:
