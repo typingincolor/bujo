@@ -306,13 +306,9 @@ describe('App - QuickStats', () => {
       expect(screen.getByText('Today task')).toBeInTheDocument()
     })
 
-    // Should show 3 overdue tasks - the value is in a sibling div
-    // Find the QuickStats card (not the sidebar) by looking for the specific structure
-    const overdueCards = screen.getAllByText('Pending Tasks')
-      .map(el => el.closest('.rounded-lg'))
-      .filter(card => card?.querySelector('.font-display'))
-    expect(overdueCards.length).toBeGreaterThan(0)
-    expect(overdueCards[0]).toHaveTextContent('3')
+    // Should show 3 overdue tasks in the QuickStats card
+    const pendingTasksCard = screen.getByTestId('stat-card-pending-tasks')
+    expect(pendingTasksCard).toHaveTextContent('3')
   })
 })
 

@@ -58,7 +58,7 @@ describe('OverviewView - Display', () => {
 
   it('shows empty state when no overdue entries', () => {
     render(<OverviewView overdueEntries={[]} />)
-    expect(screen.getByText(/no outstanding tasks|you're all caught up/i)).toBeInTheDocument()
+    expect(screen.getByText(/no pending tasks/i)).toBeInTheDocument()
   })
 
   it('displays entry date', () => {

@@ -259,7 +259,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
         <>
           {taskEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground italic py-6 text-center">
-              No outstanding tasks. You're all caught up!
+              No pending tasks. You're all caught up!
             </p>
           ) : (
             <div className="space-y-4">

@@ -245,7 +245,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
         <>
           {questionEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground italic py-6 text-center">
-              No outstanding questions. All answered!
+              No open questions. All answered!
             </p>
           ) : (
             <div className="space-y-4">

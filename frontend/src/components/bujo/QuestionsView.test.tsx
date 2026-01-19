@@ -57,7 +57,7 @@ describe('QuestionsView - Display', () => {
 
   it('shows empty state when no questions', () => {
     render(<QuestionsView questions={[]} />)
-    expect(screen.getByText(/no outstanding questions|all answered/i)).toBeInTheDocument()
+    expect(screen.getByText(/no open questions/i)).toBeInTheDocument()
   })
 
   it('displays entry date', () => {
