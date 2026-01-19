@@ -66,7 +66,7 @@ x outstanding tasks view - the indicator for context works but doesn't look grea
 . ability to tag people (@mentions with surname support), searchable by tagged person
 . change views in tui / cli to match those in frontend
 . need to be able to change entry type in tui
-. today view - bottom of screen shows events from yesterday (bug)
+x today view - bottom of screen shows events from yesterday (bug)
 . need to be able to move tasks to a list in TUI
 . use > to migrate tasks rather than m (TUI and check FE)
 x remove warning message "failed to initialize AI: AI features are disabled (set BUJO_AI_ENABLED=true to enable)"
