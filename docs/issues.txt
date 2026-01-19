@@ -78,3 +78,5 @@ x the descriptions in the sidebar of the frontend are not very good, suggest bet
 . Service layer interface duplication - services redefine repository interfaces instead of using domain interfaces
 . StatsService error silencing - calculateHabitStats() uses continue on error instead of propagating (internal/service/stats.go:221-223)
 . Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
+. If you cancel or delete and answer to a question, you should be able to answer it again
+. How do you add an answer to a question using the capture modal?
