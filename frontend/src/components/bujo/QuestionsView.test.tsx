@@ -224,8 +224,41 @@ describe('QuestionsView - Collapse/Expand', () => {
   })
 })
 
-describe('QuestionsView - Context Display', () => {
-  it('shows context when clicking on a question', async () => {
+describe('QuestionsView - Context Pill', () => {
+  it('shows context pill with ancestor count when question has parent', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent note', type: 'note', parentId: null }),
+      createTestEntry({ id: 2, content: 'Question with parent', type: 'question', parentId: 1 }),
+    ]
+    render(<QuestionsView questions={entries} />)
+
+    const pill = screen.getByTestId('context-pill')
+    expect(pill).toBeInTheDocument()
+    expect(pill).toHaveTextContent('1')
+  })
+
+  it('shows correct ancestor count for deeply nested questions', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Root event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Parent note', type: 'note', parentId: 1 }),
+      createTestEntry({ id: 3, content: 'Question with grandparent', type: 'question', parentId: 2 }),
+    ]
+    render(<QuestionsView questions={entries} />)
+
+    const pill = screen.getByTestId('context-pill')
+    expect(pill).toHaveTextContent('2')
+  })
+
+  it('does not show context pill when question has no parent', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Root question', type: 'question', parentId: null }),
+    ]
+    render(<QuestionsView questions={entries} />)
+
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
+  })
+
+  it('hides context pill when entry is expanded', async () => {
     const user = userEvent.setup()
     const entries = [
       createTestEntry({ id: 1, content: 'Parent note', type: 'note', parentId: null }),
@@ -233,26 +266,56 @@ describe('QuestionsView - Context Display', () => {
     ]
     render(<QuestionsView questions={entries} />)
 
-    // Only question should be visible initially
-    expect(screen.getByText('Question with parent')).toBeInTheDocument()
-    expect(screen.queryByText('Parent note')).not.toBeInTheDocument()
+    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
 
     // Click to expand
     await user.click(screen.getByText('Question with parent'))
 
-    // Now parent should be visible in context
     await waitFor(() => {
       expect(screen.getByText('Parent note')).toBeInTheDocument()
     })
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
   })
 
-  it('shows context indicator when question has parent', () => {
+  it('clicking context pill toggles expand/collapse', async () => {
+    const user = userEvent.setup()
     const entries = [
       createTestEntry({ id: 1, content: 'Parent note', type: 'note', parentId: null }),
       createTestEntry({ id: 2, content: 'Question with parent', type: 'question', parentId: 1 }),
     ]
     render(<QuestionsView questions={entries} />)
-    expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+
+    // Click pill to expand
+    await user.click(screen.getByTestId('context-pill'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent note')).toBeInTheDocument()
+    })
+
+    // Click entry to collapse
+    await user.click(screen.getByText('Question with parent'))
+
+    await waitFor(() => {
+      expect(screen.queryByText('Parent note')).not.toBeInTheDocument()
+      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+    })
+  })
+
+  it('context pill click does not trigger other entry actions', async () => {
+    const user = userEvent.setup()
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent note', type: 'note', parentId: null }),
+      createTestEntry({ id: 2, content: 'Question with parent', type: 'question', parentId: 1 }),
+    ]
+    render(<QuestionsView questions={entries} />)
+
+    // Click pill - should only expand, not trigger other actions
+    await user.click(screen.getByTestId('context-pill'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent note')).toBeInTheDocument()
+    })
+    expect(CancelEntry).not.toHaveBeenCalled()
   })
 })
 

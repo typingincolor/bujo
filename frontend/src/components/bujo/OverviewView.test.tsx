@@ -500,28 +500,46 @@ describe('OverviewView - Keyboard Shortcuts', () => {
   })
 })
 
-describe('OverviewView - Context Indicator', () => {
-  it('shows context indicator icon when entry has parent and is not expanded', () => {
+describe('OverviewView - Context Pill', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows context pill with ancestor count when entry has parent and is not expanded', () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
       createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
     ]
     render(<OverviewView overdueEntries={entries} />)
 
-    expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+    const pill = screen.getByTestId('context-pill')
+    expect(pill).toBeInTheDocument()
+    expect(pill).toHaveTextContent('1')
   })
 
-  it('does not show context indicator when entry has no parent', () => {
+  it('shows correct ancestor count for deeply nested entries', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Grandparent', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Parent', type: 'note', parentId: 1 }),
+      createTestEntry({ id: 3, content: 'Child task', type: 'task', parentId: 2 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    const pill = screen.getByTestId('context-pill')
+    expect(pill).toHaveTextContent('2')
+  })
+
+  it('does not show context pill when entry has no parent', () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Root task', type: 'task', parentId: null }),
     ]
     render(<OverviewView overdueEntries={entries} />)
 
     expect(screen.getByText('Root task')).toBeInTheDocument()
-    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
   })
 
-  it('hides context indicator when entry is expanded', async () => {
+  it('hides context pill when entry is expanded', async () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
       createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
@@ -529,16 +547,69 @@ describe('OverviewView - Context Indicator', () => {
     const user = userEvent.setup()
     render(<OverviewView overdueEntries={entries} />)
 
-    expect(screen.getByTitle('Has parent context')).toBeInTheDocument()
+    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
 
-    // Click to expand
-    await user.click(screen.getByText('Task with parent'))
+    // Click pill to expand
+    await user.click(screen.getByTestId('context-pill'))
 
     await waitFor(() => {
-      // Parent event appears in context chain (not in main list since it's type 'event', not 'task')
       expect(screen.getByText('Parent event')).toBeInTheDocument()
     })
-    expect(screen.queryByTitle('Has parent context')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
+  })
+
+  it('clicking context pill toggles expand/collapse', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Click pill to expand
+    await user.click(screen.getByTestId('context-pill'))
+    await waitFor(() => {
+      expect(screen.getByText('Parent event')).toBeInTheDocument()
+    })
+
+    // Click entry row to collapse (pill is hidden when expanded)
+    await user.click(screen.getByText('Task with parent'))
+    await waitFor(() => {
+      expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
+    })
+
+    // Pill should reappear
+    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+  })
+
+  it('context pill click does not trigger other entry actions', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Click pill - should only expand, not mark done
+    await user.click(screen.getByTestId('context-pill'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent event')).toBeInTheDocument()
+    })
+    expect(MarkEntryDone).not.toHaveBeenCalled()
+  })
+
+  it('context starts collapsed by default', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+
+    // Parent should not be visible initially
+    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
+    // Pill should be visible
+    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
   })
 })
 

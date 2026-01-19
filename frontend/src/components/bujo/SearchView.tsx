@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, ChevronUp, MessageCircle } from 'lucide-react';
+import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, MessageCircle } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { ContextPill } from './ContextPill';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
@@ -31,6 +32,8 @@ export function SearchView() {
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [ancestorsMap, setAncestorsMap] = useState<Map<number, AncestorEntry[]>>(new Map());
+  const [ancestorCounts, setAncestorCounts] = useState<Map<number, number>>(new Map());
+  const [loadingCounts, setLoadingCounts] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [answerModalOpen, setAnswerModalOpen] = useState(false);
   const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
@@ -39,6 +42,8 @@ export function SearchView() {
     setQuery(searchQuery);
     setExpandedIds(new Set());
     setAncestorsMap(new Map());
+    setAncestorCounts(new Map());
+    setLoadingCounts(new Set());
     setSelectedIndex(-1);
 
     if (!searchQuery.trim()) {
@@ -49,15 +54,42 @@ export function SearchView() {
 
     try {
       const searchResults = await Search(searchQuery);
-      setResults((searchResults || []).map(entry => ({
+      const mappedResults = (searchResults || []).map(entry => ({
         id: entry.ID,
         content: entry.Content,
         type: entry.Type as EntryType,
         priority: ((entry.Priority as string)?.toLowerCase() || 'none') as Priority,
         date: (entry.CreatedAt as unknown as string) || '',
         parentId: entry.ParentID ?? null,
-      })));
+      }));
+      setResults(mappedResults);
       setHasSearched(true);
+
+      const resultsWithParents = mappedResults.filter(r => r.parentId !== null);
+      if (resultsWithParents.length > 0) {
+        setLoadingCounts(new Set(resultsWithParents.map(r => r.id)));
+        for (const result of resultsWithParents) {
+          try {
+            const ancestors = await GetEntryAncestors(result.id);
+            setAncestorCounts(prev => {
+              const next = new Map(prev);
+              next.set(result.id, (ancestors || []).length);
+              return next;
+            });
+          } catch {
+            setAncestorCounts(prev => {
+              const next = new Map(prev);
+              next.set(result.id, 1);
+              return next;
+            });
+          }
+          setLoadingCounts(prev => {
+            const next = new Set(prev);
+            next.delete(result.id);
+            return next;
+          });
+        }
+      }
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);
@@ -344,6 +376,8 @@ export function SearchView() {
           const isExpanded = expandedIds.has(result.id);
           const ancestors = ancestorsMap.get(result.id) || [];
           const isSelected = index === selectedIndex;
+          const ancestorCount = ancestorCounts.get(result.id) ?? 0;
+          const isLoadingCount = loadingCounts.has(result.id);
 
           return (
             <div
@@ -378,14 +412,13 @@ export function SearchView() {
                 data-result-id={result.id}
                 style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
               >
-                {/* Context indicator - shows when entry has parent and isn't expanded */}
+                {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
                 {result.parentId !== null && !isExpanded && (
-                  <span title="Has parent context">
-                    <ChevronUp
-                      className="w-4 h-4 text-muted-foreground flex-shrink-0"
-                      aria-label="Has parent context"
-                    />
-                  </span>
+                  <ContextPill
+                    count={ancestorCount}
+                    onClick={() => toggleExpanded(result)}
+                    isLoading={isLoadingCount}
+                  />
                 )}
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
                   <span className={cn(
