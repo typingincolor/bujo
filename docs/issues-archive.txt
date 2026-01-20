@@ -86,3 +86,4 @@
 #76 x BackupService SQL bypass - VerifyBackup() uses direct sql.Open() instead of repository interface (internal/service/backup.go:118-125)
 #77 x CLI commands bypass dependency injection - archive, backup, export, import, history commands directly instantiate sqlite repositories
 #80 x Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
+#78 x Service layer interface duplication - services redefine repository interfaces instead of using domain interfaces
