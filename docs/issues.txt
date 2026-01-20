@@ -4,6 +4,6 @@
 # Closed issues archived in issues-archive.txt
 
 #66 . ability to tag people (@mentions with surname support), searchable by tagged person
-#75 . update all documentation
 #88 . Need to password protect app / database - encrypt data at rest
 #90 . Settings page - make GitHub link open the repo, add support link to GitHub issues page
+#91 . Add automatic backup support to desktop app - currently automatic backups only trigger from CLI/TUI, desktop app users need manual backup

@@ -88,3 +88,4 @@
 #80 x Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
 #78 x Service layer interface duplication - services redefine repository interfaces instead of using domain interfaces
 #79 x StatsService error silencing - calculateHabitStats() uses continue on error instead of propagating (internal/service/stats.go:221-223)
+#75 x update all documentation
