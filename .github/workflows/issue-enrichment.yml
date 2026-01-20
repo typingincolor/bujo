@@ -24,7 +24,7 @@ jobs:
         run: go mod tidy
 
       - name: Analyze issue and add context
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const issue = context.payload.issue;
