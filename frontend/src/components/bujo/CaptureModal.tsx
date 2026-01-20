@@ -143,9 +143,10 @@ export function CaptureModal({
             <div><code className="bg-muted px-1 rounded">-</code> Note</div>
             <div><code className="bg-muted px-1 rounded">o</code> Event</div>
             <div><code className="bg-muted px-1 rounded">?</code> Question</div>
+            <div><code className="bg-muted px-1 rounded">a</code> Answer</div>
           </div>
           <div className="mt-2 text-muted-foreground">
-            <span className="font-medium">Tip:</span> Indent with spaces/tabs to create child entries.
+            <span className="font-medium">Tip:</span> Indent to create child entries. Indent <code className="bg-muted px-1 rounded">a</code> after a question to answer it.
           </div>
         </div>
 

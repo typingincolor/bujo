@@ -349,6 +349,7 @@ func TestParseEntryType_QuestionAndAnswered(t *testing.T) {
 		{"question from ?", "? What is the deadline", EntryTypeQuestion},
 		{"answered from star", "★ This is answered", EntryTypeAnswered},
 		{"answer from arrow", "↳ This is the answer", EntryTypeAnswer},
+		{"answer from a", "a This is the answer", EntryTypeAnswer},
 	}
 
 	for _, tt := range tests {

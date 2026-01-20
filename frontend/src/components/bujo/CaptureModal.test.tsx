@@ -398,4 +398,36 @@ o Event from file`
       })
     })
   })
+
+  describe('answering questions', () => {
+    it('shows answer syntax in help section', () => {
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      expect(screen.getByText('Answer')).toBeInTheDocument()
+      expect(screen.getByText(/answer it/i)).toBeInTheDocument()
+    })
+
+    it('sends question with indented answer to AddEntry', async () => {
+      const onEntriesCreated = vi.fn()
+      const user = userEvent.setup()
+      vi.mocked(AddEntry).mockClear()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={onEntriesCreated} />
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter entries/i)
+      await user.type(textarea, '? What is today{enter}  a Monday')
+      await user.click(screen.getByText('Save Entries'))
+
+      await waitFor(() => {
+        expect(AddEntry).toHaveBeenCalledWith(
+          '? What is today\n  a Monday',
+          expect.anything()
+        )
+      })
+    })
+  })
 })
