@@ -297,6 +297,18 @@ func (r *DayContextRepository) GetDeleted(ctx context.Context) ([]domain.DayCont
 	return contexts, rows.Err()
 }
 
+func (r *DayContextRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `SELECT MAX(valid_from) FROM day_context`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *DayContextRepository) Restore(ctx context.Context, entityID domain.EntityID) error {
 	now := time.Now().Format(time.RFC3339)
 

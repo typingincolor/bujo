@@ -259,6 +259,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.saveCaptureCmd(content)
 
+	case checkChangesMsg:
+		return m.handleCheckChanges()
+
+	case dataChangedMsg:
+		return m.handleDataChanged()
+
 	case tea.KeyMsg:
 		if m.quitConfirmMode.active {
 			return m.handleQuitConfirmMode(msg)

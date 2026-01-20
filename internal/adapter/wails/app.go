@@ -7,6 +7,7 @@ import (
 	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type ListWithItems struct {
@@ -15,9 +16,16 @@ type ListWithItems struct {
 	Items []domain.ListItem
 }
 
+const (
+	changePollingInterval = 2 * time.Second
+	eventDataChanged      = "data:changed"
+)
+
 type App struct {
-	ctx      context.Context
-	services *app.Services
+	ctx          context.Context
+	services     *app.Services
+	lastModified time.Time
+	stopPolling  chan struct{}
 }
 
 func NewApp(services *app.Services) *App {
@@ -28,6 +36,49 @@ func NewApp(services *app.Services) *App {
 
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	a.stopPolling = make(chan struct{})
+
+	if a.services.ChangeDetection != nil {
+		lastMod, _ := a.services.ChangeDetection.GetLastModified(ctx)
+		a.lastModified = lastMod
+		go a.pollForChanges()
+	}
+}
+
+func (a *App) pollForChanges() {
+	ticker := time.NewTicker(changePollingInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-a.stopPolling:
+			return
+		case <-ticker.C:
+			a.checkForChanges()
+		}
+	}
+}
+
+func (a *App) checkForChanges() {
+	if a.services.ChangeDetection == nil {
+		return
+	}
+
+	currentMod, err := a.services.ChangeDetection.GetLastModified(a.ctx)
+	if err != nil {
+		return
+	}
+
+	if currentMod.After(a.lastModified) {
+		a.lastModified = currentMod
+		runtime.EventsEmit(a.ctx, eventDataChanged)
+	}
+}
+
+func (a *App) Shutdown(_ context.Context) {
+	if a.stopPolling != nil {
+		close(a.stopPolling)
+	}
 }
 
 func (a *App) Greet(name string) string {

@@ -538,6 +538,20 @@ func (r *EntryRepository) GetAll(ctx context.Context) ([]domain.Entry, error) {
 	return r.scanEntries(rows)
 }
 
+func (r *EntryRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `
+		SELECT MAX(valid_from) FROM entries
+	`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
 	if opts.Query == "" && opts.Type == nil {
 		return []domain.Entry{}, nil

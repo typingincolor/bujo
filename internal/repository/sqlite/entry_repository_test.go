@@ -1001,3 +1001,47 @@ func TestEntryRepository_Update_PreservesOrder(t *testing.T) {
 	_ = id2
 	_ = id3
 }
+
+func TestEntryRepository_GetLastModified_ReturnsLatestValidFrom(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	baseTime := time.Date(2026, 1, 20, 10, 0, 0, 0, time.UTC)
+	laterTime := time.Date(2026, 1, 20, 11, 0, 0, 0, time.UTC)
+
+	entry1 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "First entry",
+		CreatedAt: baseTime,
+	}
+	_, err := repo.Insert(ctx, entry1)
+	require.NoError(t, err)
+
+	lastModified, err := repo.GetLastModified(ctx)
+	require.NoError(t, err)
+	assert.False(t, lastModified.IsZero(), "should return a non-zero timestamp")
+
+	entry2 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Second entry",
+		CreatedAt: laterTime,
+	}
+	_, err = repo.Insert(ctx, entry2)
+	require.NoError(t, err)
+
+	newLastModified, err := repo.GetLastModified(ctx)
+	require.NoError(t, err)
+	assert.True(t, newLastModified.After(lastModified) || newLastModified.Equal(lastModified),
+		"last modified should be >= previous after insert")
+}
+
+func TestEntryRepository_GetLastModified_EmptyTable(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	lastModified, err := repo.GetLastModified(ctx)
+	require.NoError(t, err)
+	assert.True(t, lastModified.IsZero(), "should return zero time for empty table")
+}

@@ -11,13 +11,14 @@ import (
 )
 
 type Services struct {
-	DB      *sql.DB
-	Bujo    *service.BujoService
-	Habit   *service.HabitService
-	List    *service.ListService
-	Goal    *service.GoalService
-	Stats   *service.StatsService
-	Summary *service.SummaryService
+	DB              *sql.DB
+	Bujo            *service.BujoService
+	Habit           *service.HabitService
+	List            *service.ListService
+	Goal            *service.GoalService
+	Stats           *service.StatsService
+	Summary         *service.SummaryService
+	ChangeDetection *service.ChangeDetectionService
 }
 
 type ServiceFactory struct{}
@@ -50,12 +51,23 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 	goalRepo := sqlite.NewGoalRepository(db)
 	parser := domain.NewTreeParser()
 
+	changeDetectors := []domain.ChangeDetector{
+		entryRepo,
+		dayCtxRepo,
+		habitRepo,
+		habitLogRepo,
+		listRepo,
+		listItemRepo,
+		goalRepo,
+	}
+
 	return &Services{
-		DB:    db,
-		Bujo:  service.NewBujoService(entryRepo, dayCtxRepo, parser),
-		Habit: service.NewHabitService(habitRepo, habitLogRepo),
-		List:  service.NewListService(listRepo, listItemRepo),
-		Goal:  service.NewGoalService(goalRepo),
-		Stats: service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
+		DB:              db,
+		Bujo:            service.NewBujoService(entryRepo, dayCtxRepo, parser),
+		Habit:           service.NewHabitService(habitRepo, habitLogRepo),
+		List:            service.NewListService(listRepo, listItemRepo),
+		Goal:            service.NewGoalService(goalRepo),
+		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
+		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
 	}
 }

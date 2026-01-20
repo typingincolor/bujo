@@ -297,6 +297,18 @@ func (r *ListItemRepository) CountArchivable(ctx context.Context, olderThan time
 	return count, err
 }
 
+func (r *ListItemRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `SELECT MAX(valid_from) FROM list_items`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *ListItemRepository) DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error) {
 	result, err := r.db.ExecContext(ctx, `
 		DELETE FROM list_items

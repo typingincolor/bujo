@@ -24,14 +24,19 @@ const (
 	pendingTasksLookbackYears = 1
 )
 
+type ChangeDetector interface {
+	GetLastModified(ctx context.Context) (time.Time, error)
+}
+
 type Config struct {
-	BujoService    *service.BujoService
-	HabitService   *service.HabitService
-	ListService    *service.ListService
-	GoalService    *service.GoalService
-	SummaryService *service.SummaryService
-	StatsService   *service.StatsService
-	Theme          string
+	BujoService     *service.BujoService
+	HabitService    *service.HabitService
+	ListService     *service.ListService
+	GoalService     *service.GoalService
+	SummaryService  *service.SummaryService
+	StatsService    *service.StatsService
+	ChangeDetection ChangeDetector
+	Theme           string
 }
 
 type Model struct {
@@ -41,6 +46,8 @@ type Model struct {
 	goalService              *service.GoalService
 	summaryService           *service.SummaryService
 	statsService             *service.StatsService
+	changeDetection          ChangeDetector
+	lastCheckedModified      time.Time
 	agenda                   *service.MultiDayAgenda
 	journalGoals             []domain.Goal
 	entries                  []EntryItem
@@ -387,6 +394,7 @@ func NewWithConfig(cfg Config) Model {
 		goalService:       cfg.GoalService,
 		summaryService:    cfg.SummaryService,
 		statsService:      cfg.StatsService,
+		changeDetection:   cfg.ChangeDetection,
 		collapsed:         make(map[domain.EntityID]bool),
 		viewMode:          ViewModeDay,
 		viewDate:          today,
@@ -410,7 +418,13 @@ func NewWithConfig(cfg Config) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.loadAgendaCmd()
+	cmds := []tea.Cmd{m.loadAgendaCmd()}
+
+	if m.changeDetection != nil {
+		cmds = append(cmds, m.checkChangesCmd())
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func (m Model) availableLines() int {

@@ -316,6 +316,18 @@ func (r *HabitRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	return result.LastInsertId()
 }
 
+func (r *HabitRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `SELECT MAX(valid_from) FROM habits`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *HabitRepository) scanHabit(row *sql.Row) (*domain.Habit, error) {
 	var habit domain.Habit
 	var createdAt string

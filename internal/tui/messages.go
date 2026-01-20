@@ -166,3 +166,7 @@ type editorFinishedMsg struct {
 	content string
 	err     error
 }
+
+type checkChangesMsg struct{}
+
+type dataChangedMsg struct{}

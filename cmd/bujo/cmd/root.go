@@ -24,13 +24,14 @@ var (
 	dbPath  string
 	verbose bool
 
-	db             *sql.DB
-	bujoService    *service.BujoService
-	habitService   *service.HabitService
-	listService    *service.ListService
-	goalService    *service.GoalService
-	summaryService *service.SummaryService
-	statsService   *service.StatsService
+	db                     *sql.DB
+	bujoService            *service.BujoService
+	habitService           *service.HabitService
+	listService            *service.ListService
+	goalService            *service.GoalService
+	summaryService         *service.SummaryService
+	statsService           *service.StatsService
+	changeDetectionService *service.ChangeDetectionService
 )
 
 var rootCmd = &cobra.Command{
@@ -73,6 +74,17 @@ var rootCmd = &cobra.Command{
 		listService = service.NewListService(listRepo, listItemRepo)
 		goalService = service.NewGoalService(goalRepo)
 		statsService = service.NewStatsService(entryRepo, habitRepo, habitLogRepo)
+
+		changeDetectors := []domain.ChangeDetector{
+			entryRepo,
+			dayCtxRepo,
+			habitRepo,
+			habitLogRepo,
+			listRepo,
+			listItemRepo,
+			goalRepo,
+		}
+		changeDetectionService = service.NewChangeDetectionService(changeDetectors)
 
 		summaryRepo := sqlite.NewSummaryRepository(db)
 		aiClient, err := ai.NewAIClient(cmd.Context())
