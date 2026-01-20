@@ -1,41 +1,34 @@
 ---
-description: Start fixing an issue with TDD workflow
-allowed-tools: Read, Edit, Bash(git status), Bash(git checkout *), Bash(git pull), Bash(git branch *), Glob, Grep
+description: Start fixing a GitHub issue with TDD workflow
+allowed-tools: Bash(gh issue view *), Bash(git status), Bash(git checkout *), Bash(git pull), Bash(git branch *), Read, Glob, Grep
 ---
 
 # Fix Issue
 
-Create a branch and start fixing an issue using strict TDD.
+Create a branch and start fixing a GitHub issue using strict TDD.
 
 ## Arguments
 
-`$ARGUMENTS` should contain the issue number (e.g., `90` or `#90`).
-
-## File Format
-
-Issues use explicit IDs: `#ID STATUS DESCRIPTION`
-- Open issues are in `docs/issues.txt`
-- Closed issues are archived in `docs/issues-archive.txt`
+`$ARGUMENTS` should contain the GitHub issue number (e.g., `359` or `#359`).
 
 ## Instructions
 
 ### Step 1: Validate Issue
 
 1. Parse the issue number from `$ARGUMENTS` (strip `#` if present)
-2. Read `docs/issues.txt`
-3. Find the line matching `#[NUMBER]`
-4. Verify issue is open (`.` marker)
+2. Fetch issue details from GitHub: `gh issue view [NUMBER]`
+3. Verify issue is open
 
 ### Step 2: Create Branch
 
 1. Ensure working directory is clean (`git status`)
 2. Checkout main and pull latest
 3. Create branch: `fix/issue-[NUMBER]-[slug]`
-   - slug = first 3-4 words of description, kebab-case, max 30 chars
+   - slug = first 3-4 words of title, kebab-case, max 30 chars
 
 ### Step 3: Understand the Issue
 
-1. Read the issue description carefully
+1. Read the issue title and body carefully
 2. Search the codebase for relevant files using Glob and Grep
 3. Identify what needs to change
 
@@ -59,13 +52,13 @@ Ask clarifying questions if the requirements are ambiguous.
 ## Validation
 
 - Issue number must be provided
-- Issue must exist and be open (`.` marker)
+- Issue must exist and be open on GitHub
 - Git working directory must be clean
 
 ## Output
 
 ```
-Starting fix for issue #[NUMBER]: [description]
+Starting fix for issue #[NUMBER]: [title]
 
 Branch: fix/issue-[NUMBER]-[slug]
 

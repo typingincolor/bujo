@@ -1,25 +1,19 @@
 ---
-description: Recommend the next issue to work on
-allowed-tools: Read, Glob, Grep
+description: Recommend the next GitHub issue to work on
+allowed-tools: Bash(gh issue list *), Bash(gh issue view *), Bash(git log *), Read, Glob, Grep
 ---
 
 # Find Next Issue
 
-Analyze open issues and recommend which one to tackle next.
-
-## File Format
-
-Issues use explicit IDs: `#ID STATUS DESCRIPTION`
-- Open issues are in `docs/issues.txt`
-- Parse `#N . description` format from each non-comment line
+Analyze open GitHub issues and recommend which one to tackle next.
 
 ## Instructions
 
 ### Step 1: Get Open Issues
 
-1. Read `docs/issues.txt`
-2. Filter to only open issues (`.` marker)
-3. Parse the issue ID and description from each line
+```bash
+gh issue list --state open --limit 20
+```
 
 ### Step 2: Analyze Each Issue
 
@@ -55,7 +49,7 @@ Score issues and recommend the top 1-3, prioritizing:
 ```
 ## Recommended Next Issue
 
-### #[ID]: [description]
+### #[NUMBER]: [title]
 
 **Why this one:**
 - [Reason 1]
@@ -67,14 +61,14 @@ Score issues and recommend the top 1-3, prioritizing:
 
 ### Other candidates:
 
-**#[ID]:** [description]
+**#[NUMBER]:** [title]
 - [Brief reason for/against]
 
-**#[ID]:** [description]
+**#[NUMBER]:** [title]
 - [Brief reason for/against]
 
 ---
 
 To start working on the recommended issue:
-`/issue-fix [ID]`
+`/issue-fix [NUMBER]`
 ```

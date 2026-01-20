@@ -1,63 +1,60 @@
 ---
-description: List issues from docs/issues.txt with optional filtering
-allowed-tools: Read
+description: List GitHub issues with optional filtering
+allowed-tools: Bash(gh issue list *), Read
 ---
 
 # List Issues
 
-Read and display issues from `docs/issues.txt` (and optionally `docs/issues-archive.txt`).
-
-**Issue markers:**
-- `.` = open (pending)
-- `x` = done/fixed
-- `~` = won't fix/abandoned
-
-**File format:** `#ID STATUS DESCRIPTION`
+List GitHub issues with optional filtering.
 
 ## Arguments
 
 The command accepts an optional filter argument: `$ARGUMENTS`
 
-- No argument or `open`: Show only open issues (`.`) from `docs/issues.txt` **(default)**
-- `all`: Show all issues from both files
-- `done`: Show only completed issues (`x`) from archive
-- `closed`: Show only won't-fix issues (`~`) from archive
+- No argument or `open`: Show only open issues **(default)**
+- `all`: Show all issues including closed
+- `closed`: Show only closed issues
 
 ## Instructions
 
-1. Read `docs/issues.txt` (and `docs/issues-archive.txt` if filter requires)
-2. Parse `#ID STATUS DESCRIPTION` format from each non-comment line
-3. Display issues based on filter
-4. Show summary counts
+### List Open Issues (default)
+
+```bash
+gh issue list --state open
+```
+
+### List All Issues
+
+```bash
+gh issue list --state all --limit 50
+```
+
+### List Closed Issues
+
+```bash
+gh issue list --state closed --limit 50
+```
+
+## Staging Area (Optional)
+
+If `docs/issues.txt` has entries, mention them as "staged for sync":
+
+```
+## Staged in issues.txt (not yet in GitHub)
+#ID . [description]
+...
+
+Run `/issue-sync` to create GitHub issues from staged entries.
+```
 
 ## Output Format
 
-Use the actual markers from the file (`.`, `x`, `~`) in the output.
-
-**Default (no argument or `open`):**
 ```
 ## Open Issues (N)
 
-#ID . [description]
-...
-```
-
-**For `all` filter:**
-```
-## Issues (filter: all)
-
-### Open (N)
-#ID . [description]
-...
-
-### Done (N)
-#ID x [description]
-...
-
-### Won't Fix (N)
-#ID ~ [description]
+#NUMBER  TITLE
 ...
 
 ---
-Total: N issues (N open, N done, N won't fix)
+Total: N open issues
 ```

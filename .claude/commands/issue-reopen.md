@@ -1,45 +1,34 @@
 ---
-description: Reopen a closed or done issue
-allowed-tools: Read, Edit
+description: Reopen a closed GitHub issue
+allowed-tools: Bash(gh issue reopen *), Bash(gh issue view *)
 ---
 
 # Reopen Issue
 
-Reopen an issue that was previously marked as done or closed.
+Reopen a GitHub issue that was previously closed.
 
 ## Arguments
 
-`$ARGUMENTS` should contain the issue number (e.g., `90` or `#90`).
-
-## File Format
-
-Issues use explicit IDs: `#ID STATUS DESCRIPTION`
-- Open issues are in `docs/issues.txt`
-- Closed issues are archived in `docs/issues-archive.txt`
+`$ARGUMENTS` should contain the GitHub issue number (e.g., `359` or `#359`).
 
 ## Instructions
 
 1. Parse the issue number from `$ARGUMENTS` (strip `#` if present)
-2. First check `docs/issues.txt` - if found with `.` marker, it's already open
-3. Read `docs/issues-archive.txt`
-4. Find the line matching `#[NUMBER]`
-5. Verify issue is closed (`x` or `~` marker)
-6. Remove the line from `docs/issues-archive.txt`
-7. Add the line to `docs/issues.txt` with `.` marker: `#[NUMBER] . [description]`
-8. Report the change
+2. View the issue to get details: `gh issue view [NUMBER]`
+3. If already open, report that
+4. Reopen the issue: `gh issue reopen [NUMBER]`
+5. Report the change
 
 ## Validation
 
 - Issue number must be provided
-- Issue must exist in one of the files
-- Issue must currently be done (`x`) or closed (`~`) in the archive
-- If issue is already open (`.`), report that
+- Issue must exist on GitHub
+- If issue is already open, report that
 
 ## Output
 
 ```
-Reopened issue #[NUMBER]: [description]
-(Moved to issues.txt)
+Reopened issue #[NUMBER]: [title]
 ```
 
 Or if already open:
