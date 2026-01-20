@@ -23,7 +23,7 @@ jobs:
 
       - name: Analyze PR changes
         id: analyze
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const pr = context.payload.pull_request;
@@ -89,7 +89,7 @@ jobs:
             core.setOutput('has_production', hasProduction.toString());
 
       - name: Generate PR description
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           COMMIT_MESSAGES: ${{ steps.analyze.outputs.commit_messages }}
