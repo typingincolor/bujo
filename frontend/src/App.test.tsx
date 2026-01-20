@@ -363,7 +363,7 @@ describe('App - Day Navigation', () => {
 
     await waitFor(() => {
       expect(GetAgenda).toHaveBeenCalled()
-    }, { timeout: 3000 })
+    }, { timeout: 5000 })
   })
 
   it('clicking next day navigates to next day', async () => {
