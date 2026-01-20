@@ -5,7 +5,6 @@
 
 #66 . ability to tag people (@mentions with surname support), searchable by tagged person
 #75 . update all documentation
-#76 . BackupService SQL bypass - VerifyBackup() uses direct sql.Open() instead of repository interface (internal/service/backup.go:118-125)
 #77 . CLI commands bypass dependency injection - archive, backup, export, import, history commands directly instantiate sqlite repositories
 #78 . Service layer interface duplication - services redefine repository interfaces instead of using domain interfaces
 #79 . StatsService error silencing - calculateHabitStats() uses continue on error instead of propagating (internal/service/stats.go:221-223)
