@@ -8,8 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/domain"
-	"github.com/typingincolor/bujo/internal/repository/sqlite"
-	"github.com/typingincolor/bujo/internal/service"
 )
 
 var exportCmd = &cobra.Command{
@@ -47,20 +45,6 @@ func runExport(cmd *cobra.Command, args []string) error {
 		return runMarkdownExport(cmd, args[0])
 	}
 
-	entryRepo := sqlite.NewEntryRepository(db)
-	habitRepo := sqlite.NewHabitRepository(db)
-	habitLogRepo := sqlite.NewHabitLogRepository(db)
-	dayContextRepo := sqlite.NewDayContextRepository(db)
-	summaryRepo := sqlite.NewSummaryRepository(db)
-	listRepo := sqlite.NewListRepository(db)
-	listItemRepo := sqlite.NewListItemRepository(db)
-	goalRepo := sqlite.NewGoalRepository(db)
-
-	exportSvc := service.NewExportService(
-		entryRepo, habitRepo, habitLogRepo, dayContextRepo,
-		summaryRepo, listRepo, listItemRepo, goalRepo,
-	)
-
 	opts := domain.NewExportOptions()
 
 	if exportFrom != "" {
@@ -78,7 +62,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 		opts = opts.WithDateRange(from, to)
 	}
 
-	data, err := exportSvc.Export(cmd.Context(), opts)
+	data, err := exportService.Export(cmd.Context(), opts)
 	if err != nil {
 		return fmt.Errorf("export failed: %w", err)
 	}

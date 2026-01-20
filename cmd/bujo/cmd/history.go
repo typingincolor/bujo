@@ -7,13 +7,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/domain"
-	"github.com/typingincolor/bujo/internal/repository/sqlite"
-	"github.com/typingincolor/bujo/internal/service"
-)
-
-var (
-	historyService *service.HistoryService
-	listItemRepo   *sqlite.ListItemRepository
 )
 
 var historyCmd = &cobra.Command{
@@ -23,14 +16,6 @@ var historyCmd = &cobra.Command{
 
 The event sourcing system keeps track of all changes to list items,
 allowing you to see previous versions and restore them if needed.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
-			return err
-		}
-		listItemRepo = sqlite.NewListItemRepository(db)
-		historyService = service.NewHistoryService(listItemRepo)
-		return nil
-	},
 }
 
 var historyShowCmd = &cobra.Command{

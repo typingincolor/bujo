@@ -6,12 +6,9 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/typingincolor/bujo/internal/repository/sqlite"
-	"github.com/typingincolor/bujo/internal/service"
 )
 
 var (
-	archiveService   *service.ArchiveService
 	archiveOlderThan string
 	archiveExecute   bool
 )
@@ -25,14 +22,6 @@ By default, shows how many records would be archived (dry run).
 Use --execute to actually perform the archive operation.
 
 Old versions are rows with valid_to set, meaning they've been superseded.`,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
-			return err
-		}
-		listItemRepo := sqlite.NewListItemRepository(db)
-		archiveService = service.NewArchiveService(listItemRepo)
-		return nil
-	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cutoff, err := parseArchiveCutoff(archiveOlderThan)
 		if err != nil {

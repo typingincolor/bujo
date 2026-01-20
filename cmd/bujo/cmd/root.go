@@ -32,6 +32,11 @@ var (
 	summaryService         *service.SummaryService
 	statsService           *service.StatsService
 	changeDetectionService *service.ChangeDetectionService
+	archiveService         *service.ArchiveService
+	backupService          *service.BackupService
+	exportService          *service.ExportService
+	importService          *service.ImportService
+	historyService         *service.HistoryService
 )
 
 var rootCmd = &cobra.Command{
@@ -52,8 +57,8 @@ var rootCmd = &cobra.Command{
 
 		backupDir := getDefaultBackupDir()
 		backupRepo := sqlite.NewBackupRepository(db)
-		backupSvc := service.NewBackupService(backupRepo)
-		created, path, err := backupSvc.EnsureRecentBackup(cmd.Context(), backupDir, 7)
+		backupService = service.NewBackupService(backupRepo)
+		created, path, err := backupService.EnsureRecentBackup(cmd.Context(), backupDir, 7)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to ensure backup: %v\n", err)
 		} else if created {
@@ -86,7 +91,18 @@ var rootCmd = &cobra.Command{
 		}
 		changeDetectionService = service.NewChangeDetectionService(changeDetectors)
 
+		archiveService = service.NewArchiveService(listItemRepo)
+		historyService = service.NewHistoryService(listItemRepo)
+
 		summaryRepo := sqlite.NewSummaryRepository(db)
+		exportService = service.NewExportService(
+			entryRepo, habitRepo, habitLogRepo, dayCtxRepo,
+			summaryRepo, listRepo, listItemRepo, goalRepo,
+		)
+		importService = service.NewImportService(
+			entryRepo, habitRepo, habitLogRepo, dayCtxRepo,
+			summaryRepo, listRepo, listItemRepo, goalRepo,
+		)
 		aiClient, err := ai.NewAIClient(cmd.Context())
 		if err != nil && !errors.Is(err, ai.ErrAIDisabled) {
 			fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
