@@ -7,13 +7,19 @@ allowed-tools: Read, Glob, Grep
 
 Analyze open issues and recommend which one to tackle next.
 
+## File Format
+
+Issues use explicit IDs: `#ID STATUS DESCRIPTION`
+- Open issues are in `docs/issues.txt`
+- Parse `#N . description` format from each non-comment line
+
 ## Instructions
 
 ### Step 1: Get Open Issues
 
 1. Read `docs/issues.txt`
 2. Filter to only open issues (`.` marker)
-3. Note the issue number (line number) and description for each
+3. Parse the issue ID and description from each line
 
 ### Step 2: Analyze Each Issue
 
@@ -49,7 +55,7 @@ Score issues and recommend the top 1-3, prioritizing:
 ```
 ## Recommended Next Issue
 
-### #[NUMBER]: [description]
+### #[ID]: [description]
 
 **Why this one:**
 - [Reason 1]
@@ -61,14 +67,14 @@ Score issues and recommend the top 1-3, prioritizing:
 
 ### Other candidates:
 
-**#[NUMBER]:** [description]
+**#[ID]:** [description]
 - [Brief reason for/against]
 
-**#[NUMBER]:** [description]
+**#[ID]:** [description]
 - [Brief reason for/against]
 
 ---
 
 To start working on the recommended issue:
-`/issue-fix [NUMBER]`
+`/issue-fix [ID]`
 ```

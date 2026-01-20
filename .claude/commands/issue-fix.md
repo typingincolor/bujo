@@ -9,15 +9,21 @@ Create a branch and start fixing an issue using strict TDD.
 
 ## Arguments
 
-`$ARGUMENTS` should contain the issue number (line number).
+`$ARGUMENTS` should contain the issue number (e.g., `90` or `#90`).
+
+## File Format
+
+Issues use explicit IDs: `#ID STATUS DESCRIPTION`
+- Open issues are in `docs/issues.txt`
+- Closed issues are archived in `docs/issues-archive.txt`
 
 ## Instructions
 
 ### Step 1: Validate Issue
 
-1. Parse the issue number from `$ARGUMENTS`
+1. Parse the issue number from `$ARGUMENTS` (strip `#` if present)
 2. Read `docs/issues.txt`
-3. Find the line with that number
+3. Find the line matching `#[NUMBER]`
 4. Verify issue is open (`.` marker)
 
 ### Step 2: Create Branch
