@@ -173,6 +173,20 @@ Never skip tests because:
 3. REFACTOR: Assess improvement opportunities (only if adds value)
 4. **Wait for commit approval** before every commit
 
+## Git & GitHub Workflow
+
+### Merging Pull Requests
+
+**CRITICAL**: This repository has branch protection rules enabled. Standard merge attempts will fail.
+
+**Always use the `--admin` flag when merging PRs:**
+
+```bash
+gh pr merge [PR_NUMBER] --squash --delete-branch --admin
+```
+
+Without `--admin`, you will see: `the base branch policy prohibits the merge`
+
 ## Code Style
 
 **Functional patterns adapted for Go:**
