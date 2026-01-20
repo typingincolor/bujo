@@ -2,6 +2,8 @@
 
 Complete command reference for the bujo command-line interface.
 
+For practical usage patterns and workflows, see [Common Workflows](WORKFLOWS.md).
+
 ## Global Flags
 
 | Flag | Description |
@@ -63,6 +65,39 @@ bujo ls --from 2026-01-01 --to 2026-01-07
 | `--from` | Start date |
 | `--to` | End date |
 
+### tomorrow
+
+Show entries scheduled for tomorrow.
+
+```bash
+bujo tomorrow
+```
+
+### next
+
+Show entries for the upcoming 7 days (starting from tomorrow).
+
+```bash
+bujo next
+```
+
+### tasks
+
+Show outstanding (incomplete) tasks.
+
+```bash
+bujo tasks
+bujo tasks --from "last week"
+bujo tasks --from 2026-01-01 --to 2026-01-31
+```
+
+| Flag | Description |
+|------|-------------|
+| `--from` | Start date |
+| `--to` | End date |
+
+By default shows tasks from the last 30 days.
+
 ### done
 
 Mark an entry as complete.
@@ -70,6 +105,15 @@ Mark an entry as complete.
 ```bash
 bujo done <id>
 bujo done 42
+```
+
+### undo
+
+Mark a completed entry as incomplete.
+
+```bash
+bujo undo <id>
+bujo undo 42
 ```
 
 ### edit
@@ -86,6 +130,40 @@ bujo edit 5 "New content" --priority medium
 | Flag | Description |
 |------|-------------|
 | `-p, --priority` | Set priority (none, low, medium, high) |
+
+### retype
+
+Change an entry's type.
+
+```bash
+bujo retype <id> <type>
+bujo retype 42 note     # Change to note
+bujo retype 15 task     # Change to task
+bujo retype 23 event    # Change to event
+```
+
+Valid types: `task`, `note`, `event`
+
+### move
+
+Move an entry to a different parent or logged date.
+
+```bash
+bujo move <id> [flags]
+bujo move 42 --parent 10           # Make entry 42 a child of entry 10
+bujo move 42 --root                # Make entry 42 a root entry (no parent)
+bujo move 42 --logged yesterday    # Change logged date to yesterday
+bujo move 42 --parent 10 --logged "last monday"
+```
+
+| Flag | Description |
+|------|-------------|
+| `--parent` | New parent entry ID |
+| `--root` | Move entry to root (no parent) |
+| `--logged` | New logged date |
+| `-y, --yes` | Skip date confirmation prompt |
+
+Unlike `migrate` (which reschedules tasks to future dates), `move` reorganizes entries within the journal.
 
 ### view
 
@@ -134,6 +212,45 @@ If the entry has children, you'll be prompted to choose how to handle them.
 | Flag | Description |
 |------|-------------|
 | `-f, --force` | Delete without prompting (includes children) |
+
+### cancel
+
+Cancel an entry (mark as no longer relevant).
+
+```bash
+bujo cancel <id>
+bujo cancel 42
+```
+
+Cancelled entries remain visible with strikethrough styling but are clearly marked as not active. Use this when a task becomes irrelevant rather than completed.
+
+### uncancel
+
+Restore a cancelled entry back to a task.
+
+```bash
+bujo uncancel <id>
+bujo uncancel 42
+```
+
+### deleted
+
+List entries that have been deleted but can still be restored.
+
+```bash
+bujo deleted
+```
+
+Each entry shows its entity ID which can be used with `bujo restore` to bring it back.
+
+### restore
+
+Restore a previously deleted entry.
+
+```bash
+bujo deleted              # See deleted entries and their entity IDs
+bujo restore <entity-id>  # Restore entry by entity ID
+```
 
 ### search
 
@@ -550,6 +667,52 @@ bujo archive --older-than 2026-01-01      # Archive before date
 | `--older-than` | Archive versions older than date (YYYY-MM-DD) |
 | `--execute` | Actually perform the archive |
 
+## Data Commands
+
+### export
+
+Export bujo data to JSON format for backup or migration.
+
+```bash
+bujo export > backup.json              # Export all data
+bujo export --from 2026-01-01          # Export from date
+bujo export --from 2026-01-01 --to 2026-01-31  # Export date range
+```
+
+| Flag | Description |
+|------|-------------|
+| `--from` | Start date for export (YYYY-MM-DD) |
+| `--to` | End date for export (YYYY-MM-DD) |
+| `--format` | Export format: `json` or `csv` (default: json) |
+
+Export a specific entry tree to markdown:
+
+```bash
+bujo export 42                 # Export entry 42 and children as markdown
+bujo export 42 -o entry.md     # Export to file
+```
+
+| Flag | Description |
+|------|-------------|
+| `-o, --output` | Output file (for markdown export) |
+
+### import
+
+Import bujo data from a JSON backup file.
+
+```bash
+bujo import backup.json                    # Merge with existing data
+bujo import backup.json --mode replace     # Replace all data (destructive)
+```
+
+| Flag | Description |
+|------|-------------|
+| `--mode` | Import mode: `merge` (default) or `replace` |
+
+Modes:
+- `merge` - Add new records, skip if entity_id already exists
+- `replace` - Clear all existing data and import fresh (destructive)
+
 ## Other Commands
 
 ### tui
@@ -593,8 +756,9 @@ Most commands accept natural language dates:
 
 | Variable | Description |
 |----------|-------------|
-| `BUJO_AI_PROVIDER` | AI provider: `ollama` or `gemini` |
-| `BUJO_MODEL` | Model name for local AI |
+| `BUJO_AI_ENABLED` | Enable AI features: `true` or `false` (default: false) |
+| `BUJO_AI_PROVIDER` | AI provider: `local` or `gemini` |
+| `BUJO_MODEL` | Model name for local AI (default: llama3.2:3b) |
 | `GEMINI_API_KEY` | API key for Google Gemini |
 | `DB_PATH` | Default database path |
 

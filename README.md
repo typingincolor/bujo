@@ -92,13 +92,25 @@ bujo habit
 | `o` | Event | A scheduled occurrence |
 | `x` | Done | A completed task |
 | `>` | Migrated | A task moved to another day |
+| `~` | Cancelled | A task no longer relevant |
+| `?` | Question | An open question to be answered |
+| `★` | Answered | A question that has been answered |
 
 ## Documentation
 
+**Getting Started:**
+- [Quick Start](docs/QUICKSTART.md) - Get started in 5 minutes
+- [Common Workflows](docs/WORKFLOWS.md) - Practical usage patterns
+
+**Interfaces:**
 - [CLI Reference](docs/CLI.md) - Complete command documentation
 - [TUI Guide](docs/TUI.md) - Interactive terminal UI shortcuts
 - [Desktop App](docs/FRONTEND.md) - Native application guide
+
+**Reference:**
+- [Data Management](docs/DATA.md) - Backup, export, and storage
 - [AI Setup](docs/AI_SETUP.md) - Configure local or cloud AI
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Architecture](docs/ARCHITECTURE.md) - Technical design overview
 
 ## Data Storage
