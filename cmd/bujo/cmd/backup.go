@@ -7,11 +7,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	sqliterepo "github.com/typingincolor/bujo/internal/repository/sqlite"
-	"github.com/typingincolor/bujo/internal/service"
 )
 
-var backupService *service.BackupService
 var backupDir string
 
 func getDefaultBackupDir() string {
@@ -35,8 +32,6 @@ Backups are stored in ~/.bujo/backups/ by default.`,
 			return err
 		}
 		backupDir = getDefaultBackupDir()
-		backupRepo := sqliterepo.NewBackupRepository(db)
-		backupService = service.NewBackupService(backupRepo)
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {

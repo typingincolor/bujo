@@ -7,8 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/domain"
-	"github.com/typingincolor/bujo/internal/repository/sqlite"
-	"github.com/typingincolor/bujo/internal/service"
 )
 
 var importCmd = &cobra.Command{
@@ -58,23 +56,9 @@ func runImport(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(os.Stderr, "Warning: Replace mode will delete all existing data!")
 	}
 
-	entryRepo := sqlite.NewEntryRepository(db)
-	habitRepo := sqlite.NewHabitRepository(db)
-	habitLogRepo := sqlite.NewHabitLogRepository(db)
-	dayContextRepo := sqlite.NewDayContextRepository(db)
-	summaryRepo := sqlite.NewSummaryRepository(db)
-	listRepo := sqlite.NewListRepository(db)
-	listItemRepo := sqlite.NewListItemRepository(db)
-	goalRepo := sqlite.NewGoalRepository(db)
-
-	importSvc := service.NewImportService(
-		entryRepo, habitRepo, habitLogRepo, dayContextRepo,
-		summaryRepo, listRepo, listItemRepo, goalRepo,
-	)
-
 	opts := domain.NewImportOptions(mode)
 
-	if err := importSvc.Import(cmd.Context(), &data, opts); err != nil {
+	if err := importService.Import(cmd.Context(), &data, opts); err != nil {
 		return fmt.Errorf("import failed: %w", err)
 	}
 
