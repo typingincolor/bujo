@@ -11,7 +11,7 @@ function ActionPlaceholder() {
   return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
 }
 
-interface SearchResult {
+export interface SearchResult {
   id: number;
   content: string;
   type: EntryType;
