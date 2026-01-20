@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { HelpCircle, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
 import { ContextPill } from './ContextPill'
 import { format, parseISO } from 'date-fns'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
 import { AnswerQuestionModal } from './AnswerQuestionModal'
 
@@ -65,10 +65,16 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
   const sortedDates = Array.from(grouped.keys()).sort()
 
   // Build flat list of entries in display order for keyboard navigation
-  const flatEntries: Entry[] = []
-  for (const dateStr of sortedDates) {
-    flatEntries.push(...grouped.get(dateStr)!)
-  }
+  const flatEntries = useMemo(() => {
+    const questionEntriesFiltered = questions.filter(e => e.type === 'question')
+    const groupedEntries = groupByDate(questionEntriesFiltered)
+    const dates = Array.from(groupedEntries.keys()).sort()
+    const entries: Entry[] = []
+    for (const dateStr of dates) {
+      entries.push(...groupedEntries.get(dateStr)!)
+    }
+    return entries
+  }, [questions])
 
   // Map entry ID to flat index for selection
   const entryToFlatIndex = new Map<number, number>()
@@ -99,7 +105,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
     onEntryChanged?.()
   }
 
-  const handleCancel = async (entry: Entry) => {
+  const handleCancel = useCallback(async (entry: Entry) => {
     try {
       await CancelEntry(entry.id)
       onEntryChanged?.()
@@ -107,9 +113,9 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
       console.error('Failed to cancel entry:', error)
       onError?.(error instanceof Error ? error.message : 'Failed to cancel entry')
     }
-  }
+  }, [onEntryChanged, onError])
 
-  const handleUncancel = async (entry: Entry) => {
+  const handleUncancel = useCallback(async (entry: Entry) => {
     try {
       await UncancelEntry(entry.id)
       onEntryChanged?.()
@@ -117,9 +123,9 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
       console.error('Failed to uncancel entry:', error)
       onError?.(error instanceof Error ? error.message : 'Failed to uncancel entry')
     }
-  }
+  }, [onEntryChanged, onError])
 
-  const handleDelete = async (entry: Entry) => {
+  const handleDelete = useCallback(async (entry: Entry) => {
     try {
       await DeleteEntry(entry.id)
       onEntryChanged?.()
@@ -127,9 +133,9 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
       console.error('Failed to delete entry:', error)
       onError?.(error instanceof Error ? error.message : 'Failed to delete entry')
     }
-  }
+  }, [onEntryChanged, onError])
 
-  const handleCyclePriority = async (entry: Entry) => {
+  const handleCyclePriority = useCallback(async (entry: Entry) => {
     try {
       await CyclePriority(entry.id)
       onEntryChanged?.()
@@ -137,9 +143,9 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
       console.error('Failed to cycle priority:', error)
       onError?.(error instanceof Error ? error.message : 'Failed to cycle priority')
     }
-  }
+  }, [onEntryChanged, onError])
 
-  const handleCycleType = async (entry: Entry) => {
+  const handleCycleType = useCallback(async (entry: Entry) => {
     const cycleOrder = ['task', 'note', 'event', 'question'] as const
     const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number])
     if (currentIndex === -1) return
@@ -151,7 +157,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
       console.error('Failed to cycle type:', error)
       onError?.(error instanceof Error ? error.message : 'Failed to cycle type')
     }
-  }
+  }, [onEntryChanged, onError])
 
   // Keyboard navigation
   useEffect(() => {
@@ -216,7 +222,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [flatEntries, selectedIndex])
+  }, [flatEntries, selectedIndex, handleCancel, handleCyclePriority, handleCycleType, handleUncancel])
 
   return (
     <div className="space-y-4">
