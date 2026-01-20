@@ -33,7 +33,7 @@ x Change "Past Week" view to "Review"
 x Search results: clicking on a search result should show it's context. Should be able to do all the actions on an entry on the search page.
 x remove search entries... box from the header
 x Let's revamp the documentation, readme should be shorter and link to specific pages for cli, tui and frontend.
-. need to think about how the app refreshes. The database can be updated by the CLI / TUI and the Frontend does not change. Some sort of optimistic locking maybe?
+x need to think about how the app refreshes. The database can be updated by the CLI / TUI and the Frontend does not change. Some sort of optimistic locking maybe?
 x Today view - use unicode characters to indicate entry types (see tui and bujo today). The entry text is not aligned with the entry type. The should be vertical centre aligned
 x CI build failing
 x Today/Review view - chose a better icon for un-complete icon, it should be the . we use to represent a task
