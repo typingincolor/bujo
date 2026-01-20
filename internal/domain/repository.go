@@ -15,7 +15,6 @@ type EntryRepository interface {
 	GetOverdue(ctx context.Context, date time.Time) ([]Entry, error)
 	GetWithChildren(ctx context.Context, id int64) ([]Entry, error)
 	GetChildren(ctx context.Context, parentID int64) ([]Entry, error)
-	GetByListID(ctx context.Context, listID int64) ([]Entry, error)
 	Update(ctx context.Context, entry Entry) error
 	Delete(ctx context.Context, id int64) error
 	DeleteAll(ctx context.Context) error
@@ -23,6 +22,8 @@ type EntryRepository interface {
 	GetHistory(ctx context.Context, entityID EntityID) ([]Entry, error)
 	GetAsOf(ctx context.Context, entityID EntityID, asOf time.Time) (*Entry, error)
 	Search(ctx context.Context, opts SearchOptions) ([]Entry, error)
+	GetDeleted(ctx context.Context) ([]Entry, error)
+	Restore(ctx context.Context, entityID EntityID) (int64, error)
 }
 
 type HabitRepository interface {
@@ -39,10 +40,13 @@ type HabitRepository interface {
 
 type HabitLogRepository interface {
 	Insert(ctx context.Context, log HabitLog) (int64, error)
+	GetByID(ctx context.Context, id int64) (*HabitLog, error)
 	GetByHabitID(ctx context.Context, habitID int64) ([]HabitLog, error)
 	GetRange(ctx context.Context, habitID int64, start, end time.Time) ([]HabitLog, error)
+	GetRangeByEntityID(ctx context.Context, habitEntityID EntityID, start, end time.Time) ([]HabitLog, error)
 	GetAllRange(ctx context.Context, start, end time.Time) ([]HabitLog, error)
 	GetAll(ctx context.Context) ([]HabitLog, error)
+	GetLastByHabitID(ctx context.Context, habitID int64) (*HabitLog, error)
 	Delete(ctx context.Context, id int64) error
 	DeleteAll(ctx context.Context) error
 }
@@ -52,6 +56,7 @@ type DayContextRepository interface {
 	GetByDate(ctx context.Context, date time.Time) (*DayContext, error)
 	GetRange(ctx context.Context, start, end time.Time) ([]DayContext, error)
 	GetAll(ctx context.Context) ([]DayContext, error)
+	Delete(ctx context.Context, date time.Time) error
 	DeleteAll(ctx context.Context) error
 }
 

@@ -9,38 +9,13 @@ import (
 	"github.com/typingincolor/bujo/internal/domain"
 )
 
-type EntryRepository interface {
-	Insert(ctx context.Context, entry domain.Entry) (int64, error)
-	GetByID(ctx context.Context, id int64) (*domain.Entry, error)
-	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Entry, error)
-	GetByDate(ctx context.Context, date time.Time) ([]domain.Entry, error)
-	GetByDateRange(ctx context.Context, from, to time.Time) ([]domain.Entry, error)
-	GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error)
-	GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error)
-	GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error)
-	GetHistory(ctx context.Context, entityID domain.EntityID) ([]domain.Entry, error)
-	Update(ctx context.Context, entry domain.Entry) error
-	Delete(ctx context.Context, id int64) error
-	DeleteWithChildren(ctx context.Context, id int64) error
-	GetDeleted(ctx context.Context) ([]domain.Entry, error)
-	Restore(ctx context.Context, entityID domain.EntityID) (int64, error)
-	Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error)
-}
-
-type DayContextRepository interface {
-	Upsert(ctx context.Context, dayCtx domain.DayContext) error
-	GetByDate(ctx context.Context, date time.Time) (*domain.DayContext, error)
-	GetRange(ctx context.Context, start, end time.Time) ([]domain.DayContext, error)
-	Delete(ctx context.Context, date time.Time) error
-}
-
 type BujoService struct {
-	entryRepo  EntryRepository
-	dayCtxRepo DayContextRepository
+	entryRepo  domain.EntryRepository
+	dayCtxRepo domain.DayContextRepository
 	parser     *domain.TreeParser
 }
 
-func NewBujoService(entryRepo EntryRepository, dayCtxRepo DayContextRepository, parser *domain.TreeParser) *BujoService {
+func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser) *BujoService {
 	return &BujoService{
 		entryRepo:  entryRepo,
 		dayCtxRepo: dayCtxRepo,
