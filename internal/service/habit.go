@@ -8,30 +8,12 @@ import (
 	"github.com/typingincolor/bujo/internal/domain"
 )
 
-type HabitRepository interface {
-	GetOrCreate(ctx context.Context, name string, goalPerDay int) (*domain.Habit, error)
-	GetByID(ctx context.Context, id int64) (*domain.Habit, error)
-	GetByName(ctx context.Context, name string) (*domain.Habit, error)
-	GetAll(ctx context.Context) ([]domain.Habit, error)
-	Update(ctx context.Context, habit domain.Habit) error
-	Delete(ctx context.Context, id int64) error
-}
-
-type HabitLogRepository interface {
-	Insert(ctx context.Context, log domain.HabitLog) (int64, error)
-	GetByID(ctx context.Context, id int64) (*domain.HabitLog, error)
-	GetRange(ctx context.Context, habitID int64, start, end time.Time) ([]domain.HabitLog, error)
-	GetRangeByEntityID(ctx context.Context, habitEntityID domain.EntityID, start, end time.Time) ([]domain.HabitLog, error)
-	GetLastByHabitID(ctx context.Context, habitID int64) (*domain.HabitLog, error)
-	Delete(ctx context.Context, id int64) error
-}
-
 type HabitService struct {
-	habitRepo HabitRepository
-	logRepo   HabitLogRepository
+	habitRepo domain.HabitRepository
+	logRepo   domain.HabitLogRepository
 }
 
-func NewHabitService(habitRepo HabitRepository, logRepo HabitLogRepository) *HabitService {
+func NewHabitService(habitRepo domain.HabitRepository, logRepo domain.HabitLogRepository) *HabitService {
 	return &HabitService{
 		habitRepo: habitRepo,
 		logRepo:   logRepo,

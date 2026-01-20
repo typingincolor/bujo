@@ -7,24 +7,12 @@ import (
 	"github.com/typingincolor/bujo/internal/domain"
 )
 
-type ListRepository interface {
-	Create(ctx context.Context, name string) (*domain.List, error)
-	GetByID(ctx context.Context, id int64) (*domain.List, error)
-	GetByName(ctx context.Context, name string) (*domain.List, error)
-	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.List, error)
-	GetAll(ctx context.Context) ([]domain.List, error)
-	Rename(ctx context.Context, id int64, newName string) error
-	Delete(ctx context.Context, id int64) error
-	GetItemCount(ctx context.Context, listID int64) (int, error)
-	GetDoneCount(ctx context.Context, listID int64) (int, error)
-}
-
 type ListService struct {
-	listRepo     ListRepository
+	listRepo     domain.ListRepository
 	listItemRepo domain.ListItemRepository
 }
 
-func NewListService(listRepo ListRepository, listItemRepo domain.ListItemRepository) *ListService {
+func NewListService(listRepo domain.ListRepository, listItemRepo domain.ListItemRepository) *ListService {
 	return &ListService{
 		listRepo:     listRepo,
 		listItemRepo: listItemRepo,

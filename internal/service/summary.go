@@ -12,11 +12,6 @@ type SummaryEntryRepository interface {
 	GetByDateRange(ctx context.Context, from, to time.Time) ([]domain.Entry, error)
 }
 
-type SummaryRepository interface {
-	Get(ctx context.Context, horizon domain.SummaryHorizon, start, end time.Time) (*domain.Summary, error)
-	Insert(ctx context.Context, summary domain.Summary) (int64, error)
-}
-
 type SummaryGenerator interface {
 	GenerateSummary(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error)
 	GenerateSummaryStream(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon, callback func(token string)) error
@@ -24,11 +19,11 @@ type SummaryGenerator interface {
 
 type SummaryService struct {
 	entryRepo   SummaryEntryRepository
-	summaryRepo SummaryRepository
+	summaryRepo domain.SummaryRepository
 	generator   SummaryGenerator
 }
 
-func NewSummaryService(entryRepo SummaryEntryRepository, summaryRepo SummaryRepository, generator SummaryGenerator) *SummaryService {
+func NewSummaryService(entryRepo SummaryEntryRepository, summaryRepo domain.SummaryRepository, generator SummaryGenerator) *SummaryService {
 	return &SummaryService{
 		entryRepo:   entryRepo,
 		summaryRepo: summaryRepo,

@@ -301,6 +301,22 @@ func (m *mockSummaryRepo) Insert(ctx context.Context, summary domain.Summary) (i
 	return m.insertFunc(ctx, summary)
 }
 
+func (m *mockSummaryRepo) GetByHorizon(ctx context.Context, horizon domain.SummaryHorizon) ([]domain.Summary, error) {
+	return nil, nil
+}
+
+func (m *mockSummaryRepo) GetAll(ctx context.Context) ([]domain.Summary, error) {
+	return nil, nil
+}
+
+func (m *mockSummaryRepo) Delete(ctx context.Context, id int64) error {
+	return nil
+}
+
+func (m *mockSummaryRepo) DeleteAll(ctx context.Context) error {
+	return nil
+}
+
 type mockSummaryGenerator struct {
 	generateFunc func(ctx context.Context, entries []domain.Entry, horizon domain.SummaryHorizon) (string, error)
 }
