@@ -84,3 +84,5 @@
 #87 x Lists - click on circle should complete list item. Don't need the tick next to it
 #89 x Double click on entry in search should take me to the entry in the review view
 #76 x BackupService SQL bypass - VerifyBackup() uses direct sql.Open() instead of repository interface (internal/service/backup.go:118-125)
+#77 x CLI commands bypass dependency injection - archive, backup, export, import, history commands directly instantiate sqlite repositories
+#80 x Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
