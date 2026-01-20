@@ -17,6 +17,8 @@ const mockEntriesAgenda = createMockAgenda({
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
+  OnFileDrop: vi.fn(),
+  OnFileDropOff: vi.fn(),
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
@@ -43,6 +45,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   SetWeather: vi.fn().mockResolvedValue(undefined),
   SetLocation: vi.fn().mockResolvedValue(undefined),
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
+  OpenFileDialog: vi.fn().mockResolvedValue(''),
+  ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
 import { GetAgenda, GetHabits, AddEntry, MarkEntryDone, EditEntry, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'

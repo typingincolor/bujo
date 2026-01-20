@@ -2,6 +2,7 @@ package wails
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/app"
@@ -354,4 +355,35 @@ func (a *App) GetSummary(date time.Time) (string, error) {
 		return "", nil
 	}
 	return summary.Content, nil
+}
+
+func (a *App) ReadFile(path string) (string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
+}
+
+func (a *App) OpenFileDialog() (string, error) {
+	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Import Entries",
+		Filters: []runtime.FileFilter{
+			{
+				DisplayName: "Text Files (*.txt, *.md)",
+				Pattern:     "*.txt;*.md",
+			},
+			{
+				DisplayName: "All Files (*.*)",
+				Pattern:     "*.*",
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil
+	}
+	return a.ReadFile(path)
 }

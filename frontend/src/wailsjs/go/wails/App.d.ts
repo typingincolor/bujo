@@ -4,6 +4,7 @@ import {time} from '../models';
 import {service} from '../models';
 import {domain} from '../models';
 import {wails} from '../models';
+import {context} from '../models';
 
 export function AddChildEntry(arg1:number,arg2:string,arg3:time.Time):Promise<Array<number>>;
 
@@ -85,6 +86,10 @@ export function MoveEntryToRoot(arg1:number):Promise<void>;
 
 export function MoveListItem(arg1:number,arg2:number):Promise<void>;
 
+export function OpenFileDialog():Promise<string>;
+
+export function ReadFile(arg1:string):Promise<string>;
+
 export function RemoveListItem(arg1:number):Promise<void>;
 
 export function RenameList(arg1:number,arg2:string):Promise<void>;
@@ -102,6 +107,8 @@ export function SetMood(arg1:time.Time,arg2:string):Promise<void>;
 export function SetPriority(arg1:number,arg2:string):Promise<void>;
 
 export function SetWeather(arg1:time.Time,arg2:string):Promise<void>;
+
+export function Shutdown(arg1:context.Context):Promise<void>;
 
 export function UncancelEntry(arg1:number):Promise<void>;
 

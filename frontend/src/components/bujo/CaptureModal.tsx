@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { cn, startOfDay } from '@/lib/utils'
-import { AddEntry } from '@/wailsjs/go/wails/App'
+import { AddEntry, OpenFileDialog, ReadFile } from '@/wailsjs/go/wails/App'
+import { OnFileDrop, OnFileDropOff } from '@/wailsjs/runtime/runtime'
 import { toWailsTime } from '@/lib/wailsTime'
 
 interface CaptureModalProps {
@@ -55,6 +56,46 @@ export function CaptureModal({
     setContent(newContent)
     saveDraft(newContent)
   }
+
+  const handleFileContent = useCallback((fileContent: string) => {
+    if (!fileContent) return
+
+    setContent((prevContent) => {
+      const newContent = prevContent.trim()
+        ? prevContent + '\n' + fileContent
+        : fileContent
+      saveDraft(newContent)
+      return newContent
+    })
+  }, [saveDraft])
+
+  const handleImportFile = async () => {
+    try {
+      const fileContent = await OpenFileDialog()
+      handleFileContent(fileContent)
+    } catch (err) {
+      console.error('Failed to import file:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleFileDrop = async (_x: number, _y: number, paths: string[]) => {
+      if (paths.length === 0) return
+      try {
+        const fileContent = await ReadFile(paths[0])
+        handleFileContent(fileContent)
+      } catch (err) {
+        console.error('Failed to read dropped file:', err)
+      }
+    }
+
+    OnFileDrop(handleFileDrop, false)
+    return () => {
+      OnFileDropOff()
+    }
+  }, [isOpen, handleFileContent])
 
   if (!isOpen) return null
 
@@ -117,6 +158,13 @@ export function CaptureModal({
           />
 
           <div className="flex justify-end gap-3 mt-4">
+            <button
+              type="button"
+              onClick={handleImportFile}
+              className="px-4 py-2 text-sm rounded-md border hover:bg-secondary transition-colors mr-auto"
+            >
+              Import File
+            </button>
             <button
               type="button"
               onClick={onClose}

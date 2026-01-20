@@ -58,7 +58,7 @@ x outstanding tasks logic seems screwy. The date they are shown under should be 
 x Search View (and maybe others) - click cycle priority does nothing. Check all actions do something!
 x Cannot change type on Today view and probably review review
 x The action icons should stay in the same places. Use empty placeholders for icons that are missing.
-. Complete work on file upload / drag and drop
+x Complete work on file upload / drag and drop
 x Outstanding questions view is not working. I have an outstanding question and I cannot see it.
 x Context indicator is showing, but clicking on it does not show the context
 x outstanding tasks view - the indicator for context works but doesn't look great. Use a pill instead. Need to be able to collapse context as well
