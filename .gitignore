@@ -13,6 +13,9 @@ coverage.out
 # OS
 .DS_Store
 
+# Claude Code auto-generated files
+**/CLAUDE.md
+
 # Local database
 *.db
 
