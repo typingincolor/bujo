@@ -2,19 +2,17 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
-
-	_ "modernc.org/sqlite"
 )
 
 type BackupRepository interface {
 	Backup(ctx context.Context, destPath string) error
+	VerifyIntegrity(ctx context.Context, backupPath string) error
 }
 
 type BackupService struct {
@@ -111,25 +109,5 @@ func (s *BackupService) EnsureRecentBackup(ctx context.Context, backupDir string
 }
 
 func (s *BackupService) VerifyBackup(ctx context.Context, backupPath string) error {
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		return fmt.Errorf("backup file does not exist: %s", backupPath)
-	}
-
-	db, err := sql.Open("sqlite", backupPath)
-	if err != nil {
-		return fmt.Errorf("failed to open backup: %w", err)
-	}
-	defer func() { _ = db.Close() }()
-
-	var result string
-	err = db.QueryRowContext(ctx, "PRAGMA integrity_check").Scan(&result)
-	if err != nil {
-		return fmt.Errorf("failed to verify backup: %w", err)
-	}
-
-	if result != "ok" {
-		return fmt.Errorf("backup integrity check failed: %s", result)
-	}
-
-	return nil
+	return s.repo.VerifyIntegrity(ctx, backupPath)
 }
