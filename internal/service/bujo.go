@@ -361,8 +361,21 @@ func (s *BujoService) CancelEntry(ctx context.Context, id int64) error {
 		return err
 	}
 
+	wasAnswer := entry.Type == domain.EntryTypeAnswer
+	parentID := entry.ParentID
+
 	entry.Type = domain.EntryTypeCancelled
-	return s.entryRepo.Update(ctx, *entry)
+	if err := s.entryRepo.Update(ctx, *entry); err != nil {
+		return err
+	}
+
+	if wasAnswer && parentID != nil {
+		if err := s.reopenParentQuestionIfNeeded(ctx, *parentID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *BujoService) UncancelEntry(ctx context.Context, id int64) error {
@@ -441,11 +454,25 @@ func (s *BujoService) CyclePriority(ctx context.Context, id int64) error {
 }
 
 func (s *BujoService) DeleteEntry(ctx context.Context, id int64) error {
-	if _, err := s.getEntry(ctx, id); err != nil {
+	entry, err := s.getEntry(ctx, id)
+	if err != nil {
 		return err
 	}
 
-	return s.entryRepo.DeleteWithChildren(ctx, id)
+	wasAnswer := entry.Type == domain.EntryTypeAnswer
+	parentID := entry.ParentID
+
+	if err := s.entryRepo.DeleteWithChildren(ctx, id); err != nil {
+		return err
+	}
+
+	if wasAnswer && parentID != nil {
+		if err := s.reopenParentQuestionIfNeeded(ctx, *parentID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *BujoService) DeleteEntryAndReparent(ctx context.Context, id int64) error {
@@ -860,6 +887,23 @@ func (s *BujoService) ReopenQuestion(ctx context.Context, id int64) error {
 
 	entry.Type = domain.EntryTypeQuestion
 	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) reopenParentQuestionIfNeeded(ctx context.Context, parentID int64) error {
+	parent, err := s.entryRepo.GetByID(ctx, parentID)
+	if err != nil {
+		return err
+	}
+	if parent == nil {
+		return nil
+	}
+
+	if parent.Type == domain.EntryTypeAnswered {
+		parent.Type = domain.EntryTypeQuestion
+		return s.entryRepo.Update(ctx, *parent)
+	}
+
+	return nil
 }
 
 func (s *BujoService) ExportEntryMarkdown(ctx context.Context, id int64) (string, error) {

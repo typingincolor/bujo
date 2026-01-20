@@ -1880,6 +1880,64 @@ func TestBujoService_ReopenQuestion_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_CancelAnswer_ReopensQuestion(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = service.MarkAnswered(ctx, ids[0], "42")
+	require.NoError(t, err)
+
+	question, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	require.Equal(t, domain.EntryTypeAnswered, question.Type)
+
+	children, err := entryRepo.GetChildren(ctx, question.ID)
+	require.NoError(t, err)
+	require.Len(t, children, 1)
+	answerID := children[0].ID
+
+	err = service.CancelEntry(ctx, answerID)
+	require.NoError(t, err)
+
+	question, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeQuestion, question.Type)
+}
+
+func TestBujoService_DeleteAnswer_ReopensQuestion(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What is the meaning of life", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 1)
+
+	err = service.MarkAnswered(ctx, ids[0], "42")
+	require.NoError(t, err)
+
+	question, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	require.Equal(t, domain.EntryTypeAnswered, question.Type)
+
+	children, err := entryRepo.GetChildren(ctx, question.ID)
+	require.NoError(t, err)
+	require.Len(t, children, 1)
+	answerID := children[0].ID
+
+	err = service.DeleteEntry(ctx, answerID)
+	require.NoError(t, err)
+
+	question, err = entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeQuestion, question.Type)
+}
+
 func TestBujoService_GetDailyAgenda_WithMoodAndWeather(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()
