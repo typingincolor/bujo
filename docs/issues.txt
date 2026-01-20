@@ -5,6 +5,5 @@
 
 #66 . ability to tag people (@mentions with surname support), searchable by tagged person
 #75 . update all documentation
-#79 . StatsService error silencing - calculateHabitStats() uses continue on error instead of propagating (internal/service/stats.go:221-223)
 #88 . Need to password protect app / database - encrypt data at rest
 #90 . Settings page - make GitHub link open the repo, add support link to GitHub issues page
