@@ -414,6 +414,12 @@ function App() {
     })
   }, [])
 
+  const handleSearchNavigate = useCallback((result: SearchResult) => {
+    const entryDate = new Date(result.date)
+    setReviewAnchorDate(startOfDay(entryDate))
+    setView('week')
+  }, [])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
@@ -637,7 +643,7 @@ function App() {
 
           {view === 'search' && (
             <div className="max-w-3xl mx-auto">
-              <SearchView onMigrate={handleSearchMigrate} />
+              <SearchView onMigrate={handleSearchMigrate} onNavigateToEntry={handleSearchNavigate} />
             </div>
           )}
 
