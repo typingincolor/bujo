@@ -75,6 +75,12 @@ func (a *App) checkForChanges() {
 	}
 }
 
+func (a *App) Shutdown(_ context.Context) {
+	if a.stopPolling != nil {
+		close(a.stopPolling)
+	}
+}
+
 func (a *App) Greet(name string) string {
 	return "Hello " + name + ", from Bujo!"
 }

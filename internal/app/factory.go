@@ -51,7 +51,7 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 	goalRepo := sqlite.NewGoalRepository(db)
 	parser := domain.NewTreeParser()
 
-	changeDetectors := []service.ChangeDetector{
+	changeDetectors := []domain.ChangeDetector{
 		entryRepo,
 		dayCtxRepo,
 		habitRepo,

@@ -3,17 +3,15 @@ package service
 import (
 	"context"
 	"time"
+
+	"github.com/typingincolor/bujo/internal/domain"
 )
 
-type ChangeDetector interface {
-	GetLastModified(ctx context.Context) (time.Time, error)
-}
-
 type ChangeDetectionService struct {
-	detectors []ChangeDetector
+	detectors []domain.ChangeDetector
 }
 
-func NewChangeDetectionService(detectors []ChangeDetector) *ChangeDetectionService {
+func NewChangeDetectionService(detectors []domain.ChangeDetector) *ChangeDetectionService {
 	return &ChangeDetectionService{detectors: detectors}
 }
 
@@ -31,13 +29,4 @@ func (s *ChangeDetectionService) GetLastModified(ctx context.Context) (time.Time
 	}
 
 	return latest, nil
-}
-
-func (s *ChangeDetectionService) HasChangedSince(ctx context.Context, since time.Time) (bool, error) {
-	lastModified, err := s.GetLastModified(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	return lastModified.After(since), nil
 }
