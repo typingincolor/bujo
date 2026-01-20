@@ -1,6 +1,6 @@
 import { BujoList } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw, MoveRight, Check } from 'lucide-react'
+import { List, CheckCircle2, Circle, ChevronRight, Plus, Trash2, Pencil, X, Ban, RotateCcw, MoveRight } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { MarkListItemDone, MarkListItemUndone, AddListItem, RemoveListItem, CreateList, DeleteList, RenameList, EditListItem, CancelListItem, UncancelListItem, MoveListItem } from '@/wailsjs/go/wails/App'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -212,29 +212,22 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
               className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2"
             >
               {item.type === 'done' ? (
-                <CheckCircle2 className="w-4 h-4 text-bujo-done flex-shrink-0" />
-              ) : item.type === 'cancelled' ? (
-                <Ban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              ) : (
-                <Circle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              )}
-              {/* Tick/untick buttons for task and done items */}
-              {item.type === 'task' && (
-                <button
-                  onClick={(e) => handleTickItem(e, item.id, item.done)}
-                  title="Mark as done"
-                  className="p-1 rounded text-muted-foreground hover:text-green-500 hover:bg-green-500/10 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                </button>
-              )}
-              {item.type === 'done' && (
                 <button
                   onClick={(e) => handleTickItem(e, item.id, item.done)}
                   title="Mark as not done"
-                  className="p-1 rounded text-muted-foreground hover:text-orange-600 hover:bg-orange-500/20 transition-colors opacity-0 group-hover:opacity-100"
+                  className="flex-shrink-0 hover:opacity-70 transition-opacity"
                 >
-                  <span className="text-sm font-bold leading-none">•</span>
+                  <CheckCircle2 className="w-4 h-4 text-bujo-done" />
+                </button>
+              ) : item.type === 'cancelled' ? (
+                <Ban className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              ) : (
+                <button
+                  onClick={(e) => handleTickItem(e, item.id, item.done)}
+                  title="Mark as done"
+                  className="flex-shrink-0 hover:text-green-500 transition-colors text-muted-foreground"
+                >
+                  <Circle className="w-4 h-4" />
                 </button>
               )}
               {editingItemId === item.id ? (
