@@ -9,7 +9,7 @@ import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
 import { OverviewView } from '@/components/bujo/OverviewView'
 import { QuestionsView } from '@/components/bujo/QuestionsView'
-import { SearchView } from '@/components/bujo/SearchView'
+import { SearchView, SearchResult } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
@@ -403,6 +403,17 @@ function App() {
     setInlineInputMode(null)
   }, [])
 
+  const handleSearchMigrate = useCallback((result: SearchResult) => {
+    setMigrateModalEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date
+    })
+  }, [])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
@@ -584,6 +595,7 @@ function App() {
                 overdueEntries={overdueEntries}
                 onEntryChanged={loadData}
                 onError={setError}
+                onMigrate={(entry) => setMigrateModalEntry(entry)}
               />
             </div>
           )}
@@ -625,7 +637,7 @@ function App() {
 
           {view === 'search' && (
             <div className="max-w-3xl mx-auto">
-              <SearchView />
+              <SearchView onMigrate={handleSearchMigrate} />
             </div>
           )}
 

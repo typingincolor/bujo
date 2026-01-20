@@ -174,6 +174,17 @@ describe('OverviewView - Interactions', () => {
     expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
   })
 
+  it('calls onMigrate when migrate button is clicked', async () => {
+    const user = userEvent.setup()
+    const onMigrate = vi.fn()
+    const entry = createTestEntry({ id: 42, type: 'task' })
+    render(<OverviewView overdueEntries={[entry]} onMigrate={onMigrate} />)
+
+    await user.click(screen.getByTitle('Migrate entry'))
+
+    expect(onMigrate).toHaveBeenCalledWith(entry)
+  })
+
   it('shows priority button for all entries', () => {
     render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
     expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()

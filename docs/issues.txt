@@ -83,7 +83,7 @@ x the descriptions in the sidebar of the frontend are not very good, suggest bet
 . You should be able to click on the circle on the goals in the monthly goals to mark it as completed
 x TUI - "No entries for the last 7 days" message should reflect the actual view being displayed, not hardcoded to 7 days
 x TUI - overdue tasks still appearing in journal and review views
-. FE - migrate entry from pending tasks is not doing anything
+x FE - migrate entry from pending tasks is not doing anything
 . Lists - click on circle should complete list item. Don't need the tick next to it
 . Need to password protect app / database - encrypt data at rest
 . Double click on entry in search should take me to the entry in the review view
