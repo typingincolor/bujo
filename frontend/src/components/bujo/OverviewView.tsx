@@ -14,6 +14,7 @@ interface OverviewViewProps {
   overdueEntries: Entry[];
   onEntryChanged?: () => void;
   onError?: (message: string) => void;
+  onMigrate?: (entry: Entry) => void;
 }
 
 function groupByDate(entries: Entry[]): Map<string, Entry[]> {
@@ -49,7 +50,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
   return chain;
 }
 
-export function OverviewView({ overdueEntries, onEntryChanged, onError }: OverviewViewProps) {
+export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -392,7 +393,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError }: Overvi
                             {entry.type === 'task' ? (
                               <button
                                 data-action-slot
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); onMigrate?.(entry); }}
                                 title="Migrate entry"
                                 className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
                               >

@@ -26,7 +26,11 @@ interface AncestorEntry {
   type: EntryType;
 }
 
-export function SearchView() {
+interface SearchViewProps {
+  onMigrate?: (entry: SearchResult) => void;
+}
+
+export function SearchView({ onMigrate }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -528,7 +532,7 @@ export function SearchView() {
                 {result.type === 'task' ? (
                   <button
                     data-action-slot
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => { e.stopPropagation(); onMigrate?.(result); }}
                     title="Migrate entry"
                     className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
                   >

@@ -578,6 +578,27 @@ describe('SearchView - Actions', () => {
     })
   })
 
+  it('calls onMigrate when migrate button is clicked', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    const onMigrate = vi.fn()
+    render(<SearchView onMigrate={onMigrate} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Migrate entry'))
+
+    expect(onMigrate).toHaveBeenCalledWith(expect.objectContaining({ id: 42, type: 'task', content: 'Test task' }))
+  })
+
   it('shows priority button for all entries', async () => {
     vi.mocked(Search).mockResolvedValue([
       createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),

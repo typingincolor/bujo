@@ -584,6 +584,7 @@ function App() {
                 overdueEntries={overdueEntries}
                 onEntryChanged={loadData}
                 onError={setError}
+                onMigrate={(entry) => setMigrateModalEntry(entry)}
               />
             </div>
           )}
@@ -625,7 +626,7 @@ function App() {
 
           {view === 'search' && (
             <div className="max-w-3xl mx-auto">
-              <SearchView />
+              <SearchView onMigrate={(entry) => setMigrateModalEntry({ id: entry.id, content: entry.content, type: entry.type, priority: entry.priority, parentId: entry.parentId, loggedDate: entry.date })} />
             </div>
           )}
 
