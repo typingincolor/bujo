@@ -277,6 +277,18 @@ func (r *GoalRepository) MoveToMonth(ctx context.Context, id int64, newMonth tim
 	return r.Update(ctx, *goal)
 }
 
+func (r *GoalRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `SELECT MAX(valid_from) FROM goals`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *GoalRepository) scanGoal(row *sql.Row) (*domain.Goal, error) {
 	var goal domain.Goal
 	var entityID sql.NullString

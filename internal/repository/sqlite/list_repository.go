@@ -351,6 +351,18 @@ func (r *ListRepository) GetItemCount(ctx context.Context, listID int64) (int, e
 	return count, err
 }
 
+func (r *ListRepository) GetLastModified(ctx context.Context) (time.Time, error) {
+	var validFrom sql.NullString
+	err := r.db.QueryRowContext(ctx, `SELECT MAX(valid_from) FROM lists`).Scan(&validFrom)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if !validFrom.Valid {
+		return time.Time{}, nil
+	}
+	return time.Parse(time.RFC3339, validFrom.String)
+}
+
 func (r *ListRepository) GetDoneCount(ctx context.Context, listID int64) (int, error) {
 	var count int
 	err := r.db.QueryRowContext(ctx, `

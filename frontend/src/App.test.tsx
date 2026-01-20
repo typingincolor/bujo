@@ -15,6 +15,10 @@ const mockEntriesAgenda = createMockAgenda({
   Overdue: [],
 })
 
+vi.mock('./wailsjs/runtime/runtime', () => ({
+  EventsOn: vi.fn().mockReturnValue(() => {}),
+}))
+
 vi.mock('./wailsjs/go/wails/App', () => ({
   GetAgenda: vi.fn().mockResolvedValue({
     Overdue: [],

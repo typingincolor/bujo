@@ -93,3 +93,7 @@ type ListItemRepository interface {
 	CountArchivable(ctx context.Context, olderThan time.Time) (int, error)
 	DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error)
 }
+
+type ChangeDetector interface {
+	GetLastModified(ctx context.Context) (time.Time, error)
+}
