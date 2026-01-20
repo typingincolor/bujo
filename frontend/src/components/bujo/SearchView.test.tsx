@@ -1114,3 +1114,62 @@ describe('SearchView - Context Pill', () => {
     })
   })
 })
+
+describe('SearchView - Double Click Navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls onNavigateToEntry when double-clicking a search result', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onNavigateToEntry = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onNavigateToEntry={onNavigateToEntry} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    const result = screen.getByText('Test entry').closest('[data-result-id]')
+    expect(result).toBeInTheDocument()
+
+    await user.dblClick(result!)
+
+    expect(onNavigateToEntry).toHaveBeenCalledWith({
+      id: 42,
+      content: 'Test entry',
+      type: 'task',
+      priority: 'none',
+      date: '2024-01-15T10:00:00Z',
+      parentId: null,
+    })
+  })
+
+  it('does not call onNavigateToEntry on single click', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onNavigateToEntry = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onNavigateToEntry={onNavigateToEntry} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    const result = screen.getByText('Test entry').closest('[data-result-id]')
+    await user.click(result!)
+
+    expect(onNavigateToEntry).not.toHaveBeenCalled()
+  })
+})

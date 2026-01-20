@@ -86,4 +86,4 @@ x TUI - overdue tasks still appearing in journal and review views
 x FE - migrate entry from pending tasks is not doing anything
 x Lists - click on circle should complete list item. Don't need the tick next to it
 . Need to password protect app / database - encrypt data at rest
-. Double click on entry in search should take me to the entry in the review view
+x Double click on entry in search should take me to the entry in the review view

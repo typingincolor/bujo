@@ -28,9 +28,10 @@ interface AncestorEntry {
 
 interface SearchViewProps {
   onMigrate?: (entry: SearchResult) => void;
+  onNavigateToEntry?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -387,6 +388,7 @@ export function SearchView({ onMigrate }: SearchViewProps) {
             <div
               key={result.id}
               onClick={() => toggleExpanded(result)}
+              onDoubleClick={() => onNavigateToEntry?.(result)}
               className={cn(
                 'p-3 rounded-lg border border-border cursor-pointer',
                 'bg-card transition-colors group',
