@@ -50,31 +50,37 @@ bujo history restore <entity-id> <version>
 
 ## Backup
 
-### Creating Backups
+### Automatic Backups
+
+bujo automatically creates a backup when you run any command if the most recent backup is older than 7 days. You'll see a message when this happens:
+
+```
+Creating backup... /Users/you/.bujo/backups/bujo-2026-01-20-143022.db
+```
+
+Backups are stored in `~/.bujo/backups/` with timestamps.
+
+### Manual Backups
 
 ```bash
-# Create a new backup
+# Create a backup immediately
 bujo backup create
 
 # List existing backups
 bujo backup
 
 # Verify backup integrity
-bujo backup verify ~/.bujo/backups/bujo_2026-01-20_143022.db
+bujo backup verify ~/.bujo/backups/bujo-2026-01-20-143022.db
 ```
 
-Backups are stored in `~/.bujo/backups/` with timestamps.
+### More Frequent Backups
 
-### Automated Backups
-
-Add to your crontab for daily backups:
+For daily backups (instead of weekly), add to your crontab:
 
 ```bash
 crontab -e
 # Add: 0 9 * * * /usr/local/bin/bujo backup create
 ```
-
-Or use a launchd plist on macOS for more reliability.
 
 ## Export
 
