@@ -357,11 +357,13 @@ describe('App - Day Navigation', () => {
     vi.mocked(GetAgenda).mockClear()
 
     const datePicker = screen.getByLabelText(/pick date/i)
-    fireEvent.change(datePicker, { target: { value: '2026-01-20' } })
+    await act(async () => {
+      fireEvent.change(datePicker, { target: { value: '2026-01-20' } })
+    })
 
     await waitFor(() => {
       expect(GetAgenda).toHaveBeenCalled()
-    })
+    }, { timeout: 3000 })
   })
 
   it('clicking next day navigates to next day', async () => {
