@@ -13,6 +13,7 @@ var symbolToType = map[rune]EntryType{
 	'x': EntryTypeDone,
 	'>': EntryTypeMigrated,
 	'?': EntryTypeQuestion,
+	'a': EntryTypeAnswer,
 	'•': EntryTypeTask,
 	'–': EntryTypeNote,
 	'○': EntryTypeEvent,
