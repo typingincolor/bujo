@@ -87,3 +87,4 @@ x FE - migrate entry from pending tasks is not doing anything
 x Lists - click on circle should complete list item. Don't need the tick next to it
 . Need to password protect app / database - encrypt data at rest
 x Double click on entry in search should take me to the entry in the review view
+. Settings page - make GitHub link open the repo, add support link to GitHub issues page
