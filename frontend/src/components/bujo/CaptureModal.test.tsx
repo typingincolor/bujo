@@ -266,6 +266,11 @@ o Event from file`
   })
 
   describe('drag and drop', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    afterEach(() => {
+      consoleSpy.mockClear()
+    })
     it('registers OnFileDrop handler when modal opens', () => {
       render(
         <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
@@ -383,6 +388,12 @@ o Event from file`
   })
 
   describe('file import errors', () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    afterEach(() => {
+      consoleSpy.mockClear()
+    })
+
     it('shows error message when import fails', async () => {
       vi.mocked(OpenFileDialog).mockRejectedValueOnce(new Error('File too large'))
       const user = userEvent.setup()

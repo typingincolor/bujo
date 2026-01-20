@@ -907,9 +907,20 @@ describe('App - Task Migration', () => {
 })
 
 describe('App - No flicker on data refresh', () => {
+  const originalError = console.error
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    // Suppress act() warnings in this test - the async flow is intentionally complex
+    console.error = (...args: unknown[]) => {
+      if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) return
+      originalError(...args)
+    }
+  })
+
+  afterEach(() => {
+    console.error = originalError
   })
 
   it('does not show loading spinner when refreshing data after habit action', async () => {
@@ -959,8 +970,10 @@ describe('App - No flicker on data refresh', () => {
     // Small delay to let the API call start
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    // Resolve the pending API call
-    resolveGetHabits!({ Habits: [] })
+    // Resolve the pending API call wrapped in act() to avoid warning
+    await act(async () => {
+      resolveGetHabits!({ Habits: [] })
+    })
 
     // Wait for everything to settle
     await waitFor(() => {
