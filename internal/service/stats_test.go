@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -33,7 +34,8 @@ func (m *mockStatsHabitRepo) GetAll(ctx context.Context) ([]domain.Habit, error)
 }
 
 type mockStatsHabitLogRepo struct {
-	logs []domain.HabitLog
+	logs            []domain.HabitLog
+	getByHabitIDErr error
 }
 
 func (m *mockStatsHabitLogRepo) GetAllRange(ctx context.Context, start, end time.Time) ([]domain.HabitLog, error) {
@@ -47,6 +49,9 @@ func (m *mockStatsHabitLogRepo) GetAllRange(ctx context.Context, start, end time
 }
 
 func (m *mockStatsHabitLogRepo) GetByHabitID(ctx context.Context, habitID int64) ([]domain.HabitLog, error) {
+	if m.getByHabitIDErr != nil {
+		return nil, m.getByHabitIDErr
+	}
 	var result []domain.HabitLog
 	for _, l := range m.logs {
 		if l.HabitID == habitID {
@@ -241,5 +246,30 @@ func TestStatsService_GetStats_EmptyData(t *testing.T) {
 	}
 	if stats.HabitStats.Active != 0 {
 		t.Errorf("expected 0 habits, got %d", stats.HabitStats.Active)
+	}
+}
+
+func TestStatsService_GetStats_GetByHabitIDError(t *testing.T) {
+	today := time.Date(2026, 1, 10, 0, 0, 0, 0, time.UTC)
+	from := today.AddDate(0, 0, -29)
+
+	habits := []domain.Habit{
+		{ID: 1, EntityID: "h1", Name: "Exercise"},
+	}
+
+	repoErr := errors.New("database connection failed")
+
+	svc := NewStatsService(
+		&mockStatsEntryRepo{},
+		&mockStatsHabitRepo{habits: habits},
+		&mockStatsHabitLogRepo{getByHabitIDErr: repoErr},
+	)
+
+	_, err := svc.GetStats(context.Background(), from, today)
+	if err == nil {
+		t.Fatal("expected error to be propagated, got nil")
+	}
+	if !errors.Is(err, repoErr) {
+		t.Errorf("expected error to wrap %v, got %v", repoErr, err)
 	}
 }

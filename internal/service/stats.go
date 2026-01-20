@@ -65,7 +65,12 @@ func (s *StatsService) GetStats(ctx context.Context, from, to time.Time) (*domai
 	stats.EntryCounts = s.countEntries(entries)
 	stats.TaskCompletion = s.calculateTaskCompletion(entries)
 	stats.Productivity = s.calculateProductivity(entries)
-	stats.HabitStats = s.calculateHabitStats(ctx, habits, logs, to)
+
+	habitStats, err := s.calculateHabitStats(ctx, habits, logs, to)
+	if err != nil {
+		return nil, err
+	}
+	stats.HabitStats = habitStats
 
 	return stats, nil
 }
@@ -190,14 +195,14 @@ func (s *StatsService) calculateProductivity(entries []domain.Entry) domain.Prod
 	return prod
 }
 
-func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.Habit, logs []domain.HabitLog, today time.Time) domain.HabitStats {
+func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.Habit, logs []domain.HabitLog, today time.Time) (domain.HabitStats, error) {
 	stats := domain.HabitStats{
 		Active:    len(habits),
 		TotalLogs: len(logs),
 	}
 
 	if len(habits) == 0 {
-		return stats
+		return stats, nil
 	}
 
 	logCounts := make(map[int64]int)
@@ -220,7 +225,7 @@ func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.
 
 		habitLogs, err := s.habitLogRepo.GetByHabitID(ctx, h.ID)
 		if err != nil {
-			continue
+			return domain.HabitStats{}, err
 		}
 
 		streak := domain.CalculateStreak(habitLogs, today)
@@ -233,5 +238,5 @@ func (s *StatsService) calculateHabitStats(ctx context.Context, habits []domain.
 		}
 	}
 
-	return stats
+	return stats, nil
 }
