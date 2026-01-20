@@ -52,13 +52,15 @@ bujo history restore <entity-id> <version>
 
 ### Automatic Backups
 
-bujo automatically creates a backup when you run any command if the most recent backup is older than 7 days. You'll see a message when this happens:
+bujo automatically creates a backup when you run any CLI or TUI command if the most recent backup is older than 7 days. You'll see a message when this happens:
 
 ```
 Creating backup... /Users/you/.bujo/backups/bujo-2026-01-20-143022.db
 ```
 
 Backups are stored in `~/.bujo/backups/` with timestamps.
+
+**Note:** The desktop app does not trigger automatic backups. If you primarily use the desktop app, run `bujo backup create` periodically or use cron for scheduled backups.
 
 ### Manual Backups
 
