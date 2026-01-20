@@ -162,6 +162,14 @@ export function MoveListItem(arg1, arg2) {
   return window['go']['wails']['App']['MoveListItem'](arg1, arg2);
 }
 
+export function OpenFileDialog() {
+  return window['go']['wails']['App']['OpenFileDialog']();
+}
+
+export function ReadFile(arg1) {
+  return window['go']['wails']['App']['ReadFile'](arg1);
+}
+
 export function RemoveListItem(arg1) {
   return window['go']['wails']['App']['RemoveListItem'](arg1);
 }
@@ -196,6 +204,10 @@ export function SetPriority(arg1, arg2) {
 
 export function SetWeather(arg1, arg2) {
   return window['go']['wails']['App']['SetWeather'](arg1, arg2);
+}
+
+export function Shutdown(arg1) {
+  return window['go']['wails']['App']['Shutdown'](arg1);
 }
 
 export function UncancelEntry(arg1) {

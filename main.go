@@ -11,6 +11,7 @@ import (
 	wailsrt "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -50,6 +51,18 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup:        wailsApp.Startup,
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: false,
+			CSSDropProperty:    "--wails-drop-target",
+			CSSDropValue:       "drop",
+		},
+		Mac: &mac.Options{
+			About: &mac.AboutInfo{
+				Title:   "Bujo",
+				Message: "A Bullet Journal for your terminal and desktop",
+			},
+		},
 		Bind: []interface{}{
 			wailsApp,
 		},

@@ -5,9 +5,17 @@ import { CaptureModal } from './CaptureModal'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({
   AddEntry: vi.fn().mockResolvedValue([1]),
+  OpenFileDialog: vi.fn().mockResolvedValue(''),
+  ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { AddEntry } from '@/wailsjs/go/wails/App'
+vi.mock('@/wailsjs/runtime/runtime', () => ({
+  OnFileDrop: vi.fn(),
+  OnFileDropOff: vi.fn(),
+}))
+
+import { AddEntry, OpenFileDialog, ReadFile } from '@/wailsjs/go/wails/App'
+import { OnFileDrop, OnFileDropOff } from '@/wailsjs/runtime/runtime'
 
 const mockStorage: Record<string, string> = {}
 const mockLocalStorage = {
@@ -179,6 +187,215 @@ describe('CaptureModal', () => {
         <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
       )
       expect(screen.getByText(/indent/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('file import', () => {
+    it('renders import file button', () => {
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+      expect(screen.getByText('Import File')).toBeInTheDocument()
+    })
+
+    it('calls OpenFileDialog when import button is clicked', async () => {
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      await user.click(screen.getByText('Import File'))
+
+      expect(OpenFileDialog).toHaveBeenCalled()
+    })
+
+    it('populates textarea with file contents', async () => {
+      const fileContent = `. Task from file
+- Note from file
+o Event from file`
+      vi.mocked(OpenFileDialog).mockResolvedValueOnce(fileContent)
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      await user.click(screen.getByText('Import File'))
+
+      await waitFor(() => {
+        const textarea = screen.getByPlaceholderText(/enter entries/i)
+        expect(textarea).toHaveValue(fileContent)
+      })
+    })
+
+    it('does not change textarea when user cancels file dialog', async () => {
+      vi.mocked(OpenFileDialog).mockResolvedValueOnce('')
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter entries/i)
+      await user.type(textarea, '. Existing content')
+      await user.click(screen.getByText('Import File'))
+
+      await waitFor(() => {
+        expect(textarea).toHaveValue('. Existing content')
+      })
+    })
+
+    it('appends file contents to existing content', async () => {
+      const fileContent = `. Task from file`
+      vi.mocked(OpenFileDialog).mockResolvedValueOnce(fileContent)
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      const textarea = screen.getByPlaceholderText(/enter entries/i)
+      await user.type(textarea, '. Existing task')
+      await user.click(screen.getByText('Import File'))
+
+      await waitFor(() => {
+        expect(textarea).toHaveValue('. Existing task\n. Task from file')
+      })
+    })
+  })
+
+  describe('drag and drop', () => {
+    it('registers OnFileDrop handler when modal opens', () => {
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      expect(OnFileDrop).toHaveBeenCalled()
+    })
+
+    it('unregisters OnFileDrop handler when modal closes', () => {
+      const { rerender } = render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      rerender(
+        <CaptureModal isOpen={false} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      expect(OnFileDropOff).toHaveBeenCalled()
+    })
+
+    it('reads dropped file and populates textarea', async () => {
+      const fileContent = `. Dropped task
+- Dropped note`
+      vi.mocked(ReadFile).mockResolvedValueOnce(fileContent)
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/file.txt'])
+
+      await waitFor(() => {
+        expect(ReadFile).toHaveBeenCalledWith('/path/to/file.txt')
+      })
+
+      await waitFor(() => {
+        const textarea = screen.getByPlaceholderText(/enter entries/i)
+        expect(textarea).toHaveValue(fileContent)
+      })
+    })
+
+    it('only reads the first dropped file', async () => {
+      const fileContent = `. Task from first file`
+      vi.mocked(ReadFile).mockResolvedValueOnce(fileContent)
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/first.txt', '/path/to/second.txt'])
+
+      await waitFor(() => {
+        expect(ReadFile).toHaveBeenCalledTimes(1)
+        expect(ReadFile).toHaveBeenCalledWith('/path/to/first.txt')
+      })
+    })
+
+    it('shows error message when file read fails', async () => {
+      vi.mocked(ReadFile).mockRejectedValueOnce(new Error('File too large'))
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/large.txt'])
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to read file/i)).toBeInTheDocument()
+      })
+    })
+
+    it('clears error message when modal is closed and reopened', async () => {
+      vi.mocked(ReadFile).mockRejectedValueOnce(new Error('File too large'))
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      const { rerender } = render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/large.txt'])
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to read file/i)).toBeInTheDocument()
+      })
+
+      rerender(
+        <CaptureModal isOpen={false} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      rerender(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      expect(screen.queryByText(/failed to read file/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('file import errors', () => {
+    it('shows error message when import fails', async () => {
+      vi.mocked(OpenFileDialog).mockRejectedValueOnce(new Error('File too large'))
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      await user.click(screen.getByText('Import File'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to import file/i)).toBeInTheDocument()
+      })
     })
   })
 })
