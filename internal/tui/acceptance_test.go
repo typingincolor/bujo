@@ -1433,8 +1433,9 @@ func TestUAT_JournalView_MoveEntryToList(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()
 
-	// Create a journal entry
-	entries, err := bujoSvc.LogEntries(ctx, ". Task to move", service.LogEntriesOptions{})
+	// Create a journal entry for today
+	opts := service.LogEntriesOptions{Date: time.Now()}
+	entries, err := bujoSvc.LogEntries(ctx, ". Task to move", opts)
 	if err != nil {
 		t.Fatalf("failed to create entry: %v", err)
 	}

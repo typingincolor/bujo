@@ -168,7 +168,11 @@ func (m Model) renderJournalContent() string {
 	}
 
 	if len(m.entries) == 0 {
-		sb.WriteString(HelpStyle.Render("No entries for the last 7 days."))
+		emptyMsg := "No entries for today."
+		if m.viewMode == ViewModeWeek {
+			emptyMsg = "No entries for the last 7 days."
+		}
+		sb.WriteString(HelpStyle.Render(emptyMsg))
 		sb.WriteString("\n\n")
 	} else {
 		availableLines := m.height - 6 // 2 for toolbar, 2 for help, 2 for padding

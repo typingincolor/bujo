@@ -1111,14 +1111,8 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	viewDateNormalized := time.Date(m.viewDate.Year(), m.viewDate.Month(), m.viewDate.Day(), 0, 0, 0, 0, m.viewDate.Location())
-	isViewingPast := viewDateNormalized.Before(today)
 
 	var items []EntryItem
-
-	if len(agenda.Overdue) > 0 && !isViewingPast {
-		items = append(items, m.flattenEntries(agenda.Overdue, "⚠️  OVERDUE", true, today)...)
-	}
 
 	for _, day := range agenda.Days {
 		if len(day.Entries) == 0 {
