@@ -2,6 +2,7 @@ package wails
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"time"
 
@@ -357,7 +358,16 @@ func (a *App) GetSummary(date time.Time) (string, error) {
 	return summary.Content, nil
 }
 
+const maxFileSize = 1024 * 1024
+
 func (a *App) ReadFile(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	if info.Size() > maxFileSize {
+		return "", fmt.Errorf("file too large: %d bytes (max %d bytes)", info.Size(), maxFileSize)
+	}
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", err

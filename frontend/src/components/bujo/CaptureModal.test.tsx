@@ -332,5 +332,70 @@ o Event from file`
         expect(ReadFile).toHaveBeenCalledWith('/path/to/first.txt')
       })
     })
+
+    it('shows error message when file read fails', async () => {
+      vi.mocked(ReadFile).mockRejectedValueOnce(new Error('File too large'))
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/large.txt'])
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to read file/i)).toBeInTheDocument()
+      })
+    })
+
+    it('clears error message when modal is closed and reopened', async () => {
+      vi.mocked(ReadFile).mockRejectedValueOnce(new Error('File too large'))
+
+      let dropCallback: (x: number, y: number, paths: string[]) => void = () => {}
+      vi.mocked(OnFileDrop).mockImplementation((cb) => {
+        dropCallback = cb
+      })
+
+      const { rerender } = render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      dropCallback(100, 100, ['/path/to/large.txt'])
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to read file/i)).toBeInTheDocument()
+      })
+
+      rerender(
+        <CaptureModal isOpen={false} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      rerender(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      expect(screen.queryByText(/failed to read file/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('file import errors', () => {
+    it('shows error message when import fails', async () => {
+      vi.mocked(OpenFileDialog).mockRejectedValueOnce(new Error('File too large'))
+      const user = userEvent.setup()
+
+      render(
+        <CaptureModal isOpen={true} onClose={() => {}} onEntriesCreated={() => {}} />
+      )
+
+      await user.click(screen.getByText('Import File'))
+
+      await waitFor(() => {
+        expect(screen.getByText(/failed to import file/i)).toBeInTheDocument()
+      })
+    })
   })
 })

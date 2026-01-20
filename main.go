@@ -11,9 +11,7 @@ import (
 	wailsrt "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -65,8 +63,6 @@ func main() {
 				Message: "A Bullet Journal for your terminal and desktop",
 			},
 		},
-		Windows: &windows.Options{},
-		Linux:   &linux.Options{},
 		Bind: []interface{}{
 			wailsApp,
 		},

@@ -1123,6 +1123,35 @@ func TestApp_ReadFile_ReturnsErrorForNonExistent(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestApp_ReadFile_ReturnsErrorForLargeFile(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	tempFile, err := os.CreateTemp("", "bujo-large-*.txt")
+	require.NoError(t, err)
+	defer os.Remove(tempFile.Name())
+
+	largeContent := make([]byte, 2*1024*1024)
+	for i := range largeContent {
+		largeContent[i] = 'a'
+	}
+	_, err = tempFile.Write(largeContent)
+	require.NoError(t, err)
+	tempFile.Close()
+
+	_, err = wailsApp.ReadFile(tempFile.Name())
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "file too large")
+}
+
 func TestApp_OpenFileDialog_ReturnsSelectedFilePath(t *testing.T) {
 	ctx := context.Background()
 

@@ -19,9 +19,11 @@ export function CaptureModal({
 }: CaptureModalProps) {
   const [content, setContent] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
+      setImportError(null)
       const draft = localStorage.getItem(DRAFT_KEY)
       if (draft) {
         setContent(draft)
@@ -70,11 +72,13 @@ export function CaptureModal({
   }, [saveDraft])
 
   const handleImportFile = async () => {
+    setImportError(null)
     try {
       const fileContent = await OpenFileDialog()
       handleFileContent(fileContent)
     } catch (err) {
       console.error('Failed to import file:', err)
+      setImportError('Failed to import file. Please try again.')
     }
   }
 
@@ -83,11 +87,13 @@ export function CaptureModal({
 
     const handleFileDrop = async (_x: number, _y: number, paths: string[]) => {
       if (paths.length === 0) return
+      setImportError(null)
       try {
         const fileContent = await ReadFile(paths[0])
         handleFileContent(fileContent)
       } catch (err) {
         console.error('Failed to read dropped file:', err)
+        setImportError('Failed to read file. Please try again.')
       }
     }
 
@@ -142,6 +148,12 @@ export function CaptureModal({
             <span className="font-medium">Tip:</span> Indent with spaces/tabs to create child entries.
           </div>
         </div>
+
+        {importError && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-sm text-destructive">
+            {importError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
           <textarea
