@@ -415,10 +415,16 @@ describe('GoalsView - Click and Tick/Untick Behavior', () => {
     expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
   })
 
-  it('shows task bullet symbol in mark as not done button', () => {
-    render(<GoalsView goals={[createTestGoal({ content: 'Done Goal', status: 'done' })]} />)
-    const undoneButton = screen.getByTitle('Mark as not done')
-    expect(undoneButton).toHaveTextContent('•')
+  it('clicking circle on done goal marks as not done', async () => {
+    const user = userEvent.setup()
+    const onGoalChanged = vi.fn()
+    render(<GoalsView goals={[createTestGoal({ id: 42, content: 'Done Goal', status: 'done' })]} onGoalChanged={onGoalChanged} />)
+
+    await user.click(screen.getByTitle('Mark as not done'))
+
+    await waitFor(() => {
+      expect(MarkGoalActive).toHaveBeenCalledWith(42)
+    })
   })
 })
 

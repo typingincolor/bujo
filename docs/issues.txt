@@ -80,7 +80,7 @@ x the descriptions in the sidebar of the frontend are not very good, suggest bet
 . Package-level mutable state in history command - var listItemRepo anti-pattern (cmd/bujo/cmd/history.go:14-17)
 . If you cancel or delete and answer to a question, you should be able to answer it again
 . How do you add an answer to a question using the capture modal?
-. You should be able to click on the circle on the goals in the monthly goals to mark it as completed
+x You should be able to click on the circle on the goals in the monthly goals to mark it as completed
 x TUI - "No entries for the last 7 days" message should reflect the actual view being displayed, not hardcoded to 7 days
 x TUI - overdue tasks still appearing in journal and review views
 x FE - migrate entry from pending tasks is not doing anything
