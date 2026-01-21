@@ -18,10 +18,11 @@ func NewEntryRepository(db *sql.DB) *EntryRepository {
 }
 
 func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64, error) {
-	var scheduledDate *string
+	var scheduledDateStr string
 	if entry.ScheduledDate != nil {
-		s := entry.ScheduledDate.Format("2006-01-02")
-		scheduledDate = &s
+		scheduledDateStr = entry.ScheduledDate.Format("2006-01-02")
+	} else {
+		scheduledDateStr = entry.CreatedAt.Format("2006-01-02")
 	}
 
 	entityID := entry.EntityID
@@ -38,7 +39,7 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate, entry.CreatedAt.Format(time.RFC3339),
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.CreatedAt.Format(time.RFC3339),
 		entityID.String(), 1, now, domain.OpTypeInsert.String())
 
 	if err != nil {
@@ -194,10 +195,13 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		return err
 	}
 
-	var scheduledDate *string
+	var scheduledDateStr string
 	if entry.ScheduledDate != nil {
-		s := entry.ScheduledDate.Format("2006-01-02")
-		scheduledDate = &s
+		scheduledDateStr = entry.ScheduledDate.Format("2006-01-02")
+	} else if current.ScheduledDate != nil {
+		scheduledDateStr = current.ScheduledDate.Format("2006-01-02")
+	} else {
+		scheduledDateStr = current.CreatedAt.Format("2006-01-02")
 	}
 
 	priority := entry.Priority
@@ -208,7 +212,7 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr,
 		current.CreatedAt.Format(time.RFC3339), current.EntityID.String(), maxVersion+1, now, domain.OpTypeUpdate.String())
 	if err != nil {
 		return err
@@ -264,10 +268,11 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 
-	var scheduledDate *string
+	var scheduledDateStr string
 	if entry.ScheduledDate != nil {
-		s := entry.ScheduledDate.Format("2006-01-02")
-		scheduledDate = &s
+		scheduledDateStr = entry.ScheduledDate.Format("2006-01-02")
+	} else {
+		scheduledDateStr = entry.CreatedAt.Format("2006-01-02")
 	}
 
 	priority := entry.Priority
@@ -278,7 +283,7 @@ func (r *EntryRepository) Delete(ctx context.Context, id int64) error {
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDate,
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr,
 		entry.CreatedAt.Format(time.RFC3339), entry.EntityID.String(), maxVersion+1, now, domain.OpTypeDelete.String())
 	if err != nil {
 		return err
@@ -392,9 +397,11 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	if lastEntry.Location.Valid {
 		location = &lastEntry.Location.String
 	}
-	var scheduledDate *string
+	var scheduledDateStr string
 	if lastEntry.ScheduledDate.Valid {
-		scheduledDate = &lastEntry.ScheduledDate.String
+		scheduledDateStr = lastEntry.ScheduledDate.String
+	} else {
+		scheduledDateStr = lastEntry.CreatedAt[:10]
 	}
 	priority := lastEntry.Priority
 	if priority == "" {
@@ -404,7 +411,7 @@ func (r *EntryRepository) Restore(ctx context.Context, entityID domain.EntityID)
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, lastEntry.Type, lastEntry.Content, priority, parentID, lastEntry.Depth, location, scheduledDate,
+	`, lastEntry.Type, lastEntry.Content, priority, parentID, lastEntry.Depth, location, scheduledDateStr,
 		lastEntry.CreatedAt, entityID.String(), lastEntry.Version+1, now, domain.OpTypeInsert.String())
 	if err != nil {
 		return 0, err
