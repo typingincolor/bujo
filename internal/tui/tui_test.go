@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
+	"github.com/typingincolor/bujo/internal/testutil"
 )
 
 func init() {
@@ -30,12 +30,6 @@ func createTextInput() textinput.Model {
 	ti.CharLimit = 256
 	ti.Width = 50
 	return ti
-}
-
-var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-
-func stripAnsi(s string) string {
-	return ansiRegex.ReplaceAllString(s, "")
 }
 
 func TestDefaultKeyMap_ShortHelp(t *testing.T) {
@@ -4004,7 +3998,7 @@ func TestPendingTasks_ParentChainIndentationIsCorrect(t *testing.T) {
 		},
 	}
 
-	view := stripAnsi(model.View())
+	view := testutil.StripAnsi(model.View())
 
 	if !strings.Contains(view, "  > – Parent note") {
 		t.Errorf("expected parent to be indented with '  > – Parent note', got:\n%s", view)
@@ -4034,7 +4028,7 @@ func TestPendingTasks_ContextIndicatorIsVisible(t *testing.T) {
 		},
 	}
 
-	view := stripAnsi(model.View())
+	view := testutil.StripAnsi(model.View())
 
 	// Task with context should have a clear indicator (not just small [1])
 	if !strings.Contains(view, "↳") {
@@ -4070,7 +4064,7 @@ func TestPendingTasks_ScrollingAccountsForDateHeaders(t *testing.T) {
 	model.pendingTasksState.entries = entries
 	model.pendingTasksState.selectedIdx = 0
 
-	view := stripAnsi(model.View())
+	view := testutil.StripAnsi(model.View())
 	lines := strings.Split(view, "\n")
 
 	// Count actual content lines (excluding empty lines at end)
@@ -4111,7 +4105,7 @@ func TestPendingTasks_ScrollingToBottomShowsLastEntry(t *testing.T) {
 	model.pendingTasksState.selectedIdx = len(entries) - 1
 	model = model.ensurePendingTaskVisible()
 
-	view := stripAnsi(model.View())
+	view := testutil.StripAnsi(model.View())
 
 	// Last entry (Task 10) should be visible
 	if !strings.Contains(view, "Task 10") {

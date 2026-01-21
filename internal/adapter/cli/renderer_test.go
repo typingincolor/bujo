@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -10,17 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
+	"github.com/typingincolor/bujo/internal/testutil"
 )
 
 func init() {
 	// Enable color output for tests (normally disabled when not a TTY)
 	color.NoColor = false
-}
-
-// stripANSI removes ANSI escape codes from a string for content verification
-func stripANSI(s string) string {
-	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*m`)
-	return ansiRegex.ReplaceAllString(s, "")
 }
 
 func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
@@ -119,7 +113,7 @@ func TestRenderGoalsSection_ShowsGoalsWithProgress(t *testing.T) {
 	}
 
 	result := RenderGoalsSection(goals, month)
-	stripped := stripANSI(result)
+	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "January Goals")
 	assert.Contains(t, stripped, "Learn Go")
@@ -144,7 +138,7 @@ func TestRenderGoalsSection_ShowsCheckmarkForDoneGoals(t *testing.T) {
 	}
 
 	result := RenderGoalsSection(goals, month)
-	stripped := stripANSI(result)
+	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "✓")
 	assert.Contains(t, stripped, "Completed goal")
@@ -166,7 +160,7 @@ func TestRenderDailyAgenda_WithMoodAndWeather(t *testing.T) {
 	}
 
 	result := RenderDailyAgenda(agenda)
-	stripped := stripANSI(result)
+	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "Home Office")
 	assert.Contains(t, stripped, "Focused")
@@ -206,7 +200,7 @@ func TestRenderMultiDayAgenda_WithMoodAndWeather(t *testing.T) {
 	}
 
 	result := RenderMultiDayAgenda(agenda, today)
-	stripped := stripANSI(result)
+	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "Home")
 	assert.Contains(t, stripped, "Energetic")

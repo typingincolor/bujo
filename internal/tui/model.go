@@ -22,6 +22,8 @@ const (
 	minAvailableLines         = 5
 	locationHistoryMonths     = 6
 	pendingTasksLookbackYears = 1
+	pendingTasksHeaderLines   = 4
+	pendingTasksFooterLines   = 2
 )
 
 type ChangeDetector interface {

@@ -1535,9 +1535,7 @@ func (m Model) pendingTasksVisibleCount(startIdx int, maxLines int) int {
 }
 
 func (m Model) pendingTasksVisibleRows() int {
-	headerLines := 4
-	footerLines := 2
-	return m.height - headerLines - footerLines
+	return m.height - pendingTasksHeaderLines - pendingTasksFooterLines
 }
 
 func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

@@ -1043,6 +1043,11 @@ func (m Model) renderPendingTasksContent() string {
 
 	sb.WriteString(fmt.Sprintf("Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries)))
 
+	parentChains := m.pendingTasksState.parentChains
+	if parentChains == nil {
+		parentChains = make(map[int64][]domain.Entry)
+	}
+
 	maxLines := m.pendingTasksVisibleRows()
 	startIdx := m.pendingTasksState.scrollOffset
 	linesUsed := 0
@@ -1070,7 +1075,7 @@ func (m Model) renderPendingTasksContent() string {
 			linesNeeded += 2
 		}
 		if isExpanded {
-			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
+			if chain, ok := parentChains[entry.ID]; ok && len(chain) > 0 {
 				linesNeeded += len(chain)
 			}
 		}
@@ -1095,13 +1100,13 @@ func (m Model) renderPendingTasksContent() string {
 		}
 
 		if isExpanded {
-			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
+			if chain, ok := parentChains[entry.ID]; ok && len(chain) > 0 {
 				sb.WriteString(m.renderParentChain(chain))
 				linesUsed += len(chain)
 			}
 		}
 
-		line := m.renderPendingEntryLine(entry, isSelected, isExpanded, m.pendingTasksState.parentChains)
+		line := m.renderPendingEntryLine(entry, isSelected, isExpanded, parentChains)
 		sb.WriteString(line)
 		sb.WriteString("\n")
 		linesUsed++
