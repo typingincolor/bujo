@@ -102,7 +102,8 @@ type DayEntries struct {
 }
 
 type MultiDayAgenda struct {
-	Days []DayEntries
+	Overdue []domain.Entry
+	Days    []DayEntries
 }
 
 func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*DailyAgenda, error) {
@@ -131,6 +132,12 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 
 func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time) (*MultiDayAgenda, error) {
 	agenda := &MultiDayAgenda{}
+
+	overdue, err := s.entryRepo.GetOverdue(ctx, from)
+	if err != nil {
+		return nil, err
+	}
+	agenda.Overdue = overdue
 
 	entries, err := s.entryRepo.GetByDateRange(ctx, from, to)
 	if err != nil {
