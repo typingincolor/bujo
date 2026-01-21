@@ -2,59 +2,15 @@ package tui
 
 import "github.com/typingincolor/bujo/internal/domain"
 
-func CanCancel(entry domain.Entry) bool {
-	return entry.CanCancel()
-}
-
-func CanUncancel(entry domain.Entry) bool {
-	return entry.CanUncancel()
-}
-
-func CanCycleType(entry domain.Entry) bool {
-	return entry.CanCycleType()
-}
-
-func CanEdit(entry domain.Entry) bool {
-	return entry.CanEdit()
-}
-
-func CanMigrate(entry domain.Entry) bool {
-	return entry.CanMigrate()
-}
-
-func CanAnswer(entry domain.Entry) bool {
-	return entry.CanAnswer()
-}
-
-func CanAddChild(entry domain.Entry) bool {
-	return entry.CanAddChild()
-}
-
-func CanMoveToList(entry domain.Entry) bool {
-	return entry.CanMoveToList()
-}
-
-func CanMoveToRoot(entry domain.Entry) bool {
-	return entry.CanMoveToRoot()
-}
-
-func CanCyclePriority(entry domain.Entry) bool {
-	return entry.CanCyclePriority()
-}
-
-func CanDelete(entry domain.Entry) bool {
-	return entry.CanDelete()
-}
-
 func UpdateKeyMapForEntry(km *KeyMap, entry domain.Entry) {
-	km.CancelEntry.SetEnabled(CanCancel(entry))
-	km.UncancelEntry.SetEnabled(CanUncancel(entry))
-	km.Edit.SetEnabled(CanEdit(entry))
-	km.Retype.SetEnabled(CanCycleType(entry))
-	km.AddChild.SetEnabled(CanAddChild(entry))
-	km.Migrate.SetEnabled(CanMigrate(entry))
-	km.MoveToList.SetEnabled(CanMoveToList(entry))
-	km.Answer.SetEnabled(CanAnswer(entry))
+	km.CancelEntry.SetEnabled(entry.CanCancel())
+	km.UncancelEntry.SetEnabled(entry.CanUncancel())
+	km.Edit.SetEnabled(entry.CanEdit())
+	km.Retype.SetEnabled(entry.CanCycleType())
+	km.AddChild.SetEnabled(entry.CanAddChild())
+	km.Migrate.SetEnabled(entry.CanMigrate())
+	km.MoveToList.SetEnabled(entry.CanMoveToList())
+	km.Answer.SetEnabled(entry.CanAnswer())
 }
 
 func ResetKeyMapEnabled(km *KeyMap) {

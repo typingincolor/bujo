@@ -546,3 +546,49 @@ func TestEntry_CanMoveToRoot(t *testing.T) {
 		})
 	}
 }
+
+func TestEntry_CanCyclePriority(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeDone, true},
+		{EntryTypeCancelled, true},
+		{EntryTypeQuestion, true},
+		{EntryTypeAnswered, true},
+		{EntryTypeAnswer, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanCyclePriority())
+		})
+	}
+}
+
+func TestEntry_CanDelete(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeDone, true},
+		{EntryTypeCancelled, true},
+		{EntryTypeQuestion, true},
+		{EntryTypeAnswered, true},
+		{EntryTypeAnswer, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanDelete())
+		})
+	}
+}
