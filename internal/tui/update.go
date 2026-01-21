@@ -57,6 +57,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
+		m = m.syncKeyMapToSelection()
 
 		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
 			switch m.viewMode {
@@ -406,23 +407,23 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.selectedIdx > 0 {
 			m.selectedIdx--
 		}
-		return m.ensuredVisible(), nil
+		return m.syncKeyMapToSelection().ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Down):
 		if m.selectedIdx < len(m.entries)-1 {
 			m.selectedIdx++
 		}
-		return m.ensuredVisible(), nil
+		return m.syncKeyMapToSelection().ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Top):
 		m.selectedIdx = 0
 		m.scrollOffset = 0
-		return m, nil
+		return m.syncKeyMapToSelection(), nil
 
 	case key.Matches(msg, m.keyMap.Bottom):
 		if len(m.entries) > 0 {
 			m.selectedIdx = len(m.entries) - 1
-			m = m.scrollToBottom()
+			m = m.scrollToBottom().syncKeyMapToSelection()
 		}
 		return m, nil
 
@@ -487,12 +488,20 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.CancelEntry):
 		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			if !CanCancel(entry) {
+				return m, nil
+			}
 			return m, m.cancelEntryCmd()
 		}
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.UncancelEntry):
 		if len(m.entries) > 0 {
+			entry := m.entries[m.selectedIdx].Entry
+			if !CanUncancel(entry) {
+				return m, nil
+			}
 			return m, m.uncancelEntryCmd()
 		}
 		return m, nil
@@ -500,6 +509,9 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Retype):
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
+			if !CanCycleType(entry) {
+				return m, nil
+			}
 			m.retypeMode = retypeState{
 				active:      true,
 				entryID:     entry.ID,
@@ -529,6 +541,9 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
+		if !CanEdit(entry) {
+			return m, nil
+		}
 		ti := textinput.New()
 		ti.SetValue(entry.Content)
 		ti.Focus()
@@ -571,6 +586,9 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
+		if !CanAddChild(entry) {
+			return m, nil
+		}
 		ti := textinput.New()
 		ti.Placeholder = ". task, - note, o event"
 		ti.Focus()
@@ -650,7 +668,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
-		if entry.Type != domain.EntryTypeTask && entry.Type != domain.EntryTypeNote {
+		if !CanMoveToList(entry) {
 			return m, nil
 		}
 		return m, m.loadListsForMoveCmd(entry.ID, entry.Type, entry.Content)
