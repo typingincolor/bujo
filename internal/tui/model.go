@@ -1218,13 +1218,6 @@ func (m Model) expandAllSiblings() Model {
 			}
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		if (parentID == nil && entry.ParentID == nil) ||
-			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
-			m.collapsed[entry.EntityID] = false
-		}
-	}
-
 	m.entries = m.flattenAgenda(m.agenda)
 	return m.ensuredVisible()
 }
@@ -1245,13 +1238,6 @@ func (m Model) collapseAllSiblings() Model {
 			}
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		if (parentID == nil && entry.ParentID == nil) ||
-			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
-			m.collapsed[entry.EntityID] = true
-		}
-	}
-
 	m.entries = m.flattenAgenda(m.agenda)
 	return m.ensuredVisible()
 }
@@ -1356,10 +1342,6 @@ func (m Model) ensureSelectedAndAncestorsExpanded() Model {
 			entryByID[entry.ID] = entry
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		entryByID[entry.ID] = entry
-	}
-
 	current := selectedEntry
 	for current.ParentID != nil {
 		parent, exists := entryByID[*current.ParentID]

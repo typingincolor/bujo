@@ -90,7 +90,6 @@ type DailyAgenda struct {
 	Location *string
 	Mood     *string
 	Weather  *string
-	Overdue  []domain.Entry
 	Today    []domain.Entry
 }
 
@@ -103,8 +102,7 @@ type DayEntries struct {
 }
 
 type MultiDayAgenda struct {
-	Overdue []domain.Entry
-	Days    []DayEntries
+	Days []DayEntries
 }
 
 func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*DailyAgenda, error) {
@@ -122,12 +120,6 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 		agenda.Weather = dayCtx.Weather
 	}
 
-	overdue, err := s.entryRepo.GetOverdue(ctx, date)
-	if err != nil {
-		return nil, err
-	}
-	agenda.Overdue = overdue
-
 	today, err := s.entryRepo.GetByDate(ctx, date)
 	if err != nil {
 		return nil, err
@@ -139,12 +131,6 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 
 func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time) (*MultiDayAgenda, error) {
 	agenda := &MultiDayAgenda{}
-
-	overdue, err := s.entryRepo.GetOverdue(ctx, from)
-	if err != nil {
-		return nil, err
-	}
-	agenda.Overdue = overdue
 
 	entries, err := s.entryRepo.GetByDateRange(ctx, from, to)
 	if err != nil {

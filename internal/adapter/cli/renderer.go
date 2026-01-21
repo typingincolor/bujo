@@ -42,16 +42,10 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 	sb.WriteString(header + "\n")
 	sb.WriteString(Dimmed(separator) + "\n")
 
-	if len(agenda.Overdue) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, agenda.Date)
-		sb.WriteString("\n")
-	}
-
 	if len(agenda.Today) > 0 {
 		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
 		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false, agenda.Date)
-	} else if len(agenda.Overdue) == 0 {
+	} else {
 		sb.WriteString(Dimmed("No entries for today\n"))
 	}
 
@@ -62,12 +56,6 @@ func RenderDailyAgenda(agenda *service.DailyAgenda) string {
 
 func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) string {
 	var sb strings.Builder
-
-	if len(agenda.Overdue) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", Red(Bold("OVERDUE"))))
-		renderEntryTreeWithOverdue(&sb, agenda.Overdue, 0, true, today)
-		sb.WriteString("\n")
-	}
 
 	for _, day := range agenda.Days {
 		dateStr := day.Date.Format("Monday, Jan 2")

@@ -3520,25 +3520,15 @@ func TestRenderJournalContent_EmptyMessage_WeekView(t *testing.T) {
 	}
 }
 
-func TestFlattenAgenda_NeverShowsOverdueSection(t *testing.T) {
+func TestFlattenAgenda_IncludesDayEntries(t *testing.T) {
 	model := New(nil)
 	model.viewMode = ViewModeDay
 	model.viewDate = time.Now()
 	model.collapsed = make(map[domain.EntityID]bool)
 
 	today := time.Now()
-	pastDate := today.AddDate(0, 0, -3)
 
 	agenda := &service.MultiDayAgenda{
-		Overdue: []domain.Entry{
-			{
-				ID:            1,
-				EntityID:      "entity-1",
-				Content:       "Overdue task",
-				Type:          domain.EntryTypeTask,
-				ScheduledDate: &pastDate,
-			},
-		},
 		Days: []service.DayEntries{
 			{
 				Date: today,
@@ -3557,12 +3547,14 @@ func TestFlattenAgenda_NeverShowsOverdueSection(t *testing.T) {
 
 	items := model.flattenAgenda(agenda)
 
+	foundTodayTask := false
 	for _, item := range items {
-		if item.DayHeader == "⚠️  OVERDUE" {
-			t.Error("flattenAgenda should never include OVERDUE section - use Outstanding Tasks view instead")
+		if item.Entry.Content == "Today task" {
+			foundTodayTask = true
 		}
-		if item.Entry.Content == "Overdue task" {
-			t.Error("overdue tasks should not appear in journal/review views")
-		}
+	}
+
+	if !foundTodayTask {
+		t.Error("flattenAgenda should include entries from Days")
 	}
 }
