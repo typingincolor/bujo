@@ -102,3 +102,7 @@ type ListItemRepository interface {
 type ChangeDetector interface {
 	GetLastModified(ctx context.Context) (time.Time, error)
 }
+
+type EntryToListMover interface {
+	MoveEntryToList(ctx context.Context, entry Entry, listEntityID EntityID) error
+}

@@ -213,12 +213,10 @@ type createListState struct {
 }
 
 type moveToListState struct {
-	active       bool
-	entryID      int64
-	entryType    domain.EntryType
-	entryContent string
-	targetLists  []domain.List
-	selectedIdx  int
+	active      bool
+	entryID     int64
+	targetLists []domain.List
+	selectedIdx int
 }
 
 type goalState struct {
@@ -709,7 +707,7 @@ func (m Model) createListCmd(name string) tea.Cmd {
 	}
 }
 
-func (m Model) loadListsForMoveCmd(entryID int64, entryType domain.EntryType, entryContent string) tea.Cmd {
+func (m Model) loadListsForMoveCmd(entryID int64) tea.Cmd {
 	return func() tea.Msg {
 		if m.listService == nil {
 			return errMsg{fmt.Errorf("list service not available")}
@@ -720,10 +718,8 @@ func (m Model) loadListsForMoveCmd(entryID int64, entryType domain.EntryType, en
 			return errMsg{err}
 		}
 		return listsForMoveLoadedMsg{
-			entryID:      entryID,
-			entryType:    entryType,
-			entryContent: entryContent,
-			lists:        lists,
+			entryID: entryID,
+			lists:   lists,
 		}
 	}
 }
@@ -820,27 +816,36 @@ func (m Model) moveListItemCmd(itemID int64, targetListID int64, fromListID int6
 	}
 }
 
-func (m Model) moveEntryToListCmd(entryID int64, listID int64, entryType domain.EntryType, entryContent string) tea.Cmd {
+func (m Model) moveEntryToListCmd(entryID int64, listID int64) tea.Cmd {
 	return func() tea.Msg {
 		if m.bujoService == nil {
 			return errMsg{fmt.Errorf("bujo service not available")}
 		}
-		if m.listService == nil {
-			return errMsg{fmt.Errorf("list service not available")}
-		}
 		ctx := context.Background()
 
-		_, err := m.listService.AddItem(ctx, listID, entryType, entryContent)
-		if err != nil {
-			return errMsg{err}
-		}
-
-		err = m.bujoService.DeleteEntry(ctx, entryID)
+		err := m.bujoService.MoveEntryToList(ctx, entryID, listID)
 		if err != nil {
 			return errMsg{err}
 		}
 
 		return entryMovedToListMsg{entryID: entryID}
+	}
+}
+
+func (m Model) moveToRootCmd(entryID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+
+		moveToRoot := true
+		err := m.bujoService.MoveEntry(ctx, entryID, service.MoveOptions{MoveToRoot: &moveToRoot})
+		if err != nil {
+			return errMsg{err}
+		}
+
+		return entryUpdatedMsg{id: entryID}
 	}
 }
 

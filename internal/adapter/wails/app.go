@@ -319,6 +319,10 @@ func (a *App) MoveEntryToRoot(id int64) error {
 	return a.services.Bujo.MoveEntry(a.ctx, id, service.MoveOptions{MoveToRoot: &moveToRoot})
 }
 
+func (a *App) MoveEntryToList(entryID int64, listID int64) error {
+	return a.services.Bujo.MoveEntryToList(a.ctx, entryID, listID)
+}
+
 func (a *App) SetLocation(date time.Time, location string) error {
 	return a.services.Bujo.SetLocation(a.ctx, date, location)
 }

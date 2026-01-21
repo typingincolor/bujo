@@ -64,10 +64,8 @@ type listsLoadedMsg struct {
 type listCreatedMsg struct{}
 
 type listsForMoveLoadedMsg struct {
-	entryID      int64
-	entryType    domain.EntryType
-	entryContent string
-	lists        []domain.List
+	entryID int64
+	lists   []domain.List
 }
 
 type listItemsLoadedMsg struct {

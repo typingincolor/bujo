@@ -28,9 +28,10 @@ interface SearchViewProps {
   onNavigateToEntry?: (entry: SearchResult) => void;
   onMoveToList?: (entry: SearchResult) => void;
   onEdit?: (entry: SearchResult) => void;
+  onAddChild?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry, onMoveToList, onEdit }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry, onMoveToList, onEdit, onAddChild }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -486,6 +487,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onMoveToList, onEdit 
                     onNavigateToEntry: onNavigateToEntry ? () => onNavigateToEntry(result) : undefined,
                     onEdit: onEdit ? () => onEdit(result) : undefined,
                     onDelete: () => handleDelete(result.id),
+                    onAddChild: onAddChild ? () => onAddChild(result) : undefined,
                   }}
                   variant="always-visible"
                   usePlaceholders

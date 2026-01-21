@@ -96,6 +96,51 @@ describe('DayView', () => {
     })
   })
 
+  describe('move to list functionality', () => {
+    it('calls onMoveToList when Move to list button is clicked for task entry', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <DayView
+          day={createTestDay()}
+          onMoveToList={onMoveToList}
+        />
+      )
+
+      // Task entry should have move to list button
+      fireEvent.click(screen.getByTitle('Move to list'))
+      expect(onMoveToList).toHaveBeenCalledWith(expect.objectContaining({ id: 1, content: 'First task' }))
+    })
+
+    it('calls onMoveToList from context menu for task entry', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <DayView
+          day={createTestDay()}
+          onMoveToList={onMoveToList}
+        />
+      )
+
+      const taskEntry = screen.getByText('First task').closest('[data-entry-id]')!
+      fireEvent.contextMenu(taskEntry)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to list' }))
+
+      expect(onMoveToList).toHaveBeenCalledWith(expect.objectContaining({ id: 1, content: 'First task' }))
+    })
+
+    it('does not show move to list button for note entries', () => {
+      render(
+        <DayView
+          day={createTestDay()}
+          onMoveToList={() => {}}
+        />
+      )
+
+      // There should be only one move to list button (for the task entry, not the note)
+      const allMoveToListButtons = screen.getAllByTitle('Move to list')
+      expect(allMoveToListButtons.length).toBe(1)
+    })
+  })
+
   describe('context menu actions', () => {
     it('calls onAddChild when Add child is clicked from context menu', () => {
       const onAddChild = vi.fn()

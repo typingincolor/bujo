@@ -154,6 +154,10 @@ export function MigrateGoal(arg1, arg2) {
   return window['go']['wails']['App']['MigrateGoal'](arg1, arg2);
 }
 
+export function MoveEntryToList(arg1, arg2) {
+  return window['go']['wails']['App']['MoveEntryToList'](arg1, arg2);
+}
+
 export function MoveEntryToRoot(arg1) {
   return window['go']['wails']['App']['MoveEntryToRoot'](arg1);
 }

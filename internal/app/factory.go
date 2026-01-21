@@ -49,6 +49,7 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 	listRepo := sqlite.NewListRepository(db)
 	listItemRepo := sqlite.NewListItemRepository(db)
 	goalRepo := sqlite.NewGoalRepository(db)
+	entryToListMover := sqlite.NewEntryToListMover(db)
 	parser := domain.NewTreeParser()
 
 	changeDetectors := []domain.ChangeDetector{
@@ -63,7 +64,7 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 
 	return &Services{
 		DB:              db,
-		Bujo:            service.NewBujoService(entryRepo, dayCtxRepo, parser),
+		Bujo:            service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover),
 		Habit:           service.NewHabitService(habitRepo, habitLogRepo),
 		List:            service.NewListService(listRepo, listItemRepo),
 		Goal:            service.NewGoalService(goalRepo),

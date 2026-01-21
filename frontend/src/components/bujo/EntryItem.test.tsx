@@ -539,6 +539,16 @@ describe('EntryItem', () => {
       expect(onAddChild).toHaveBeenCalledTimes(1)
     })
 
+    it('does not show Add child option for question entries', () => {
+      const onAddChild = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'question' })} onAddChild={onAddChild} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.queryByText('Add child')).not.toBeInTheDocument()
+    })
+
     it('closes context menu when clicking outside', () => {
       render(<EntryItem entry={createTestEntry()} onAddChild={() => {}} />)
       const container = screen.getByText('Test entry').closest('[data-entry-id]')!
@@ -786,6 +796,81 @@ describe('EntryItem', () => {
       )
       const symbolButton = screen.getByTitle('Mark as not done')
       expect(symbolButton).toHaveTextContent('✓')
+    })
+  })
+
+  describe('move to list functionality', () => {
+    it('shows move to list button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Move to list')).toBeInTheDocument()
+    })
+
+    it('calls onMoveToList when move to list button is clicked', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={onMoveToList}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Move to list'))
+      expect(onMoveToList).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show move to list button for non-task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+    })
+
+    it('does not show move to list button for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+    })
+
+    it('shows Move to list option in context menu for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Move to list' })).toBeInTheDocument()
+    })
+
+    it('calls onMoveToList when Move to list context menu option is clicked', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={onMoveToList}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to list' }))
+
+      expect(onMoveToList).toHaveBeenCalledTimes(1)
     })
   })
 
