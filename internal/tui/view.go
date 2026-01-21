@@ -1043,9 +1043,27 @@ func (m Model) renderPendingTasksContent() string {
 
 	sb.WriteString(fmt.Sprintf("Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries)))
 
-	for i, entry := range m.pendingTasksState.entries {
+	visibleRows := m.pendingTasksVisibleRows()
+	startIdx := m.pendingTasksState.scrollOffset
+	endIdx := startIdx + visibleRows
+	if endIdx > len(m.pendingTasksState.entries) {
+		endIdx = len(m.pendingTasksState.entries)
+	}
+
+	if startIdx > 0 {
+		sb.WriteString(HelpStyle.Render("  ↑ more above"))
+		sb.WriteString("\n")
+	}
+
+	for i := startIdx; i < endIdx; i++ {
+		entry := m.pendingTasksState.entries[i]
 		line := m.renderEntryLine(entry, i == m.pendingTasksState.selectedIdx)
 		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	if endIdx < len(m.pendingTasksState.entries) {
+		sb.WriteString(HelpStyle.Render("  ↓ more below"))
 		sb.WriteString("\n")
 	}
 

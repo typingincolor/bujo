@@ -279,9 +279,10 @@ type commandPaletteState struct {
 }
 
 type pendingTasksState struct {
-	entries     []domain.Entry
-	selectedIdx int
-	loading     bool
+	entries      []domain.Entry
+	selectedIdx  int
+	scrollOffset int
+	loading      bool
 }
 
 type questionsState struct {

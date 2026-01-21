@@ -353,6 +353,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleStatsMode(msg)
 		case ViewTypeSearch:
 			return m.handleSearchViewMode(msg)
+		case ViewTypePendingTasks:
+			return m.handlePendingTasksMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -1394,6 +1396,71 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.pendingTasksState.selectedIdx < len(m.pendingTasksState.entries)-1 {
+			m.pendingTasksState.selectedIdx++
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.pendingTasksState.selectedIdx > 0 {
+			m.pendingTasksState.selectedIdx--
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Top):
+		m.pendingTasksState.selectedIdx = 0
+		m.pendingTasksState.scrollOffset = 0
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Bottom):
+		if len(m.pendingTasksState.entries) > 0 {
+			m.pendingTasksState.selectedIdx = len(m.pendingTasksState.entries) - 1
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) ensurePendingTaskVisible() Model {
+	visibleRows := m.pendingTasksVisibleRows()
+	if visibleRows <= 0 {
+		return m
+	}
+
+	if m.pendingTasksState.selectedIdx < m.pendingTasksState.scrollOffset {
+		m.pendingTasksState.scrollOffset = m.pendingTasksState.selectedIdx
+	}
+
+	if m.pendingTasksState.selectedIdx >= m.pendingTasksState.scrollOffset+visibleRows {
+		m.pendingTasksState.scrollOffset = m.pendingTasksState.selectedIdx - visibleRows + 1
+	}
+
+	return m
+}
+
+func (m Model) pendingTasksVisibleRows() int {
+	headerLines := 4
+	footerLines := 2
+	return m.height - headerLines - footerLines
 }
 
 func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

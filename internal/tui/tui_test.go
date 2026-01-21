@@ -3558,3 +3558,169 @@ func TestFlattenAgenda_IncludesDayEntries(t *testing.T) {
 		t.Error("flattenAgenda should include entries from Days")
 	}
 }
+
+func TestPendingTasks_NavigateDown(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 3, Content: "Task 3", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateUp(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 3, Content: "Task 3", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 2
+
+	msg := tea.KeyMsg{Type: tea.KeyUp}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateDownAtBounds(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 1
+
+	msg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx to stay at 1 (at bounds), got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateUpAtBounds(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyUp}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx to stay at 0 (at bounds), got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_ScrollOffsetAdjustsWhenNavigatingBeyondViewport(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 10
+
+	today := time.Now()
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task %d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.scrollOffset = 0
+
+	for i := 0; i < 8; i++ {
+		msg := tea.KeyMsg{Type: tea.KeyDown}
+		newModel, _ := model.Update(msg)
+		model = newModel.(Model)
+	}
+
+	if model.pendingTasksState.scrollOffset <= 0 {
+		t.Errorf("expected scrollOffset to be > 0 after navigating beyond viewport, got %d", model.pendingTasksState.scrollOffset)
+	}
+}
+
+func TestPendingTasks_RenderShowsScrollIndicators(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 15
+
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task %d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 10
+	model.pendingTasksState.scrollOffset = 5
+
+	view := model.View()
+
+	if !strings.Contains(view, "↑") {
+		t.Error("expected scroll up indicator when scrollOffset > 0")
+	}
+	if !strings.Contains(view, "↓") {
+		t.Error("expected scroll down indicator when more items below viewport")
+	}
+}
+
+func TestPendingTasks_RenderOnlyShowsVisibleEntries(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 15
+
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task_Item_%02d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 10
+	model.pendingTasksState.scrollOffset = 8
+
+	view := model.View()
+
+	if strings.Contains(view, "Task_Item_01") {
+		t.Error("Task 1 should not be visible when scrollOffset is 8")
+	}
+	if !strings.Contains(view, "Task_Item_09") {
+		t.Error("Task 9 should be visible (index 8, at scrollOffset)")
+	}
+}
