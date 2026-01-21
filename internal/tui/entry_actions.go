@@ -2,55 +2,48 @@ package tui
 
 import "github.com/typingincolor/bujo/internal/domain"
 
-var cycleableTypes = map[domain.EntryType]bool{
-	domain.EntryTypeTask:     true,
-	domain.EntryTypeNote:     true,
-	domain.EntryTypeEvent:    true,
-	domain.EntryTypeQuestion: true,
-}
-
 func CanCancel(entry domain.Entry) bool {
-	return entry.Type != domain.EntryTypeCancelled
+	return entry.CanCancel()
 }
 
 func CanUncancel(entry domain.Entry) bool {
-	return entry.Type == domain.EntryTypeCancelled
+	return entry.CanUncancel()
 }
 
 func CanCycleType(entry domain.Entry) bool {
-	return cycleableTypes[entry.Type]
+	return entry.CanCycleType()
 }
 
 func CanEdit(entry domain.Entry) bool {
-	return entry.Type != domain.EntryTypeCancelled
+	return entry.CanEdit()
 }
 
 func CanMigrate(entry domain.Entry) bool {
-	return entry.Type == domain.EntryTypeTask
+	return entry.CanMigrate()
 }
 
 func CanAnswer(entry domain.Entry) bool {
-	return entry.Type == domain.EntryTypeQuestion
+	return entry.CanAnswer()
 }
 
 func CanAddChild(entry domain.Entry) bool {
-	return entry.Type != domain.EntryTypeQuestion
+	return entry.CanAddChild()
 }
 
 func CanMoveToList(entry domain.Entry) bool {
-	return entry.Type == domain.EntryTypeTask
+	return entry.CanMoveToList()
 }
 
 func CanMoveToRoot(entry domain.Entry) bool {
-	return entry.ParentID != nil
+	return entry.CanMoveToRoot()
 }
 
-func CanCyclePriority(_ domain.Entry) bool {
-	return true
+func CanCyclePriority(entry domain.Entry) bool {
+	return entry.CanCyclePriority()
 }
 
-func CanDelete(_ domain.Entry) bool {
-	return true
+func CanDelete(entry domain.Entry) bool {
+	return entry.CanDelete()
 }
 
 func UpdateKeyMapForEntry(km *KeyMap, entry domain.Entry) {

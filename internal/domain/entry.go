@@ -148,3 +148,62 @@ func (e Entry) Validate() error {
 	}
 	return nil
 }
+
+// cycleableTypes defines which entry types can have their type changed.
+// SYNC: This logic is duplicated in frontend/src/components/bujo/EntryActions/types.ts
+// for instant UI validation. When modifying, update both files.
+var cycleableTypes = map[EntryType]bool{
+	EntryTypeTask:     true,
+	EntryTypeNote:     true,
+	EntryTypeEvent:    true,
+	EntryTypeQuestion: true,
+}
+
+// Entry action validation methods.
+// SYNC: These rules are duplicated in frontend/src/components/bujo/EntryActions/types.ts
+// (ACTION_REGISTRY appliesTo functions) for instant UI validation.
+// When modifying validation rules, update both files.
+
+func (e Entry) CanCancel() bool {
+	return e.Type != EntryTypeCancelled
+}
+
+func (e Entry) CanUncancel() bool {
+	return e.Type == EntryTypeCancelled
+}
+
+func (e Entry) CanCycleType() bool {
+	return cycleableTypes[e.Type]
+}
+
+func (e Entry) CanEdit() bool {
+	return e.Type != EntryTypeCancelled
+}
+
+func (e Entry) CanMigrate() bool {
+	return e.Type == EntryTypeTask
+}
+
+func (e Entry) CanAnswer() bool {
+	return e.Type == EntryTypeQuestion
+}
+
+func (e Entry) CanAddChild() bool {
+	return e.Type != EntryTypeQuestion
+}
+
+func (e Entry) CanMoveToList() bool {
+	return e.Type == EntryTypeTask
+}
+
+func (e Entry) CanMoveToRoot() bool {
+	return e.ParentID != nil
+}
+
+func (e Entry) CanCyclePriority() bool {
+	return true
+}
+
+func (e Entry) CanDelete() bool {
+	return true
+}

@@ -357,3 +357,192 @@ func TestPriority_Cycle(t *testing.T) {
 		})
 	}
 }
+
+func TestEntry_CanCancel(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeDone, true},
+		{EntryTypeMigrated, true},
+		{EntryTypeCancelled, false},
+		{EntryTypeQuestion, true},
+		{EntryTypeAnswered, true},
+		{EntryTypeAnswer, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanCancel())
+		})
+	}
+}
+
+func TestEntry_CanUncancel(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, false},
+		{EntryTypeNote, false},
+		{EntryTypeCancelled, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanUncancel())
+		})
+	}
+}
+
+func TestEntry_CanCycleType(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeQuestion, true},
+		{EntryTypeDone, false},
+		{EntryTypeMigrated, false},
+		{EntryTypeCancelled, false},
+		{EntryTypeAnswered, false},
+		{EntryTypeAnswer, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanCycleType())
+		})
+	}
+}
+
+func TestEntry_CanEdit(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeDone, true},
+		{EntryTypeMigrated, true},
+		{EntryTypeCancelled, false},
+		{EntryTypeQuestion, true},
+		{EntryTypeAnswered, true},
+		{EntryTypeAnswer, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanEdit())
+		})
+	}
+}
+
+func TestEntry_CanMigrate(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, false},
+		{EntryTypeEvent, false},
+		{EntryTypeDone, false},
+		{EntryTypeCancelled, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanMigrate())
+		})
+	}
+}
+
+func TestEntry_CanAnswer(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeQuestion, true},
+		{EntryTypeTask, false},
+		{EntryTypeNote, false},
+		{EntryTypeAnswered, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanAnswer())
+		})
+	}
+}
+
+func TestEntry_CanAddChild(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, true},
+		{EntryTypeEvent, true},
+		{EntryTypeQuestion, false},
+		{EntryTypeDone, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanAddChild())
+		})
+	}
+}
+
+func TestEntry_CanMoveToList(t *testing.T) {
+	tests := []struct {
+		entryType EntryType
+		expected  bool
+	}{
+		{EntryTypeTask, true},
+		{EntryTypeNote, false},
+		{EntryTypeEvent, false},
+		{EntryTypeDone, false},
+		{EntryTypeCancelled, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.entryType), func(t *testing.T) {
+			entry := Entry{Type: tt.entryType}
+			assert.Equal(t, tt.expected, entry.CanMoveToList())
+		})
+	}
+}
+
+func TestEntry_CanMoveToRoot(t *testing.T) {
+	parentID := int64(1)
+
+	tests := []struct {
+		name     string
+		parentID *int64
+		expected bool
+	}{
+		{"with parent can move to root", &parentID, true},
+		{"without parent cannot move to root", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entry := Entry{Type: EntryTypeTask, ParentID: tt.parentID}
+			assert.Equal(t, tt.expected, entry.CanMoveToRoot())
+		})
+	}
+}
