@@ -576,6 +576,7 @@ function App() {
                 onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                 onAddChild={handleAddChild}
                 onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
+                onMoveToList={(entry) => setMoveToListEntry(entry)}
               />
               {inlineInputMode ? (
                 <InlineEntryInput
@@ -629,6 +630,7 @@ function App() {
                   onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
                   onAddChild={handleAddChild}
                   onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
+                  onMoveToList={(entry) => setMoveToListEntry(entry)}
                 />
               ))}
               {reviewDays.length === 0 && (

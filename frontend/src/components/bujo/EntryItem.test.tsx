@@ -789,6 +789,81 @@ describe('EntryItem', () => {
     })
   })
 
+  describe('move to list functionality', () => {
+    it('shows move to list button for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.getByTitle('Move to list')).toBeInTheDocument()
+    })
+
+    it('calls onMoveToList when move to list button is clicked', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={onMoveToList}
+        />
+      )
+
+      fireEvent.click(screen.getByTitle('Move to list'))
+      expect(onMoveToList).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not show move to list button for non-task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+    })
+
+    it('does not show move to list button for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onMoveToList={() => {}}
+        />
+      )
+      expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+    })
+
+    it('shows Move to list option in context menu for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={() => {}}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.getByRole('menuitem', { name: 'Move to list' })).toBeInTheDocument()
+    })
+
+    it('calls onMoveToList when Move to list context menu option is clicked', () => {
+      const onMoveToList = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onMoveToList={onMoveToList}
+        />
+      )
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to list' }))
+
+      expect(onMoveToList).toHaveBeenCalledTimes(1)
+    })
+  })
+
   describe('cycle type', () => {
     it('shows cycle type button when onCycleType callback is provided', () => {
       render(<EntryItem entry={createTestEntry({ type: 'task' })} onCycleType={() => {}} />)

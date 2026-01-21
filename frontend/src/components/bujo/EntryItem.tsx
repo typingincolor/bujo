@@ -27,6 +27,7 @@ interface EntryItemProps {
   onAddChild?: () => void;
   onCycleType?: () => void;
   onMoveToRoot?: () => void;
+  onMoveToList?: () => void;
 }
 
 const CONTEXT_MENU_ESTIMATED_SIZE = { width: 150, height: 300 };
@@ -64,6 +65,7 @@ export function EntryItem({
   onAddChild,
   onCycleType,
   onMoveToRoot,
+  onMoveToList,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
@@ -176,6 +178,7 @@ export function EntryItem({
           onCyclePriority,
           onCycleType,
           onMigrate,
+          onMoveToList,
           onEdit,
           onDelete,
         }}
@@ -254,6 +257,18 @@ export function EntryItem({
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
             >
               Migrate
+            </button>
+          )}
+          {onMoveToList && entry.type === 'task' && (
+            <button
+              role="menuitem"
+              onClick={() => {
+                onMoveToList();
+                closeContextMenu();
+              }}
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-secondary transition-colors"
+            >
+              Move to list
             </button>
           )}
           {onCycleType && canChangeType && (
