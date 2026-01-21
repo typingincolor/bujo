@@ -26,10 +26,11 @@ interface AncestorEntry {
 interface SearchViewProps {
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
+  onMoveToList?: (entry: SearchResult) => void;
   onEdit?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry, onMoveToList, onEdit }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -481,6 +482,8 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
                     onCyclePriority: () => handleCyclePriority(result.id),
                     onCycleType: () => handleCycleType(result.id, result.type),
                     onMigrate: onMigrate ? () => onMigrate(result) : undefined,
+                    onMoveToList: onMoveToList ? () => onMoveToList(result) : undefined,
+                    onNavigateToEntry: onNavigateToEntry ? () => onNavigateToEntry(result) : undefined,
                     onEdit: onEdit ? () => onEdit(result) : undefined,
                     onDelete: () => handleDelete(result.id),
                   }}

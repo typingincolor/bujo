@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, AddListItem } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -19,6 +19,7 @@ import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
+import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
@@ -58,6 +59,7 @@ function App() {
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
   const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
+  const [moveToListEntry, setMoveToListEntry] = useState<Entry | null>(null)
   const [answerModalEntry, setAnswerModalEntry] = useState<Entry | null>(null)
   const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
   const [habitDays, setHabitDays] = useState(14)
@@ -365,6 +367,18 @@ function App() {
     }
   }, [migrateModalEntry, loadData])
 
+  const handleMoveToList = useCallback(async (listId: number) => {
+    if (!moveToListEntry) return
+    try {
+      await AddListItem(listId, moveToListEntry.content)
+      setMoveToListEntry(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to move entry to list:', err)
+      setError(err instanceof Error ? err.message : 'Failed to move entry to list')
+    }
+  }, [moveToListEntry, loadData])
+
   const handleSelectEntry = useCallback((id: number) => {
     const index = flatEntries.findIndex(e => e.id === id)
     if (index !== -1) {
@@ -416,6 +430,34 @@ function App() {
 
   const handleSearchNavigate = useCallback((result: SearchResult) => {
     const entryDate = new Date(result.date)
+    setReviewAnchorDate(startOfDay(entryDate))
+    setView('week')
+  }, [])
+
+  const handleSearchMoveToList = useCallback((result: SearchResult) => {
+    setMoveToListEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date
+    })
+  }, [])
+
+  const handleSearchEdit = useCallback((result: SearchResult) => {
+    setEditModalEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date
+    })
+  }, [])
+
+  const handleOverviewNavigate = useCallback((entry: Entry) => {
+    const entryDate = new Date(entry.loggedDate)
     setReviewAnchorDate(startOfDay(entryDate))
     setView('week')
   }, [])
@@ -602,6 +644,9 @@ function App() {
                 onEntryChanged={loadData}
                 onError={setError}
                 onMigrate={(entry) => setMigrateModalEntry(entry)}
+                onMoveToList={(entry) => setMoveToListEntry(entry)}
+                onNavigateToEntry={handleOverviewNavigate}
+                onEdit={(entry) => setEditModalEntry(entry)}
               />
             </div>
           )}
@@ -643,7 +688,12 @@ function App() {
 
           {view === 'search' && (
             <div className="max-w-3xl mx-auto">
-              <SearchView onMigrate={handleSearchMigrate} onNavigateToEntry={handleSearchNavigate} />
+              <SearchView
+                onMigrate={handleSearchMigrate}
+                onNavigateToEntry={handleSearchNavigate}
+                onMoveToList={handleSearchMoveToList}
+                onEdit={handleSearchEdit}
+              />
             </div>
           )}
 
@@ -695,6 +745,14 @@ function App() {
         entryContent={migrateModalEntry?.content || ''}
         onMigrate={handleMigrateEntry}
         onCancel={() => setMigrateModalEntry(null)}
+      />
+
+      {/* Move to List Modal */}
+      <ListPickerModal
+        isOpen={moveToListEntry !== null}
+        entryContent={moveToListEntry?.content || ''}
+        onSelect={handleMoveToList}
+        onCancel={() => setMoveToListEntry(null)}
       />
 
       {/* Answer Question Modal */}

@@ -110,7 +110,7 @@ describe('useEntryActions', () => {
       const actions = getApplicableBarActions(task);
       const types = actions.map(a => a.type);
 
-      const expectedOrder = ['cancel', 'cyclePriority', 'cycleType', 'migrate', 'edit', 'delete'];
+      const expectedOrder = ['cancel', 'cyclePriority', 'cycleType', 'migrate', 'moveToList', 'navigateToEntry', 'edit', 'delete'];
       expect(types).toEqual(expectedOrder);
     });
 
@@ -119,7 +119,7 @@ describe('useEntryActions', () => {
       const actions = getApplicableBarActions(question);
       const types = actions.map(a => a.type);
 
-      const expectedOrder = ['answer', 'cancel', 'cyclePriority', 'cycleType', 'edit', 'delete'];
+      const expectedOrder = ['answer', 'cancel', 'cyclePriority', 'cycleType', 'navigateToEntry', 'edit', 'delete'];
       expect(types).toEqual(expectedOrder);
     });
   });

@@ -13,6 +13,8 @@ interface OverviewViewProps {
   onError?: (message: string) => void;
   onMigrate?: (entry: Entry) => void;
   onEdit?: (entry: Entry) => void;
+  onMoveToList?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
 }
 
 function groupByDate(entries: Entry[]): Map<string, Entry[]> {
@@ -48,7 +50,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
   return chain;
 }
 
-export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onEdit }: OverviewViewProps) {
+export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onEdit, onMoveToList, onNavigateToEntry }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -361,6 +363,8 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                                 onCyclePriority: () => handleCyclePriority(entry),
                                 onCycleType: () => handleCycleType(entry),
                                 onMigrate: onMigrate ? () => onMigrate(entry) : undefined,
+                                onMoveToList: onMoveToList ? () => onMoveToList(entry) : undefined,
+                                onNavigateToEntry: onNavigateToEntry ? () => onNavigateToEntry(entry) : undefined,
                                 onEdit: onEdit ? () => onEdit(entry) : undefined,
                                 onDelete: () => handleDelete(entry),
                               }}
