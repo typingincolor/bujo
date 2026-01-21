@@ -142,12 +142,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case listsForMoveLoadedMsg:
 		m.moveToListMode = moveToListState{
-			active:       true,
-			entryID:      msg.entryID,
-			entryType:    msg.entryType,
-			entryContent: msg.entryContent,
-			targetLists:  msg.lists,
-			selectedIdx:  0,
+			active:      true,
+			entryID:     msg.entryID,
+			targetLists: msg.lists,
+			selectedIdx: 0,
 		}
 		return m, nil
 
@@ -671,7 +669,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !entry.CanMoveToList() {
 			return m, nil
 		}
-		return m, m.loadListsForMoveCmd(entry.ID, entry.Type, entry.Content)
+		return m, m.loadListsForMoveCmd(entry.ID)
 
 	case key.Matches(msg, m.keyMap.MoveToRoot):
 		if len(m.entries) == 0 {

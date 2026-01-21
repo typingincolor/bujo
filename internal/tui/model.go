@@ -213,12 +213,10 @@ type createListState struct {
 }
 
 type moveToListState struct {
-	active       bool
-	entryID      int64
-	entryType    domain.EntryType
-	entryContent string
-	targetLists  []domain.List
-	selectedIdx  int
+	active      bool
+	entryID     int64
+	targetLists []domain.List
+	selectedIdx int
 }
 
 type goalState struct {
@@ -709,7 +707,7 @@ func (m Model) createListCmd(name string) tea.Cmd {
 	}
 }
 
-func (m Model) loadListsForMoveCmd(entryID int64, entryType domain.EntryType, entryContent string) tea.Cmd {
+func (m Model) loadListsForMoveCmd(entryID int64) tea.Cmd {
 	return func() tea.Msg {
 		if m.listService == nil {
 			return errMsg{fmt.Errorf("list service not available")}
@@ -720,10 +718,8 @@ func (m Model) loadListsForMoveCmd(entryID int64, entryType domain.EntryType, en
 			return errMsg{err}
 		}
 		return listsForMoveLoadedMsg{
-			entryID:      entryID,
-			entryType:    entryType,
-			entryContent: entryContent,
-			lists:        lists,
+			entryID: entryID,
+			lists:   lists,
 		}
 	}
 }
