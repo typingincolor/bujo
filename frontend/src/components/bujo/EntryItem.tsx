@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
+import { EntryActionBar } from './EntryActions';
 import { cn } from '@/lib/utils';
 import { calculateMenuPosition } from '@/lib/menuPosition';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -66,6 +67,7 @@ export function EntryItem({
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
+  const canEdit = entry.type !== 'cancelled';
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   const closeContextMenu = useCallback(() => {
@@ -165,104 +167,21 @@ export function EntryItem({
       )}
 
       {/* Action buttons (shown on hover) */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {onAnswer && entry.type === 'question' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAnswer();
-            }}
-            title="Answer question"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onCancel && entry.type !== 'cancelled' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCancel();
-            }}
-            title="Cancel entry"
-            className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onUncancel && entry.type === 'cancelled' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onUncancel();
-            }}
-            title="Uncancel entry"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onCyclePriority && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCyclePriority();
-            }}
-            title="Cycle priority"
-            className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors"
-          >
-            <Flag className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onCycleType && canChangeType && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCycleType();
-            }}
-            title="Change type"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onMigrate && entry.type === 'task' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMigrate();
-            }}
-            title="Migrate entry"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onEdit && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit();
-            }}
-            title="Edit entry"
-            className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onDelete && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            title="Delete entry"
-            className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
+      <EntryActionBar
+        entry={entry}
+        callbacks={{
+          onAnswer,
+          onCancel,
+          onUncancel,
+          onCyclePriority,
+          onCycleType,
+          onMigrate,
+          onEdit,
+          onDelete,
+        }}
+        variant="hover-reveal"
+        size="sm"
+      />
 
       {/* Entry ID (shown on hover) */}
       <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
@@ -385,7 +304,7 @@ export function EntryItem({
               Add child
             </button>
           )}
-          {onEdit && (
+          {onEdit && canEdit && (
             <button
               role="menuitem"
               onClick={() => {

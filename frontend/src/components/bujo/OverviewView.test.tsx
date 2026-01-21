@@ -164,13 +164,18 @@ describe('OverviewView - Interactions', () => {
     expect(screen.getByTitle('Delete entry')).toBeInTheDocument()
   })
 
-  it('shows edit button for all entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+  it('shows edit button for non-cancelled entries when onEdit provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onEdit={vi.fn()} />)
     expect(screen.getByTitle('Edit entry')).toBeInTheDocument()
   })
 
-  it('shows migrate button for task entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+  it('does not show edit button for cancelled entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} onEdit={vi.fn()} />)
+    expect(screen.queryByTitle('Edit entry')).not.toBeInTheDocument()
+  })
+
+  it('shows migrate button for task entries when onMigrate provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onMigrate={vi.fn()} />)
     expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
   })
 

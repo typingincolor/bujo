@@ -1,20 +1,18 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Clock, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { ContextPill } from './ContextPill';
+import { EntryActionBar } from './EntryActions';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
-
-function ActionPlaceholder() {
-  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
-}
 
 interface OverviewViewProps {
   overdueEntries: Entry[];
   onEntryChanged?: () => void;
   onError?: (message: string) => void;
   onMigrate?: (entry: Entry) => void;
+  onEdit?: (entry: Entry) => void;
 }
 
 function groupByDate(entries: Entry[]): Map<string, Entry[]> {
@@ -50,7 +48,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
   return chain;
 }
 
-export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate }: OverviewViewProps) {
+export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onEdit }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -355,73 +353,20 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                                 {PRIORITY_SYMBOLS[entry.priority]}
                               </span>
                             )}
-                            {entry.type !== 'cancelled' ? (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); handleCancel(entry); }}
-                                title="Cancel entry"
-                                className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); handleUncancel(entry); }}
-                                title="Uncancel entry"
-                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <RotateCcw className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              data-action-slot
-                              onClick={(e) => { e.stopPropagation(); handleCyclePriority(entry); }}
-                              title="Cycle priority"
-                              className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <Flag className="w-4 h-4" />
-                            </button>
-                            {entry.type === 'task' ? (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); handleCycleType(entry); }}
-                                title="Change type"
-                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <RefreshCw className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <ActionPlaceholder />
-                            )}
-                            {entry.type === 'task' ? (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); onMigrate?.(entry); }}
-                                title="Migrate entry"
-                                className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <ArrowRight className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <ActionPlaceholder />
-                            )}
-                            <button
-                              data-action-slot
-                              onClick={(e) => e.stopPropagation()}
-                              title="Edit entry"
-                              className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              data-action-slot
-                              onClick={(e) => { e.stopPropagation(); handleDelete(entry); }}
-                              title="Delete entry"
-                              className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <EntryActionBar
+                              entry={entry}
+                              callbacks={{
+                                onCancel: () => handleCancel(entry),
+                                onUncancel: () => handleUncancel(entry),
+                                onCyclePriority: () => handleCyclePriority(entry),
+                                onCycleType: () => handleCycleType(entry),
+                                onMigrate: onMigrate ? () => onMigrate(entry) : undefined,
+                                onEdit: onEdit ? () => onEdit(entry) : undefined,
+                                onDelete: () => handleDelete(entry),
+                              }}
+                              variant="hover-reveal"
+                              usePlaceholders
+                            />
                           </div>
                         </div>
                       );
