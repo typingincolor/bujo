@@ -22,6 +22,8 @@ const (
 	minAvailableLines         = 5
 	locationHistoryMonths     = 6
 	pendingTasksLookbackYears = 1
+	pendingTasksHeaderLines   = 4
+	pendingTasksFooterLines   = 2
 )
 
 type ChangeDetector interface {
@@ -279,9 +281,12 @@ type commandPaletteState struct {
 }
 
 type pendingTasksState struct {
-	entries     []domain.Entry
-	selectedIdx int
-	loading     bool
+	entries      []domain.Entry
+	selectedIdx  int
+	scrollOffset int
+	loading      bool
+	parentChains map[int64][]domain.Entry
+	expandedID   int64
 }
 
 type questionsState struct {
@@ -1104,6 +1109,20 @@ func (m Model) loadQuestionsCmd() tea.Cmd {
 	}
 }
 
+func (m Model) loadParentChainCmd(entryID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+		ancestors, err := m.bujoService.GetEntryAncestors(ctx, entryID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return parentChainLoadedMsg{entryID: entryID, chain: ancestors}
+	}
+}
+
 func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 	if agenda == nil {
 		return nil
@@ -1218,13 +1237,6 @@ func (m Model) expandAllSiblings() Model {
 			}
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		if (parentID == nil && entry.ParentID == nil) ||
-			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
-			m.collapsed[entry.EntityID] = false
-		}
-	}
-
 	m.entries = m.flattenAgenda(m.agenda)
 	return m.ensuredVisible()
 }
@@ -1245,13 +1257,6 @@ func (m Model) collapseAllSiblings() Model {
 			}
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		if (parentID == nil && entry.ParentID == nil) ||
-			(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
-			m.collapsed[entry.EntityID] = true
-		}
-	}
-
 	m.entries = m.flattenAgenda(m.agenda)
 	return m.ensuredVisible()
 }
@@ -1356,10 +1361,6 @@ func (m Model) ensureSelectedAndAncestorsExpanded() Model {
 			entryByID[entry.ID] = entry
 		}
 	}
-	for _, entry := range m.agenda.Overdue {
-		entryByID[entry.ID] = entry
-	}
-
 	current := selectedEntry
 	for current.ParentID != nil {
 		parent, exists := entryByID[*current.ParentID]

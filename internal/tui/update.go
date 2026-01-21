@@ -234,6 +234,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.pendingTasksState.loading = false
 		m.pendingTasksState.entries = msg.entries
 		m.pendingTasksState.selectedIdx = 0
+		m.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+		m.pendingTasksState.expandedID = 0
+		return m, nil
+
+	case parentChainLoadedMsg:
+		if m.pendingTasksState.parentChains == nil {
+			m.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+		}
+		m.pendingTasksState.parentChains[msg.entryID] = msg.chain
+		m.pendingTasksState.expandedID = msg.entryID
 		return m, nil
 
 	case questionsLoadedMsg:
@@ -353,6 +363,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleStatsMode(msg)
 		case ViewTypeSearch:
 			return m.handleSearchViewMode(msg)
+		case ViewTypePendingTasks:
+			return m.handlePendingTasksMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -1394,6 +1406,136 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.pendingTasksState.selectedIdx < len(m.pendingTasksState.entries)-1 {
+			m.pendingTasksState.selectedIdx++
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.pendingTasksState.selectedIdx > 0 {
+			m.pendingTasksState.selectedIdx--
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Top):
+		m.pendingTasksState.selectedIdx = 0
+		m.pendingTasksState.scrollOffset = 0
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Bottom):
+		if len(m.pendingTasksState.entries) > 0 {
+			m.pendingTasksState.selectedIdx = len(m.pendingTasksState.entries) - 1
+			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyEnter:
+		if len(m.pendingTasksState.entries) > 0 &&
+			m.pendingTasksState.selectedIdx < len(m.pendingTasksState.entries) {
+			entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+			if m.pendingTasksState.expandedID == entry.ID {
+				m.pendingTasksState.expandedID = 0
+				return m, nil
+			}
+
+			if entry.ParentID != nil {
+				_, cached := m.pendingTasksState.parentChains[entry.ID]
+				if !cached {
+					return m, m.loadParentChainCmd(entry.ID)
+				}
+			}
+			m.pendingTasksState.expandedID = entry.ID
+		}
+		return m, nil
+	}
+
+	return m, nil
+}
+
+func (m Model) ensurePendingTaskVisible() Model {
+	maxLines := m.pendingTasksVisibleRows()
+	if maxLines <= 0 {
+		return m
+	}
+
+	if m.pendingTasksState.selectedIdx < m.pendingTasksState.scrollOffset {
+		m.pendingTasksState.scrollOffset = m.pendingTasksState.selectedIdx
+	}
+
+	for {
+		visibleCount := m.pendingTasksVisibleCount(m.pendingTasksState.scrollOffset, maxLines)
+		lastVisible := m.pendingTasksState.scrollOffset + visibleCount - 1
+		if m.pendingTasksState.selectedIdx <= lastVisible {
+			break
+		}
+		m.pendingTasksState.scrollOffset++
+		if m.pendingTasksState.scrollOffset >= len(m.pendingTasksState.entries) {
+			m.pendingTasksState.scrollOffset = len(m.pendingTasksState.entries) - 1
+			break
+		}
+	}
+
+	return m
+}
+
+func (m Model) pendingTasksVisibleCount(startIdx int, maxLines int) int {
+	if startIdx >= len(m.pendingTasksState.entries) {
+		return 0
+	}
+
+	linesUsed := 0
+	if startIdx > 0 {
+		linesUsed++
+	}
+
+	var currentDateStr string
+	count := 0
+	for i := startIdx; i < len(m.pendingTasksState.entries); i++ {
+		entry := m.pendingTasksState.entries[i]
+
+		entryDateStr := ""
+		if entry.ScheduledDate != nil {
+			entryDateStr = entry.ScheduledDate.Format("2006-01-02")
+		}
+
+		linesNeeded := 1
+		if entryDateStr != currentDateStr {
+			linesNeeded += 2
+		}
+
+		if linesUsed+linesNeeded > maxLines && count > 0 {
+			break
+		}
+
+		if entryDateStr != currentDateStr {
+			currentDateStr = entryDateStr
+		}
+		linesUsed += linesNeeded
+		count++
+	}
+
+	return count
+}
+
+func (m Model) pendingTasksVisibleRows() int {
+	return m.height - pendingTasksHeaderLines - pendingTasksFooterLines
 }
 
 func (m Model) handleGoalsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

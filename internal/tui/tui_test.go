@@ -15,6 +15,7 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
+	"github.com/typingincolor/bujo/internal/testutil"
 )
 
 func init() {
@@ -3520,25 +3521,15 @@ func TestRenderJournalContent_EmptyMessage_WeekView(t *testing.T) {
 	}
 }
 
-func TestFlattenAgenda_NeverShowsOverdueSection(t *testing.T) {
+func TestFlattenAgenda_IncludesDayEntries(t *testing.T) {
 	model := New(nil)
 	model.viewMode = ViewModeDay
 	model.viewDate = time.Now()
 	model.collapsed = make(map[domain.EntityID]bool)
 
 	today := time.Now()
-	pastDate := today.AddDate(0, 0, -3)
 
 	agenda := &service.MultiDayAgenda{
-		Overdue: []domain.Entry{
-			{
-				ID:            1,
-				EntityID:      "entity-1",
-				Content:       "Overdue task",
-				Type:          domain.EntryTypeTask,
-				ScheduledDate: &pastDate,
-			},
-		},
 		Days: []service.DayEntries{
 			{
 				Date: today,
@@ -3557,12 +3548,580 @@ func TestFlattenAgenda_NeverShowsOverdueSection(t *testing.T) {
 
 	items := model.flattenAgenda(agenda)
 
+	foundTodayTask := false
 	for _, item := range items {
-		if item.DayHeader == "⚠️  OVERDUE" {
-			t.Error("flattenAgenda should never include OVERDUE section - use Outstanding Tasks view instead")
+		if item.Entry.Content == "Today task" {
+			foundTodayTask = true
 		}
-		if item.Entry.Content == "Overdue task" {
-			t.Error("overdue tasks should not appear in journal/review views")
+	}
+
+	if !foundTodayTask {
+		t.Error("flattenAgenda should include entries from Days")
+	}
+}
+
+func TestPendingTasks_NavigateDown(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 3, Content: "Task 3", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateUp(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 3, Content: "Task 3", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 2
+
+	msg := tea.KeyMsg{Type: tea.KeyUp}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateDownAtBounds(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 1
+
+	msg := tea.KeyMsg{Type: tea.KeyDown}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx to stay at 1 (at bounds), got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_NavigateUpAtBounds(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	today := time.Now()
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	msg := tea.KeyMsg{Type: tea.KeyUp}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx to stay at 0 (at bounds), got %d", m.pendingTasksState.selectedIdx)
+	}
+}
+
+func TestPendingTasks_ScrollOffsetAdjustsWhenNavigatingBeyondViewport(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 10
+
+	today := time.Now()
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task %d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.scrollOffset = 0
+
+	for i := 0; i < 8; i++ {
+		msg := tea.KeyMsg{Type: tea.KeyDown}
+		newModel, _ := model.Update(msg)
+		model = newModel.(Model)
+	}
+
+	if model.pendingTasksState.scrollOffset <= 0 {
+		t.Errorf("expected scrollOffset to be > 0 after navigating beyond viewport, got %d", model.pendingTasksState.scrollOffset)
+	}
+}
+
+func TestPendingTasks_RenderShowsScrollIndicators(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 15
+
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task %d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 10
+	model.pendingTasksState.scrollOffset = 5
+
+	view := model.View()
+
+	if !strings.Contains(view, "↑") {
+		t.Error("expected scroll up indicator when scrollOffset > 0")
+	}
+	if !strings.Contains(view, "↓") {
+		t.Error("expected scroll down indicator when more items below viewport")
+	}
+}
+
+func TestPendingTasks_RenderOnlyShowsVisibleEntries(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 15
+
+	entries := make([]domain.Entry, 20)
+	for i := range entries {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Task_Item_%02d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 10
+	model.pendingTasksState.scrollOffset = 8
+
+	view := model.View()
+
+	if strings.Contains(view, "Task_Item_01") {
+		t.Error("Task 1 should not be visible when scrollOffset is 8")
+	}
+	if !strings.Contains(view, "Task_Item_09") {
+		t.Error("Task 9 should be visible (index 8, at scrollOffset)")
+	}
+}
+
+func TestPendingTasks_ShowsContextIndicatorForEntriesWithParents(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Standalone task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	grandparentID := int64(99)
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+			{ID: 99, Content: "Grandparent", Type: domain.EntryTypeEvent, ParentID: &grandparentID},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "↳") {
+		t.Error("expected context indicator ↳ for nested task with parents")
+	}
+}
+
+func TestPendingTasks_ShowsParentChainForSelectedEntry(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 2
+
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Parent event") {
+		t.Error("expected parent context to be shown for selected entry")
+	}
+	if !strings.Contains(view, ">") {
+		t.Error("expected breadcrumb indicator in parent chain display")
+	}
+}
+
+func TestPendingTasks_EnterTogglesContextExpansion(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 0
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 2 {
+		t.Errorf("expected expandedID to be 2 after Enter, got %d", m.pendingTasksState.expandedID)
+	}
+
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 0 {
+		t.Errorf("expected expandedID to be 0 after second Enter (toggle off), got %d", m.pendingTasksState.expandedID)
+	}
+}
+
+func TestPendingTasks_EnterTriggersParentChainLoadingWhenNotCached(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	_, cmd := model.Update(msg)
+
+	if cmd == nil {
+		t.Error("expected a command to be returned to load parent chain, got nil")
+	}
+}
+
+func TestPendingTasks_ParentChainLoadedMsgStoresChainAndExpandsEntry(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	parentChain := []domain.Entry{
+		{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+	}
+	msg := parentChainLoadedMsg{
+		entryID: 2,
+		chain:   parentChain,
+	}
+
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 2 {
+		t.Errorf("expected expandedID to be 2 after parentChainLoadedMsg, got %d", m.pendingTasksState.expandedID)
+	}
+
+	chain, ok := m.pendingTasksState.parentChains[2]
+	if !ok {
+		t.Error("expected parent chain to be stored in parentChains map")
+	}
+	if len(chain) != 1 {
+		t.Errorf("expected parent chain length to be 1, got %d", len(chain))
+	}
+}
+
+func TestPendingTasks_GroupsTasksByDateWithHeaders(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	twoDaysAgo := today.AddDate(0, 0, -2)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task from two days ago", Type: domain.EntryTypeTask, ScheduledDate: &twoDaysAgo},
+		{ID: 2, Content: "Yesterday task 1", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+		{ID: 3, Content: "Yesterday task 2", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+		{ID: 4, Content: "Today task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	if !strings.Contains(view, twoDaysAgo.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for two days ago (%s) in view", twoDaysAgo.Format("Mon, Jan 2"))
+	}
+	if !strings.Contains(view, yesterday.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for yesterday (%s) in view", yesterday.Format("Mon, Jan 2"))
+	}
+	if !strings.Contains(view, today.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for today (%s) in view", today.Format("Mon, Jan 2"))
+	}
+}
+
+func TestPendingTasks_DoesNotShowDateOnEachTaskLine(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "First task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Second task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	dateOnLine := today.Format("2006-01-02")
+	occurrences := strings.Count(view, dateOnLine)
+	if occurrences > 1 {
+		t.Errorf("expected date %s to NOT appear on each task line, found %d occurrences", dateOnLine, occurrences)
+	}
+}
+
+func TestPendingTasks_TasksWithinGroupShowWithoutDate(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "My task content", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	if !strings.Contains(view, "• My task content") {
+		t.Error("expected task line to show just the symbol and content without date bracket prefix")
+	}
+	if strings.Contains(view, "["+today.Format("2006-01-02")+"]") {
+		t.Error("expected task line to NOT have date in brackets")
+	}
+}
+
+func TestPendingTasks_ShowsDateHeaderWhenScrolled(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 15
+
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+
+	entries := make([]domain.Entry, 20)
+	for i := 0; i < 10; i++ {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Yesterday task %d", i+1), Type: domain.EntryTypeTask, ScheduledDate: &yesterday}
+	}
+	for i := 10; i < 20; i++ {
+		entries[i] = domain.Entry{ID: int64(i + 1), Content: fmt.Sprintf("Today task %d", i-9), Type: domain.EntryTypeTask, ScheduledDate: &today}
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 5
+	model.pendingTasksState.scrollOffset = 5
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	if !strings.Contains(view, yesterday.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for yesterday (%s) when scrolled into that date group", yesterday.Format("Mon, Jan 2"))
+	}
+}
+
+func TestPendingTasks_ParentChainIndentationIsCorrect(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+	parentID := int64(100)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Child task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 2
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent note", Type: domain.EntryTypeNote},
+		},
+	}
+
+	view := testutil.StripAnsi(model.View())
+
+	if !strings.Contains(view, "  > – Parent note") {
+		t.Errorf("expected parent to be indented with '  > – Parent note', got:\n%s", view)
+	}
+	if !strings.Contains(view, "    • Child task") {
+		t.Errorf("expected child task to be more indented than parent with '    • Child task', got:\n%s", view)
+	}
+}
+
+func TestPendingTasks_ContextIndicatorIsVisible(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+	parentID := int64(100)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task without context", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Task with context", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent note", Type: domain.EntryTypeNote},
+		},
+	}
+
+	view := testutil.StripAnsi(model.View())
+
+	// Task with context should have a clear indicator (not just small [1])
+	if !strings.Contains(view, "↳") {
+		t.Errorf("expected context indicator with ↳ symbol for task with parents, got:\n%s", view)
+	}
+
+	// Task without context should NOT have the indicator
+	lines := strings.Split(view, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "Task without context") && strings.Contains(line, "↳") {
+			t.Errorf("task without context should not have ↳ indicator")
 		}
+	}
+}
+
+func TestPendingTasks_ScrollingAccountsForDateHeaders(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 20 // Small height to force scrolling issues
+
+	// Create entries across 5 different dates (each date header takes a line)
+	entries := make([]domain.Entry, 0, 15)
+	for i := 0; i < 15; i++ {
+		date := time.Now().AddDate(0, 0, -i).Truncate(24 * time.Hour)
+		entries = append(entries, domain.Entry{
+			ID:            int64(i + 1),
+			Content:       fmt.Sprintf("Task %d", i+1),
+			Type:          domain.EntryTypeTask,
+			ScheduledDate: &date,
+		})
+	}
+	model.pendingTasksState.entries = entries
+	model.pendingTasksState.selectedIdx = 0
+
+	view := testutil.StripAnsi(model.View())
+	lines := strings.Split(view, "\n")
+
+	// Count actual content lines (excluding empty lines at end)
+	contentLines := 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			contentLines++
+		}
+	}
+
+	// Should not exceed height (with some margin for header/footer)
+	maxExpectedLines := model.height + 2 // small buffer for final newlines
+	if contentLines > maxExpectedLines {
+		t.Errorf("view has %d content lines but height is %d, content:\n%s", contentLines, model.height, view)
+	}
+}
+
+func TestPendingTasks_ScrollingToBottomShowsLastEntry(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 20
+
+	// Create entries across multiple dates
+	entries := make([]domain.Entry, 0, 10)
+	for i := 0; i < 10; i++ {
+		date := time.Now().AddDate(0, 0, -i).Truncate(24 * time.Hour)
+		entries = append(entries, domain.Entry{
+			ID:            int64(i + 1),
+			Content:       fmt.Sprintf("Task %d", i+1),
+			Type:          domain.EntryTypeTask,
+			ScheduledDate: &date,
+		})
+	}
+	model.pendingTasksState.entries = entries
+
+	// Navigate to bottom
+	model.pendingTasksState.selectedIdx = len(entries) - 1
+	model = model.ensurePendingTaskVisible()
+
+	view := testutil.StripAnsi(model.View())
+
+	// Last entry (Task 10) should be visible
+	if !strings.Contains(view, "Task 10") {
+		t.Errorf("expected last entry 'Task 10' to be visible after scrolling to bottom, got:\n%s", view)
+	}
+
+	// Selection indicator should be on Task 10
+	lines := strings.Split(view, "\n")
+	found := false
+	for _, line := range lines {
+		if strings.Contains(line, "Task 10") && strings.Contains(line, ">") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected Task 10 to be selected (have > indicator), got:\n%s", view)
 	}
 }

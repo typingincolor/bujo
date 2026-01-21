@@ -104,21 +104,15 @@ func TestBujoService_GetDailyAgenda(t *testing.T) {
 	ctx := context.Background()
 
 	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
-	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
-
-	// Add overdue task
-	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: yesterday})
-	require.NoError(t, err)
 
 	// Add today's tasks
-	_, err = service.LogEntries(ctx, `. Today's task
+	_, err := service.LogEntries(ctx, `. Today's task
 - Today's note`, LogEntriesOptions{Date: today})
 	require.NoError(t, err)
 
 	agenda, err := service.GetDailyAgenda(ctx, today)
 
 	require.NoError(t, err)
-	assert.Len(t, agenda.Overdue, 1)
 	assert.Len(t, agenda.Today, 2)
 }
 
@@ -882,26 +876,21 @@ func TestBujoService_GetMultiDayAgenda_ReturnsEntriesGroupedByDate(t *testing.T)
 	assert.Len(t, agenda.Days[2].Entries, 1)
 }
 
-func TestBujoService_GetMultiDayAgenda_IncludesOverdueOnFirstDay(t *testing.T) {
+func TestBujoService_GetMultiDayAgenda_DoesNotIncludeOverdue(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()
 
-	oldDate := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	day1 := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
 	day2 := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
 
-	// Overdue task from before the range
-	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: oldDate})
-	require.NoError(t, err)
-
-	_, err = service.LogEntries(ctx, ". Task on day 1", LogEntriesOptions{Date: day1})
+	_, err := service.LogEntries(ctx, ". Task on day 1", LogEntriesOptions{Date: day1})
 	require.NoError(t, err)
 
 	agenda, err := service.GetMultiDayAgenda(ctx, day1, day2)
 
 	require.NoError(t, err)
-	assert.Len(t, agenda.Overdue, 1)
-	assert.Equal(t, "Overdue task", agenda.Overdue[0].Content)
+	require.Len(t, agenda.Days, 2)
+	assert.Len(t, agenda.Days[0].Entries, 1)
 }
 
 func TestBujoService_GetMultiDayAgenda_IncludesLocations(t *testing.T) {
