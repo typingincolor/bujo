@@ -820,27 +820,36 @@ func (m Model) moveListItemCmd(itemID int64, targetListID int64, fromListID int6
 	}
 }
 
-func (m Model) moveEntryToListCmd(entryID int64, listID int64, entryType domain.EntryType, entryContent string) tea.Cmd {
+func (m Model) moveEntryToListCmd(entryID int64, listID int64) tea.Cmd {
 	return func() tea.Msg {
 		if m.bujoService == nil {
 			return errMsg{fmt.Errorf("bujo service not available")}
 		}
-		if m.listService == nil {
-			return errMsg{fmt.Errorf("list service not available")}
-		}
 		ctx := context.Background()
 
-		_, err := m.listService.AddItem(ctx, listID, entryType, entryContent)
-		if err != nil {
-			return errMsg{err}
-		}
-
-		err = m.bujoService.DeleteEntry(ctx, entryID)
+		err := m.bujoService.MoveEntryToList(ctx, entryID, listID)
 		if err != nil {
 			return errMsg{err}
 		}
 
 		return entryMovedToListMsg{entryID: entryID}
+	}
+}
+
+func (m Model) moveToRootCmd(entryID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+
+		moveToRoot := true
+		err := m.bujoService.MoveEntry(ctx, entryID, service.MoveOptions{MoveToRoot: &moveToRoot})
+		if err != nil {
+			return errMsg{err}
+		}
+
+		return entryUpdatedMsg{id: entryID}
 	}
 }
 

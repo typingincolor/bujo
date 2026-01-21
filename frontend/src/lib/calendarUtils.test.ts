@@ -41,7 +41,8 @@ describe('calendarUtils', () => {
       const today = new Date();
       const week = getWeekDates(today);
 
-      const todayStr = today.toISOString().split('T')[0];
+      // Use local date formatting to match implementation (not UTC)
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       // Today should be the last day (rightmost)
       expect(week[6].date).toBe(todayStr);
       expect(week[6].isToday).toBe(true);
@@ -128,7 +129,8 @@ describe('calendarUtils', () => {
 
     it('marks isFuture for dates after today', () => {
       const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      // Use local date formatting to match implementation (not UTC)
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const calendar = getMonthCalendar(today);
 
       const allDays = calendar.flat();

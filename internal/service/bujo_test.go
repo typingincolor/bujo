@@ -2154,3 +2154,114 @@ func TestBujoService_ExportEntryMarkdown_WithChildren(t *testing.T) {
 	assert.Contains(t, markdown, "  –")
 	assert.Contains(t, markdown, "  •")
 }
+
+func setupBujoServiceWithLists(t *testing.T) (*BujoService, *sqlite.EntryRepository, *sqlite.ListRepository, *sqlite.ListItemRepository) {
+	t.Helper()
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	entryRepo := sqlite.NewEntryRepository(db)
+	dayCtxRepo := sqlite.NewDayContextRepository(db)
+	listRepo := sqlite.NewListRepository(db)
+	listItemRepo := sqlite.NewListItemRepository(db)
+	entryToListMover := sqlite.NewEntryToListMover(db)
+	parser := domain.NewTreeParser()
+
+	service := NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover)
+	return service, entryRepo, listRepo, listItemRepo
+}
+
+func TestBujoService_MoveEntryToList_Success(t *testing.T) {
+	service, entryRepo, listRepo, listItemRepo := setupBujoServiceWithLists(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	entryID := ids[0]
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	err = service.MoveEntryToList(ctx, entryID, list.ID)
+
+	require.NoError(t, err)
+
+	// Entry should be deleted
+	entry, err := entryRepo.GetByID(ctx, entryID)
+	require.NoError(t, err)
+	assert.Nil(t, entry)
+
+	// List item should exist with same content
+	items, err := listItemRepo.GetByListID(ctx, list.ID)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, "Buy groceries", items[0].Content)
+	assert.Equal(t, domain.ListItemTypeTask, items[0].Type)
+}
+
+func TestBujoService_MoveEntryToList_OnlyTasks(t *testing.T) {
+	service, _, listRepo, _ := setupBujoServiceWithLists(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "- A note", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	noteID := ids[0]
+
+	list, err := listRepo.Create(ctx, "Notes")
+	require.NoError(t, err)
+
+	err = service.MoveEntryToList(ctx, noteID, list.ID)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks can be moved to lists")
+}
+
+func TestBujoService_MoveEntryToList_EntryNotFound(t *testing.T) {
+	service, _, listRepo, _ := setupBujoServiceWithLists(t)
+	ctx := context.Background()
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	err = service.MoveEntryToList(ctx, 9999, list.ID)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
+func TestBujoService_MoveEntryToList_ListNotFound(t *testing.T) {
+	service, _, _, _ := setupBujoServiceWithLists(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MoveEntryToList(ctx, ids[0], 9999)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "list not found")
+}
+
+func TestBujoService_MoveEntryToList_WithChildren_Fails(t *testing.T) {
+	service, _, listRepo, _ := setupBujoServiceWithLists(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 21, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Parent task\n  . Child task", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 2)
+
+	parentID := ids[0]
+
+	list, err := listRepo.Create(ctx, "Test List")
+	require.NoError(t, err)
+
+	err = service.MoveEntryToList(ctx, parentID, list.ID)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot move entry with children")
+}

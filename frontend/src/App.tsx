@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, AddListItem } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -370,7 +370,7 @@ function App() {
   const handleMoveToList = useCallback(async (listId: number) => {
     if (!moveToListEntry) return
     try {
-      await AddListItem(listId, moveToListEntry.content)
+      await MoveEntryToList(moveToListEntry.id, listId)
       setMoveToListEntry(null)
       loadData()
     } catch (err) {
@@ -393,6 +393,16 @@ function App() {
       setInlineInputMode('child')
     }
   }, [flatEntries])
+
+  const handleMoveToRoot = useCallback(async (entry: Entry) => {
+    try {
+      await MoveEntryToRoot(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to move entry to root:', err)
+      setError(err instanceof Error ? err.message : 'Failed to move entry to root')
+    }
+  }, [loadData])
 
   const handleInlineEntrySubmit = useCallback(async (content: string) => {
     const today = startOfDay(new Date())
@@ -454,6 +464,13 @@ function App() {
       parentId: result.parentId,
       loggedDate: result.date
     })
+  }, [])
+
+  const handleSearchAddChild = useCallback((result: SearchResult) => {
+    // Navigate to the entry's date in week view where user can add child
+    const entryDate = new Date(result.date)
+    setReviewAnchorDate(startOfDay(entryDate))
+    setView('week')
   }, [])
 
   const handleOverviewNavigate = useCallback((entry: Entry) => {
@@ -649,6 +666,9 @@ function App() {
                 onMoveToList={(entry) => setMoveToListEntry(entry)}
                 onNavigateToEntry={handleOverviewNavigate}
                 onEdit={(entry) => setEditModalEntry(entry)}
+                onAnswer={(entry) => setAnswerModalEntry(entry)}
+                onAddChild={handleAddChild}
+                onMoveToRoot={handleMoveToRoot}
               />
             </div>
           )}
@@ -695,6 +715,7 @@ function App() {
                 onNavigateToEntry={handleSearchNavigate}
                 onMoveToList={handleSearchMoveToList}
                 onEdit={handleSearchEdit}
+                onAddChild={handleSearchAddChild}
               />
             </div>
           )}

@@ -10,9 +10,12 @@ import (
 )
 
 type BujoService struct {
-	entryRepo  domain.EntryRepository
-	dayCtxRepo domain.DayContextRepository
-	parser     *domain.TreeParser
+	entryRepo        domain.EntryRepository
+	dayCtxRepo       domain.DayContextRepository
+	parser           *domain.TreeParser
+	listRepo         domain.ListRepository
+	listItemRepo     domain.ListItemRepository
+	entryToListMover domain.EntryToListMover
 }
 
 func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser) *BujoService {
@@ -20,6 +23,17 @@ func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayConte
 		entryRepo:  entryRepo,
 		dayCtxRepo: dayCtxRepo,
 		parser:     parser,
+	}
+}
+
+func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover) *BujoService {
+	return &BujoService{
+		entryRepo:        entryRepo,
+		dayCtxRepo:       dayCtxRepo,
+		parser:           parser,
+		listRepo:         listRepo,
+		listItemRepo:     listItemRepo,
+		entryToListMover: entryToListMover,
 	}
 }
 
@@ -938,4 +952,37 @@ func formatEntryMarkdown(entry domain.Entry, children map[int64][]domain.Entry, 
 	}
 
 	return sb.String()
+}
+
+func (s *BujoService) MoveEntryToList(ctx context.Context, entryID int64, listID int64) error {
+	entry, err := s.getEntry(ctx, entryID)
+	if err != nil {
+		return err
+	}
+
+	if !entry.CanMoveToList() {
+		return fmt.Errorf("only tasks can be moved to lists, this is a %s", entry.Type)
+	}
+
+	children, err := s.entryRepo.GetChildren(ctx, entry.ID)
+	if err != nil {
+		return fmt.Errorf("failed to check for children: %w", err)
+	}
+	if len(children) > 0 {
+		return fmt.Errorf("cannot move entry with children to a list")
+	}
+
+	list, err := s.listRepo.GetByID(ctx, listID)
+	if err != nil {
+		return err
+	}
+	if list == nil {
+		return fmt.Errorf("list not found: %d", listID)
+	}
+
+	if err := s.entryToListMover.MoveEntryToList(ctx, *entry, list.EntityID); err != nil {
+		return fmt.Errorf("failed to move entry to list: %w", err)
+	}
+
+	return nil
 }

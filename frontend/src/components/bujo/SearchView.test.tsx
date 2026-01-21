@@ -1358,6 +1358,33 @@ describe('SearchView - Navigate to Entry Button', () => {
   })
 })
 
+describe('SearchView - Add Child Callback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('accepts onAddChild prop without error', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onAddChild = vi.fn()
+    const user = userEvent.setup()
+    // Should render without error when onAddChild is provided
+    render(<SearchView onAddChild={onAddChild} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    // Verify EntryActionBar is rendered (callbacks are wired internally)
+    expect(screen.getByTestId('entry-action-bar')).toBeInTheDocument()
+  })
+})
+
 describe('SearchView - Symbol Click Toggle', () => {
   beforeEach(() => {
     vi.clearAllMocks()

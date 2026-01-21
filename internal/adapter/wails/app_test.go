@@ -1026,6 +1026,73 @@ func TestApp_MoveEntryToRoot_RemovesParent(t *testing.T) {
 	assert.Equal(t, 0, updated.Depth)
 }
 
+func TestApp_MoveEntryToList_MovesTaskToList(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create a task entry
+	entryIDs, err := wailsApp.AddEntry(". Buy groceries", today)
+	require.NoError(t, err)
+	entryID := entryIDs[0]
+
+	// Create a list
+	listID, err := wailsApp.CreateList("Shopping")
+	require.NoError(t, err)
+
+	// Move entry to list
+	err = wailsApp.MoveEntryToList(entryID, listID)
+	require.NoError(t, err)
+
+	// Entry should be deleted (GetEntry returns error for deleted entries)
+	_, err = wailsApp.GetEntry(entryID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+
+	// List should have the item
+	lists, err := wailsApp.GetLists()
+	require.NoError(t, err)
+	require.Len(t, lists, 1)
+	require.Len(t, lists[0].Items, 1)
+	assert.Equal(t, "Buy groceries", lists[0].Items[0].Content)
+}
+
+func TestApp_MoveEntryToList_FailsForNonTasks(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	// Create a note entry
+	entryIDs, err := wailsApp.AddEntry("- This is a note", today)
+	require.NoError(t, err)
+	noteID := entryIDs[0]
+
+	// Create a list
+	listID, err := wailsApp.CreateList("Notes")
+	require.NoError(t, err)
+
+	// Attempt to move note to list - should fail
+	err = wailsApp.MoveEntryToList(noteID, listID)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only tasks can be moved to lists")
+}
+
 func TestApp_GetOutstandingQuestions_ReturnsOnlyQuestions(t *testing.T) {
 	ctx := context.Background()
 

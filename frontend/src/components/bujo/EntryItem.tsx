@@ -307,7 +307,7 @@ export function EntryItem({
               Move to root
             </button>
           )}
-          {onAddChild && (
+          {onAddChild && entry.type !== 'question' && (
             <button
               role="menuitem"
               onClick={() => {

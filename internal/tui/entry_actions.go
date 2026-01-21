@@ -10,7 +10,10 @@ func UpdateKeyMapForEntry(km *KeyMap, entry domain.Entry) {
 	km.AddChild.SetEnabled(entry.CanAddChild())
 	km.Migrate.SetEnabled(entry.CanMigrate())
 	km.MoveToList.SetEnabled(entry.CanMoveToList())
+	km.MoveToRoot.SetEnabled(entry.CanMoveToRoot())
 	km.Answer.SetEnabled(entry.CanAnswer())
+	km.Priority.SetEnabled(entry.CanCyclePriority())
+	km.Delete.SetEnabled(entry.CanDelete())
 }
 
 func ResetKeyMapEnabled(km *KeyMap) {
@@ -21,7 +24,10 @@ func ResetKeyMapEnabled(km *KeyMap) {
 	km.AddChild.SetEnabled(true)
 	km.Migrate.SetEnabled(true)
 	km.MoveToList.SetEnabled(true)
+	km.MoveToRoot.SetEnabled(true)
 	km.Answer.SetEnabled(true)
+	km.Priority.SetEnabled(true)
+	km.Delete.SetEnabled(true)
 }
 
 func (m Model) syncKeyMapToSelection() Model {

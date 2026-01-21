@@ -539,6 +539,16 @@ describe('EntryItem', () => {
       expect(onAddChild).toHaveBeenCalledTimes(1)
     })
 
+    it('does not show Add child option for question entries', () => {
+      const onAddChild = vi.fn()
+      render(<EntryItem entry={createTestEntry({ type: 'question' })} onAddChild={onAddChild} />)
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      fireEvent.contextMenu(container)
+
+      expect(screen.queryByText('Add child')).not.toBeInTheDocument()
+    })
+
     it('closes context menu when clicking outside', () => {
       render(<EntryItem entry={createTestEntry()} onAddChild={() => {}} />)
       const container = screen.getByText('Test entry').closest('[data-entry-id]')!

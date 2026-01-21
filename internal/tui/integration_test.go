@@ -27,9 +27,10 @@ func setupTestServices(t *testing.T) (*service.BujoService, *service.HabitServic
 	listItemRepo := sqlite.NewListItemRepository(db)
 	goalRepo := sqlite.NewGoalRepository(db)
 	dayContextRepo := sqlite.NewDayContextRepository(db)
+	entryToListMover := sqlite.NewEntryToListMover(db)
 	parser := domain.NewTreeParser()
 
-	bujoService := service.NewBujoService(entryRepo, dayContextRepo, parser)
+	bujoService := service.NewBujoServiceWithLists(entryRepo, dayContextRepo, parser, listRepo, listItemRepo, entryToListMover)
 	habitService := service.NewHabitService(habitRepo, habitLogRepo)
 	listService := service.NewListService(listRepo, listItemRepo)
 	goalService := service.NewGoalService(goalRepo)

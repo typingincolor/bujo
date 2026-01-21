@@ -673,6 +673,16 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.loadListsForMoveCmd(entry.ID, entry.Type, entry.Content)
 
+	case key.Matches(msg, m.keyMap.MoveToRoot):
+		if len(m.entries) == 0 {
+			return m, nil
+		}
+		entry := m.entries[m.selectedIdx].Entry
+		if !entry.CanMoveToRoot() {
+			return m, nil
+		}
+		return m, m.moveToRootCmd(entry.ID)
+
 	case key.Matches(msg, m.keyMap.Priority):
 		if len(m.entries) == 0 {
 			return m, nil
@@ -1993,10 +2003,8 @@ func (m Model) handleMoveToListMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.moveToListMode.targetLists) > 0 && m.moveToListMode.selectedIdx < len(m.moveToListMode.targetLists) {
 			targetList := m.moveToListMode.targetLists[m.moveToListMode.selectedIdx]
 			entryID := m.moveToListMode.entryID
-			entryType := m.moveToListMode.entryType
-			entryContent := m.moveToListMode.entryContent
 			m.moveToListMode.active = false
-			return m, m.moveEntryToListCmd(entryID, targetList.ID, entryType, entryContent)
+			return m, m.moveEntryToListCmd(entryID, targetList.ID)
 		}
 		return m, nil
 
@@ -2008,10 +2016,8 @@ func (m Model) handleMoveToListMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				if idx < len(m.moveToListMode.targetLists) {
 					targetList := m.moveToListMode.targetLists[idx]
 					entryID := m.moveToListMode.entryID
-					entryType := m.moveToListMode.entryType
-					entryContent := m.moveToListMode.entryContent
 					m.moveToListMode.active = false
-					return m, m.moveEntryToListCmd(entryID, targetList.ID, entryType, entryContent)
+					return m, m.moveEntryToListCmd(entryID, targetList.ID)
 				}
 			}
 		}
