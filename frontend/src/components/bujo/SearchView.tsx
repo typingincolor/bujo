@@ -1,15 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, MessageCircle } from 'lucide-react';
+import { Search as SearchIcon } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { ContextPill } from './ContextPill';
+import { EntryActionBar } from './EntryActions';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { AnswerQuestionModal } from './AnswerQuestionModal';
-
-function ActionPlaceholder() {
-  return <span data-action-slot className="p-1 w-6 h-6" aria-hidden="true" />;
-}
 
 export interface SearchResult {
   id: number;
@@ -29,9 +26,10 @@ interface AncestorEntry {
 interface SearchViewProps {
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
+  onEdit?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -167,8 +165,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     }
   }, [refreshEntry]);
 
-  const handleCancel = useCallback(async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCancel = useCallback(async (id: number) => {
     try {
       await CancelEntry(id);
       await refreshEntry(id);
@@ -177,8 +174,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     }
   }, [refreshEntry]);
 
-  const handleUncancel = useCallback(async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleUncancel = useCallback(async (id: number) => {
     try {
       await UncancelEntry(id);
       await refreshEntry(id);
@@ -187,8 +183,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     }
   }, [refreshEntry]);
 
-  const handleDelete = useCallback(async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = useCallback(async (id: number) => {
     try {
       await DeleteEntry(id);
       setResults(prev => prev.filter(r => r.id !== id));
@@ -197,8 +192,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     }
   }, []);
 
-  const handleCyclePriority = useCallback(async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCyclePriority = useCallback(async (id: number) => {
     try {
       await CyclePriority(id);
       await refreshEntry(id);
@@ -207,8 +201,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     }
   }, [refreshEntry]);
 
-  const handleCycleType = useCallback(async (id: number, currentType: EntryType, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCycleType = useCallback(async (id: number, currentType: EntryType) => {
     const cycleOrder: EntryType[] = ['task', 'note', 'event', 'question'];
     const currentIndex = cycleOrder.indexOf(currentType);
     if (currentIndex === -1) return;
@@ -479,85 +472,21 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                 </div>
 
                 {/* Action buttons */}
-                {result.type === 'question' ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => { e.stopPropagation(); handleAnswer(result); }}
-                    title="Answer question"
-                    className="p-1 rounded hover:bg-bujo-question/20 text-muted-foreground hover:text-bujo-question"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <ActionPlaceholder />
-                )}
-                {result.type !== 'cancelled' ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => handleCancel(result.id, e)}
-                    title="Cancel entry"
-                    className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <button
-                    data-action-slot
-                    onClick={(e) => handleUncancel(result.id, e)}
-                    title="Uncancel entry"
-                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                  </button>
-                )}
-                <button
-                  data-action-slot
-                  onClick={(e) => handleCyclePriority(result.id, e)}
-                  title="Cycle priority"
-                  className="p-1 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning"
-                >
-                  <Flag className="w-4 h-4" />
-                </button>
-                {(result.type === 'task' || result.type === 'note' || result.type === 'event' || result.type === 'question') ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => handleCycleType(result.id, result.type, e)}
-                    title="Change type"
-                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <ActionPlaceholder />
-                )}
-                {result.type === 'task' ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => { e.stopPropagation(); onMigrate?.(result); }}
-                    title="Migrate entry"
-                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                ) : (
-                  <ActionPlaceholder />
-                )}
-                <button
-                  data-action-slot
-                  onClick={(e) => e.stopPropagation()}
-                  title="Edit entry"
-                  className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  data-action-slot
-                  onClick={(e) => handleDelete(result.id, e)}
-                  title="Delete entry"
-                  className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <EntryActionBar
+                  entry={result}
+                  callbacks={{
+                    onAnswer: () => handleAnswer(result),
+                    onCancel: () => handleCancel(result.id),
+                    onUncancel: () => handleUncancel(result.id),
+                    onCyclePriority: () => handleCyclePriority(result.id),
+                    onCycleType: () => handleCycleType(result.id, result.type),
+                    onMigrate: onMigrate ? () => onMigrate(result) : undefined,
+                    onEdit: onEdit ? () => onEdit(result) : undefined,
+                    onDelete: () => handleDelete(result.id),
+                  }}
+                  variant="always-visible"
+                  usePlaceholders
+                />
 
                 <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
                   #{result.id}

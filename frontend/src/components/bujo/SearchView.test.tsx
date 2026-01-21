@@ -546,13 +546,13 @@ describe('SearchView - Actions', () => {
     })
   })
 
-  it('shows edit button for all entries', async () => {
+  it('shows edit button for non-cancelled entries when onEdit provided', async () => {
     vi.mocked(Search).mockResolvedValue([
       createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
     ] as never)
 
     const user = userEvent.setup()
-    render(<SearchView />)
+    render(<SearchView onEdit={vi.fn()} />)
 
     const input = screen.getByPlaceholderText(/search entries/i)
     await user.type(input, 'test')
@@ -562,13 +562,31 @@ describe('SearchView - Actions', () => {
     })
   })
 
-  it('shows migrate button for task entries', async () => {
+  it('does not show edit button for cancelled entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test cancelled', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView onEdit={vi.fn()} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test cancelled')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTitle('Edit entry')).not.toBeInTheDocument()
+  })
+
+  it('shows migrate button for task entries when onMigrate provided', async () => {
     vi.mocked(Search).mockResolvedValue([
       createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
     ] as never)
 
     const user = userEvent.setup()
-    render(<SearchView />)
+    render(<SearchView onMigrate={vi.fn()} />)
 
     const input = screen.getByPlaceholderText(/search entries/i)
     await user.type(input, 'test')
