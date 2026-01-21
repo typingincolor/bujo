@@ -1043,20 +1043,19 @@ func (m Model) renderPendingTasksContent() string {
 
 	sb.WriteString(fmt.Sprintf("Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries)))
 
-	visibleRows := m.pendingTasksVisibleRows()
+	maxLines := m.pendingTasksVisibleRows()
 	startIdx := m.pendingTasksState.scrollOffset
-	endIdx := startIdx + visibleRows
-	if endIdx > len(m.pendingTasksState.entries) {
-		endIdx = len(m.pendingTasksState.entries)
-	}
+	linesUsed := 0
+	endIdx := startIdx
 
 	if startIdx > 0 {
 		sb.WriteString(HelpStyle.Render("  ↑ more above"))
 		sb.WriteString("\n")
+		linesUsed++
 	}
 
 	var currentDateStr string
-	for i := startIdx; i < endIdx; i++ {
+	for i := startIdx; i < len(m.pendingTasksState.entries); i++ {
 		entry := m.pendingTasksState.entries[i]
 		isSelected := i == m.pendingTasksState.selectedIdx
 		isExpanded := entry.ID == m.pendingTasksState.expandedID
@@ -1066,9 +1065,24 @@ func (m Model) renderPendingTasksContent() string {
 			entryDateStr = entry.ScheduledDate.Format("2006-01-02")
 		}
 
+		linesNeeded := 1
+		if entryDateStr != currentDateStr {
+			linesNeeded += 2
+		}
+		if isExpanded {
+			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
+				linesNeeded += len(chain)
+			}
+		}
+
+		if linesUsed+linesNeeded > maxLines && i > startIdx {
+			break
+		}
+
 		if entryDateStr != currentDateStr {
 			if currentDateStr != "" {
 				sb.WriteString("\n")
+				linesUsed++
 			}
 			if entry.ScheduledDate != nil {
 				sb.WriteString(DateHeaderStyle.Render(entry.ScheduledDate.Format("Mon, Jan 2")))
@@ -1076,18 +1090,22 @@ func (m Model) renderPendingTasksContent() string {
 				sb.WriteString(DateHeaderStyle.Render("No Date"))
 			}
 			sb.WriteString("\n")
+			linesUsed++
 			currentDateStr = entryDateStr
 		}
 
 		if isExpanded {
 			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
 				sb.WriteString(m.renderParentChain(chain))
+				linesUsed += len(chain)
 			}
 		}
 
-		line := m.renderPendingEntryLine(entry, isSelected, m.pendingTasksState.parentChains)
+		line := m.renderPendingEntryLine(entry, isSelected, isExpanded, m.pendingTasksState.parentChains)
 		sb.WriteString(line)
 		sb.WriteString("\n")
+		linesUsed++
+		endIdx = i + 1
 	}
 
 	if endIdx < len(m.pendingTasksState.entries) {
@@ -1122,21 +1140,24 @@ func (m Model) renderEntryLine(entry domain.Entry, selected bool) string {
 	return line
 }
 
-func (m Model) renderPendingEntryLine(entry domain.Entry, selected bool, parentChains map[int64][]domain.Entry) string {
+func (m Model) renderPendingEntryLine(entry domain.Entry, selected bool, expanded bool, parentChains map[int64][]domain.Entry) string {
 	symbol := entry.Type.Symbol()
 	content := entry.Content
+	hasParents := entry.ParentID != nil
 
 	prefix := "  "
-	if selected {
+	if expanded && hasParents {
+		prefix = "    "
+	} else if selected {
 		prefix = "> "
 	}
 
 	contextIndicator := ""
-	if chain, ok := parentChains[entry.ID]; ok && len(chain) > 0 {
-		contextIndicator = fmt.Sprintf(" [%d]", len(chain))
+	if !expanded && hasParents {
+		contextIndicator = "↳ "
 	}
 
-	line := fmt.Sprintf("%s%s %s%s", prefix, symbol, content, contextIndicator)
+	line := fmt.Sprintf("%s%s%s %s", prefix, contextIndicator, symbol, content)
 
 	if selected {
 		return SelectedStyle.Render(line)

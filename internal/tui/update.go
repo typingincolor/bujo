@@ -1470,8 +1470,8 @@ func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) ensurePendingTaskVisible() Model {
-	visibleRows := m.pendingTasksVisibleRows()
-	if visibleRows <= 0 {
+	maxLines := m.pendingTasksVisibleRows()
+	if maxLines <= 0 {
 		return m
 	}
 
@@ -1479,11 +1479,59 @@ func (m Model) ensurePendingTaskVisible() Model {
 		m.pendingTasksState.scrollOffset = m.pendingTasksState.selectedIdx
 	}
 
-	if m.pendingTasksState.selectedIdx >= m.pendingTasksState.scrollOffset+visibleRows {
-		m.pendingTasksState.scrollOffset = m.pendingTasksState.selectedIdx - visibleRows + 1
+	for {
+		visibleCount := m.pendingTasksVisibleCount(m.pendingTasksState.scrollOffset, maxLines)
+		lastVisible := m.pendingTasksState.scrollOffset + visibleCount - 1
+		if m.pendingTasksState.selectedIdx <= lastVisible {
+			break
+		}
+		m.pendingTasksState.scrollOffset++
+		if m.pendingTasksState.scrollOffset >= len(m.pendingTasksState.entries) {
+			m.pendingTasksState.scrollOffset = len(m.pendingTasksState.entries) - 1
+			break
+		}
 	}
 
 	return m
+}
+
+func (m Model) pendingTasksVisibleCount(startIdx int, maxLines int) int {
+	if startIdx >= len(m.pendingTasksState.entries) {
+		return 0
+	}
+
+	linesUsed := 0
+	if startIdx > 0 {
+		linesUsed++
+	}
+
+	var currentDateStr string
+	count := 0
+	for i := startIdx; i < len(m.pendingTasksState.entries); i++ {
+		entry := m.pendingTasksState.entries[i]
+
+		entryDateStr := ""
+		if entry.ScheduledDate != nil {
+			entryDateStr = entry.ScheduledDate.Format("2006-01-02")
+		}
+
+		linesNeeded := 1
+		if entryDateStr != currentDateStr {
+			linesNeeded += 2
+		}
+
+		if linesUsed+linesNeeded > maxLines && count > 0 {
+			break
+		}
+
+		if entryDateStr != currentDateStr {
+			currentDateStr = entryDateStr
+		}
+		linesUsed += linesNeeded
+		count++
+	}
+
+	return count
 }
 
 func (m Model) pendingTasksVisibleRows() int {
