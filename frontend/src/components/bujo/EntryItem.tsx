@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
+import { calculateMenuPosition } from '@/lib/menuPosition';
 import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Check, Flag, RefreshCw } from 'lucide-react';
 
 interface EntryItemProps {
@@ -87,7 +88,13 @@ export function EntryItem({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    const estimatedMenuSize = { width: 150, height: 300 };
+    const adjusted = calculateMenuPosition(
+      { x: e.clientX, y: e.clientY },
+      estimatedMenuSize,
+      { width: window.innerWidth, height: window.innerHeight }
+    );
+    setContextMenuPos(adjusted);
   };
 
   const handleClick = () => {

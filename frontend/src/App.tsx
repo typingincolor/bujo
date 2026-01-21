@@ -25,6 +25,7 @@ import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
+import { formatDateForInput, parseDateFromInput } from '@/lib/dateUtils'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
@@ -174,9 +175,8 @@ function App() {
   }, [])
 
   const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const dateValue = e.target.value
-    if (dateValue) {
-      const newDate = new Date(dateValue + 'T00:00:00')
+    const newDate = parseDateFromInput(e.target.value)
+    if (newDate) {
       setCurrentDate(newDate)
     }
   }, [])
@@ -495,7 +495,7 @@ function App() {
                 <input
                   type="date"
                   aria-label="Pick date"
-                  value={currentDate.toISOString().split('T')[0]}
+                  value={formatDateForInput(currentDate)}
                   onChange={handleDateChange}
                   className="px-3 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-sm transition-colors border-none focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
