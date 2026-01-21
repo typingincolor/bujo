@@ -947,6 +947,28 @@ func TestBujoService_GetMultiDayAgenda_EmptyRange(t *testing.T) {
 	assert.Empty(t, agenda.Days[1].Entries)
 }
 
+func TestBujoService_GetMultiDayAgenda_IncludesOverdueEntries(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	pastDate := time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)
+	fromDate := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	toDate := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: pastDate})
+	require.NoError(t, err)
+	_, err = service.LogEntries(ctx, ". Current task", LogEntriesOptions{Date: fromDate})
+	require.NoError(t, err)
+
+	agenda, err := service.GetMultiDayAgenda(ctx, fromDate, toDate)
+
+	require.NoError(t, err)
+	require.Len(t, agenda.Days, 2)
+	assert.Len(t, agenda.Days[0].Entries, 1, "Current task should be in Days")
+	assert.Len(t, agenda.Overdue, 1, "Overdue task should be in Overdue field")
+	assert.Equal(t, "Overdue task", agenda.Overdue[0].Content)
+}
+
 // Mood tracking tests
 
 func TestBujoService_SetMood(t *testing.T) {
