@@ -39,4 +39,9 @@ describe('parseDateFromInput', () => {
 
     expect(result).toBeNull()
   })
+
+  it('returns null for malformed input', () => {
+    expect(parseDateFromInput('invalid')).toBeNull()
+    expect(parseDateFromInput('not-a-date')).toBeNull()
+  })
 })

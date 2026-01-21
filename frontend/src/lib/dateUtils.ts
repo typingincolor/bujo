@@ -8,5 +8,8 @@ export function formatDateForInput(date: Date): string {
 export function parseDateFromInput(value: string): Date | null {
   if (!value) return null
   const [year, month, day] = value.split('-').map(Number)
-  return new Date(year, month - 1, day, 0, 0, 0)
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+  const date = new Date(year, month - 1, day, 0, 0, 0)
+  if (isNaN(date.getTime())) return null
+  return date
 }

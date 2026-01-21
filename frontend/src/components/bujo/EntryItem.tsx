@@ -28,6 +28,8 @@ interface EntryItemProps {
   onMoveToRoot?: () => void;
 }
 
+const CONTEXT_MENU_ESTIMATED_SIZE = { width: 150, height: 300 };
+
 const contentStyles: Record<EntryType, string> = {
   task: '',
   note: 'text-muted-foreground italic',
@@ -88,10 +90,9 @@ export function EntryItem({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    const estimatedMenuSize = { width: 150, height: 300 };
     const adjusted = calculateMenuPosition(
       { x: e.clientX, y: e.clientY },
-      estimatedMenuSize,
+      CONTEXT_MENU_ESTIMATED_SIZE,
       { width: window.innerWidth, height: window.innerHeight }
     );
     setContextMenuPos(adjusted);

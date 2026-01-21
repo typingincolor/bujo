@@ -1,9 +1,9 @@
-interface Point {
+export interface Point {
   x: number
   y: number
 }
 
-interface Size {
+export interface Size {
   width: number
   height: number
 }
