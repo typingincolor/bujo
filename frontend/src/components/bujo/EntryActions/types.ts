@@ -1,5 +1,5 @@
 import { Entry, EntryType } from '@/types/bujo';
-import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, Pencil, Trash2, CornerDownRight, ArrowUpToLine, ListPlus } from 'lucide-react';
+import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, Pencil, Trash2, CornerDownRight, ArrowUpToLine, ListPlus, Calendar } from 'lucide-react';
 
 export type EntryActionType =
   | 'answer'
@@ -12,7 +12,8 @@ export type EntryActionType =
   | 'delete'
   | 'addChild'
   | 'moveToRoot'
-  | 'moveToList';
+  | 'moveToList'
+  | 'navigateToEntry';
 
 export interface ActionContext {
   hasParent?: boolean;
@@ -47,6 +48,7 @@ export interface ActionCallbacks {
   onAddChild?: () => void;
   onMoveToRoot?: () => void;
   onMoveToList?: () => void;
+  onNavigateToEntry?: () => void;
 }
 
 const CYCLEABLE_TYPES: EntryType[] = ['task', 'note', 'event', 'question'];
@@ -158,7 +160,17 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     label: 'Move to list',
     title: 'Move to list',
     appliesTo: (entry) => entry.type === 'task',
-    showInBar: false,
+    showInBar: true,
+    showInMenu: true,
+    hoverClass: 'hover:bg-primary/20 hover:text-primary',
+  },
+  navigateToEntry: {
+    type: 'navigateToEntry',
+    icon: Calendar,
+    label: 'Go to date',
+    title: 'Go to date',
+    appliesTo: () => true,
+    showInBar: true,
     showInMenu: true,
     hoverClass: 'hover:bg-primary/20 hover:text-primary',
   },
@@ -171,6 +183,8 @@ export const BAR_ACTION_ORDER: EntryActionType[] = [
   'cyclePriority',
   'cycleType',
   'migrate',
+  'moveToList',
+  'navigateToEntry',
   'edit',
   'delete',
 ];
@@ -181,6 +195,7 @@ export const MENU_ACTION_ORDER: EntryActionType[] = [
   'uncancel',
   'migrate',
   'moveToList',
+  'navigateToEntry',
   'cycleType',
   'cyclePriority',
   'moveToRoot',

@@ -729,3 +729,74 @@ describe('OverviewView - Action Icon Placeholders', () => {
     expect(taskActionSlots?.length).toBe(doneActionSlots?.length)
   })
 })
+
+describe('OverviewView - Move to List', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows move to list button for task entries when onMoveToList provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onMoveToList={vi.fn()} />)
+    expect(screen.getByTitle('Move to list')).toBeInTheDocument()
+  })
+
+  it('does not show move to list button when onMoveToList not provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+  })
+
+  it('does not show move to list button for cancelled entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} onMoveToList={vi.fn()} />)
+    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+  })
+
+  it('calls onMoveToList when move to list button is clicked', async () => {
+    const user = userEvent.setup()
+    const onMoveToList = vi.fn()
+    const entry = createTestEntry({ id: 42, type: 'task' })
+    render(<OverviewView overdueEntries={[entry]} onMoveToList={onMoveToList} />)
+
+    await user.click(screen.getByTitle('Move to list'))
+
+    expect(onMoveToList).toHaveBeenCalledWith(entry)
+  })
+})
+
+describe('OverviewView - Navigate to Entry', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows go to date button when onNavigateToEntry provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onNavigateToEntry={vi.fn()} />)
+    expect(screen.getByTitle('Go to date')).toBeInTheDocument()
+  })
+
+  it('does not show go to date button when onNavigateToEntry not provided', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    expect(screen.queryByTitle('Go to date')).not.toBeInTheDocument()
+  })
+
+  it('calls onNavigateToEntry when go to date button is clicked', async () => {
+    const user = userEvent.setup()
+    const onNavigateToEntry = vi.fn()
+    const entry = createTestEntry({ id: 42, type: 'task', loggedDate: '2026-01-15' })
+    render(<OverviewView overdueEntries={[entry]} onNavigateToEntry={onNavigateToEntry} />)
+
+    await user.click(screen.getByTitle('Go to date'))
+
+    expect(onNavigateToEntry).toHaveBeenCalledWith(entry)
+  })
+
+  it('shows go to date button for all entry types', () => {
+    const entries = [
+      createTestEntry({ id: 1, type: 'task' }),
+      createTestEntry({ id: 2, type: 'done' }),
+      createTestEntry({ id: 3, type: 'cancelled' }),
+    ]
+    render(<OverviewView overdueEntries={entries} onNavigateToEntry={vi.fn()} />)
+
+    const goToDateButtons = screen.getAllByTitle('Go to date')
+    expect(goToDateButtons).toHaveLength(3)
+  })
+})

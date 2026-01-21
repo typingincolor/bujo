@@ -36,6 +36,7 @@ const callbackMap: Record<EntryActionType, keyof ActionCallbacks> = {
   addChild: 'onAddChild',
   moveToRoot: 'onMoveToRoot',
   moveToList: 'onMoveToList',
+  navigateToEntry: 'onNavigateToEntry',
 };
 
 export function EntryActionBar({
