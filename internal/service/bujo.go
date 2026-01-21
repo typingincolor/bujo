@@ -380,14 +380,39 @@ func (s *BujoService) RetypeEntry(ctx context.Context, id int64, newType domain.
 		return err
 	}
 
+	if !entry.CanCycleType() {
+		return s.retypeErrorMessage(entry.Type)
+	}
+
 	entry.Type = newType
 	return s.entryRepo.Update(ctx, *entry)
+}
+
+func (s *BujoService) retypeErrorMessage(entryType domain.EntryType) error {
+	switch entryType {
+	case domain.EntryTypeCancelled:
+		return fmt.Errorf("cannot change type of cancelled entry: uncancel it first")
+	case domain.EntryTypeDone:
+		return fmt.Errorf("cannot change type of completed entry: use undo to reopen it first")
+	case domain.EntryTypeMigrated:
+		return fmt.Errorf("cannot change type of migrated entry: the entry has moved to a new date")
+	case domain.EntryTypeAnswered:
+		return fmt.Errorf("cannot change type of answered entry: reopen the question first")
+	case domain.EntryTypeAnswer:
+		return fmt.Errorf("cannot change type of answer entry: answers are tied to their parent question")
+	default:
+		return fmt.Errorf("cannot change type of %s entry", entryType)
+	}
 }
 
 func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string) error {
 	entry, err := s.getEntry(ctx, id)
 	if err != nil {
 		return err
+	}
+
+	if !entry.CanEdit() {
+		return fmt.Errorf("cannot edit cancelled entry: uncancel it first to make changes")
 	}
 
 	entry.Content = newContent

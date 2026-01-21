@@ -1,3 +1,29 @@
+/**
+ * Entry Action Validation Logic
+ *
+ * IMPORTANT: The validation rules in this file (appliesTo functions) must stay
+ * in sync with the domain layer source of truth: internal/domain/entry.go
+ *
+ * The Go domain layer defines Can* methods on the Entry type:
+ * - CanAnswer() -> answer.appliesTo
+ * - CanCancel() -> cancel.appliesTo
+ * - CanUncancel() -> uncancel.appliesTo
+ * - CanCycleType() -> cycleType.appliesTo
+ * - CanEdit() -> edit.appliesTo
+ * - CanMigrate() -> migrate.appliesTo
+ * - CanAddChild() -> addChild.appliesTo
+ * - CanMoveToList() -> moveToList.appliesTo
+ * - CanMoveToRoot() -> moveToRoot.appliesTo
+ * - CanCyclePriority() -> cyclePriority.appliesTo
+ * - CanDelete() -> delete.appliesTo
+ *
+ * This duplication exists because:
+ * 1. Different tech stacks (Go backend, TypeScript frontend)
+ * 2. Frontend needs instant validation for UX (hiding/showing buttons)
+ * 3. Backend validates regardless (defense-in-depth)
+ *
+ * When modifying validation rules, update BOTH files.
+ */
 import { Entry, EntryType } from '@/types/bujo';
 import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, Pencil, Trash2, CornerDownRight, ArrowUpToLine, ListPlus, Calendar } from 'lucide-react';
 

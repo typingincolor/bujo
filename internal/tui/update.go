@@ -489,7 +489,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.CancelEntry):
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
-			if !CanCancel(entry) {
+			if !entry.CanCancel() {
 				return m, nil
 			}
 			return m, m.cancelEntryCmd()
@@ -499,7 +499,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.UncancelEntry):
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
-			if !CanUncancel(entry) {
+			if !entry.CanUncancel() {
 				return m, nil
 			}
 			return m, m.uncancelEntryCmd()
@@ -509,7 +509,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.Retype):
 		if len(m.entries) > 0 {
 			entry := m.entries[m.selectedIdx].Entry
-			if !CanCycleType(entry) {
+			if !entry.CanCycleType() {
 				return m, nil
 			}
 			m.retypeMode = retypeState{
@@ -541,7 +541,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
-		if !CanEdit(entry) {
+		if !entry.CanEdit() {
 			return m, nil
 		}
 		ti := textinput.New()
@@ -586,7 +586,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
-		if !CanAddChild(entry) {
+		if !entry.CanAddChild() {
 			return m, nil
 		}
 		ti := textinput.New()
@@ -668,7 +668,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		entry := m.entries[m.selectedIdx].Entry
-		if !CanMoveToList(entry) {
+		if !entry.CanMoveToList() {
 			return m, nil
 		}
 		return m, m.loadListsForMoveCmd(entry.ID, entry.Type, entry.Content)
