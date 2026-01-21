@@ -148,6 +148,11 @@ type pendingTasksLoadedMsg struct {
 	entries []domain.Entry
 }
 
+type parentChainLoadedMsg struct {
+	entryID int64
+	chain   []domain.Entry
+}
+
 type questionsLoadedMsg struct {
 	entries []domain.Entry
 }

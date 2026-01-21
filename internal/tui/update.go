@@ -234,6 +234,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.pendingTasksState.loading = false
 		m.pendingTasksState.entries = msg.entries
 		m.pendingTasksState.selectedIdx = 0
+		m.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+		m.pendingTasksState.expandedID = 0
+		return m, nil
+
+	case parentChainLoadedMsg:
+		if m.pendingTasksState.parentChains == nil {
+			m.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+		}
+		m.pendingTasksState.parentChains[msg.entryID] = msg.chain
+		m.pendingTasksState.expandedID = msg.entryID
 		return m, nil
 
 	case questionsLoadedMsg:
@@ -1433,6 +1443,25 @@ func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.pendingTasksState.entries) > 0 {
 			m.pendingTasksState.selectedIdx = len(m.pendingTasksState.entries) - 1
 			m = m.ensurePendingTaskVisible()
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyEnter:
+		if len(m.pendingTasksState.entries) > 0 &&
+			m.pendingTasksState.selectedIdx < len(m.pendingTasksState.entries) {
+			entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+			if m.pendingTasksState.expandedID == entry.ID {
+				m.pendingTasksState.expandedID = 0
+				return m, nil
+			}
+
+			if entry.ParentID != nil {
+				_, cached := m.pendingTasksState.parentChains[entry.ID]
+				if !cached {
+					return m, m.loadParentChainCmd(entry.ID)
+				}
+			}
+			m.pendingTasksState.expandedID = entry.ID
 		}
 		return m, nil
 	}

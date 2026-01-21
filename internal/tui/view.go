@@ -1057,7 +1057,16 @@ func (m Model) renderPendingTasksContent() string {
 
 	for i := startIdx; i < endIdx; i++ {
 		entry := m.pendingTasksState.entries[i]
-		line := m.renderEntryLine(entry, i == m.pendingTasksState.selectedIdx)
+		isSelected := i == m.pendingTasksState.selectedIdx
+		isExpanded := entry.ID == m.pendingTasksState.expandedID
+
+		if isExpanded {
+			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
+				sb.WriteString(m.renderParentChain(chain))
+			}
+		}
+
+		line := m.renderPendingEntryLine(entry, isSelected, m.pendingTasksState.parentChains)
 		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
@@ -1092,6 +1101,46 @@ func (m Model) renderEntryLine(entry domain.Entry, selected bool) string {
 	}
 
 	return line
+}
+
+func (m Model) renderPendingEntryLine(entry domain.Entry, selected bool, parentChains map[int64][]domain.Entry) string {
+	dateStr := "no date"
+	if entry.ScheduledDate != nil {
+		dateStr = entry.ScheduledDate.Format("2006-01-02")
+	}
+
+	symbol := entry.Type.Symbol()
+	content := entry.Content
+
+	prefix := "  "
+	if selected {
+		prefix = "> "
+	}
+
+	contextIndicator := ""
+	if chain, ok := parentChains[entry.ID]; ok && len(chain) > 0 {
+		contextIndicator = fmt.Sprintf(" [%d]", len(chain))
+	}
+
+	line := fmt.Sprintf("%s[%s] %s %s%s", prefix, dateStr, symbol, content, contextIndicator)
+
+	if selected {
+		return SelectedStyle.Render(line)
+	}
+
+	return line
+}
+
+func (m Model) renderParentChain(chain []domain.Entry) string {
+	var sb strings.Builder
+
+	for i := len(chain) - 1; i >= 0; i-- {
+		ancestor := chain[i]
+		indent := strings.Repeat("  ", len(chain)-1-i)
+		sb.WriteString(fmt.Sprintf("  %s> %s %s\n", indent, ancestor.Type.Symbol(), HelpStyle.Render(ancestor.Content)))
+	}
+
+	return sb.String()
 }
 
 func (m Model) renderQuestionsContent() string {

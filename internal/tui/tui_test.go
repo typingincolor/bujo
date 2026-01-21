@@ -3724,3 +3724,147 @@ func TestPendingTasks_RenderOnlyShowsVisibleEntries(t *testing.T) {
 		t.Error("Task 9 should be visible (index 8, at scrollOffset)")
 	}
 }
+
+func TestPendingTasks_ShowsContextIndicatorForEntriesWithParents(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Standalone task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+
+	grandparentID := int64(99)
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+			{ID: 99, Content: "Grandparent", Type: domain.EntryTypeEvent, ParentID: &grandparentID},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "[2]") {
+		t.Error("expected context indicator showing parent count for nested task")
+	}
+}
+
+func TestPendingTasks_ShowsParentChainForSelectedEntry(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 2
+
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {
+			{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+		},
+	}
+
+	view := model.View()
+
+	if !strings.Contains(view, "Parent event") {
+		t.Error("expected parent context to be shown for selected entry")
+	}
+	if !strings.Contains(view, ">") {
+		t.Error("expected breadcrumb indicator in parent chain display")
+	}
+}
+
+func TestPendingTasks_EnterTogglesContextExpansion(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 0
+	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
+		2: {{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent}},
+	}
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 2 {
+		t.Errorf("expected expandedID to be 2 after Enter, got %d", m.pendingTasksState.expandedID)
+	}
+
+	newModel, _ = m.Update(msg)
+	m = newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 0 {
+		t.Errorf("expected expandedID to be 0 after second Enter (toggle off), got %d", m.pendingTasksState.expandedID)
+	}
+}
+
+func TestPendingTasks_EnterTriggersParentChainLoadingWhenNotCached(t *testing.T) {
+	today := time.Now()
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 24
+
+	parentID := int64(100)
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.expandedID = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	msg := tea.KeyMsg{Type: tea.KeyEnter}
+	_, cmd := model.Update(msg)
+
+	if cmd == nil {
+		t.Error("expected a command to be returned to load parent chain, got nil")
+	}
+}
+
+func TestPendingTasks_ParentChainLoadedMsgStoresChainAndExpandsEntry(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	parentChain := []domain.Entry{
+		{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent},
+	}
+	msg := parentChainLoadedMsg{
+		entryID: 2,
+		chain:   parentChain,
+	}
+
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.pendingTasksState.expandedID != 2 {
+		t.Errorf("expected expandedID to be 2 after parentChainLoadedMsg, got %d", m.pendingTasksState.expandedID)
+	}
+
+	chain, ok := m.pendingTasksState.parentChains[2]
+	if !ok {
+		t.Error("expected parent chain to be stored in parentChains map")
+	}
+	if len(chain) != 1 {
+		t.Errorf("expected parent chain length to be 1, got %d", len(chain))
+	}
+}

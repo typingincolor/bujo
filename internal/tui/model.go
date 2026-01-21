@@ -283,6 +283,8 @@ type pendingTasksState struct {
 	selectedIdx  int
 	scrollOffset int
 	loading      bool
+	parentChains map[int64][]domain.Entry
+	expandedID   int64
 }
 
 type questionsState struct {
@@ -1102,6 +1104,20 @@ func (m Model) loadQuestionsCmd() tea.Cmd {
 			return errMsg{err}
 		}
 		return questionsLoadedMsg{entries: questions}
+	}
+}
+
+func (m Model) loadParentChainCmd(entryID int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return errMsg{fmt.Errorf("bujo service not available")}
+		}
+		ctx := context.Background()
+		ancestors, err := m.bujoService.GetEntryAncestors(ctx, entryID)
+		if err != nil {
+			return errMsg{err}
+		}
+		return parentChainLoadedMsg{entryID: entryID, chain: ancestors}
 	}
 }
 
