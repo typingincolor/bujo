@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon, Check, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, MessageCircle } from 'lucide-react';
+import { Search as SearchIcon, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw, MessageCircle } from 'lucide-react';
 import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { ContextPill } from './ContextPill';
 import { format } from 'date-fns';
@@ -427,16 +427,33 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                   />
                 )}
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
-                  <span className={cn(
-                    'text-lg font-mono w-5 text-center',
-                    result.type === 'done' && 'text-bujo-done',
-                    result.type === 'task' && 'text-bujo-task',
-                    result.type === 'note' && 'text-bujo-note',
-                    result.type === 'event' && 'text-bujo-event',
-                    result.type === 'cancelled' && 'text-bujo-cancelled',
-                  )}>
-                    {getSymbol(result.type)}
-                  </span>
+                  {/* Symbol - clickable for task/done entries */}
+                  {result.type === 'task' || result.type === 'done' ? (
+                    <button
+                      data-testid="entry-symbol"
+                      onClick={(e) => result.type === 'task' ? handleMarkDone(result.id, e) : handleMarkUndone(result.id, e)}
+                      title={result.type === 'task' ? 'Mark done' : 'Mark undone'}
+                      className={cn(
+                        'text-lg font-mono w-5 text-center cursor-pointer hover:opacity-70 transition-opacity',
+                        result.type === 'done' && 'text-bujo-done',
+                        result.type === 'task' && 'text-bujo-task',
+                      )}
+                    >
+                      {getSymbol(result.type)}
+                    </button>
+                  ) : (
+                    <span
+                      data-testid="entry-symbol"
+                      className={cn(
+                        'text-lg font-mono w-5 text-center',
+                        result.type === 'note' && 'text-bujo-note',
+                        result.type === 'event' && 'text-bujo-event',
+                        result.type === 'cancelled' && 'text-bujo-cancelled',
+                      )}
+                    >
+                      {getSymbol(result.type)}
+                    </span>
+                  )}
                   {result.priority !== 'none' && (
                     <span className={cn(
                       'text-xs font-bold',
@@ -462,25 +479,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                 </div>
 
                 {/* Action buttons */}
-                {result.type === 'task' ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => handleMarkDone(result.id, e)}
-                    title="Mark done"
-                    className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-bujo-done"
-                  >
-                    <Check className="w-4 h-4" />
-                  </button>
-                ) : result.type === 'done' ? (
-                  <button
-                    data-action-slot
-                    onClick={(e) => handleMarkUndone(result.id, e)}
-                    title="Mark undone"
-                    className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600"
-                  >
-                    <span className="text-sm font-bold leading-none">•</span>
-                  </button>
-                ) : result.type === 'question' ? (
+                {result.type === 'question' ? (
                   <button
                     data-action-slot
                     onClick={(e) => { e.stopPropagation(); handleAnswer(result); }}

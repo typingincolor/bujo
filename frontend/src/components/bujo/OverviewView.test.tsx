@@ -119,10 +119,10 @@ describe('OverviewView - Interactions', () => {
     })
   })
 
-  it('shows task bullet symbol in mark undone button', () => {
+  it('shows checkmark symbol for done entries', () => {
     render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
     const undoneButton = screen.getByTitle('Mark undone')
-    expect(undoneButton).toHaveTextContent('•')
+    expect(undoneButton).toHaveTextContent('✓')
   })
 
   it('shows cancel button for non-cancelled entries', () => {
@@ -621,6 +621,69 @@ describe('OverviewView - Context Pill', () => {
     expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
     // Pill should be visible
     expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+  })
+})
+
+describe('OverviewView - Symbol Click Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls MarkEntryDone when clicking symbol for task entry', async () => {
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task' })]} />)
+
+    const symbolButton = screen.getByTitle('Mark done')
+    await user.click(symbolButton)
+
+    await waitFor(() => {
+      expect(MarkEntryDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls MarkEntryUndone when clicking symbol for done entry', async () => {
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'done' })]} />)
+
+    const symbolButton = screen.getByTitle('Mark undone')
+    await user.click(symbolButton)
+
+    await waitFor(() => {
+      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('symbol shows task bullet for task entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
+    const symbolButton = screen.getByTitle('Mark done')
+    expect(symbolButton).toHaveTextContent('•')
+  })
+
+  it('symbol shows checkmark for done entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
+    const symbolButton = screen.getByTitle('Mark undone')
+    expect(symbolButton).toHaveTextContent('✓')
+  })
+
+  it('symbol is not clickable for cancelled entries', () => {
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} />)
+    expect(screen.queryByTitle('Mark done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark undone')).not.toBeInTheDocument()
+  })
+
+  it('symbol click does not toggle row expand', async () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
+      createTestEntry({ id: 2, content: 'Child task', type: 'task', parentId: 1 }),
+    ]
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={entries} />)
+
+    const symbolButton = screen.getByTitle('Mark done')
+    await user.click(symbolButton)
+
+    // Parent should NOT be visible (expand was not triggered)
+    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
   })
 })
 

@@ -400,7 +400,7 @@ describe('SearchView - Actions', () => {
     })
   })
 
-  it('shows task bullet symbol in mark undone button', async () => {
+  it('shows checkmark symbol for done entries', async () => {
     vi.mocked(Search).mockResolvedValue([
       createMockEntry({ ID: 1, Content: 'Done task', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
     ] as never)
@@ -413,7 +413,7 @@ describe('SearchView - Actions', () => {
 
     await waitFor(() => {
       const undoneButton = screen.getByTitle('Mark undone')
-      expect(undoneButton).toHaveTextContent('•')
+      expect(undoneButton).toHaveTextContent('✓')
     })
   })
 
@@ -1171,5 +1171,109 @@ describe('SearchView - Double Click Navigation', () => {
     await user.click(result!)
 
     expect(onNavigateToEntry).not.toHaveBeenCalled()
+  })
+})
+
+describe('SearchView - Symbol Click Toggle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls MarkEntryDone when clicking symbol for task entry', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Task to complete', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'task')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Mark done')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Mark done'))
+
+    await waitFor(() => {
+      expect(MarkEntryDone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('calls MarkEntryUndone when clicking symbol for done entry', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Completed task', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'done')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Mark undone')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Mark undone'))
+
+    await waitFor(() => {
+      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
+    })
+  })
+
+  it('symbol shows task bullet for task entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Task entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'task')
+
+    await waitFor(() => {
+      const symbolButton = screen.getByTitle('Mark done')
+      expect(symbolButton).toHaveTextContent('•')
+    })
+  })
+
+  it('symbol shows checkmark for done entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Done entry', Type: 'done', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'done')
+
+    await waitFor(() => {
+      const symbolButton = screen.getByTitle('Mark undone')
+      expect(symbolButton).toHaveTextContent('✓')
+    })
+  })
+
+  it('symbol is not clickable for cancelled entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Cancelled entry', Type: 'cancelled', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'cancelled')
+
+    await waitFor(() => {
+      expect(screen.getByText('Cancelled entry')).toBeInTheDocument()
+    })
+
+    // Symbol for cancelled entries should not be a button with mark done/undone title
+    expect(screen.queryByTitle('Mark done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark undone')).not.toBeInTheDocument()
   })
 })

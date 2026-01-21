@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
-import { Clock, Check, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
+import { Clock, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Pencil, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 import { ContextPill } from './ContextPill';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -318,12 +318,31 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                                 onClick={() => toggleExpanded(entry.id)}
                               />
                             )}
-                            <span
-                              data-testid="entry-symbol"
-                              className="w-5 text-center text-muted-foreground font-mono"
-                            >
-                              {ENTRY_SYMBOLS[entry.type]}
-                            </span>
+                            {/* Symbol - clickable for task/done entries */}
+                            {entry.type === 'task' || entry.type === 'done' ? (
+                              <button
+                                data-testid="entry-symbol"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (entry.type === 'task') {
+                                    handleMarkDone(entry);
+                                  } else {
+                                    handleMarkUndone(entry);
+                                  }
+                                }}
+                                title={entry.type === 'task' ? 'Mark done' : 'Mark undone'}
+                                className="w-5 text-center text-muted-foreground font-mono cursor-pointer hover:opacity-70 transition-opacity"
+                              >
+                                {ENTRY_SYMBOLS[entry.type]}
+                              </button>
+                            ) : (
+                              <span
+                                data-testid="entry-symbol"
+                                className="w-5 text-center text-muted-foreground font-mono"
+                              >
+                                {ENTRY_SYMBOLS[entry.type]}
+                              </span>
+                            )}
                             <span className={cn(
                               'flex-1 text-sm',
                               entry.type === 'done' && 'text-bujo-done',
@@ -335,27 +354,6 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                               <span className="text-xs text-warning font-medium">
                                 {PRIORITY_SYMBOLS[entry.priority]}
                               </span>
-                            )}
-                            {entry.type === 'done' ? (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); handleMarkUndone(entry); }}
-                                title="Mark undone"
-                                className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600 transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <span className="text-sm font-bold leading-none">•</span>
-                              </button>
-                            ) : entry.type !== 'cancelled' ? (
-                              <button
-                                data-action-slot
-                                onClick={(e) => { e.stopPropagation(); handleMarkDone(entry); }}
-                                title="Mark done"
-                                className="p-1 rounded hover:bg-bujo-done/20 text-muted-foreground hover:text-bujo-done transition-colors opacity-0 group-hover:opacity-100"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <ActionPlaceholder />
                             )}
                             {entry.type !== 'cancelled' ? (
                               <button
