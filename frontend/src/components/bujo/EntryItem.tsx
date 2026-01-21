@@ -3,7 +3,7 @@ import { Entry, EntryType } from '@/types/bujo';
 import { EntrySymbol } from './EntrySymbol';
 import { cn } from '@/lib/utils';
 import { calculateMenuPosition } from '@/lib/menuPosition';
-import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Check, Flag, RefreshCw } from 'lucide-react';
+import { ChevronRight, ChevronDown, Pencil, Trash2, MessageCircle, X, RotateCcw, ArrowRight, Flag, RefreshCw } from 'lucide-react';
 
 interface EntryItemProps {
   entry: Entry;
@@ -136,8 +136,21 @@ export function EntryItem({
         <span className="w-4" />
       )}
 
-      {/* Symbol */}
-      <EntrySymbol type={entry.type} priority={entry.priority} />
+      {/* Symbol - clickable for task/done entries */}
+      {isToggleable && onToggleDone ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleDone();
+          }}
+          className="cursor-pointer hover:opacity-70 transition-opacity"
+          title={entry.type === 'task' ? 'Mark as done' : 'Mark as not done'}
+        >
+          <EntrySymbol type={entry.type} priority={entry.priority} />
+        </button>
+      ) : (
+        <EntrySymbol type={entry.type} priority={entry.priority} />
+      )}
 
       {/* Content */}
       <span className={cn('flex-1 text-sm', contentStyles[entry.type])}>
@@ -153,30 +166,6 @@ export function EntryItem({
 
       {/* Action buttons (shown on hover) */}
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {onToggleDone && entry.type === 'task' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleDone();
-            }}
-            title="Mark as done"
-            className="p-1 rounded hover:bg-green-500/20 text-muted-foreground hover:text-green-600 transition-colors"
-          >
-            <Check className="w-3.5 h-3.5" />
-          </button>
-        )}
-        {onToggleDone && entry.type === 'done' && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleDone();
-            }}
-            title="Mark as not done"
-            className="p-1 rounded hover:bg-orange-500/20 text-muted-foreground hover:text-orange-600 transition-colors"
-          >
-            <span className="text-sm font-bold leading-none">•</span>
-          </button>
-        )}
         {onAnswer && entry.type === 'question' && (
           <button
             onClick={(e) => {

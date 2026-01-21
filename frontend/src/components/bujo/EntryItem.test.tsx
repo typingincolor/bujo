@@ -376,7 +376,7 @@ describe('EntryItem', () => {
       expect(screen.getByTitle('Mark as not done')).toBeInTheDocument()
     })
 
-    it('shows task bullet symbol in untick button', () => {
+    it('shows checkmark symbol in untick button for done entries', () => {
       render(
         <EntryItem
           entry={createTestEntry({ type: 'done' })}
@@ -384,7 +384,7 @@ describe('EntryItem', () => {
         />
       )
       const untickButton = screen.getByTitle('Mark as not done')
-      expect(untickButton).toHaveTextContent('•')
+      expect(untickButton).toHaveTextContent('✓')
     })
 
     it('calls onToggleDone when tick button is clicked', () => {
@@ -704,6 +704,88 @@ describe('EntryItem', () => {
       fireEvent.contextMenu(container)
 
       expect(screen.getByRole('menuitem', { name: 'Cycle priority' })).toBeInTheDocument()
+    })
+  })
+
+  describe('symbol click toggle', () => {
+    it('calls onToggleDone when clicking symbol for task entry', () => {
+      const onToggleDone = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={onToggleDone}
+        />
+      )
+
+      const symbolButton = screen.getByTitle('Mark as done')
+      fireEvent.click(symbolButton)
+      expect(onToggleDone).toHaveBeenCalledTimes(1)
+    })
+
+    it('calls onToggleDone when clicking symbol for done entry', () => {
+      const onToggleDone = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={onToggleDone}
+        />
+      )
+
+      const symbolButton = screen.getByTitle('Mark as not done')
+      fireEvent.click(symbolButton)
+      expect(onToggleDone).toHaveBeenCalledTimes(1)
+    })
+
+    it('symbol is not clickable for note entry', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'note' })}
+          onToggleDone={() => {}}
+        />
+      )
+
+      // Note entries should not have a clickable symbol
+      expect(screen.queryByTitle('Mark as done')).not.toBeInTheDocument()
+      expect(screen.queryByTitle('Mark as not done')).not.toBeInTheDocument()
+    })
+
+    it('symbol click does not trigger row onSelect', () => {
+      const onToggleDone = vi.fn()
+      const onSelect = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={onToggleDone}
+          onSelect={onSelect}
+        />
+      )
+
+      const symbolButton = screen.getByTitle('Mark as done')
+      fireEvent.click(symbolButton)
+      expect(onToggleDone).toHaveBeenCalledTimes(1)
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('symbol shows task bullet for task entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'task' })}
+          onToggleDone={() => {}}
+        />
+      )
+      const symbolButton = screen.getByTitle('Mark as done')
+      expect(symbolButton).toHaveTextContent('•')
+    })
+
+    it('symbol shows checkmark for done entries', () => {
+      render(
+        <EntryItem
+          entry={createTestEntry({ type: 'done' })}
+          onToggleDone={() => {}}
+        />
+      )
+      const symbolButton = screen.getByTitle('Mark as not done')
+      expect(symbolButton).toHaveTextContent('✓')
     })
   })
 
