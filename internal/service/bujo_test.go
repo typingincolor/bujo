@@ -438,6 +438,23 @@ func TestBujoService_EditEntry_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
+func TestBujoService_EditEntry_CannotEditCancelled(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.EditEntry(ctx, ids[0], "New content")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot edit cancelled entry")
+}
+
 func TestBujoService_EditEntryPriority(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
@@ -1485,6 +1502,92 @@ func TestBujoService_RetypeEntry_NotFoundReturnsError(t *testing.T) {
 	err := service.RetypeEntry(ctx, 9999, domain.EntryTypeNote)
 
 	assert.Error(t, err)
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeCancelled(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.CancelEntry(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot change type of cancelled entry")
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeDone(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkDone(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot change type of completed entry")
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeMigrated(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	tomorrow := today.AddDate(0, 0, 1)
+	_, err = service.MigrateEntry(ctx, ids[0], tomorrow)
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot change type of migrated entry")
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeAnswered(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, "? What time is the meeting", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkAnswered(ctx, ids[0], "3pm")
+	require.NoError(t, err)
+
+	err = service.RetypeEntry(ctx, ids[0], domain.EntryTypeNote)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot change type of answered entry")
+}
+
+func TestBujoService_RetypeEntry_CannotRetypeAnswer(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 9, 0, 0, 0, 0, time.UTC)
+	ids, err := service.LogEntries(ctx, `? What time is the meeting
+	a 3pm`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 2)
+
+	answerID := ids[1]
+	err = service.RetypeEntry(ctx, answerID, domain.EntryTypeNote)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot change type of answer entry")
 }
 
 func TestBujoService_RetypeEntry_PreservesContent(t *testing.T) {
