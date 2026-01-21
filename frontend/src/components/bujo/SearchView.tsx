@@ -165,8 +165,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
     }
   }, [refreshEntry]);
 
-  const handleCancel = useCallback(async (id: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleCancel = useCallback(async (id: number) => {
     try {
       await CancelEntry(id);
       await refreshEntry(id);
@@ -175,8 +174,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
     }
   }, [refreshEntry]);
 
-  const handleUncancel = useCallback(async (id: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleUncancel = useCallback(async (id: number) => {
     try {
       await UncancelEntry(id);
       await refreshEntry(id);
@@ -185,8 +183,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
     }
   }, [refreshEntry]);
 
-  const handleDelete = useCallback(async (id: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleDelete = useCallback(async (id: number) => {
     try {
       await DeleteEntry(id);
       setResults(prev => prev.filter(r => r.id !== id));
@@ -195,8 +192,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
     }
   }, []);
 
-  const handleCyclePriority = useCallback(async (id: number, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleCyclePriority = useCallback(async (id: number) => {
     try {
       await CyclePriority(id);
       await refreshEntry(id);
@@ -205,8 +201,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onEdit }: SearchViewP
     }
   }, [refreshEntry]);
 
-  const handleCycleType = useCallback(async (id: number, currentType: EntryType, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleCycleType = useCallback(async (id: number, currentType: EntryType) => {
     const cycleOrder: EntryType[] = ['task', 'note', 'event', 'question'];
     const currentIndex = cycleOrder.indexOf(currentType);
     if (currentIndex === -1) return;

@@ -185,7 +185,7 @@ describe('EntryActionBar', () => {
   });
 
   describe('variants', () => {
-    it('applies opacity-0 group-hover:opacity-100 for hover-reveal variant', () => {
+    it('applies opacity-0 group-hover:opacity-100 focus-within:opacity-100 for hover-reveal variant', () => {
       render(
         <EntryActionBar
           entry={createEntry()}
@@ -197,6 +197,7 @@ describe('EntryActionBar', () => {
       const container = document.querySelector('[data-testid="entry-action-bar"]');
       expect(container).toHaveClass('opacity-0');
       expect(container).toHaveClass('group-hover:opacity-100');
+      expect(container).toHaveClass('focus-within:opacity-100');
     });
 
     it('does not apply opacity classes for always-visible variant', () => {

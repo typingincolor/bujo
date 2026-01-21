@@ -30,6 +30,7 @@ export function EntryActionButton({
 
   return (
     <button
+      type="button"
       data-action-slot
       onClick={handleClick}
       title={config.title}
