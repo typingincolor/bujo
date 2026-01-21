@@ -1055,10 +1055,29 @@ func (m Model) renderPendingTasksContent() string {
 		sb.WriteString("\n")
 	}
 
+	var currentDateStr string
 	for i := startIdx; i < endIdx; i++ {
 		entry := m.pendingTasksState.entries[i]
 		isSelected := i == m.pendingTasksState.selectedIdx
 		isExpanded := entry.ID == m.pendingTasksState.expandedID
+
+		entryDateStr := ""
+		if entry.ScheduledDate != nil {
+			entryDateStr = entry.ScheduledDate.Format("2006-01-02")
+		}
+
+		if entryDateStr != currentDateStr {
+			if currentDateStr != "" {
+				sb.WriteString("\n")
+			}
+			if entry.ScheduledDate != nil {
+				sb.WriteString(DateHeaderStyle.Render(entry.ScheduledDate.Format("Mon, Jan 2")))
+			} else {
+				sb.WriteString(DateHeaderStyle.Render("No Date"))
+			}
+			sb.WriteString("\n")
+			currentDateStr = entryDateStr
+		}
 
 		if isExpanded {
 			if chain, ok := m.pendingTasksState.parentChains[entry.ID]; ok && len(chain) > 0 {
@@ -1104,11 +1123,6 @@ func (m Model) renderEntryLine(entry domain.Entry, selected bool) string {
 }
 
 func (m Model) renderPendingEntryLine(entry domain.Entry, selected bool, parentChains map[int64][]domain.Entry) string {
-	dateStr := "no date"
-	if entry.ScheduledDate != nil {
-		dateStr = entry.ScheduledDate.Format("2006-01-02")
-	}
-
 	symbol := entry.Type.Symbol()
 	content := entry.Content
 
@@ -1122,7 +1136,7 @@ func (m Model) renderPendingEntryLine(entry domain.Entry, selected bool, parentC
 		contextIndicator = fmt.Sprintf(" [%d]", len(chain))
 	}
 
-	line := fmt.Sprintf("%s[%s] %s %s%s", prefix, dateStr, symbol, content, contextIndicator)
+	line := fmt.Sprintf("%s%s %s%s", prefix, symbol, content, contextIndicator)
 
 	if selected {
 		return SelectedStyle.Render(line)

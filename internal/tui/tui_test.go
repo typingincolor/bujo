@@ -3868,3 +3868,83 @@ func TestPendingTasks_ParentChainLoadedMsgStoresChainAndExpandsEntry(t *testing.
 		t.Errorf("expected parent chain length to be 1, got %d", len(chain))
 	}
 }
+
+func TestPendingTasks_GroupsTasksByDateWithHeaders(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	twoDaysAgo := today.AddDate(0, 0, -2)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "Task from two days ago", Type: domain.EntryTypeTask, ScheduledDate: &twoDaysAgo},
+		{ID: 2, Content: "Yesterday task 1", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+		{ID: 3, Content: "Yesterday task 2", Type: domain.EntryTypeTask, ScheduledDate: &yesterday},
+		{ID: 4, Content: "Today task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	if !strings.Contains(view, twoDaysAgo.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for two days ago (%s) in view", twoDaysAgo.Format("Mon, Jan 2"))
+	}
+	if !strings.Contains(view, yesterday.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for yesterday (%s) in view", yesterday.Format("Mon, Jan 2"))
+	}
+	if !strings.Contains(view, today.Format("Mon, Jan 2")) {
+		t.Errorf("expected date header for today (%s) in view", today.Format("Mon, Jan 2"))
+	}
+}
+
+func TestPendingTasks_DoesNotShowDateOnEachTaskLine(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "First task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+		{ID: 2, Content: "Second task", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	dateOnLine := today.Format("2006-01-02")
+	occurrences := strings.Count(view, dateOnLine)
+	if occurrences > 1 {
+		t.Errorf("expected date %s to NOT appear on each task line, found %d occurrences", dateOnLine, occurrences)
+	}
+}
+
+func TestPendingTasks_TasksWithinGroupShowWithoutDate(t *testing.T) {
+	model := New(nil)
+	model.currentView = ViewTypePendingTasks
+	model.width = 80
+	model.height = 30
+
+	today := time.Now().Truncate(24 * time.Hour)
+
+	model.pendingTasksState.entries = []domain.Entry{
+		{ID: 1, Content: "My task content", Type: domain.EntryTypeTask, ScheduledDate: &today},
+	}
+	model.pendingTasksState.selectedIdx = 0
+	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
+
+	view := model.View()
+
+	if !strings.Contains(view, "• My task content") {
+		t.Error("expected task line to show just the symbol and content without date bracket prefix")
+	}
+	if strings.Contains(view, "["+today.Format("2006-01-02")+"]") {
+		t.Error("expected task line to NOT have date in brackets")
+	}
+}
