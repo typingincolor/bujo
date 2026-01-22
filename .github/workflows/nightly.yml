@@ -1,0 +1,243 @@
+name: Nightly Build
+
+on:
+  schedule:
+    # Run at 2am UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force build even if no changes since last build'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  check-changes:
+    name: Check for changes
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      build_number: ${{ steps.build_number.outputs.number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes since last build
+        id: check
+        run: |
+          # Get the latest build tag
+          LATEST_BUILD=$(git tag -l 'build-*' --sort=-version:refname | head -1)
+
+          if [ -z "$LATEST_BUILD" ]; then
+            echo "No previous builds found, will build"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.force }}" == "true" ]; then
+            echo "Force build requested"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            # Check if there are new commits since last build
+            CHANGES=$(git rev-list ${LATEST_BUILD}..HEAD --count)
+            if [ "$CHANGES" -gt 0 ]; then
+              echo "Found $CHANGES new commits since $LATEST_BUILD"
+              echo "should_build=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "No changes since $LATEST_BUILD, skipping build"
+              echo "should_build=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Determine build number
+        id: build_number
+        if: steps.check.outputs.should_build == 'true'
+        run: |
+          # Get highest existing build number
+          LATEST_BUILD=$(git tag -l 'build-*' --sort=-version:refname | head -1 | sed 's/build-//')
+
+          if [ -z "$LATEST_BUILD" ]; then
+            NEXT_BUILD=1
+          else
+            NEXT_BUILD=$((LATEST_BUILD + 1))
+          fi
+
+          echo "number=$NEXT_BUILD" >> "$GITHUB_OUTPUT"
+          echo "Next build number: $NEXT_BUILD"
+
+  build-cli:
+    name: Build CLI
+    needs: check-changes
+    if: needs.check-changes.outputs.should_build == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Create and push tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BUILD_TAG="build-${{ needs.check-changes.outputs.build_number }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$BUILD_TAG" -m "Build ${{ needs.check-changes.outputs.build_number }}"
+          git push origin "$BUILD_TAG"
+
+      - name: Tidy modules
+        run: go mod tidy
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean --config .goreleaser.nightly.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
+          GORELEASER_CURRENT_TAG: build-${{ needs.check-changes.outputs.build_number }}
+
+  build-desktop:
+    name: Build Desktop ${{ matrix.platform.name }}
+    needs: [check-changes, build-cli]
+    if: needs.check-changes.outputs.should_build == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: macOS
+            os: macos-latest
+            build-platform: darwin/universal
+            artifact-name: darwin-universal
+          - name: Windows
+            os: windows-latest
+            build-platform: windows/amd64
+            artifact-name: windows-amd64
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build Wails app
+        run: wails build -platform ${{ matrix.platform.build-platform }}
+
+      - name: Create release archive (macOS)
+        if: matrix.platform.os == 'macos-latest'
+        run: |
+          BUILD_TAG="build-${{ needs.check-changes.outputs.build_number }}"
+          cd build/bin
+          zip -r bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip bujoapp.app
+          shasum -a 256 bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip > bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip.sha256
+
+      - name: Create release archive (Windows)
+        if: matrix.platform.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $BUILD_TAG = "build-${{ needs.check-changes.outputs.build_number }}"
+          cd build/bin
+          Compress-Archive -Path bujoapp.exe -DestinationPath "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip").Hash.ToLower()
+          "$hash  bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip" | Out-File -Encoding ASCII "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip.sha256"
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ needs.check-changes.outputs.build_number }}
+          files: |
+            build/bin/bujo-desktop-build-${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip
+            build/bin/bujo-desktop-build-${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip.sha256
+
+  update-homebrew:
+    name: Update Homebrew
+    needs: [check-changes, build-desktop]
+    if: needs.check-changes.outputs.should_build == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Get SHA256 from release
+        id: sha
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BUILD_TAG="build-${{ needs.check-changes.outputs.build_number }}"
+          # Retry logic to handle brief delay in release asset availability
+          for i in 1 2 3 4 5; do
+            SHA256=$(gh release download "${BUILD_TAG}" --repo "${{ github.repository }}" --pattern "*darwin-universal.zip.sha256" --output - 2>/dev/null | awk '{print $1}')
+            if [ -n "$SHA256" ]; then
+              echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "Attempt $i: Release asset not yet available, waiting 10s..."
+            sleep 10
+          done
+          echo "Failed to download SHA256 after 5 attempts"
+          exit 1
+
+      - name: Update Homebrew cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
+        run: |
+          BUILD_TAG="build-${{ needs.check-changes.outputs.build_number }}"
+          BUILD_NUM="${{ needs.check-changes.outputs.build_number }}"
+          SHA256="${{ steps.sha.outputs.sha256 }}"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/typingincolor/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+
+          cat > tap/Casks/bujo-desktop.rb << 'EOF'
+cask "bujo-desktop" do
+  version "BUILD_NUM_PLACEHOLDER"
+  sha256 "SHA256_PLACEHOLDER"
+
+  url "https://github.com/typingincolor/bujo/releases/download/build-#{version}/bujo-desktop-build-#{version}-darwin-universal.zip"
+  name "Bujo Desktop"
+  desc "Desktop Bullet Journal with AI-powered summaries"
+  homepage "https://github.com/typingincolor/bujo"
+
+  app "bujoapp.app"
+
+  zap trash: [
+    "~/Library/Application Support/bujo",
+    "~/Library/Preferences/com.wails.bujo.plist",
+  ]
+end
+EOF
+
+          sed -i '' "s/BUILD_NUM_PLACEHOLDER/${BUILD_NUM}/g" tap/Casks/bujo-desktop.rb
+          sed -i '' "s/SHA256_PLACEHOLDER/${SHA256}/g" tap/Casks/bujo-desktop.rb
+
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/bujo-desktop.rb
+          git commit -m "Update bujo-desktop to ${BUILD_TAG}"
+          git push
