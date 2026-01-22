@@ -41,9 +41,6 @@ archives:
 checksum:
   name_template: 'checksums.txt'
 
-snapshot:
-  version_template: "{{ incpatch .Version }}-next"
-
 changelog:
   sort: asc
   filters:
@@ -60,7 +57,7 @@ release:
     name: bujo
   draft: false
   prerelease: auto
-  name_template: "v{{.Version}}"
+  name_template: "{{.Tag}}"
 
 brews:
   - name: bujo

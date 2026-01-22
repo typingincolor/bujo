@@ -1,0 +1,120 @@
+name: Rename Releases to Build Numbers
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no changes made)'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  rename:
+    name: Rename Releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Rename releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -e
+
+          echo "Fetching all releases..."
+          RELEASES=$(gh release list --limit 100 --json tagName,name,body,isDraft,isPrerelease --jq 'sort_by(.tagName) | reverse')
+
+          # Get releases sorted by version (oldest first for sequential numbering)
+          # Parse version numbers and sort
+          SORTED_TAGS=$(echo "$RELEASES" | jq -r '.[].tagName' | sort -V)
+
+          BUILD_NUM=1
+          for TAG in $SORTED_TAGS; do
+            # Skip if already a build-N tag
+            if [[ "$TAG" =~ ^build-[0-9]+$ ]]; then
+              echo "Skipping $TAG (already renamed)"
+              # Update BUILD_NUM to be higher than this
+              EXISTING_NUM=$(echo "$TAG" | sed 's/build-//')
+              if [ "$EXISTING_NUM" -ge "$BUILD_NUM" ]; then
+                BUILD_NUM=$((EXISTING_NUM + 1))
+              fi
+              continue
+            fi
+
+            NEW_TAG="build-${BUILD_NUM}"
+            echo ""
+            echo "=== Renaming $TAG -> $NEW_TAG ==="
+
+            if [ "$DRY_RUN" == "true" ]; then
+              echo "[DRY RUN] Would rename $TAG to $NEW_TAG"
+            else
+              # Get release details
+              RELEASE_INFO=$(echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag)')
+              BODY=$(echo "$RELEASE_INFO" | jq -r '.body // ""')
+              IS_DRAFT=$(echo "$RELEASE_INFO" | jq -r '.isDraft')
+              IS_PRERELEASE=$(echo "$RELEASE_INFO" | jq -r '.isPrerelease')
+
+              # Get the commit SHA for this tag
+              COMMIT_SHA=$(git rev-list -n 1 "$TAG" 2>/dev/null || echo "")
+
+              if [ -z "$COMMIT_SHA" ]; then
+                echo "Warning: Could not find commit for tag $TAG, fetching..."
+                git fetch origin "refs/tags/$TAG:refs/tags/$TAG" || true
+                COMMIT_SHA=$(git rev-list -n 1 "$TAG" 2>/dev/null || echo "")
+              fi
+
+              if [ -z "$COMMIT_SHA" ]; then
+                echo "Error: Could not find commit for tag $TAG, skipping"
+                continue
+              fi
+
+              echo "Commit SHA: $COMMIT_SHA"
+
+              # Create new tag pointing to same commit
+              git tag "$NEW_TAG" "$COMMIT_SHA"
+              git push origin "$NEW_TAG"
+
+              # Build flags for release creation
+              FLAGS="--title $NEW_TAG"
+              if [ "$IS_PRERELEASE" == "true" ]; then
+                FLAGS="$FLAGS --prerelease"
+              fi
+              if [ "$IS_DRAFT" == "true" ]; then
+                FLAGS="$FLAGS --draft"
+              fi
+
+              # Download assets from old release
+              ASSET_DIR=$(mktemp -d)
+              echo "Downloading assets to $ASSET_DIR..."
+              gh release download "$TAG" --dir "$ASSET_DIR" 2>/dev/null || echo "No assets to download"
+
+              # Create new release with same body and assets
+              if [ -n "$(ls -A "$ASSET_DIR" 2>/dev/null)" ]; then
+                gh release create "$NEW_TAG" $FLAGS --notes "$BODY" "$ASSET_DIR"/*
+              else
+                gh release create "$NEW_TAG" $FLAGS --notes "$BODY"
+              fi
+
+              # Delete old release and tag
+              echo "Deleting old release $TAG..."
+              gh release delete "$TAG" --yes
+              git push origin --delete "$TAG"
+
+              rm -rf "$ASSET_DIR"
+              echo "Successfully renamed $TAG -> $NEW_TAG"
+            fi
+
+            BUILD_NUM=$((BUILD_NUM + 1))
+          done
+
+          echo ""
+          echo "=== Complete ==="
+          echo "Next build number will be: $BUILD_NUM"
