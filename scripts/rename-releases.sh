@@ -54,15 +54,23 @@ for TAG in $SORTED_TAGS; do
   IS_DRAFT=$(echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag) | .isDraft')
   IS_PRERELEASE=$(echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag) | .isPrerelease')
 
-  # Get commit SHA for this tag
-  COMMIT_SHA=$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq '.object.sha' 2>/dev/null || echo "")
+  # Get commit SHA for this tag - handle both lightweight and annotated tags
+  REF_INFO=$(gh api "repos/$REPO/git/refs/tags/$TAG" 2>/dev/null || echo "")
+  if [ -z "$REF_INFO" ]; then
+    echo "Error: Could not find ref for tag $TAG, skipping"
+    rm -f "$BODY_FILE"
+    continue
+  fi
 
-  # If it's an annotated tag, we need to dereference it
-  if [ -n "$COMMIT_SHA" ]; then
-    OBJ_TYPE=$(gh api "repos/$REPO/git/tags/$COMMIT_SHA" --jq '.object.type' 2>/dev/null || echo "")
-    if [ "$OBJ_TYPE" == "commit" ]; then
-      COMMIT_SHA=$(gh api "repos/$REPO/git/tags/$COMMIT_SHA" --jq '.object.sha' 2>/dev/null || echo "$COMMIT_SHA")
-    fi
+  OBJ_SHA=$(echo "$REF_INFO" | jq -r '.object.sha')
+  OBJ_TYPE=$(echo "$REF_INFO" | jq -r '.object.type')
+
+  if [ "$OBJ_TYPE" == "tag" ]; then
+    # Annotated tag - need to dereference to get commit
+    COMMIT_SHA=$(gh api "repos/$REPO/git/tags/$OBJ_SHA" --jq '.object.sha' 2>/dev/null || echo "")
+  else
+    # Lightweight tag - already points to commit
+    COMMIT_SHA="$OBJ_SHA"
   fi
 
   if [ -z "$COMMIT_SHA" ]; then
