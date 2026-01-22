@@ -16,6 +16,8 @@ import {
 
 type PeriodView = 'week' | 'month' | 'quarter';
 
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
 interface HabitTrackerProps {
   habits: Habit[];
   onHabitChanged?: () => void;
@@ -444,12 +446,12 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
           <div className="flex-shrink-0 w-32" />
           <div className="flex-1">
             <div className="grid grid-cols-7 gap-px mb-1">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => (
+              {getWeekDates(effectiveAnchor).map((day, i) => (
                 <div
                   key={i}
                   className="w-full flex justify-center text-[10px] text-muted-foreground font-medium"
                 >
-                  {label}
+                  {DAY_LABELS[day.dayOfWeek]}
                 </div>
               ))}
             </div>

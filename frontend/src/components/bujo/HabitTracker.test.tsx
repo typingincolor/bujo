@@ -640,6 +640,50 @@ describe('HabitTracker - Week View Header', () => {
   })
 })
 
+describe('HabitTracker - Week View Dynamic Day Labels', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    // Wednesday Jan 22, 2025
+    vi.setSystemTime(new Date('2025-01-22T12:00:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('shows day labels matching actual days displayed (past 7 days ending with anchor)', () => {
+    // Anchor is Wednesday Jan 22, 2025
+    // Past 7 days: Thu 16, Fri 17, Sat 18, Sun 19, Mon 20, Tue 21, Wed 22
+    // Labels should be: T, F, S, S, M, T, W (not S, M, T, W, T, F, S)
+    const anchor = new Date('2025-01-22')
+    const habit = createTestHabit({
+      dayHistory: [
+        { date: '2025-01-16', completed: false, count: 0 },
+        { date: '2025-01-17', completed: false, count: 0 },
+        { date: '2025-01-18', completed: false, count: 0 },
+        { date: '2025-01-19', completed: false, count: 0 },
+        { date: '2025-01-20', completed: false, count: 0 },
+        { date: '2025-01-21', completed: false, count: 0 },
+        { date: '2025-01-22', completed: false, count: 0 },
+      ]
+    })
+    render(<HabitTracker habits={[habit]} anchorDate={anchor} />)
+
+    // The header should show labels matching the actual days:
+    // Thu=T, Fri=F, Sat=S, Sun=S, Mon=M, Tue=T, Wed=W
+    // So we expect: T, F, S, S, M, T, W
+    const headerLabels = screen.getAllByText(/^[SMTWF]$/)
+
+    // Should have exactly 7 labels in the header
+    expect(headerLabels).toHaveLength(7)
+
+    // Extract text content to verify order
+    const labelTexts = headerLabels.map(el => el.textContent)
+    expect(labelTexts).toEqual(['T', 'F', 'S', 'S', 'M', 'T', 'W'])
+  })
+})
+
 describe('HabitTracker - No Re-render Animation', () => {
   it('habit rows do not have slide-in animation that would flicker on re-render', () => {
     const habit = createTestHabit({ name: 'Exercise' })
