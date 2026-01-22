@@ -71,6 +71,8 @@ brews:
     license: "MIT"
     install: |
       bin.install "bujo"
+    post_install: |
+      (zsh_completion/"_bujo").write `#{bin}/bujo completion zsh`
     test: |
       system "#{bin}/bujo", "version"
     caveats: |
