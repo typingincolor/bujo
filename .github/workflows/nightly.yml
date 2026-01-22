@@ -213,27 +213,24 @@ jobs:
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/typingincolor/homebrew-tap.git" tap
           mkdir -p tap/Casks
 
-          cat > tap/Casks/bujo-desktop.rb << 'EOF'
-cask "bujo-desktop" do
-  version "BUILD_NUM_PLACEHOLDER"
-  sha256 "SHA256_PLACEHOLDER"
+          cat > tap/Casks/bujo-desktop.rb <<CASKEOF
+          cask "bujo-desktop" do
+            version "${BUILD_NUM}"
+            sha256 "${SHA256}"
 
-  url "https://github.com/typingincolor/bujo/releases/download/build-#{version}/bujo-desktop-build-#{version}-darwin-universal.zip"
-  name "Bujo Desktop"
-  desc "Desktop Bullet Journal with AI-powered summaries"
-  homepage "https://github.com/typingincolor/bujo"
+            url "https://github.com/typingincolor/bujo/releases/download/build-#{version}/bujo-desktop-build-#{version}-darwin-universal.zip"
+            name "Bujo Desktop"
+            desc "Desktop Bullet Journal with AI-powered summaries"
+            homepage "https://github.com/typingincolor/bujo"
 
-  app "bujoapp.app"
+            app "bujoapp.app"
 
-  zap trash: [
-    "~/Library/Application Support/bujo",
-    "~/Library/Preferences/com.wails.bujo.plist",
-  ]
-end
-EOF
-
-          sed -i '' "s/BUILD_NUM_PLACEHOLDER/${BUILD_NUM}/g" tap/Casks/bujo-desktop.rb
-          sed -i '' "s/SHA256_PLACEHOLDER/${SHA256}/g" tap/Casks/bujo-desktop.rb
+            zap trash: [
+              "~/Library/Application Support/bujo",
+              "~/Library/Preferences/com.wails.bujo.plist",
+            ]
+          end
+          CASKEOF
 
           cd tap
           git config user.name "github-actions[bot]"
