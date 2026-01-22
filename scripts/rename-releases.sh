@@ -21,7 +21,7 @@ export GH_TOKEN
 REPO="typingincolor/bujo"
 
 echo "Fetching all releases..."
-RELEASES=$(gh release list --repo "$REPO" --limit 100 --json tagName,body,isDraft,isPrerelease)
+RELEASES=$(gh release list --repo "$REPO" --limit 100 --json tagName,isDraft,isPrerelease)
 
 # Sort tags by version (oldest first)
 SORTED_TAGS=$(echo "$RELEASES" | jq -r '.[].tagName' | sort -V)
@@ -48,9 +48,9 @@ for TAG in $SORTED_TAGS; do
     continue
   fi
 
-  # Get release details
+  # Get release details - fetch body separately via gh release view
   BODY_FILE=$(mktemp)
-  echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag) | .body // ""' > "$BODY_FILE"
+  gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""' > "$BODY_FILE"
   IS_DRAFT=$(echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag) | .isDraft')
   IS_PRERELEASE=$(echo "$RELEASES" | jq -r --arg tag "$TAG" '.[] | select(.tagName == $tag) | .isPrerelease')
 
