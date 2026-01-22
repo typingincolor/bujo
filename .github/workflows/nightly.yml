@@ -31,8 +31,8 @@ jobs:
       - name: Check for changes since last build
         id: check
         run: |
-          # Get the latest nightly build tag (v0.0.N format for semver compatibility)
-          LATEST_BUILD=$(git tag -l 'v0.0.*' --sort=-version:refname | head -1)
+          # Get the latest nightly build tag (v3.0.0-nightly.N format)
+          LATEST_BUILD=$(git tag -l 'v3.0.0-nightly.*' --sort=-version:refname | head -1)
 
           if [ -z "$LATEST_BUILD" ]; then
             echo "No previous builds found, will build"
@@ -42,7 +42,7 @@ jobs:
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
             # Check if there are new commits since last build
-            CHANGES=$(git rev-list ${LATEST_BUILD}..HEAD --count)
+            CHANGES=$(git rev-list "${LATEST_BUILD}..HEAD" --count)
             if [ "$CHANGES" -gt 0 ]; then
               echo "Found $CHANGES new commits since $LATEST_BUILD"
               echo "should_build=true" >> "$GITHUB_OUTPUT"
@@ -56,8 +56,8 @@ jobs:
         id: build_number
         if: steps.check.outputs.should_build == 'true'
         run: |
-          # Get highest existing build number from v0.0.N tags
-          LATEST_BUILD=$(git tag -l 'v0.0.*' --sort=-version:refname | head -1 | sed 's/v0\.0\.//')
+          # Get highest existing build number from v3.0.0-nightly.N tags
+          LATEST_BUILD=$(git tag -l 'v3.0.0-nightly.*' --sort=-version:refname | head -1 | sed 's/v3\.0\.0-nightly\.//')
 
           if [ -z "$LATEST_BUILD" ]; then
             NEXT_BUILD=1
@@ -89,7 +89,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BUILD_TAG="v0.0.${{ needs.check-changes.outputs.build_number }}"
+          BUILD_TAG="v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$BUILD_TAG" -m "Nightly build ${{ needs.check-changes.outputs.build_number }}"
@@ -107,7 +107,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
-          GORELEASER_CURRENT_TAG: v0.0.${{ needs.check-changes.outputs.build_number }}
+          GORELEASER_CURRENT_TAG: v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}
 
   build-desktop:
     name: Build Desktop ${{ matrix.platform.name }}
@@ -154,7 +154,7 @@ jobs:
       - name: Create release archive (macOS)
         if: matrix.platform.os == 'macos-latest'
         run: |
-          BUILD_TAG="v0.0.${{ needs.check-changes.outputs.build_number }}"
+          BUILD_TAG="v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
           cd build/bin
           zip -r bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip bujoapp.app
           shasum -a 256 bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip > bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip.sha256
@@ -163,7 +163,7 @@ jobs:
         if: matrix.platform.os == 'windows-latest'
         shell: pwsh
         run: |
-          $BUILD_TAG = "v0.0.${{ needs.check-changes.outputs.build_number }}"
+          $BUILD_TAG = "v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
           cd build/bin
           Compress-Archive -Path bujoapp.exe -DestinationPath "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip"
           $hash = (Get-FileHash -Algorithm SHA256 "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip").Hash.ToLower()
@@ -172,10 +172,10 @@ jobs:
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.0.${{ needs.check-changes.outputs.build_number }}
+          tag_name: v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}
           files: |
-            build/bin/bujo-desktop-v0.0.${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip
-            build/bin/bujo-desktop-v0.0.${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip.sha256
+            build/bin/bujo-desktop-v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip
+            build/bin/bujo-desktop-v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}-${{ matrix.platform.artifact-name }}.zip.sha256
 
   update-homebrew:
     name: Update Homebrew
@@ -188,7 +188,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          BUILD_TAG="v0.0.${{ needs.check-changes.outputs.build_number }}"
+          BUILD_TAG="v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
           # Retry logic to handle brief delay in release asset availability
           for i in 1 2 3 4 5; do
             SHA256=$(gh release download "${BUILD_TAG}" --repo "${{ github.repository }}" --pattern "*darwin-universal.zip.sha256" --output - 2>/dev/null | awk '{print $1}')
@@ -206,7 +206,7 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_SECRET }}
         run: |
-          BUILD_TAG="v0.0.${{ needs.check-changes.outputs.build_number }}"
+          BUILD_TAG="v3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
           SHA256="${{ steps.sha.outputs.sha256 }}"
 
           git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/typingincolor/homebrew-tap.git" tap
@@ -214,7 +214,7 @@ jobs:
 
           cat > tap/Casks/bujo-desktop.rb <<CASKEOF
           cask "bujo-desktop" do
-            version "0.0.${{ needs.check-changes.outputs.build_number }}"
+            version "3.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
             sha256 "${SHA256}"
 
             url "https://github.com/typingincolor/bujo/releases/download/v#{version}/bujo-desktop-v#{version}-darwin-universal.zip"
