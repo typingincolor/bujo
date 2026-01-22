@@ -255,3 +255,64 @@ describe('Header - Location', () => {
     })
   })
 })
+
+describe('Header - currentDate prop', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('uses currentDate prop for SetMood API call instead of today', async () => {
+    const user = userEvent.setup()
+    const pastDate = new Date('2026-01-15')
+    render(<Header title="Today" currentDate={pastDate} />)
+
+    await user.click(screen.getByTitle('Set mood'))
+    await user.click(screen.getByText('😊'))
+
+    await waitFor(() => {
+      expect(SetMood).toHaveBeenCalled()
+      const call = vi.mocked(SetMood).mock.calls[0]
+      const dateArg = new Date(call[0] as unknown as string)
+      expect(dateArg.toDateString()).toBe(pastDate.toDateString())
+    })
+  })
+
+  it('uses currentDate prop for SetWeather API call instead of today', async () => {
+    const user = userEvent.setup()
+    const pastDate = new Date('2026-01-15')
+    render(<Header title="Today" currentDate={pastDate} />)
+
+    await user.click(screen.getByTitle('Set weather'))
+    await user.click(screen.getByText('☀️'))
+
+    await waitFor(() => {
+      expect(SetWeather).toHaveBeenCalled()
+      const call = vi.mocked(SetWeather).mock.calls[0]
+      const dateArg = new Date(call[0] as unknown as string)
+      expect(dateArg.toDateString()).toBe(pastDate.toDateString())
+    })
+  })
+
+  it('uses currentDate prop for SetLocation API call instead of today', async () => {
+    const user = userEvent.setup()
+    const pastDate = new Date('2026-01-15')
+    render(<Header title="Today" currentDate={pastDate} />)
+
+    await user.click(screen.getByTitle('Set location'))
+    await user.click(screen.getByText('🏢'))
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+      const call = vi.mocked(SetLocation).mock.calls[0]
+      const dateArg = new Date(call[0] as unknown as string)
+      expect(dateArg.toDateString()).toBe(pastDate.toDateString())
+    })
+  })
+
+  it('displays the currentDate in header when provided', () => {
+    const pastDate = new Date('2026-01-15')
+    render(<Header title="Today" currentDate={pastDate} />)
+
+    expect(screen.getByText('Thursday, January 15, 2026')).toBeInTheDocument()
+  })
+})

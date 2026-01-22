@@ -41,6 +41,7 @@ interface HeaderProps {
   currentMood?: string;
   currentWeather?: string;
   currentLocation?: string;
+  currentDate?: Date;
   onMoodChanged?: () => void;
   onWeatherChanged?: () => void;
   onLocationChanged?: () => void;
@@ -52,11 +53,12 @@ export function Header({
   currentMood,
   currentWeather,
   currentLocation,
+  currentDate,
   onMoodChanged,
   onWeatherChanged,
   onLocationChanged,
 }: HeaderProps) {
-  const today = new Date();
+  const displayDate = currentDate ?? new Date();
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showWeatherPicker, setShowWeatherPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -90,20 +92,20 @@ export function Header({
   }, [showLocationPicker]);
 
   const handleMoodSelect = async (mood: MoodValue) => {
-    await SetMood(today.toISOString(), mood);
+    await SetMood(displayDate.toISOString(), mood);
     setShowMoodPicker(false);
     onMoodChanged?.();
   };
 
   const handleWeatherSelect = async (weather: WeatherValue) => {
-    await SetWeather(today.toISOString(), weather);
+    await SetWeather(displayDate.toISOString(), weather);
     setShowWeatherPicker(false);
     onWeatherChanged?.();
   };
 
   const handleLocationSelect = async (location: string) => {
     if (!location.trim()) return;
-    await SetLocation(today.toISOString(), location);
+    await SetLocation(displayDate.toISOString(), location);
     setShowLocationPicker(false);
     setLocationInput('');
     onLocationChanged?.();
@@ -134,7 +136,7 @@ export function Header({
         <h2 className="font-display text-2xl font-semibold">{title}</h2>
         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Calendar className="w-4 h-4" />
-          {format(today, 'EEEE, MMMM d, yyyy')}
+          {format(displayDate, 'EEEE, MMMM d, yyyy')}
         </span>
 
         {/* Mood button */}

@@ -534,6 +534,7 @@ function App() {
           currentMood={today?.mood}
           currentWeather={today?.weather}
           currentLocation={today?.location}
+          currentDate={currentDate}
           onMoodChanged={loadData}
           onWeatherChanged={loadData}
           onLocationChanged={loadData}
