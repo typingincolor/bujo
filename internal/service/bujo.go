@@ -209,11 +209,15 @@ func (s *BujoService) GetEntry(ctx context.Context, id int64) (*domain.Entry, er
 }
 
 func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location string) error {
-	dayCtx := domain.DayContext{
-		Date:     date,
-		Location: &location,
+	dayCtx, err := s.dayCtxRepo.GetByDate(ctx, date)
+	if err != nil {
+		return err
 	}
-	return s.dayCtxRepo.Upsert(ctx, dayCtx)
+	if dayCtx == nil {
+		dayCtx = &domain.DayContext{Date: date}
+	}
+	dayCtx.Location = &location
+	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 
 func (s *BujoService) GetLocationHistory(ctx context.Context, from, to time.Time) ([]domain.DayContext, error) {

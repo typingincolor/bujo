@@ -217,6 +217,31 @@ func TestBujoService_ClearLocation(t *testing.T) {
 	assert.Nil(t, loc)
 }
 
+func TestBujoService_SetLocation_PreservesExistingMoodAndWeather(t *testing.T) {
+	service, _, dayCtxRepo := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	err := service.SetMood(ctx, today, "happy")
+	require.NoError(t, err)
+	err = service.SetWeather(ctx, today, "sunny")
+	require.NoError(t, err)
+
+	err = service.SetLocation(ctx, today, "Office")
+	require.NoError(t, err)
+
+	dayCtx, err := dayCtxRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, dayCtx)
+	require.NotNil(t, dayCtx.Location, "Location should be set")
+	assert.Equal(t, "Office", *dayCtx.Location)
+	require.NotNil(t, dayCtx.Mood, "Mood should be preserved after setting location")
+	assert.Equal(t, "happy", *dayCtx.Mood)
+	require.NotNil(t, dayCtx.Weather, "Weather should be preserved after setting location")
+	assert.Equal(t, "sunny", *dayCtx.Weather)
+}
+
 func TestBujoService_MarkDone(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
