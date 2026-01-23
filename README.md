@@ -2,10 +2,14 @@
 
 [![CI](https://github.com/typingincolor/bujo/actions/workflows/ci.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/ci.yml)
 [![Nightly](https://github.com/typingincolor/bujo/actions/workflows/nightly.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/nightly.yml)
+[![Security](https://github.com/typingincolor/bujo/actions/workflows/security.yml/badge.svg)](https://github.com/typingincolor/bujo/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/typingincolor/bujo/graph/badge.svg)](https://codecov.io/gh/typingincolor/bujo)
 [![Go Report Card](https://goreportcard.com/badge/github.com/typingincolor/bujo?v=1)](https://goreportcard.com/report/github.com/typingincolor/bujo)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/typingincolor/bujo)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/github/v/release/typingincolor/bujo?include_prereleases)](https://github.com/typingincolor/bujo/releases)
+[![Last Commit](https://img.shields.io/github/last-commit/typingincolor/bujo)](https://github.com/typingincolor/bujo/commits/main)
+[![Code Size](https://img.shields.io/github/languages/code-size/typingincolor/bujo)](https://github.com/typingincolor/bujo)
 
 A command-line Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.
 
