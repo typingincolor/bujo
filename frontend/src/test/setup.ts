@@ -6,7 +6,7 @@ class ResizeObserverMock {
   disconnect() {}
 }
 
-global.ResizeObserver = ResizeObserverMock
+globalThis.ResizeObserver = ResizeObserverMock
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}

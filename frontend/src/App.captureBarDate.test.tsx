@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
@@ -53,16 +53,16 @@ const mockLocalStorage = {
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage })
 
 describe('CaptureBar - Uses currentDate (not new Date())', () => {
-  // Use a fixed "today" for testing - we'll mock Date to control the starting point
-  const fixedToday = new Date('2026-01-20T12:00:00Z')
-  const yesterday = subDays(startOfDay(fixedToday), 1) // 2026-01-19
+  // Use real "today" and calculate yesterday from it
+  const today = startOfDay(new Date())
+  const yesterday = subDays(today, 1)
   const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
 
   const mockTodayAgenda = createMockAgenda({
     Days: [createMockDayEntries({
-      Date: fixedToday.toISOString(),
+      Date: today.toISOString(),
       Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task', CreatedAt: fixedToday.toISOString() }),
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task', CreatedAt: today.toISOString() }),
       ],
     })],
     Overdue: [],
@@ -78,33 +78,10 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
     Overdue: [],
   })
 
-  let originalDate: DateConstructor
-
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
     vi.mocked(GetAgenda).mockResolvedValue(mockTodayAgenda)
-
-    // Mock Date constructor to return our fixed date
-    originalDate = global.Date
-    const MockDate = class extends Date {
-      constructor(...args: ConstructorParameters<typeof Date>) {
-        if (args.length === 0) {
-          super(fixedToday)
-        } else {
-          // @ts-expect-error spread args
-          super(...args)
-        }
-      }
-      static now() {
-        return fixedToday.getTime()
-      }
-    }
-    global.Date = MockDate as DateConstructor
-  })
-
-  afterEach(() => {
-    global.Date = originalDate
   })
 
   it('AddEntry receives currentDate when submitting after navigating to past day', async () => {
