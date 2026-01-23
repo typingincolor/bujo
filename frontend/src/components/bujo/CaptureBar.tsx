@@ -21,6 +21,13 @@ const TYPE_PREFIXES: Record<CaptureType, string> = {
   question: '? ',
 }
 
+const TYPE_SYMBOLS: Record<CaptureType, string> = {
+  task: '.',
+  note: '-',
+  event: 'o',
+  question: '?',
+}
+
 const PREFIX_TO_TYPE: Record<string, CaptureType> = {
   '. ': 'task',
   '- ': 'note',
@@ -142,14 +149,15 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
               type="button"
               onClick={() => setSelectedType(type)}
               aria-pressed={selectedType === type}
+              aria-label={type}
               className={cn(
-                'px-2 py-1 text-xs rounded capitalize',
+                'w-8 h-8 text-sm font-mono rounded',
                 selectedType === type
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
             >
-              {type}
+              {TYPE_SYMBOLS[type]}
             </button>
           ))}
         </div>

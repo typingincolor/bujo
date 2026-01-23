@@ -25,6 +25,16 @@ describe('CaptureBar', () => {
       expect(screen.getByRole('button', { name: /question/i })).toBeInTheDocument()
     })
 
+    it('displays bullet journal symbols instead of word labels', () => {
+      render(<CaptureBar {...defaultProps} />)
+
+      // Buttons should show symbols, not words
+      expect(screen.getByRole('button', { name: /task/i })).toHaveTextContent('.')
+      expect(screen.getByRole('button', { name: /note/i })).toHaveTextContent('-')
+      expect(screen.getByRole('button', { name: /event/i })).toHaveTextContent('o')
+      expect(screen.getByRole('button', { name: /question/i })).toHaveTextContent('?')
+    })
+
     it('renders input with placeholder', () => {
       render(<CaptureBar {...defaultProps} />)
 
