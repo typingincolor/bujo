@@ -45,7 +45,7 @@ var rootCmd = &cobra.Command{
 	Long:             `bujo is a CLI-based Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.`,
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Name() == "help" || cmd.Name() == "completion" {
+		if cmd.Name() == "help" || cmd.Name() == "version" || cmd.Parent() != nil && cmd.Parent().Name() == "completion" {
 			return nil
 		}
 
