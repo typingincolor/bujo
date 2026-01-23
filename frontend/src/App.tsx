@@ -439,27 +439,25 @@ function App() {
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
-    const today = startOfDay(new Date())
     try {
-      await AddEntry(content, toWailsTime(today))
+      await AddEntry(content, toWailsTime(currentDate))
       loadData()
     } catch (err) {
       console.error('Failed to add entry:', err)
       setError(err instanceof Error ? err.message : 'Failed to add entry')
     }
-  }, [loadData])
+  }, [loadData, currentDate])
 
   const handleCaptureBarSubmitChild = useCallback(async (parentId: number, content: string) => {
-    const today = startOfDay(new Date())
     try {
-      await AddChildEntry(parentId, content, toWailsTime(today))
+      await AddChildEntry(parentId, content, toWailsTime(currentDate))
       setCaptureParentEntry(null)
       loadData()
     } catch (err) {
       console.error('Failed to add child entry:', err)
       setError(err instanceof Error ? err.message : 'Failed to add child entry')
     }
-  }, [loadData])
+  }, [loadData, currentDate])
 
   const handleCaptureBarClearParent = useCallback(() => {
     setCaptureParentEntry(null)
