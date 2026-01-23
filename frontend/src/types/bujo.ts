@@ -9,6 +9,8 @@ export interface Entry {
   priority: Priority;
   parentId: number | null;
   loggedDate: string;
+  scheduledDate?: string;
+  migrationCount?: number;
   children?: Entry[];
   collapsed?: boolean;
 }

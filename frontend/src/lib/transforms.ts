@@ -8,6 +8,7 @@ export function transformEntry(e: domain.Entry): Entry {
     : e.CreatedAt
       ? String(e.CreatedAt)
       : new Date().toISOString()
+  const scheduledDate = e.ScheduledDate ? String(e.ScheduledDate).split('T')[0] : undefined
   return {
     id: e.ID,
     content: e.Content,
@@ -15,6 +16,8 @@ export function transformEntry(e: domain.Entry): Entry {
     priority: (e.Priority?.toLowerCase() || 'none') as Priority,
     parentId: e.ParentID ?? null,
     loggedDate,
+    scheduledDate,
+    migrationCount: (e as { MigrationCount?: number }).MigrationCount,
   }
 }
 
