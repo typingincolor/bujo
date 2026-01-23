@@ -75,6 +75,14 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     localStorage.setItem(TYPE_KEY, selectedType)
   }, [selectedType])
 
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
+  }, [content])
+
   const handleSubmit = useCallback(() => {
     if (!content.trim()) return
 
@@ -94,11 +102,24 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
 
-    for (const [prefix, type] of Object.entries(PREFIX_TO_TYPE)) {
-      if (newValue === prefix) {
-        setSelectedType(type)
-        setContent('')
-        return
+    // Check for prefix at start of input or when completing a partial prefix
+    // (e.g., user typed "." and now types " " to complete ". ")
+    const isStartingPrefix = content === '' || Object.keys(PREFIX_TO_TYPE).some(
+      prefix => prefix.startsWith(content) && content.length < prefix.length
+    )
+
+    if (isStartingPrefix) {
+      for (const [prefix, type] of Object.entries(PREFIX_TO_TYPE)) {
+        if (newValue === prefix) {
+          setSelectedType(type)
+          setContent('')
+          return
+        }
+        if (newValue.startsWith(prefix) && newValue.length > prefix.length) {
+          setSelectedType(type)
+          setContent(newValue.slice(prefix.length))
+          return
+        }
       }
     }
 
