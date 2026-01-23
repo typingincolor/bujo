@@ -28,7 +28,7 @@ describe('useNavigationHistory', () => {
       result.current.pushHistory({ view: 'week', scrollPosition: 100, entryId: 42 })
     })
 
-    const returned = act(() => result.current.goBack())
+    act(() => result.current.goBack())
 
     expect(result.current.canGoBack).toBe(false)
     expect(result.current.history).toBeNull()
