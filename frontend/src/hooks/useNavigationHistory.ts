@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
+import { ViewType } from '@/components/bujo/Sidebar'
 
 export interface NavigationState {
-  view: string
+  view: ViewType
   scrollPosition: number
   entryId?: number
 }
