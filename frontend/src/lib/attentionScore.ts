@@ -36,7 +36,7 @@ export function calculateAttentionScore(
   }
 
   // Priority set: +30, high/urgent: additional +20
-  if (entry.priority && entry.priority !== '' && entry.priority !== 'none') {
+  if (entry.priority && entry.priority !== 'none') {
     score += 30
     indicators.push('priority')
     if (entry.priority === 'high') {

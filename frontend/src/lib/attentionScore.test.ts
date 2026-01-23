@@ -4,12 +4,10 @@ import { Entry } from '@/types/bujo'
 
 const createEntry = (overrides: Partial<Entry> = {}): Entry => ({
   id: 1,
-  entityId: 'e1',
   type: 'task',
   content: 'Test task',
-  priority: '',
+  priority: 'none',
   parentId: null,
-  depth: 0,
   loggedDate: new Date().toISOString(),
   scheduledDate: undefined,
   migrationCount: 0,
