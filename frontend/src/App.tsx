@@ -337,6 +337,14 @@ function App() {
           }
           break
         }
+        case 'm': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry && (entry.type === 'task' || entry.type === 'question')) {
+            setMigrateModalEntry(entry)
+          }
+          break
+        }
       }
     }
 
