@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
@@ -86,10 +86,11 @@ describe('CaptureBar - Always Visible', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: /task/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /note/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /event/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /question/i })).toBeInTheDocument()
+    const captureBar = screen.getByTestId('capture-bar')
+    expect(within(captureBar).getByRole('button', { name: /task/i })).toBeInTheDocument()
+    expect(within(captureBar).getByRole('button', { name: /note/i })).toBeInTheDocument()
+    expect(within(captureBar).getByRole('button', { name: /event/i })).toBeInTheDocument()
+    expect(within(captureBar).getByRole('button', { name: /question/i })).toBeInTheDocument()
   })
 
   it('has Task selected by default', async () => {
@@ -99,7 +100,8 @@ describe('CaptureBar - Always Visible', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const taskButton = screen.getByRole('button', { name: /task/i })
+    const captureBar = screen.getByTestId('capture-bar')
+    const taskButton = within(captureBar).getByRole('button', { name: /task/i })
     expect(taskButton).toHaveAttribute('aria-pressed', 'true')
   })
 })
@@ -119,11 +121,12 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const noteButton = screen.getByRole('button', { name: /note/i })
+    const captureBar = screen.getByTestId('capture-bar')
+    const noteButton = within(captureBar).getByRole('button', { name: /note/i })
     await user.click(noteButton)
 
     expect(noteButton).toHaveAttribute('aria-pressed', 'true')
-    const taskButton = screen.getByRole('button', { name: /task/i })
+    const taskButton = within(captureBar).getByRole('button', { name: /task/i })
     expect(taskButton).toHaveAttribute('aria-pressed', 'false')
   })
 
@@ -135,24 +138,25 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
+    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
     await user.click(input)
 
     // Start with Task selected, Tab should cycle to Note
     await user.keyboard('{Tab}')
-    expect(screen.getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
 
     // Tab to Event
     await user.keyboard('{Tab}')
-    expect(screen.getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
 
     // Tab to Question
     await user.keyboard('{Tab}')
-    expect(screen.getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
 
     // Tab wraps back to Task
     await user.keyboard('{Tab}')
-    expect(screen.getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('typing ". " prefix changes type to Task', async () => {
@@ -163,14 +167,15 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
+    const captureBar = screen.getByTestId('capture-bar')
     // First select Note type
-    const noteButton = screen.getByRole('button', { name: /note/i })
+    const noteButton = within(captureBar).getByRole('button', { name: /note/i })
     await user.click(noteButton)
 
     const input = screen.getByTestId('capture-bar-input')
     await user.type(input, '. ')
 
-    expect(screen.getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('typing "- " prefix changes type to Note', async () => {
@@ -181,10 +186,11 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
+    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
     await user.type(input, '- ')
 
-    expect(screen.getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('typing "o " prefix changes type to Event', async () => {
@@ -195,10 +201,11 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
+    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
     await user.type(input, 'o ')
 
-    expect(screen.getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('typing "? " prefix changes type to Question', async () => {
@@ -209,10 +216,11 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
+    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
     await user.type(input, '? ')
 
-    expect(screen.getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(captureBar).getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
 
@@ -323,8 +331,7 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    // Select the first entry and enter child mode
-    await user.keyboard('j')
+    // Enter child mode for the first entry (already selected at index 0)
     await user.keyboard('A')
 
     await waitFor(() => {
@@ -512,11 +519,15 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
       expect(screen.getByText(/adding to:/i)).toBeInTheDocument()
     })
 
+    // Blur the input (so global keyboard shortcuts work)
+    const input = screen.getByTestId('capture-bar-input')
+    await user.keyboard('{Escape}')
+    input.blur()
+
     // Press r to clear parent context and focus
     await user.keyboard('r')
 
     expect(screen.queryByText(/adding to:/i)).not.toBeInTheDocument()
-    const input = screen.getByTestId('capture-bar-input')
     expect(input).toHaveFocus()
   })
 })

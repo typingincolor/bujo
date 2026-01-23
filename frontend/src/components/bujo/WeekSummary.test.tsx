@@ -42,7 +42,7 @@ describe('WeekSummary', () => {
       render(<WeekSummary days={days} />)
 
       expect(screen.getByText('Created')).toBeInTheDocument()
-      expect(screen.getByText('2')).toBeInTheDocument() // 2 tasks created
+      expect(screen.getByTestId('task-flow-created')).toHaveTextContent('2') // 2 tasks created
     })
 
     it('shows done count', () => {

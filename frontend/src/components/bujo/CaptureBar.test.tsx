@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CaptureBar } from './CaptureBar'
+import { Entry } from '@/types/bujo'
 
 describe('CaptureBar', () => {
   const defaultProps = {
@@ -185,7 +186,7 @@ describe('CaptureBar', () => {
       render(
         <CaptureBar
           {...defaultProps}
-          parentEntry={{ id: 1, content: 'Team standup', type: 'event' } as any}
+          parentEntry={{ id: 1, content: 'Team standup', type: 'event', priority: 'none', parentId: null, loggedDate: '' } as Entry}
         />
       )
 
@@ -197,7 +198,7 @@ describe('CaptureBar', () => {
       render(
         <CaptureBar
           {...defaultProps}
-          parentEntry={{ id: 1, content: 'Team standup', type: 'event' } as any}
+          parentEntry={{ id: 1, content: 'Team standup', type: 'event', priority: 'none', parentId: null, loggedDate: '' } as Entry}
         />
       )
 
@@ -211,7 +212,7 @@ describe('CaptureBar', () => {
         <CaptureBar
           {...defaultProps}
           onSubmitChild={onSubmitChild}
-          parentEntry={{ id: 1, content: 'Team standup', type: 'event' } as any}
+          parentEntry={{ id: 1, content: 'Team standup', type: 'event', priority: 'none', parentId: null, loggedDate: '' } as Entry}
         />
       )
 
@@ -227,7 +228,7 @@ describe('CaptureBar', () => {
       render(
         <CaptureBar
           {...defaultProps}
-          parentEntry={{ id: 1, content: 'Team standup', type: 'event' } as any}
+          parentEntry={{ id: 1, content: 'Team standup', type: 'event', priority: 'none', parentId: null, loggedDate: '' } as Entry}
           onClearParent={onClearParent}
         />
       )

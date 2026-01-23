@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
@@ -240,9 +240,10 @@ describe('WeekSummary - Meetings', () => {
     await waitFor(() => {
       // Should show Meetings section
       expect(screen.getByText(/meetings/i)).toBeInTheDocument()
-      // Should show meetings with children
-      expect(screen.getByText('Team standup')).toBeInTheDocument()
-      expect(screen.getByText('Project review')).toBeInTheDocument()
+      // Should show meetings with children (scoped to week-summary to avoid duplicates in daily entries)
+      const weekSummary = screen.getByTestId('week-summary')
+      expect(within(weekSummary).getByText('Team standup')).toBeInTheDocument()
+      expect(within(weekSummary).getByText('Project review')).toBeInTheDocument()
     })
   })
 
@@ -281,7 +282,8 @@ describe('WeekSummary - Meetings', () => {
     await user.click(reviewButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Team standup')).toBeInTheDocument()
+      const weekSummary = screen.getByTestId('week-summary')
+      expect(within(weekSummary).getByText('Team standup')).toBeInTheDocument()
     })
 
     // "Lunch break" is an event without children - should NOT be in meetings section
@@ -368,8 +370,9 @@ describe('WeekSummary - Needs Attention', () => {
     await user.click(reviewButton)
 
     await waitFor(() => {
-      // High priority item should have a priority indicator
-      const highPriorityItem = screen.getByText('Urgent deadline task').closest('[data-attention-item]')
+      // High priority item should have a priority indicator (scoped to week-summary)
+      const weekSummary = screen.getByTestId('week-summary')
+      const highPriorityItem = within(weekSummary).getByText('Urgent deadline task').closest('[data-attention-item]')
       expect(highPriorityItem).toHaveAttribute('data-priority', 'high')
     })
   })

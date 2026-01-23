@@ -52,13 +52,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
 import { GetAgenda, AddEntry } from './wailsjs/go/wails/App'
 
 
-describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
+describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
   })
 
-  it('pressing r shows inline input for root entry', async () => {
+  it('pressing r focuses CaptureBar for root entry', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -69,11 +69,12 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
     await user.keyboard('r')
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+      const captureBarInput = screen.getByTestId('capture-bar-input')
+      expect(document.activeElement).toBe(captureBarInput)
     })
   })
 
-  it('pressing a shows inline input for sibling entry', async () => {
+  it('pressing i focuses CaptureBar', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -81,14 +82,15 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    await user.keyboard('a')
+    await user.keyboard('i')
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/add entry/i)).toBeInTheDocument()
+      const captureBarInput = screen.getByTestId('capture-bar-input')
+      expect(document.activeElement).toBe(captureBarInput)
     })
   })
 
-  it('pressing A shows inline input for child entry', async () => {
+  it('pressing A focuses CaptureBar with selected entry as parent', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -99,11 +101,16 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
     await user.keyboard('A')
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/add child entry/i)).toBeInTheDocument()
+      // Should show parent context in CaptureBar
+      const captureBar = screen.getByTestId('capture-bar')
+      expect(captureBar).toHaveTextContent('Adding to:')
+      expect(captureBar).toHaveTextContent('First task')
+      const captureBarInput = screen.getByTestId('capture-bar-input')
+      expect(document.activeElement).toBe(captureBarInput)
     })
   })
 
-  it('submitting inline input calls AddEntry and refreshes data', async () => {
+  it('submitting CaptureBar calls AddEntry and refreshes data', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -114,18 +121,19 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
     await user.keyboard('r')
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
+      const captureBarInput = screen.getByTestId('capture-bar-input')
+      expect(document.activeElement).toBe(captureBarInput)
     })
 
-    const input = screen.getByPlaceholderText(/type entry/i)
-    await user.type(input, '. New root task{Enter}')
+    const input = screen.getByTestId('capture-bar-input')
+    await user.type(input, 'New root task{Enter}')
 
     await waitFor(() => {
       expect(AddEntry).toHaveBeenCalledWith('. New root task', expect.any(String))
     })
   })
 
-  it('pressing Escape cancels inline input', async () => {
+  it('pressing Escape clears CaptureBar content', async () => {
     const user = userEvent.setup()
     render(<App />)
 
@@ -134,32 +142,26 @@ describe('App - Inline Entry Creation (a/A/r shortcuts)', () => {
     })
 
     await user.keyboard('r')
+    const input = screen.getByTestId('capture-bar-input')
+    await user.type(input, 'Some text')
 
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
-    })
+    expect(input).toHaveValue('Some text')
 
     await user.keyboard('{Escape}')
 
     await waitFor(() => {
-      expect(screen.queryByPlaceholderText(/type entry/i)).not.toBeInTheDocument()
+      expect(input).toHaveValue('')
     })
   })
 
-  it('clicking + button shows inline input for root entry', async () => {
-    const user = userEvent.setup()
+  it('CaptureBar is visible in today view', async () => {
     render(<App />)
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const addButton = screen.getByTitle('Add new entry')
-    await user.click(addButton)
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText(/type entry/i)).toBeInTheDocument()
-    })
+    expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
   })
 })
 

@@ -26,7 +26,7 @@ export function WeekSummary({ days }: WeekSummaryProps) {
   const allEntries = days.flatMap(day => flattenEntries(day.entries));
   const now = new Date();
 
-  const createdCount = allEntries.length;
+  const createdCount = allEntries.filter(e => e.type === 'task').length;
   const doneCount = allEntries.filter(e => e.type === 'done').length;
   const migratedCount = allEntries.filter(e => e.type === 'migrated').length;
   const openCount = allEntries.filter(e => e.type === 'task').length;
@@ -49,20 +49,20 @@ export function WeekSummary({ days }: WeekSummaryProps) {
   const topAttentionEntries = sortedAttentionEntries.slice(0, MAX_ATTENTION_ITEMS);
 
   return (
-    <div className="space-y-6">
+    <div data-testid="week-summary" className="space-y-6">
       <section className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Task Flow
         </h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <FlowStat label="Created" value={createdCount} />
-          <FlowStat label="Done" value={doneCount} />
-          <FlowStat label="Migrated" value={migratedCount} />
-          <FlowStat label="Open" value={openCount} />
+          <FlowStat label="Created" value={createdCount} testId="task-flow-created" />
+          <FlowStat label="Done" value={doneCount} testId="task-flow-done" />
+          <FlowStat label="Migrated" value={migratedCount} testId="task-flow-migrated" />
+          <FlowStat label="Open" value={openCount} testId="task-flow-open" />
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section data-testid="week-summary-meetings" className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Meetings
         </h3>
@@ -85,7 +85,7 @@ export function WeekSummary({ days }: WeekSummaryProps) {
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section data-testid="week-summary-attention" className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Needs Attention
         </h3>
@@ -95,10 +95,13 @@ export function WeekSummary({ days }: WeekSummaryProps) {
           ) : (
             topAttentionEntries.map(entry => {
               const { indicators } = calculateAttentionScore(entry, now);
+              const isHighPriority = entry.priority === 'high';
               return (
                 <div
                   key={entry.id}
                   data-testid="attention-item"
+                  data-attention-item
+                  data-priority={isHighPriority ? 'high' : undefined}
                   className="flex items-center justify-between p-2 rounded-lg border border-border bg-card"
                 >
                   <span className="text-sm">{entry.content}</span>
@@ -140,14 +143,15 @@ export function WeekSummary({ days }: WeekSummaryProps) {
 interface FlowStatProps {
   label: string;
   value: number;
+  testId?: string;
 }
 
-function FlowStat({ label, value }: FlowStatProps) {
+function FlowStat({ label, value, testId }: FlowStatProps) {
   return (
     <div className="rounded-lg border border-border bg-card p-3 text-center">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="sr-only">: </span>
-      <span className="font-display text-xl font-semibold block">{value}</span>
+      <span data-testid={testId} className="font-display text-xl font-semibold block">{value}</span>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { cn } from '@/lib/utils'
 import { Entry } from '@/types/bujo'
 
@@ -35,13 +35,16 @@ function getPlaceholder(type: CaptureType): string {
   return `Add a ${type}...`
 }
 
-export function CaptureBar({
-  onSubmit,
-  onSubmitChild,
-  onClearParent,
-  onFileImport,
-  parentEntry,
-}: CaptureBarProps) {
+export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(function CaptureBar(
+  {
+    onSubmit,
+    onSubmitChild,
+    onClearParent,
+    onFileImport,
+    parentEntry,
+  },
+  ref
+) {
   const [content, setContent] = useState(() => {
     return localStorage.getItem(DRAFT_KEY) || ''
   })
@@ -50,6 +53,8 @@ export function CaptureBar({
     return stored && TYPES.includes(stored) ? stored : 'task'
   })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement)
 
   useEffect(() => {
     if (content) {
@@ -114,7 +119,7 @@ export function CaptureBar({
   }
 
   return (
-    <div className="flex flex-col gap-2 p-3 bg-card border rounded-lg">
+    <div data-testid="capture-bar" className="flex flex-col gap-2 p-3 bg-card border rounded-lg">
       {parentEntry && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Adding to:</span>
@@ -150,6 +155,7 @@ export function CaptureBar({
         </div>
         <textarea
           ref={textareaRef}
+          data-testid="capture-bar-input"
           value={content}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -182,4 +188,4 @@ export function CaptureBar({
       </div>
     </div>
   )
-}
+})

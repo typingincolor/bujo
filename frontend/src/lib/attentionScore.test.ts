@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateAttentionScore, AttentionIndicator } from './attentionScore'
+import { calculateAttentionScore } from './attentionScore'
 import { Entry } from '@/types/bujo'
 
 const createEntry = (overrides: Partial<Entry> = {}): Entry => ({

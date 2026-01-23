@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { EventsOn } from './wailsjs/runtime/runtime'
-import { ChevronLeft, ChevronRight, PenLine, Plus } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot } from './wailsjs/go/wails/App'
+import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -14,7 +14,6 @@ import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
 import { CaptureModal } from '@/components/bujo/CaptureModal'
-import { InlineEntryInput } from '@/components/bujo/InlineEntryInput'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
@@ -22,6 +21,8 @@ import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
+import { CaptureBar } from '@/components/bujo/CaptureBar'
+import { WeekSummary } from '@/components/bujo/WeekSummary'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -69,8 +70,9 @@ function App() {
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
-  const [inlineInputMode, setInlineInputMode] = useState<'root' | 'sibling' | 'child' | null>(null)
+  const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
+  const captureBarRef = useRef<HTMLTextAreaElement>(null)
 
   const loadData = useCallback(async () => {
     // Only show loading spinner on initial load, not on refresh
@@ -242,16 +244,22 @@ function App() {
         }
       }
 
-      // Entry creation shortcuts (c, r, a, A) - work in today view
+      // Entry creation shortcuts (c, i, r, a, A) - work in today view
       if (view === 'today') {
         if (e.key === 'c') {
           e.preventDefault()
           setShowCaptureModal(true)
           return
         }
+        if (e.key === 'i') {
+          e.preventDefault()
+          captureBarRef.current?.focus()
+          return
+        }
         if (e.key === 'r') {
           e.preventDefault()
-          setInlineInputMode('root')
+          setCaptureParentEntry(null)
+          captureBarRef.current?.focus()
           return
         }
         if (e.key === 'a') {
@@ -261,13 +269,18 @@ function App() {
           if (selectedEntry?.type === 'question') {
             setAnswerModalEntry(selectedEntry)
           } else {
-            setInlineInputMode('sibling')
+            setCaptureParentEntry(null)
+            captureBarRef.current?.focus()
           }
           return
         }
         if (e.key === 'A') {
           e.preventDefault()
-          setInlineInputMode('child')
+          const selectedEntry = flatEntries[selectedIndex]
+          if (selectedEntry) {
+            setCaptureParentEntry(selectedEntry)
+            captureBarRef.current?.focus()
+          }
           return
         }
       }
@@ -390,7 +403,8 @@ function App() {
     const index = flatEntries.findIndex(e => e.id === entry.id)
     if (index !== -1) {
       setSelectedIndex(index)
-      setInlineInputMode('child')
+      setCaptureParentEntry(entry)
+      captureBarRef.current?.focus()
     }
   }, [flatEntries])
 
@@ -404,27 +418,46 @@ function App() {
     }
   }, [loadData])
 
-  const handleInlineEntrySubmit = useCallback(async (content: string) => {
+
+  const handleCaptureBarSubmit = useCallback(async (content: string) => {
     const today = startOfDay(new Date())
     try {
-      const selectedEntry = flatEntries[selectedIndex]
-
-      if (inlineInputMode === 'child' && selectedEntry) {
-        await AddChildEntry(selectedEntry.id, content, toWailsTime(today))
-      } else {
-        await AddEntry(content, toWailsTime(today))
-      }
-
-      setInlineInputMode(null)
+      await AddEntry(content, toWailsTime(today))
       loadData()
     } catch (err) {
       console.error('Failed to add entry:', err)
       setError(err instanceof Error ? err.message : 'Failed to add entry')
     }
-  }, [flatEntries, selectedIndex, inlineInputMode, loadData])
+  }, [loadData])
 
-  const handleInlineEntryCancel = useCallback(() => {
-    setInlineInputMode(null)
+  const handleCaptureBarSubmitChild = useCallback(async (parentId: number, content: string) => {
+    const today = startOfDay(new Date())
+    try {
+      await AddChildEntry(parentId, content, toWailsTime(today))
+      setCaptureParentEntry(null)
+      loadData()
+    } catch (err) {
+      console.error('Failed to add child entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to add child entry')
+    }
+  }, [loadData])
+
+  const handleCaptureBarClearParent = useCallback(() => {
+    setCaptureParentEntry(null)
+  }, [])
+
+  const handleCaptureBarFileImport = useCallback(async () => {
+    try {
+      const fileContent = await OpenFileDialog()
+      if (fileContent && captureBarRef.current) {
+        const currentValue = captureBarRef.current.value
+        captureBarRef.current.value = currentValue + fileContent
+        captureBarRef.current.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    } catch (err) {
+      console.error('Failed to import file:', err)
+      setError(err instanceof Error ? err.message : 'Failed to import file')
+    }
   }, [])
 
   const handleSearchMigrate = useCallback((result: SearchResult) => {
@@ -596,22 +629,14 @@ function App() {
                 onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
                 onMoveToList={(entry) => setMoveToListEntry(entry)}
               />
-              {inlineInputMode ? (
-                <InlineEntryInput
-                  mode={inlineInputMode}
-                  onSubmit={handleInlineEntrySubmit}
-                  onCancel={handleInlineEntryCancel}
-                />
-              ) : (
-                <button
-                  onClick={() => setInlineInputMode('root')}
-                  title="Add new entry"
-                  className="w-full flex items-center justify-center gap-2 py-3 text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-sm">Add entry</span>
-                </button>
-              )}
+              <CaptureBar
+                ref={captureBarRef}
+                onSubmit={handleCaptureBarSubmit}
+                onSubmitChild={handleCaptureBarSubmitChild}
+                onClearParent={handleCaptureBarClearParent}
+                onFileImport={handleCaptureBarFileImport}
+                parentEntry={captureParentEntry}
+              />
             </div>
           )}
 
@@ -638,6 +663,7 @@ function App() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
+              <WeekSummary days={reviewDays} />
               {reviewDays.map((day, i) => (
                 <DayView
                   key={i}
