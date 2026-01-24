@@ -134,7 +134,6 @@ export function EntryTree({ entries, highlightedEntryId, rootEntryId }: EntryTre
           <div
             key={entry.id}
             data-testid={`entry-tree-item-${entry.id}`}
-            data-highlighted={isHighlighted ? 'true' : undefined}
             style={{ paddingLeft: `${indent}px` }}
             className={cn(
               'py-1 px-2 rounded text-sm',

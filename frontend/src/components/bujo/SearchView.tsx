@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Search as SearchIcon } from 'lucide-react';
-import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { ContextPill } from './ContextPill';
-import { EntryContextPopover } from './EntryContextPopover';
+import { EntryActionBar } from './EntryActions';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS, Entry, ActionType } from '@/types/bujo';
+import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { AnswerQuestionModal } from './AnswerQuestionModal';
 
 export interface SearchResult {
@@ -26,9 +26,12 @@ interface AncestorEntry {
 interface SearchViewProps {
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
+  onMoveToList?: (entry: SearchResult) => void;
+  onEdit?: (entry: SearchResult) => void;
+  onAddChild?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry, onMoveToList, onEdit, onAddChild }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -39,9 +42,6 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [answerModalOpen, setAnswerModalOpen] = useState(false);
   const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
-  const [popoverEntry, setPopoverEntry] = useState<SearchResult | null>(null);
-  const [allEntries, setAllEntries] = useState<Entry[]>([]);
-  const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
@@ -62,7 +62,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
       const mappedResults = (searchResults || []).map(entry => ({
         id: entry.ID,
         content: entry.Content,
-        type: (entry.Type as string).toLowerCase() as EntryType,
+        type: entry.Type as EntryType,
         priority: ((entry.Priority as string)?.toLowerCase() || 'none') as Priority,
         date: (entry.CreatedAt as unknown as string) || '',
         parentId: entry.ParentID ?? null,
@@ -164,6 +164,55 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
       await refreshEntry(id);
     } catch (error) {
       console.error('Failed to mark undone:', error);
+    }
+  }, [refreshEntry]);
+
+  const handleCancel = useCallback(async (id: number) => {
+    try {
+      await CancelEntry(id);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to cancel entry:', error);
+    }
+  }, [refreshEntry]);
+
+  const handleUncancel = useCallback(async (id: number) => {
+    try {
+      await UncancelEntry(id);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to uncancel entry:', error);
+    }
+  }, [refreshEntry]);
+
+  const handleDelete = useCallback(async (id: number) => {
+    try {
+      await DeleteEntry(id);
+      setResults(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Failed to delete entry:', error);
+    }
+  }, []);
+
+  const handleCyclePriority = useCallback(async (id: number) => {
+    try {
+      await CyclePriority(id);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to cycle priority:', error);
+    }
+  }, [refreshEntry]);
+
+  const handleCycleType = useCallback(async (id: number, currentType: EntryType) => {
+    const cycleOrder: EntryType[] = ['task', 'note', 'event', 'question'];
+    const currentIndex = cycleOrder.indexOf(currentType);
+    if (currentIndex === -1) return;
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length];
+    try {
+      await RetypeEntry(id, nextType);
+      await refreshEntry(id);
+    } catch (error) {
+      console.error('Failed to cycle type:', error);
     }
   }, [refreshEntry]);
 
@@ -289,72 +338,6 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
     return ENTRY_SYMBOLS[type] || '•';
   };
 
-  const convertToEntry = (result: SearchResult): Entry => ({
-    id: result.id,
-    content: result.content,
-    type: result.type,
-    priority: result.priority,
-    parentId: result.parentId,
-    loggedDate: result.date,
-  });
-
-  const handleEntryClick = useCallback(async (result: SearchResult) => {
-    // Fetch ancestors to build complete entry tree BEFORE opening popover
-    const ancestors = result.parentId !== null ? await GetEntryAncestors(result.id) : [];
-    const ancestorEntries = ancestors.map(a => convertToEntry({
-      id: a.ID,
-      content: a.Content,
-      type: (a.Type as string).toLowerCase() as EntryType,
-      priority: ((a.Priority as string)?.toLowerCase() || 'none') as Priority,
-      date: (a.CreatedAt as unknown as string) || '',
-      parentId: a.ParentID ?? null,
-    }));
-
-    const allEntries = [...ancestorEntries, convertToEntry(result)];
-    setAllEntries(allEntries);
-
-    // Set popoverEntry AFTER entries are loaded
-    setPopoverEntry(result);
-  }, []);
-
-  const handlePopoverAction = useCallback(async (entry: Entry, action: ActionType) => {
-    switch (action) {
-      case 'done':
-        await MarkEntryDone(entry.id);
-        break;
-      case 'cancel':
-        await CancelEntry(entry.id);
-        break;
-      case 'priority':
-        await CyclePriority(entry.id);
-        break;
-      case 'migrate':
-        onMigrate?.({ ...entry, date: entry.loggedDate });
-        break;
-    }
-    await refreshEntry(entry.id);
-    if (action === 'done' || action === 'cancel') {
-      setPopoverEntry(null);
-    }
-  }, [onMigrate, refreshEntry]);
-
-  const handlePopoverNavigate = useCallback((entry: Entry) => {
-    onNavigateToEntry?.({ ...entry, date: entry.loggedDate });
-    setPopoverEntry(null);
-    setOpenPopoverId(null);
-  }, [onNavigateToEntry]);
-
-  const handlePopoverOpenChange = useCallback(async (result: SearchResult, open: boolean) => {
-    if (open) {
-      // Fetch ancestors before opening
-      await handleEntryClick(result);
-      setOpenPopoverId(result.id);
-    } else {
-      setOpenPopoverId(null);
-      setPopoverEntry(null);
-    }
-  }, [handleEntryClick]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -397,24 +380,17 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
           const isLoadingCount = loadingCounts.has(result.id);
 
           return (
-            <EntryContextPopover
+            <div
               key={result.id}
-              entry={convertToEntry(result)}
-              entries={popoverEntry?.id === result.id ? allEntries : [convertToEntry(result)]}
-              onAction={handlePopoverAction}
-              onNavigate={onNavigateToEntry ? handlePopoverNavigate : undefined}
-              open={openPopoverId === result.id}
-              onOpenChange={(open) => handlePopoverOpenChange(result, open)}
+              onClick={() => toggleExpanded(result)}
+              onDoubleClick={() => onNavigateToEntry?.(result)}
+              className={cn(
+                'p-3 rounded-lg border border-border cursor-pointer',
+                'bg-card transition-colors group',
+                !isSelected && 'hover:bg-secondary/30',
+                isSelected && 'ring-2 ring-primary'
+              )}
             >
-              <div
-                onDoubleClick={() => onNavigateToEntry?.(result)}
-                className={cn(
-                  'p-3 rounded-lg border border-border cursor-pointer',
-                  'bg-card transition-colors group',
-                  !isSelected && 'hover:bg-secondary/30',
-                  isSelected && 'ring-2 ring-primary'
-                )}
-              >
               {/* Ancestors context */}
               {isExpanded && ancestors.length > 0 && (
                 <div className="mb-2 pb-2 border-b border-border/50 space-y-1">
@@ -441,6 +417,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                 {result.parentId !== null && !isExpanded && (
                   <ContextPill
                     count={ancestorCount}
+                    onClick={() => toggleExpanded(result)}
                     isLoading={isLoadingCount}
                   />
                 )}
@@ -450,7 +427,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                     <button
                       data-testid="entry-symbol"
                       onClick={(e) => result.type === 'task' ? handleMarkDone(result.id, e) : handleMarkUndone(result.id, e)}
-                      title={result.type === 'task' ? 'Task' : 'Done'}
+                      title={result.type === 'task' ? 'Mark done' : 'Mark undone'}
                       className={cn(
                         'text-lg font-mono w-5 text-center cursor-pointer hover:opacity-70 transition-opacity',
                         result.type === 'done' && 'text-bujo-done',
@@ -496,13 +473,31 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                   </p>
                 </div>
 
+                {/* Action buttons */}
+                <EntryActionBar
+                  entry={result}
+                  callbacks={{
+                    onAnswer: () => handleAnswer(result),
+                    onCancel: () => handleCancel(result.id),
+                    onUncancel: () => handleUncancel(result.id),
+                    onCyclePriority: () => handleCyclePriority(result.id),
+                    onCycleType: () => handleCycleType(result.id, result.type),
+                    onMigrate: onMigrate ? () => onMigrate(result) : undefined,
+                    onMoveToList: onMoveToList ? () => onMoveToList(result) : undefined,
+                    onNavigateToEntry: onNavigateToEntry ? () => onNavigateToEntry(result) : undefined,
+                    onEdit: onEdit ? () => onEdit(result) : undefined,
+                    onDelete: () => handleDelete(result.id),
+                    onAddChild: onAddChild ? () => onAddChild(result) : undefined,
+                  }}
+                  variant="always-visible"
+                  usePlaceholders
+                />
 
                 <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
                   #{result.id}
                 </span>
               </div>
-              </div>
-            </EntryContextPopover>
+            </div>
           );
         })}
       </div>

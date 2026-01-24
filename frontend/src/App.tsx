@@ -500,6 +500,35 @@ function App() {
     setView('week')
   }, [])
 
+  const handleSearchMoveToList = useCallback((result: SearchResult) => {
+    setMoveToListEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date
+    })
+  }, [])
+
+  const handleSearchEdit = useCallback((result: SearchResult) => {
+    setEditModalEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date
+    })
+  }, [])
+
+  const handleSearchAddChild = useCallback((result: SearchResult) => {
+    // Navigate to the entry's date in week view where user can add child
+    const entryDate = new Date(result.date)
+    setReviewAnchorDate(startOfDay(entryDate))
+    setView('week')
+  }, [])
+
   const handleOverviewNavigate = useCallback((entry: Entry) => {
     const entryDate = new Date(entry.loggedDate)
     setReviewAnchorDate(startOfDay(entryDate))
@@ -784,6 +813,9 @@ function App() {
               <SearchView
                 onMigrate={handleSearchMigrate}
                 onNavigateToEntry={handleSearchNavigate}
+                onMoveToList={handleSearchMoveToList}
+                onEdit={handleSearchEdit}
+                onAddChild={handleSearchAddChild}
               />
             </div>
           )}

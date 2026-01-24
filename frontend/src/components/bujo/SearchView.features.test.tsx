@@ -73,7 +73,7 @@ describe('SearchView - Context Pill', () => {
     expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
   })
 
-  it('shows context pill with popover integration', async () => {
+  it('hides context pill when entry is expanded', async () => {
     vi.mocked(Search).mockResolvedValue([
       { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
     ] as never)
@@ -91,13 +91,13 @@ describe('SearchView - Context Pill', () => {
       expect(screen.getByTestId('context-pill')).toBeInTheDocument()
     })
 
-    // Click to open popover - pill remains visible as informational indicator
+    // Click to expand
     await user.click(screen.getByText('Child entry'))
 
     await waitFor(() => {
       expect(screen.getByText('Parent entry')).toBeInTheDocument()
     })
-    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
+    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
   })
 
   it('clicking context pill toggles expand/collapse', async () => {
@@ -254,7 +254,198 @@ describe('SearchView - Double Click Navigation', () => {
   })
 })
 
+describe('SearchView - Move to List', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
+  it('shows move to list button for task entries when onMoveToList provided', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView onMoveToList={vi.fn()} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Move to list')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show move to list button for non-task entries', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test note', Type: 'note', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView onMoveToList={vi.fn()} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test note')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+  })
+
+  it('does not show move to list button when onMoveToList not provided', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
+  })
+
+  it('calls onMoveToList when move to list button is clicked', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onMoveToList = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onMoveToList={onMoveToList} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Move to list')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Move to list'))
+
+    expect(onMoveToList).toHaveBeenCalledWith(expect.objectContaining({ id: 42, type: 'task', content: 'Test task' }))
+  })
+})
+
+describe('SearchView - Navigate to Entry Button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows go to date button when onNavigateToEntry provided', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView onNavigateToEntry={vi.fn()} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Go to date')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show go to date button when onNavigateToEntry not provided', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 1, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const user = userEvent.setup()
+    render(<SearchView />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByTitle('Go to date')).not.toBeInTheDocument()
+  })
+
+  it('calls onNavigateToEntry when go to date button is clicked', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onNavigateToEntry = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onNavigateToEntry={onNavigateToEntry} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Go to date')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTitle('Go to date'))
+
+    expect(onNavigateToEntry).toHaveBeenCalledWith(expect.objectContaining({ id: 42, type: 'task', content: 'Test entry' }))
+  })
+
+  it('go to date button works independently of double-click navigation', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onNavigateToEntry = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onNavigateToEntry={onNavigateToEntry} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByTitle('Go to date')).toBeInTheDocument()
+    })
+
+    // First use the button
+    await user.click(screen.getByTitle('Go to date'))
+    expect(onNavigateToEntry).toHaveBeenCalledTimes(1)
+
+    // Then also verify double-click still works
+    const result = screen.getByText('Test entry').closest('[data-result-id]')
+    await user.dblClick(result!)
+    expect(onNavigateToEntry).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('SearchView - Add Child Callback', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('accepts onAddChild prop without error', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onAddChild = vi.fn()
+    const user = userEvent.setup()
+    // Should render without error when onAddChild is provided
+    render(<SearchView onAddChild={onAddChild} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test task')).toBeInTheDocument()
+    })
+
+    // Verify EntryActionBar is rendered (callbacks are wired internally)
+    expect(screen.getByTestId('entry-action-bar')).toBeInTheDocument()
+  })
+})
 
 describe('SearchView - Symbol Click Toggle', () => {
   beforeEach(() => {
@@ -273,10 +464,10 @@ describe('SearchView - Symbol Click Toggle', () => {
     await user.type(input, 'task')
 
     await waitFor(() => {
-      expect(screen.getByTitle('Task')).toBeInTheDocument()
+      expect(screen.getByTitle('Mark done')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByTitle('Task'))
+    await user.click(screen.getByTitle('Mark done'))
 
     await waitFor(() => {
       expect(MarkEntryDone).toHaveBeenCalledWith(42)
@@ -295,10 +486,10 @@ describe('SearchView - Symbol Click Toggle', () => {
     await user.type(input, 'done')
 
     await waitFor(() => {
-      expect(screen.getByTitle('Done')).toBeInTheDocument()
+      expect(screen.getByTitle('Mark undone')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByTitle('Done'))
+    await user.click(screen.getByTitle('Mark undone'))
 
     await waitFor(() => {
       expect(MarkEntryUndone).toHaveBeenCalledWith(42)
@@ -317,7 +508,7 @@ describe('SearchView - Symbol Click Toggle', () => {
     await user.type(input, 'task')
 
     await waitFor(() => {
-      const symbolButton = screen.getByTitle('Task')
+      const symbolButton = screen.getByTitle('Mark done')
       expect(symbolButton).toHaveTextContent('•')
     })
   })
@@ -334,7 +525,7 @@ describe('SearchView - Symbol Click Toggle', () => {
     await user.type(input, 'done')
 
     await waitFor(() => {
-      const symbolButton = screen.getByTitle('Done')
+      const symbolButton = screen.getByTitle('Mark undone')
       expect(symbolButton).toHaveTextContent('✓')
     })
   })
@@ -354,8 +545,8 @@ describe('SearchView - Symbol Click Toggle', () => {
       expect(screen.getByText('Cancelled entry')).toBeInTheDocument()
     })
 
-    // Symbol for cancelled entries should not be a button with task/done title
-    expect(screen.queryByTitle('Task')).not.toBeInTheDocument()
-    expect(screen.queryByTitle('Done')).not.toBeInTheDocument()
+    // Symbol for cancelled entries should not be a button with mark done/undone title
+    expect(screen.queryByTitle('Mark done')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Mark undone')).not.toBeInTheDocument()
   })
 })
