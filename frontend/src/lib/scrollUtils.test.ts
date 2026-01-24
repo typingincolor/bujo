@@ -70,7 +70,7 @@ describe('scrollUtils', () => {
     it('does nothing if element lacks scrollIntoView', () => {
       const element = document.createElement('div')
       element.setAttribute('data-test', 'target')
-      delete (element as any).scrollIntoView
+      Reflect.deleteProperty(element as Record<string, unknown>, 'scrollIntoView')
       document.body.appendChild(element)
 
       scrollToElement('[data-test="target"]')

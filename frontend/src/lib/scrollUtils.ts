@@ -1,7 +1,7 @@
 export const SCROLL_INTO_VIEW_DELAY_MS = 100
 
 export function hasScrollIntoView(element: Element): element is Element & { scrollIntoView: (options?: ScrollIntoViewOptions) => void } {
-  return typeof (element as any).scrollIntoView === 'function'
+  return 'scrollIntoView' in element && typeof (element as Element & { scrollIntoView?: unknown }).scrollIntoView === 'function'
 }
 
 export function scrollToElement(
