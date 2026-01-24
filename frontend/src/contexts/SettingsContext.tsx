@@ -33,6 +33,10 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     localStorage.setItem('bujo-settings', JSON.stringify(settings))
   }, [settings])
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', settings.theme === 'dark')
+  }, [settings.theme])
+
   const setTheme = (theme: Theme) => {
     setSettings(prev => ({ ...prev, theme }))
   }

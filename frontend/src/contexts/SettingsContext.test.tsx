@@ -110,4 +110,30 @@ describe('SettingsContext', () => {
       renderHook(() => useSettings())
     }).toThrow('useSettings must be used within a SettingsProvider')
   })
+
+  it('should apply dark class to html element when theme is dark', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'dark', defaultView: 'today' }))
+    document.documentElement.classList.remove('dark')
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
+
+  it('should remove dark class from html element when theme is light', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'light', defaultView: 'today' }))
+    document.documentElement.classList.add('dark')
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+  })
 })
