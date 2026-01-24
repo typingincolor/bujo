@@ -59,7 +59,7 @@ export function EntryContextPopover({
     onNavigateRef.current = onNavigate
     entryRef.current = entry
     setOpenRef.current = setOpen
-  })
+  }, [onAction, onNavigate, entry])
 
   const handleAction = useCallback((action: ActionType) => {
     onActionRef.current(entryRef.current, action)
