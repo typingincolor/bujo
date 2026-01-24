@@ -57,7 +57,7 @@ jobs:
         if: steps.check.outputs.should_build == 'true'
         run: |
           # Get highest existing build number from v0.0.0-nightly.N tags
-          LATEST_BUILD=$(git tag -l 'v0.0.0-nightly.*' --sort=-version:refname | head -1 | sed 's/v3\.0\.0-nightly\.//')
+          LATEST_BUILD=$(git tag -l 'v0.0.0-nightly.*' --sort=-version:refname | head -1 | sed 's/v0\.0\.0-nightly\.//')
 
           if [ -z "$LATEST_BUILD" ]; then
             NEXT_BUILD=1
