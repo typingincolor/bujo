@@ -450,7 +450,7 @@ describe('OverviewView - Navigate to Entry', () => {
     })
   })
 
-  it('does not show go to entry button in popover when onNavigateToEntry not provided', async () => {
+  it('shows go to entry button in popover even when onNavigateToEntry not provided', async () => {
     const user = userEvent.setup()
     render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task', type: 'task' })]} />)
 
@@ -460,7 +460,7 @@ describe('OverviewView - Navigate to Entry', () => {
       expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
     })
 
-    expect(screen.queryByText('Go to entry')).not.toBeInTheDocument()
+    expect(screen.getByText('Go to entry')).toBeInTheDocument()
   })
 
   it('calls onNavigateToEntry when go to entry button is clicked in popover', async () => {
