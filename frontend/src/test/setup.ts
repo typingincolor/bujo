@@ -29,6 +29,12 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 })
 
+// Mock window.scrollTo for scroll utilities
+Object.defineProperty(window, 'scrollTo', {
+  value: () => {},
+  writable: true,
+})
+
 // Mock Wails runtime
 const wailsRuntimeMock = {
   LogPrint: () => {},
