@@ -1,11 +1,10 @@
-import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
+import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS, ActionType } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Clock, ChevronDown, ChevronRight } from 'lucide-react';
-import { ContextPill } from './ContextPill';
-import { EntryActionBar } from './EntryActions';
+import { EntryContextPopover } from './EntryContextPopover';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 
 interface OverviewViewProps {
   overdueEntries: Entry[];
@@ -41,21 +40,8 @@ function formatDateHeader(dateStr: string): string {
   }
 }
 
-function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[] {
-  const chain: Entry[] = [];
-  let current = entry;
-  while (current.parentId !== null) {
-    const parent = entriesById.get(current.parentId);
-    if (!parent) break;
-    chain.unshift(parent);
-    current = parent;
-  }
-  return chain;
-}
-
-export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onEdit, onMoveToList, onNavigateToEntry, onAnswer, onAddChild, onMoveToRoot }: OverviewViewProps) {
+export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onNavigateToEntry }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   // Build a lookup map for all entries by ID
@@ -86,18 +72,6 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
   flatEntries.forEach((entry, index) => {
     entryToFlatIndex.set(entry.id, index);
   });
-
-  const toggleExpanded = (id: number) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
 
   const handleMarkDone = useCallback(async (entry: Entry) => {
     try {
@@ -139,16 +113,6 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
     }
   }, [onEntryChanged, onError]);
 
-  const handleDelete = useCallback(async (entry: Entry) => {
-    try {
-      await DeleteEntry(entry.id);
-      onEntryChanged?.();
-    } catch (error) {
-      console.error('Failed to delete entry:', error);
-      onError?.(error instanceof Error ? error.message : 'Failed to delete entry');
-    }
-  }, [onEntryChanged, onError]);
-
   const handleCyclePriority = useCallback(async (entry: Entry) => {
     try {
       await CyclePriority(entry.id);
@@ -172,6 +136,31 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
       onError?.(error instanceof Error ? error.message : 'Failed to cycle type');
     }
   }, [onEntryChanged, onError]);
+
+  const handleAction = useCallback(async (entry: Entry, action: ActionType) => {
+    switch (action) {
+      case 'done':
+        if (entry.type === 'task') {
+          await handleMarkDone(entry);
+        }
+        break;
+      case 'cancel':
+        if (entry.type === 'done') {
+          await handleMarkUndone(entry);
+        }
+        break;
+      case 'priority':
+        await handleCyclePriority(entry);
+        break;
+      case 'migrate':
+        onMigrate?.(entry);
+        break;
+    }
+  }, [handleMarkDone, handleMarkUndone, handleCyclePriority, onMigrate]);
+
+  const handleNavigate = useCallback((entry: Entry) => {
+    onNavigateToEntry?.(entry);
+  }, [onNavigateToEntry]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -232,7 +221,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
             const selected = flatEntries[selectedIndex];
-            toggleExpanded(selected.id);
+            handleNavigate(selected);
           }
           break;
       }
@@ -240,7 +229,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatEntries, selectedIndex, handleCancel, handleCyclePriority, handleCycleType, handleMarkDone, handleMarkUndone, handleUncancel]);
+  }, [flatEntries, selectedIndex, handleCancel, handleCyclePriority, handleCycleType, handleMarkDone, handleMarkUndone, handleUncancel, handleNavigate]);
 
   return (
     <div className="space-y-4">
@@ -280,106 +269,49 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                   </h3>
                   <div className="space-y-1">
                     {grouped.get(dateStr)!.map((entry) => {
-                      const isExpanded = expandedIds.has(entry.id);
-                      const parentChain = buildParentChain(entry, entriesById);
-                      const ancestorCount = parentChain.length;
                       const isSelected = entryToFlatIndex.get(entry.id) === selectedIndex;
-                      return (
-                        <div key={entry.id} className="space-y-1">
-                          {/* Parent context entries (shown when expanded) */}
-                          {isExpanded && parentChain.map((parent, index) => (
-                            <div
-                              key={parent.id}
-                              className={cn(
-                                'flex items-center gap-3 p-2 rounded-lg border border-border',
-                                'bg-muted/30 text-muted-foreground'
-                              )}
-                              style={{ marginLeft: `${index * 16}px` }}
-                            >
-                              <span className="w-5 text-center font-mono">
-                                {ENTRY_SYMBOLS[parent.type]}
-                              </span>
-                              <span className="flex-1 text-sm">{parent.content}</span>
-                            </div>
-                          ))}
-                          {/* Task entry */}
-                          <div
-                            data-entry-id={entry.id}
-                            onClick={() => toggleExpanded(entry.id)}
-                            className={cn(
-                              'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
-                              'bg-card transition-colors group',
-                              !isSelected && 'hover:bg-secondary/30',
-                              isSelected && 'ring-2 ring-primary'
-                            )}
-                            style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
+                      const entryItem = (
+                        <button
+                          type="button"
+                          data-entry-id={entry.id}
+                          className={cn(
+                            'w-full flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
+                            'bg-card transition-colors group text-left',
+                            !isSelected && 'hover:bg-secondary/30',
+                            isSelected && 'ring-2 ring-primary'
+                          )}
+                        >
+                          <span
+                            data-testid="entry-symbol"
+                            className="w-5 text-center text-muted-foreground font-mono"
                           >
-                            {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
-                            {ancestorCount > 0 && !isExpanded && (
-                              <ContextPill
-                                count={ancestorCount}
-                                onClick={() => toggleExpanded(entry.id)}
-                              />
-                            )}
-                            {/* Symbol - clickable for task/done entries */}
-                            {entry.type === 'task' || entry.type === 'done' ? (
-                              <button
-                                data-testid="entry-symbol"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (entry.type === 'task') {
-                                    handleMarkDone(entry);
-                                  } else {
-                                    handleMarkUndone(entry);
-                                  }
-                                }}
-                                title={entry.type === 'task' ? 'Mark done' : 'Mark undone'}
-                                className="w-5 text-center text-muted-foreground font-mono cursor-pointer hover:opacity-70 transition-opacity"
-                              >
-                                {ENTRY_SYMBOLS[entry.type]}
-                              </button>
-                            ) : (
-                              <span
-                                data-testid="entry-symbol"
-                                className="w-5 text-center text-muted-foreground font-mono"
-                              >
-                                {ENTRY_SYMBOLS[entry.type]}
-                              </span>
-                            )}
-                            <span className={cn(
-                              'flex-1 text-sm',
-                              entry.type === 'done' && 'text-bujo-done',
-                              entry.type === 'cancelled' && 'line-through text-muted-foreground'
-                            )}>
-                              {entry.content}
+                            {ENTRY_SYMBOLS[entry.type]}
+                          </span>
+                          <span className={cn(
+                            'flex-1 text-sm',
+                            entry.type === 'done' && 'text-bujo-done',
+                            entry.type === 'cancelled' && 'line-through text-muted-foreground'
+                          )}>
+                            {entry.content}
+                          </span>
+                          {entry.priority !== 'none' && (
+                            <span className="text-xs text-warning font-medium">
+                              {PRIORITY_SYMBOLS[entry.priority]}
                             </span>
-                            {entry.priority !== 'none' && (
-                              <span className="text-xs text-warning font-medium">
-                                {PRIORITY_SYMBOLS[entry.priority]}
-                              </span>
-                            )}
-                            <EntryActionBar
-                              entry={entry}
-                              callbacks={{
-                                onCancel: () => handleCancel(entry),
-                                onUncancel: () => handleUncancel(entry),
-                                onCyclePriority: () => handleCyclePriority(entry),
-                                onCycleType: () => handleCycleType(entry),
-                                onMigrate: onMigrate ? () => onMigrate(entry) : undefined,
-                                onMoveToList: onMoveToList ? () => onMoveToList(entry) : undefined,
-                                onNavigateToEntry: onNavigateToEntry ? () => onNavigateToEntry(entry) : undefined,
-                                onEdit: onEdit ? () => onEdit(entry) : undefined,
-                                onDelete: () => handleDelete(entry),
-                                onAnswer: onAnswer ? () => onAnswer(entry) : undefined,
-                                onAddChild: onAddChild ? () => onAddChild(entry) : undefined,
-                                onMoveToRoot: onMoveToRoot ? () => onMoveToRoot(entry) : undefined,
-                              }}
-                              context={{ hasParent: entry.parentId !== null }}
-                              variant="hover-reveal"
-                              usePlaceholders
-                            />
-                          </div>
-                        </div>
+                          )}
+                        </button>
+                      );
+
+                      return (
+                        <EntryContextPopover
+                          key={entry.id}
+                          entry={entry}
+                          entries={overdueEntries}
+                          onAction={handleAction}
+                          onNavigate={onNavigateToEntry ? handleNavigate : undefined}
+                        >
+                          {entryItem}
+                        </EntryContextPopover>
                       );
                     })}
                   </div>

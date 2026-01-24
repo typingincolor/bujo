@@ -176,11 +176,16 @@ describe('App - Click Selection', () => {
     const firstTask = screen.getByText('First task').closest('[data-entry-id]')
     expect(firstTask).toHaveAttribute('data-selected', 'true')
 
-    // Click on the note entry
-    const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
-    await user.click(noteEntry!)
+    // Click on the note entry to open popover
+    const noteText = screen.getByText('A note')
+    await user.click(noteText)
+
+    // Click "Go to entry" to select it
+    const goToButton = await screen.findByText('Go to entry')
+    await user.click(goToButton)
 
     // Now the note should be selected
+    const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
     await waitFor(() => {
       expect(noteEntry).toHaveAttribute('data-selected', 'true')
     })
@@ -195,9 +200,15 @@ describe('App - Click Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const secondTask = screen.getByText('Second task').closest('[data-entry-id]')
-    await user.click(secondTask!)
+    // Click second task to open popover
+    const secondTaskText = screen.getByText('Second task')
+    await user.click(secondTaskText)
 
+    // Click "Go to entry" to select it
+    const goToButton = await screen.findByText('Go to entry')
+    await user.click(goToButton)
+
+    const secondTask = screen.getByText('Second task').closest('[data-entry-id]')
     await waitFor(() => {
       expect(secondTask).toHaveAttribute('data-selected', 'true')
     })

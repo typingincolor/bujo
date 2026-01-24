@@ -1,5 +1,6 @@
-import { DayEntries, Entry } from '@/types/bujo';
+import { DayEntries, Entry, ActionType } from '@/types/bujo';
 import { EntryItem } from './EntryItem';
+import { EntryContextPopover } from './EntryContextPopover';
 import { Calendar, MapPin, Cloud, Heart, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ function formatDayLabel(dateStr: string): string {
 
 interface EntryTreeProps {
   entries: Entry[];
+  allEntries: Entry[];
   depth?: number;
   collapsedIds: Set<number>;
   selectedEntryId?: number | null;
@@ -66,9 +68,11 @@ interface EntryTreeProps {
   onMoveToRoot?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
   onAnswer?: (entry: Entry) => void;
+  onAction?: (entry: Entry, action: ActionType) => void;
+  onNavigate?: (entry: Entry) => void;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer }: EntryTreeProps) {
+function EntryTree({ entries, allEntries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer, onAction, onNavigate }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -77,32 +81,68 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
 
         return (
           <div key={entry.id}>
-            <EntryItem
-              entry={entry}
-              depth={depth}
-              isCollapsed={isCollapsed}
-              hasChildren={hasChildren}
-              hasParent={entry.parentId !== null}
-              childCount={entry.children?.length || 0}
-              isSelected={entry.id === selectedEntryId}
-              onToggleCollapse={() => onToggleCollapse(entry.id)}
-              onToggleDone={() => onToggleDone(entry.id)}
-              onSelect={onSelect ? () => onSelect(entry.id) : undefined}
-              onEdit={onEdit ? () => onEdit(entry) : undefined}
-              onDelete={onDelete ? () => onDelete(entry) : undefined}
-              onCancel={onCancel ? () => onCancel(entry) : undefined}
-              onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
-              onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
-              onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
-              onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
-              onAddChild={onAddChild && entry.type !== 'question' ? () => onAddChild(entry) : undefined}
-              onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
-              onMoveToList={onMoveToList ? () => onMoveToList(entry) : undefined}
-              onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
-            />
+            {onAction && onNavigate ? (
+              <EntryContextPopover
+                entry={entry}
+                entries={allEntries}
+                onAction={onAction}
+                onNavigate={onNavigate}
+              >
+                <div className="w-full cursor-pointer">
+                  <EntryItem
+                    entry={entry}
+                    depth={depth}
+                    isCollapsed={isCollapsed}
+                    hasChildren={hasChildren}
+                    hasParent={entry.parentId !== null}
+                    childCount={entry.children?.length || 0}
+                    isSelected={entry.id === selectedEntryId}
+                    disableClick={true}
+                    onToggleCollapse={() => onToggleCollapse(entry.id)}
+                    onToggleDone={() => onToggleDone(entry.id)}
+                    onEdit={onEdit ? () => onEdit(entry) : undefined}
+                    onDelete={onDelete ? () => onDelete(entry) : undefined}
+                    onCancel={onCancel ? () => onCancel(entry) : undefined}
+                    onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
+                    onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
+                    onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                    onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
+                    onAddChild={onAddChild && entry.type !== 'question' ? () => onAddChild(entry) : undefined}
+                    onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
+                    onMoveToList={onMoveToList ? () => onMoveToList(entry) : undefined}
+                    onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
+                  />
+                </div>
+              </EntryContextPopover>
+            ) : (
+              <EntryItem
+                entry={entry}
+                depth={depth}
+                isCollapsed={isCollapsed}
+                hasChildren={hasChildren}
+                hasParent={entry.parentId !== null}
+                childCount={entry.children?.length || 0}
+                isSelected={entry.id === selectedEntryId}
+                onToggleCollapse={() => onToggleCollapse(entry.id)}
+                onToggleDone={() => onToggleDone(entry.id)}
+                onSelect={onSelect ? () => onSelect(entry.id) : undefined}
+                onEdit={onEdit ? () => onEdit(entry) : undefined}
+                onDelete={onDelete ? () => onDelete(entry) : undefined}
+                onCancel={onCancel ? () => onCancel(entry) : undefined}
+                onUncancel={onUncancel ? () => onUncancel(entry) : undefined}
+                onCyclePriority={onCyclePriority ? () => onCyclePriority(entry) : undefined}
+                onMigrate={onMigrate ? () => onMigrate(entry) : undefined}
+                onCycleType={onCycleType ? () => onCycleType(entry) : undefined}
+                onAddChild={onAddChild && entry.type !== 'question' ? () => onAddChild(entry) : undefined}
+                onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
+                onMoveToList={onMoveToList ? () => onMoveToList(entry) : undefined}
+                onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
+              />
+            )}
             {hasChildren && !isCollapsed && (
               <EntryTree
                 entries={entry.children!}
+                allEntries={allEntries}
                 depth={depth + 1}
                 collapsedIds={collapsedIds}
                 selectedEntryId={selectedEntryId}
@@ -120,6 +160,8 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onMoveToRoot={onMoveToRoot}
                 onMoveToList={onMoveToList}
                 onAnswer={onAnswer}
+                onAction={onAction}
+                onNavigate={onNavigate}
               />
             )}
           </div>
@@ -214,6 +256,32 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
     }
   };
 
+  const handleAction = async (entry: Entry, action: ActionType) => {
+    try {
+      switch (action) {
+        case 'done':
+          await MarkEntryDone(entry.id);
+          break;
+        case 'cancel':
+          await CancelEntry(entry.id);
+          break;
+        case 'priority':
+          await CyclePriority(entry.id);
+          break;
+        case 'migrate':
+          onMigrateEntry?.(entry);
+          return;
+      }
+      onEntryChanged?.();
+    } catch (error) {
+      console.error(`Failed to ${action} entry:`, error);
+    }
+  };
+
+  const handleNavigate = (entry: Entry) => {
+    onSelectEntry?.(entry.id);
+  };
+
   const handleToggleSummary = async () => {
     if (showSummary) {
       setShowSummary(false);
@@ -306,6 +374,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
         {tree.length > 0 ? (
           <EntryTree
             entries={tree}
+            allEntries={day.entries}
             collapsedIds={collapsedIds}
             selectedEntryId={selectedEntryId}
             onToggleCollapse={toggleCollapse}
@@ -322,6 +391,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onMoveToRoot={handleMoveToRoot}
             onMoveToList={onMoveToList}
             onAnswer={onAnswerEntry}
+            onAction={handleAction}
+            onNavigate={handleNavigate}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

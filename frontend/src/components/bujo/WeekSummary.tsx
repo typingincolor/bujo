@@ -11,6 +11,7 @@ interface WeekSummaryProps {
 }
 
 const MAX_ATTENTION_ITEMS = 5;
+const MIN_ATTENTION_SCORE = 10;
 
 const NOOP_ACTION = () => {};
 const NOOP_NAVIGATE = () => {};
@@ -52,8 +53,11 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
     e => e.type === 'task' || e.type === 'question'
   );
   const sortedAttentionEntries = sortByAttentionScore(needsAttentionEntries, now);
-  const hasMoreThanLimit = sortedAttentionEntries.length > MAX_ATTENTION_ITEMS;
-  const topAttentionEntries = sortedAttentionEntries.slice(0, MAX_ATTENTION_ITEMS);
+  const filteredAttentionEntries = sortedAttentionEntries.filter(
+    e => calculateAttentionScore(e, now).score >= MIN_ATTENTION_SCORE
+  );
+  const hasMoreThanLimit = filteredAttentionEntries.length > MAX_ATTENTION_ITEMS;
+  const topAttentionEntries = filteredAttentionEntries.slice(0, MAX_ATTENTION_ITEMS);
 
   return (
     <div data-testid="week-summary" className="space-y-6">
@@ -77,17 +81,45 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
           {eventsWithChildren.length === 0 ? (
             <p className="text-sm text-muted-foreground">No meetings this week</p>
           ) : (
-            eventsWithChildren.map(event => (
-              <div
-                key={event.id}
-                className="flex items-center justify-between p-2 rounded-lg border border-border bg-card"
-              >
-                <span className="text-sm">{event.content}</span>
-                <span className="text-xs text-muted-foreground">
-                  {getChildCount(event.id)} items
-                </span>
-              </div>
-            ))
+            eventsWithChildren.map(event => {
+              const meetingItem = (
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
+                >
+                  <span className="text-sm">{event.content}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {getChildCount(event.id)} items
+                  </span>
+                </button>
+              );
+
+              if (onAction && onNavigate) {
+                return (
+                  <EntryContextPopover
+                    key={event.id}
+                    entry={event}
+                    entries={allEntries}
+                    onAction={onAction}
+                    onNavigate={onNavigate}
+                  >
+                    {meetingItem}
+                  </EntryContextPopover>
+                );
+              }
+
+              return (
+                <EntryContextPopover
+                  key={event.id}
+                  entry={event}
+                  entries={allEntries}
+                  onAction={NOOP_ACTION}
+                  onNavigate={NOOP_NAVIGATE}
+                >
+                  {meetingItem}
+                </EntryContextPopover>
+              );
+            })
           )}
         </div>
       </section>

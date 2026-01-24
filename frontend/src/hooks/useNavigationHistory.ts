@@ -8,25 +8,25 @@ export interface NavigationState {
 }
 
 export function useNavigationHistory() {
-  const [history, setHistory] = useState<NavigationState | null>(null)
+  const [history, setHistory] = useState<NavigationState[]>([])
 
   const pushHistory = useCallback((state: NavigationState) => {
-    setHistory(state)
+    setHistory((prev) => [...prev, state])
   }, [])
 
   const goBack = useCallback(() => {
-    const current = history
-    setHistory(null)
+    const current = history[history.length - 1] || null
+    setHistory((prev) => prev.slice(0, -1))
     return current
   }, [history])
 
   const clearHistory = useCallback(() => {
-    setHistory(null)
+    setHistory([])
   }, [])
 
   return {
-    history,
-    canGoBack: history !== null,
+    history: history.length > 0 ? history[history.length - 1] : null,
+    canGoBack: history.length > 0,
     pushHistory,
     goBack,
     clearHistory,

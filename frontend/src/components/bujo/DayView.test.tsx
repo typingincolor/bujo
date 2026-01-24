@@ -53,7 +53,7 @@ const createTestDay = (overrides: Partial<DayEntries> = {}): DayEntries => ({
 
 describe('DayView', () => {
   describe('entry selection', () => {
-    it('calls onSelectEntry when an entry is clicked', () => {
+    it('calls onSelectEntry when an entry is clicked', async () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -62,12 +62,18 @@ describe('DayView', () => {
         />
       )
 
-      const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
-      fireEvent.click(noteEntry!)
+      // Click entry to open popover
+      const noteEntry = screen.getByText('A note')
+      fireEvent.click(noteEntry)
+
+      // Click "Go to entry" in popover
+      const goToButton = await screen.findByText('Go to entry')
+      fireEvent.click(goToButton)
+
       expect(onSelectEntry).toHaveBeenCalledWith(2)
     })
 
-    it('calls onSelectEntry with correct id for first entry', () => {
+    it('calls onSelectEntry with correct id for first entry', async () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -76,12 +82,18 @@ describe('DayView', () => {
         />
       )
 
-      const taskEntry = screen.getByText('First task').closest('[data-entry-id]')
-      fireEvent.click(taskEntry!)
+      // Click entry to open popover
+      const taskEntry = screen.getByText('First task')
+      fireEvent.click(taskEntry)
+
+      // Click "Go to entry" in popover
+      const goToButton = await screen.findByText('Go to entry')
+      fireEvent.click(goToButton)
+
       expect(onSelectEntry).toHaveBeenCalledWith(1)
     })
 
-    it('calls onSelectEntry with correct id for third entry', () => {
+    it('calls onSelectEntry with correct id for third entry', async () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -90,8 +102,14 @@ describe('DayView', () => {
         />
       )
 
-      const eventEntry = screen.getByText('An event').closest('[data-entry-id]')
-      fireEvent.click(eventEntry!)
+      // Click entry to open popover
+      const eventEntry = screen.getByText('An event')
+      fireEvent.click(eventEntry)
+
+      // Click "Go to entry" in popover
+      const goToButton = await screen.findByText('Go to entry')
+      fireEvent.click(goToButton)
+
       expect(onSelectEntry).toHaveBeenCalledWith(3)
     })
   })

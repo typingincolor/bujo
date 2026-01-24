@@ -357,9 +357,16 @@ function App() {
   }, [days])
 
   const handleViewChange = (newView: ViewType) => {
+    if (newView === 'today') {
+      clearHistory()
+    } else {
+      pushHistory({
+        view: view,
+        scrollPosition: window.scrollY,
+      })
+    }
     setView(newView)
     setSelectedIndex(0)
-    clearHistory()
   }
 
   const handleEditEntry = useCallback(async (newContent: string) => {
@@ -540,7 +547,7 @@ function App() {
     setView('today')
     setTimeout(() => {
       const element = document.querySelector(`[data-entry-id="${entry.id}"]`)
-      if (element) {
+      if (element && typeof element.scrollIntoView === 'function') {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
     }, SCROLL_INTO_VIEW_DELAY_MS)
@@ -643,7 +650,7 @@ function App() {
         />
 
         <main className="flex-1 overflow-y-auto p-6">
-          {view === 'today' && today && (
+          {view === 'today' && (
             <div className="max-w-3xl mx-auto space-y-6">
               {/* Day Navigation */}
               <div className="flex items-center justify-center gap-4">
@@ -686,18 +693,34 @@ function App() {
                 </button>
               </div>
               <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
-              <DayView
-                day={today}
-                selectedEntryId={selectedEntryId}
-                onEntryChanged={loadData}
-                onSelectEntry={handleSelectEntry}
-                onEditEntry={(entry) => setEditModalEntry(entry)}
-                onDeleteEntry={handleDeleteEntryRequest}
-                onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
-                onAddChild={handleAddChild}
-                onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
-                onMoveToList={(entry) => setMoveToListEntry(entry)}
-              />
+              {overdueEntries.length > 0 && (
+                <OverviewView
+                  overdueEntries={overdueEntries}
+                  onEntryChanged={loadData}
+                  onError={setError}
+                  onMigrate={(entry) => setMigrateModalEntry(entry)}
+                  onEdit={(entry) => setEditModalEntry(entry)}
+                  onMoveToList={(entry) => setMoveToListEntry(entry)}
+                  onNavigateToEntry={handleNavigateToEntry}
+                  onAnswer={(entry) => setAnswerModalEntry(entry)}
+                  onAddChild={handleAddChild}
+                  onMoveToRoot={loadData}
+                />
+              )}
+              {today && (
+                <DayView
+                  day={today}
+                  selectedEntryId={selectedEntryId}
+                  onEntryChanged={loadData}
+                  onSelectEntry={handleSelectEntry}
+                  onEditEntry={(entry) => setEditModalEntry(entry)}
+                  onDeleteEntry={handleDeleteEntryRequest}
+                  onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
+                  onAddChild={handleAddChild}
+                  onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
+                  onMoveToList={(entry) => setMoveToListEntry(entry)}
+                />
+              )}
               <CaptureBar
                 ref={captureBarRef}
                 onSubmit={handleCaptureBarSubmit}
@@ -721,7 +744,7 @@ function App() {
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-sm text-muted-foreground">
-                  {reviewDays.length > 0 && reviewDays[0]?.date} - {reviewDays.length > 0 && reviewDays[reviewDays.length - 1]?.date}
+                  Week of {reviewDays.length > 0 && reviewDays[0]?.date} - {reviewDays.length > 0 && reviewDays[reviewDays.length - 1]?.date}
                 </span>
                 <button
                   onClick={handleNextWeek}
@@ -736,23 +759,8 @@ function App() {
                 days={reviewDays}
                 onAction={handleWeekSummaryAction}
                 onNavigate={handleNavigateToEntry}
+                onShowAllAttention={() => setView('overview')}
               />
-              {reviewDays.map((day, i) => (
-                <DayView
-                  key={i}
-                  day={day}
-                  onEntryChanged={loadData}
-                  onEditEntry={(entry) => setEditModalEntry(entry)}
-                  onDeleteEntry={handleDeleteEntryRequest}
-                  onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
-                  onAddChild={handleAddChild}
-                  onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
-                  onMoveToList={(entry) => setMoveToListEntry(entry)}
-                />
-              ))}
-              {reviewDays.length === 0 && (
-                <p className="text-muted-foreground text-center py-8">No entries this week</p>
-              )}
             </div>
           )}
 

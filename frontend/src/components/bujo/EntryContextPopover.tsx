@@ -7,7 +7,7 @@ interface EntryContextPopoverProps {
   entry: Entry
   entries: Entry[]
   onAction: (entry: Entry, action: ActionType) => void
-  onNavigate: (entry: Entry) => void
+  onNavigate?: (entry: Entry) => void
   children: ReactNode
 }
 
@@ -69,8 +69,10 @@ export function EntryContextPopover({
   }, [])
 
   const handleNavigate = useCallback(() => {
-    onNavigateRef.current(entryRef.current)
-    setOpenRef.current(false)
+    if (onNavigateRef.current) {
+      onNavigateRef.current(entryRef.current)
+      setOpenRef.current(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -109,8 +111,10 @@ export function EntryContextPopover({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          role="dialog"
           data-testid="entry-context-popover"
           className="z-50 w-80 max-h-[400px] overflow-auto rounded-lg border border-border bg-card p-3 shadow-lg"
+          style={{ zIndex: 50 }}
           sideOffset={4}
           collisionPadding={16}
         >
@@ -164,12 +168,14 @@ export function EntryContextPopover({
               )}
             </div>
 
-            <button
-              onClick={handleNavigate}
-              className="text-sm text-primary hover:underline"
-            >
-              Go to entry
-            </button>
+            {onNavigate && (
+              <button
+                onClick={handleNavigate}
+                className="text-sm text-primary hover:underline"
+              >
+                Go to entry
+              </button>
+            )}
           </div>
 
           <Popover.Arrow className="fill-border" />

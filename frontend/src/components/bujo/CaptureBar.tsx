@@ -214,7 +214,8 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
           onKeyDown={handleKeyDown}
           placeholder={getPlaceholder(selectedType)}
           rows={1}
-          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none"
+          style={{ fontFamily: 'monospace' }}
+          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none font-mono"
         />
         <button
           type="button"
