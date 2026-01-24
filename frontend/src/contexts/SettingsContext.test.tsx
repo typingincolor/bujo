@@ -26,4 +26,20 @@ describe('SettingsContext', () => {
     expect(screen.getByTestId('theme').textContent).toBe(DEFAULT_SETTINGS.theme)
     expect(screen.getByTestId('defaultView').textContent).toBe(DEFAULT_SETTINGS.defaultView)
   })
+
+  it('should read existing settings from localStorage on initialization', () => {
+    const savedSettings = { theme: 'light' as const, defaultView: 'week' as const }
+    localStorage.setItem('bujo-settings', JSON.stringify(savedSettings))
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(screen.getByTestId('theme').textContent).toBe('light')
+    expect(screen.getByTestId('defaultView').textContent).toBe('week')
+
+    localStorage.clear()
+  })
 })

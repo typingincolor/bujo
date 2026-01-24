@@ -13,8 +13,21 @@ interface SettingsProviderProps {
   children: ReactNode
 }
 
+function loadSettings(): Settings {
+  try {
+    const stored = localStorage.getItem('bujo-settings')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return { ...DEFAULT_SETTINGS, ...parsed }
+    }
+  } catch (error) {
+    console.warn('Failed to load settings from localStorage:', error)
+  }
+  return DEFAULT_SETTINGS
+}
+
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState<Settings>(loadSettings)
 
   const setTheme = (theme: Theme) => {
     setSettings(prev => ({ ...prev, theme }))
