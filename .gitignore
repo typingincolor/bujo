@@ -16,6 +16,7 @@ coverage.out
 # Claude Code auto-generated files (except main project instructions)
 **/CLAUDE.md
 !.claude/CLAUDE.md
+.claude/ralph-loop.local.md
 
 # Local database
 *.db

@@ -4,8 +4,6 @@ import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
 import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, CyclePriority, CancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
-
-const SCROLL_INTO_VIEW_DELAY_MS = 100
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
@@ -31,6 +29,7 @@ import { transformDayEntries, transformEntry, transformHabit, transformList, tra
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
 import { formatDateForInput, parseDateFromInput } from '@/lib/dateUtils'
+import { scrollToElement, scrollToPosition } from '@/lib/scrollUtils'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
@@ -545,21 +544,14 @@ function App() {
     const entryDate = new Date(entry.loggedDate)
     setCurrentDate(startOfDay(entryDate))
     setView('today')
-    setTimeout(() => {
-      const element = document.querySelector(`[data-entry-id="${entry.id}"]`)
-      if (element && typeof element.scrollIntoView === 'function') {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-    }, SCROLL_INTO_VIEW_DELAY_MS)
+    scrollToElement(`[data-entry-id="${entry.id}"]`)
   }, [view, pushHistory])
 
   const handleBack = useCallback(() => {
     const previousState = goBack()
     if (previousState && isValidView(previousState.view)) {
       setView(previousState.view)
-      setTimeout(() => {
-        window.scrollTo({ top: previousState.scrollPosition, behavior: 'smooth' })
-      }, SCROLL_INTO_VIEW_DELAY_MS)
+      scrollToPosition(previousState.scrollPosition)
     }
   }, [goBack])
 

@@ -7,11 +7,18 @@ export interface NavigationState {
   entryId?: number
 }
 
+const MAX_HISTORY_DEPTH = 50
+
 export function useNavigationHistory() {
   const [history, setHistory] = useState<NavigationState[]>([])
 
   const pushHistory = useCallback((state: NavigationState) => {
-    setHistory((prev) => [...prev, state])
+    setHistory((prev) => {
+      const updated = [...prev, state]
+      return updated.length > MAX_HISTORY_DEPTH
+        ? updated.slice(-MAX_HISTORY_DEPTH)
+        : updated
+    })
   }, [])
 
   const goBack = useCallback(() => {
