@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import type { Settings, Theme, DefaultView } from '../types/settings'
 import { DEFAULT_SETTINGS } from '../types/settings'
 
@@ -28,6 +28,10 @@ function loadSettings(): Settings {
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
   const [settings, setSettings] = useState<Settings>(loadSettings)
+
+  useEffect(() => {
+    localStorage.setItem('bujo-settings', JSON.stringify(settings))
+  }, [settings])
 
   const setTheme = (theme: Theme) => {
     setSettings(prev => ({ ...prev, theme }))

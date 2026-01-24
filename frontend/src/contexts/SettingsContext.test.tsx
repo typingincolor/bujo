@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { SettingsProvider, useSettings } from './SettingsContext'
 import { DEFAULT_SETTINGS } from '../types/settings'
 
@@ -14,8 +15,11 @@ function TestComponent() {
 }
 
 describe('SettingsContext', () => {
-  it('should provide default settings when no localStorage data exists', () => {
+  beforeEach(() => {
     localStorage.clear()
+  })
+
+  it('should provide default settings when no localStorage data exists', () => {
 
     render(
       <SettingsProvider>
@@ -39,7 +43,20 @@ describe('SettingsContext', () => {
 
     expect(screen.getByTestId('theme').textContent).toBe('light')
     expect(screen.getByTestId('defaultView').textContent).toBe('week')
+  })
 
-    localStorage.clear()
+  it('should persist theme changes to localStorage', () => {
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    })
+
+    act(() => {
+      result.current.setTheme('light')
+    })
+
+    const stored = localStorage.getItem('bujo-settings')
+    expect(stored).toBeDefined()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.theme).toBe('light')
   })
 })
