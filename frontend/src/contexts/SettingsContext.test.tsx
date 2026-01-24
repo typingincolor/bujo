@@ -104,4 +104,10 @@ describe('SettingsContext', () => {
     expect(screen.getByTestId('theme').textContent).toBe('light')
     expect(screen.getByTestId('defaultView').textContent).toBe(DEFAULT_SETTINGS.defaultView)
   })
+
+  it('should throw error when useSettings is used outside SettingsProvider', () => {
+    expect(() => {
+      renderHook(() => useSettings())
+    }).toThrow('useSettings must be used within a SettingsProvider')
+  })
 })
