@@ -25,6 +25,16 @@ describe('CaptureBar', () => {
       expect(screen.getByRole('button', { name: /question/i })).toBeInTheDocument()
     })
 
+    it('displays bullet journal symbols instead of word labels', () => {
+      render(<CaptureBar {...defaultProps} />)
+
+      // Buttons should show symbols, not words
+      expect(screen.getByRole('button', { name: /task/i })).toHaveTextContent('.')
+      expect(screen.getByRole('button', { name: /note/i })).toHaveTextContent('-')
+      expect(screen.getByRole('button', { name: /event/i })).toHaveTextContent('o')
+      expect(screen.getByRole('button', { name: /question/i })).toHaveTextContent('?')
+    })
+
     it('renders input with placeholder', () => {
       render(<CaptureBar {...defaultProps} />)
 
@@ -133,6 +143,46 @@ describe('CaptureBar', () => {
       await user.type(input, '? ')
 
       expect(screen.getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
+    })
+  })
+
+  describe('prefix detection edge cases', () => {
+    it('preserves content when pasting dash-prefixed text', async () => {
+      const user = userEvent.setup()
+      render(<CaptureBar {...defaultProps} />)
+      const textarea = screen.getByTestId('capture-bar-input')
+
+      // Simulate paste of "- hello" - should switch to note and keep "hello"
+      await user.click(textarea)
+      await user.paste('- hello')
+
+      expect(screen.getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
+      expect(textarea).toHaveValue('hello')
+    })
+
+    it('preserves content when pasting task-prefixed text', async () => {
+      const user = userEvent.setup()
+      render(<CaptureBar {...defaultProps} />)
+      const textarea = screen.getByTestId('capture-bar-input')
+
+      await user.click(textarea)
+      await user.paste('. buy milk')
+
+      expect(screen.getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+      expect(textarea).toHaveValue('buy milk')
+    })
+
+    it('does not switch type when prefix appears mid-content', async () => {
+      const user = userEvent.setup()
+      render(<CaptureBar {...defaultProps} />)
+      const textarea = screen.getByTestId('capture-bar-input')
+
+      // Start with non-prefix text, then add text containing a prefix
+      await user.type(textarea, 'buy - groceries')
+
+      // Should remain as task (default) and preserve full content
+      expect(screen.getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+      expect(textarea).toHaveValue('buy - groceries')
     })
   })
 
@@ -316,6 +366,19 @@ describe('CaptureBar', () => {
       await user.type(input, 'Line 1{Shift>}{Enter}{/Shift}Line 2')
 
       expect(input).toHaveValue('Line 1\nLine 2')
+    })
+  })
+
+  describe('textarea auto-grow', () => {
+    it('expands textarea height for multiline content', async () => {
+      const user = userEvent.setup()
+      render(<CaptureBar {...defaultProps} />)
+      const textarea = screen.getByTestId('capture-bar-input') as HTMLTextAreaElement
+
+      await user.type(textarea, 'Line 1{Shift>}{Enter}{/Shift}Line 2{Shift>}{Enter}{/Shift}Line 3')
+
+      expect(textarea.style.height).not.toBe('')
+      expect(textarea.style.height).not.toBe('auto')
     })
   })
 })

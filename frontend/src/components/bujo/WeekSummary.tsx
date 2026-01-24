@@ -1,12 +1,19 @@
-import { DayEntries, Entry } from '@/types/bujo';
+import { DayEntries, Entry, ActionType } from '@/types/bujo';
 import { calculateAttentionScore, sortByAttentionScore } from '@/lib/attentionScore';
 import { cn } from '@/lib/utils';
+import { EntryContextPopover } from './EntryContextPopover';
 
 interface WeekSummaryProps {
   days: DayEntries[];
+  onAction?: (entry: Entry, action: ActionType) => void;
+  onNavigate?: (entry: Entry) => void;
+  onShowAllAttention?: () => void;
 }
 
 const MAX_ATTENTION_ITEMS = 5;
+
+const NOOP_ACTION = () => {};
+const NOOP_NAVIGATE = () => {};
 
 function flattenEntries(entries: Entry[]): Entry[] {
   const result: Entry[] = [];
@@ -22,7 +29,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result;
 }
 
-export function WeekSummary({ days }: WeekSummaryProps) {
+export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: WeekSummaryProps) {
   const allEntries = days.flatMap(day => flattenEntries(day.entries));
   const now = new Date();
 
@@ -96,13 +103,13 @@ export function WeekSummary({ days }: WeekSummaryProps) {
             topAttentionEntries.map(entry => {
               const { indicators } = calculateAttentionScore(entry, now);
               const isHighPriority = entry.priority === 'high';
-              return (
-                <div
-                  key={entry.id}
+              const attentionItem = (
+                <button
+                  type="button"
                   data-testid="attention-item"
                   data-attention-item
                   data-priority={isHighPriority ? 'high' : undefined}
-                  className="flex items-center justify-between p-2 rounded-lg border border-border bg-card"
+                  className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
                 >
                   <span className="text-sm">{entry.content}</span>
                   {indicators.length > 0 && (
@@ -125,12 +132,41 @@ export function WeekSummary({ days }: WeekSummaryProps) {
                       ))}
                     </div>
                   )}
-                </div>
+                </button>
+              );
+
+              if (onAction && onNavigate) {
+                return (
+                  <EntryContextPopover
+                    key={entry.id}
+                    entry={entry}
+                    entries={allEntries}
+                    onAction={onAction}
+                    onNavigate={onNavigate}
+                  >
+                    {attentionItem}
+                  </EntryContextPopover>
+                );
+              }
+
+              return (
+                <EntryContextPopover
+                  key={entry.id}
+                  entry={entry}
+                  entries={allEntries}
+                  onAction={NOOP_ACTION}
+                  onNavigate={NOOP_NAVIGATE}
+                >
+                  {attentionItem}
+                </EntryContextPopover>
               );
             })
           )}
           {hasMoreThanLimit && (
-            <button className="text-sm text-primary hover:underline">
+            <button
+              onClick={onShowAllAttention}
+              className="text-sm text-primary hover:underline"
+            >
               Show all
             </button>
           )}

@@ -2,6 +2,8 @@ export type EntryType = 'task' | 'note' | 'event' | 'done' | 'migrated' | 'cance
 
 export type Priority = 'none' | 'low' | 'medium' | 'high';
 
+export type ActionType = 'done' | 'cancel' | 'priority' | 'migrate';
+
 export interface Entry {
   id: number;
   content: string;

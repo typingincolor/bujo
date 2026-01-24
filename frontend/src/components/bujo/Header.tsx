@@ -45,6 +45,8 @@ interface HeaderProps {
   onMoodChanged?: () => void;
   onWeatherChanged?: () => void;
   onLocationChanged?: () => void;
+  canGoBack?: boolean;
+  onBack?: () => void;
 }
 
 export function Header({
@@ -57,6 +59,8 @@ export function Header({
   onMoodChanged,
   onWeatherChanged,
   onLocationChanged,
+  canGoBack,
+  onBack,
 }: HeaderProps) {
   const displayDate = currentDate ?? new Date();
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -133,6 +137,15 @@ export function Header({
   return (
     <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/50">
       <div className="flex items-center gap-4">
+        {canGoBack && onBack && (
+          <button
+            onClick={onBack}
+            aria-label="Go back"
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            ← Back
+          </button>
+        )}
         <h2 className="font-display text-2xl font-semibold">{title}</h2>
         <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Calendar className="w-4 h-4" />

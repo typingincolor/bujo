@@ -1,5 +1,13 @@
 import '@testing-library/jest-dom'
 
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+globalThis.ResizeObserver = ResizeObserverMock
+
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
   return {

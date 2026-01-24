@@ -21,6 +21,13 @@ const TYPE_PREFIXES: Record<CaptureType, string> = {
   question: '? ',
 }
 
+const TYPE_SYMBOLS: Record<CaptureType, string> = {
+  task: '.',
+  note: '-',
+  event: 'o',
+  question: '?',
+}
+
 const PREFIX_TO_TYPE: Record<string, CaptureType> = {
   '. ': 'task',
   '- ': 'note',
@@ -46,27 +53,51 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   ref
 ) {
   const [content, setContent] = useState(() => {
-    return localStorage.getItem(DRAFT_KEY) || ''
+    try {
+      return localStorage.getItem(DRAFT_KEY) || ''
+    } catch {
+      return ''
+    }
   })
   const [selectedType, setSelectedType] = useState<CaptureType>(() => {
-    const stored = localStorage.getItem(TYPE_KEY) as CaptureType | null
-    return stored && TYPES.includes(stored) ? stored : 'task'
+    try {
+      const stored = localStorage.getItem(TYPE_KEY) as CaptureType | null
+      return stored && TYPES.includes(stored) ? stored : 'task'
+    } catch {
+      return 'task'
+    }
   })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement)
 
   useEffect(() => {
-    if (content) {
-      localStorage.setItem(DRAFT_KEY, content)
-    } else {
-      localStorage.removeItem(DRAFT_KEY)
+    try {
+      if (content) {
+        localStorage.setItem(DRAFT_KEY, content)
+      } else {
+        localStorage.removeItem(DRAFT_KEY)
+      }
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
     }
   }, [content])
 
   useEffect(() => {
-    localStorage.setItem(TYPE_KEY, selectedType)
+    try {
+      localStorage.setItem(TYPE_KEY, selectedType)
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
+    }
   }, [selectedType])
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (textarea) {
+      textarea.style.height = 'auto'
+      textarea.style.height = `${textarea.scrollHeight}px`
+    }
+  }, [content])
 
   const handleSubmit = useCallback(() => {
     if (!content.trim()) return
@@ -80,18 +111,35 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     }
 
     setContent('')
-    localStorage.removeItem(DRAFT_KEY)
+    try {
+      localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
+    }
     textareaRef.current?.focus()
   }, [content, selectedType, parentEntry, onSubmitChild, onSubmit])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value
 
-    for (const [prefix, type] of Object.entries(PREFIX_TO_TYPE)) {
-      if (newValue === prefix) {
-        setSelectedType(type)
-        setContent('')
-        return
+    // Check for prefix at start of input or when completing a partial prefix
+    // (e.g., user typed "." and now types " " to complete ". ")
+    const isStartingPrefix = content === '' || Object.keys(PREFIX_TO_TYPE).some(
+      prefix => prefix.startsWith(content) && content.length < prefix.length
+    )
+
+    if (isStartingPrefix) {
+      for (const [prefix, type] of Object.entries(PREFIX_TO_TYPE)) {
+        if (newValue === prefix) {
+          setSelectedType(type)
+          setContent('')
+          return
+        }
+        if (newValue.startsWith(prefix) && newValue.length > prefix.length) {
+          setSelectedType(type)
+          setContent(newValue.slice(prefix.length))
+          return
+        }
       }
     }
 
@@ -111,7 +159,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
       e.preventDefault()
       if (content) {
         setContent('')
-        localStorage.removeItem(DRAFT_KEY)
+        try {
+          localStorage.removeItem(DRAFT_KEY)
+        } catch {
+          // Ignore localStorage errors (e.g., incognito mode)
+        }
       } else {
         textareaRef.current?.blur()
       }
@@ -142,14 +194,15 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
               type="button"
               onClick={() => setSelectedType(type)}
               aria-pressed={selectedType === type}
+              aria-label={type}
               className={cn(
-                'px-2 py-1 text-xs rounded capitalize',
+                'w-8 h-8 text-sm font-mono rounded',
                 selectedType === type
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted text-muted-foreground hover:bg-muted/80'
               )}
             >
-              {type}
+              {TYPE_SYMBOLS[type]}
             </button>
           ))}
         </div>

@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useNavigationHistory } from '@/hooks/useNavigationHistory'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, CyclePriority, CancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
+
+const SCROLL_INTO_VIEW_DELAY_MS = 100
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
@@ -44,6 +47,12 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
+const validViews: ViewType[] = ['today', 'week', 'overview', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+
+function isValidView(view: unknown): view is ViewType {
+  return validViews.includes(view as ViewType)
+}
+
 function App() {
   const [view, setView] = useState<ViewType>('today')
   const [days, setDays] = useState<DayEntries[]>([])
@@ -73,6 +82,7 @@ function App() {
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
+  const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
     // Only show loading spinner on initial load, not on refresh
@@ -327,6 +337,14 @@ function App() {
           }
           break
         }
+        case 'm': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry && (entry.type === 'task' || entry.type === 'question')) {
+            setMigrateModalEntry(entry)
+          }
+          break
+        }
       }
     }
 
@@ -341,6 +359,7 @@ function App() {
   const handleViewChange = (newView: ViewType) => {
     setView(newView)
     setSelectedIndex(0)
+    clearHistory()
   }
 
   const handleEditEntry = useCallback(async (newContent: string) => {
@@ -420,27 +439,25 @@ function App() {
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
-    const today = startOfDay(new Date())
     try {
-      await AddEntry(content, toWailsTime(today))
+      await AddEntry(content, toWailsTime(currentDate))
       loadData()
     } catch (err) {
       console.error('Failed to add entry:', err)
       setError(err instanceof Error ? err.message : 'Failed to add entry')
     }
-  }, [loadData])
+  }, [loadData, currentDate])
 
   const handleCaptureBarSubmitChild = useCallback(async (parentId: number, content: string) => {
-    const today = startOfDay(new Date())
     try {
-      await AddChildEntry(parentId, content, toWailsTime(today))
+      await AddChildEntry(parentId, content, toWailsTime(currentDate))
       setCaptureParentEntry(null)
       loadData()
     } catch (err) {
       console.error('Failed to add child entry:', err)
       setError(err instanceof Error ? err.message : 'Failed to add child entry')
     }
-  }, [loadData])
+  }, [loadData, currentDate])
 
   const handleCaptureBarClearParent = useCallback(() => {
     setCaptureParentEntry(null)
@@ -512,6 +529,56 @@ function App() {
     setView('week')
   }, [])
 
+  const handleNavigateToEntry = useCallback((entry: Entry) => {
+    pushHistory({
+      view: view,
+      scrollPosition: window.scrollY,
+      entryId: entry.id,
+    })
+    const entryDate = new Date(entry.loggedDate)
+    setCurrentDate(startOfDay(entryDate))
+    setView('today')
+    setTimeout(() => {
+      const element = document.querySelector(`[data-entry-id="${entry.id}"]`)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }, SCROLL_INTO_VIEW_DELAY_MS)
+  }, [view, pushHistory])
+
+  const handleBack = useCallback(() => {
+    const previousState = goBack()
+    if (previousState && isValidView(previousState.view)) {
+      setView(previousState.view)
+      setTimeout(() => {
+        window.scrollTo({ top: previousState.scrollPosition, behavior: 'smooth' })
+      }, SCROLL_INTO_VIEW_DELAY_MS)
+    }
+  }, [goBack])
+
+  const handleWeekSummaryAction = useCallback(async (entry: Entry, action: 'done' | 'cancel' | 'priority' | 'migrate') => {
+    try {
+      switch (action) {
+        case 'done':
+          await MarkEntryDone(entry.id)
+          break
+        case 'cancel':
+          await CancelEntry(entry.id)
+          break
+        case 'priority':
+          await CyclePriority(entry.id)
+          break
+        case 'migrate':
+          setMigrateModalEntry(entry)
+          return
+      }
+      loadData()
+    } catch (err) {
+      console.error(`Failed to ${action} entry:`, err)
+      setError(err instanceof Error ? err.message : `Failed to ${action} entry`)
+    }
+  }, [loadData])
+
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
@@ -571,6 +638,8 @@ function App() {
           onMoodChanged={loadData}
           onWeatherChanged={loadData}
           onLocationChanged={loadData}
+          canGoBack={canGoBack}
+          onBack={handleBack}
         />
 
         <main className="flex-1 overflow-y-auto p-6">
@@ -663,7 +732,11 @@ function App() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-              <WeekSummary days={reviewDays} />
+              <WeekSummary
+                days={reviewDays}
+                onAction={handleWeekSummaryAction}
+                onNavigate={handleNavigateToEntry}
+              />
               {reviewDays.map((day, i) => (
                 <DayView
                   key={i}
