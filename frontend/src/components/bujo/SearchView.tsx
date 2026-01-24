@@ -323,7 +323,9 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
         await MarkEntryDone(entry.id);
         break;
       case 'cancel':
-        await CancelEntry(entry.id);
+        if (entry.type === 'done') {
+          await MarkEntryUndone(entry.id);
+        }
         break;
       case 'priority':
         await CyclePriority(entry.id);
@@ -331,6 +333,10 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
       case 'migrate':
         onMigrate?.({ ...entry, date: entry.loggedDate });
         break;
+      default: {
+        const _exhaustive: never = action;
+        console.warn(`Unhandled action: ${_exhaustive}`);
+      }
     }
     await refreshEntry(entry.id);
     if (action === 'done' || action === 'cancel') {
@@ -346,14 +352,28 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
 
   const handlePopoverOpenChange = useCallback(async (result: SearchResult, open: boolean) => {
     if (open) {
-      // Fetch ancestors before opening
-      await handleEntryClick(result);
+      // Reuse cached ancestors if available to avoid duplicate fetching
+      const cachedAncestors = ancestorsMap.get(result.id);
+      if (cachedAncestors && cachedAncestors.length > 0) {
+        const ancestorEntries = cachedAncestors.map(a => convertToEntry({
+          id: a.id,
+          content: a.content,
+          type: a.type,
+          priority: 'none' as Priority,
+          date: '',
+          parentId: null,
+        }));
+        setAllEntries([...ancestorEntries, convertToEntry(result)]);
+        setPopoverEntry(result);
+      } else {
+        await handleEntryClick(result);
+      }
       setOpenPopoverId(result.id);
     } else {
       setOpenPopoverId(null);
       setPopoverEntry(null);
     }
-  }, [handleEntryClick]);
+  }, [handleEntryClick, ancestorsMap]);
 
   return (
     <div className="space-y-6">
@@ -415,7 +435,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                   isSelected && 'ring-2 ring-primary'
                 )}
               >
-              {/* Ancestors context */}
+              {/* Legacy inline ancestor expansion - allows viewing context without opening popover */}
               {isExpanded && ancestors.length > 0 && (
                 <div className="mb-2 pb-2 border-b border-border/50 space-y-1">
                   {ancestors.map((ancestor, index) => (
