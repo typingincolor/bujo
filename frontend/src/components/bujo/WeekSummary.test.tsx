@@ -187,10 +187,18 @@ describe('WeekSummary', () => {
     })
 
     it('limits to top 5 items', () => {
+      const fourDaysAgo = new Date()
+      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
+
       const days = [
         createDay({
           entries: Array.from({ length: 10 }, (_, i) =>
-            createEntry({ id: i + 1, type: 'task', content: `Task ${i + 1}` })
+            createEntry({
+              id: i + 1,
+              type: 'task',
+              content: `Task ${i + 1}`,
+              loggedDate: fourDaysAgo.toISOString(),
+            })
           ),
         }),
       ]
@@ -201,10 +209,18 @@ describe('WeekSummary', () => {
     })
 
     it('shows "Show all" link when more than 5 items', () => {
+      const fourDaysAgo = new Date()
+      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
+
       const days = [
         createDay({
           entries: Array.from({ length: 10 }, (_, i) =>
-            createEntry({ id: i + 1, type: 'task', content: `Task ${i + 1}` })
+            createEntry({
+              id: i + 1,
+              type: 'task',
+              content: `Task ${i + 1}`,
+              loggedDate: fourDaysAgo.toISOString(),
+            })
           ),
         }),
       ]

@@ -14,6 +14,7 @@ interface EntryItemProps {
   hasParent?: boolean;
   childCount?: number;
   isSelected?: boolean;
+  disableClick?: boolean;
   onToggleCollapse?: () => void;
   onToggleDone?: () => void;
   onSelect?: () => void;
@@ -52,6 +53,7 @@ export function EntryItem({
   hasParent = false,
   childCount = 0,
   isSelected = false,
+  disableClick = false,
   onToggleCollapse,
   onToggleDone,
   onSelect,
@@ -108,17 +110,18 @@ export function EntryItem({
 
   return (
     <div
+      data-testid="entry-item"
       data-entry-id={entry.id}
       data-selected={isSelected}
       className={cn(
-        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative',
+        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative font-mono',
         'animate-fade-in',
         !isSelected && 'hover:bg-secondary/50',
-        isToggleable && 'cursor-pointer',
+        isToggleable && !disableClick && 'cursor-pointer',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
-      style={{ paddingLeft: `${depth * 20 + 8}px` }}
-      onClick={handleClick}
+      style={{ paddingLeft: `${depth * 20 + 8}px`, fontFamily: 'monospace' }}
+      onClick={disableClick ? undefined : handleClick}
       onContextMenu={handleContextMenu}
     >
       {/* Collapse indicator */}

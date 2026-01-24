@@ -1,11 +1,7 @@
 {
   "enabledPlugins": {
-    "code-simplifier@claude-plugins-official": true,
     "github@claude-plugins-official": true,
-    "feature-dev@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true,
-    "frontend-design@claude-code-plugins": true
+    "superpowers@claude-plugins-official": true
   }
 }

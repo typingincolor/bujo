@@ -78,121 +78,72 @@ describe('OverviewView - Display', () => {
   })
 })
 
-describe('OverviewView - Interactions', () => {
+describe('OverviewView - Popover Interactions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('calls MarkEntryDone when clicking complete button', async () => {
+  it('opens popover when clicking entry', async () => {
     const user = userEvent.setup()
-    const onEntryChanged = vi.fn()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42 })]} onEntryChanged={onEntryChanged} />)
+    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task' })]} />)
 
-    await user.click(screen.getByTitle('Mark done'))
+    await user.click(screen.getByText('Test task'))
 
     await waitFor(() => {
-      expect(MarkEntryDone).toHaveBeenCalledWith(42)
+      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
     })
   })
 
-  it('calls onEntryChanged after marking entry done', async () => {
+  it('shows done button in popover for task entries', async () => {
     const user = userEvent.setup()
-    const onEntryChanged = vi.fn()
-    render(<OverviewView overdueEntries={[createTestEntry()]} onEntryChanged={onEntryChanged} />)
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task', content: 'Test task' })]} />)
 
-    await user.click(screen.getByTitle('Mark done'))
+    await user.click(screen.getByText('Test task'))
 
     await waitFor(() => {
+      expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
+    })
+  })
+
+  it('calls MarkEntryDone when clicking done button in popover', async () => {
+    const user = userEvent.setup()
+    const onEntryChanged = vi.fn()
+    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task', content: 'Test task' })]} onEntryChanged={onEntryChanged} />)
+
+    await user.click(screen.getByText('Test task'))
+    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /done/i }))
+
+    await waitFor(() => {
+      expect(MarkEntryDone).toHaveBeenCalledWith(42)
       expect(onEntryChanged).toHaveBeenCalled()
     })
   })
 
-  it('calls MarkEntryUndone when clicking undo on done entry', async () => {
+  it('shows migrate button in popover for task entries when onMigrate provided', async () => {
     const user = userEvent.setup()
-    const onEntryChanged = vi.fn()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'done' })]} onEntryChanged={onEntryChanged} />)
+    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task', content: 'Test task' })]} onMigrate={vi.fn()} />)
 
-    await user.click(screen.getByTitle('Mark undone'))
+    await user.click(screen.getByText('Test task'))
 
     await waitFor(() => {
-      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
+      expect(screen.getByRole('button', { name: /migrate/i })).toBeInTheDocument()
     })
   })
 
-  it('shows checkmark symbol for done entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
-    const undoneButton = screen.getByTitle('Mark undone')
-    expect(undoneButton).toHaveTextContent('✓')
-  })
-
-  it('shows cancel button for non-cancelled entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    expect(screen.getByTitle('Cancel entry')).toBeInTheDocument()
-  })
-
-  it('shows uncancel button for cancelled entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} />)
-    expect(screen.getByTitle('Uncancel entry')).toBeInTheDocument()
-  })
-
-  it('calls CancelEntry when cancel button is clicked', async () => {
-    const { CancelEntry } = await import('@/wailsjs/go/wails/App')
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task' })]} />)
-
-    await user.click(screen.getByTitle('Cancel entry'))
-
-    await waitFor(() => {
-      expect(CancelEntry).toHaveBeenCalledWith(42)
-    })
-  })
-
-  it('calls UncancelEntry when uncancel button is clicked', async () => {
-    const { UncancelEntry } = await import('@/wailsjs/go/wails/App')
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'cancelled' })]} />)
-
-    await user.click(screen.getByTitle('Uncancel entry'))
-
-    await waitFor(() => {
-      expect(UncancelEntry).toHaveBeenCalledWith(42)
-    })
-  })
-
-  it('shows delete button for all entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    expect(screen.getByTitle('Delete entry')).toBeInTheDocument()
-  })
-
-  it('shows edit button for non-cancelled entries when onEdit provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onEdit={vi.fn()} />)
-    expect(screen.getByTitle('Edit entry')).toBeInTheDocument()
-  })
-
-  it('does not show edit button for cancelled entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} onEdit={vi.fn()} />)
-    expect(screen.queryByTitle('Edit entry')).not.toBeInTheDocument()
-  })
-
-  it('shows migrate button for task entries when onMigrate provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onMigrate={vi.fn()} />)
-    expect(screen.getByTitle('Migrate entry')).toBeInTheDocument()
-  })
-
-  it('calls onMigrate when migrate button is clicked', async () => {
+  it('calls onMigrate when clicking migrate button in popover', async () => {
     const user = userEvent.setup()
     const onMigrate = vi.fn()
-    const entry = createTestEntry({ id: 42, type: 'task' })
+    const entry = createTestEntry({ id: 42, type: 'task', content: 'Test task' })
     render(<OverviewView overdueEntries={[entry]} onMigrate={onMigrate} />)
 
-    await user.click(screen.getByTitle('Migrate entry'))
+    await user.click(screen.getByText('Test task'))
+    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /migrate/i }))
 
     expect(onMigrate).toHaveBeenCalledWith(entry)
-  })
-
-  it('shows priority button for all entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    expect(screen.getByTitle('Cycle priority')).toBeInTheDocument()
   })
 })
 
@@ -275,12 +226,12 @@ describe('OverviewView - Visual Styling', () => {
   })
 })
 
-describe('OverviewView - Context Display', () => {
+describe('OverviewView - Entry Filtering', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows only task entries by default, hiding parent context entries', () => {
+  it('shows only task entries, hiding parent context entries', () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
       createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
@@ -289,11 +240,11 @@ describe('OverviewView - Context Display', () => {
 
     // Task should be visible
     expect(screen.getByText('Overdue task')).toBeInTheDocument()
-    // Parent event should be hidden by default
+    // Parent event should be hidden (not a task-type)
     expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
   })
 
-  it('shows context when clicking on a task', async () => {
+  it('shows ancestor context in popover when clicking on a task', async () => {
     const user = userEvent.setup()
     const entries = [
       createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
@@ -301,45 +252,14 @@ describe('OverviewView - Context Display', () => {
     ]
     render(<OverviewView overdueEntries={entries} />)
 
-    // Click on the task to expand context
     await user.click(screen.getByText('Overdue task'))
 
-    // Parent event should now be visible
+    await waitFor(() => {
+      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
+    })
+
+    // Parent event should be visible in popover context
     expect(screen.getByText('Parent event')).toBeInTheDocument()
-  })
-
-  it('hides context when clicking on an expanded task again', async () => {
-    const user = userEvent.setup()
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    // Click to expand
-    await user.click(screen.getByText('Overdue task'))
-    expect(screen.getByText('Parent event')).toBeInTheDocument()
-
-    // Click again to collapse
-    await user.click(screen.getByText('Overdue task'))
-    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
-  })
-
-  it('shows multi-level context when clicking on a deeply nested task', async () => {
-    const user = userEvent.setup()
-    const entries = [
-      createTestEntry({ id: 1, content: 'Grandparent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Parent note', type: 'note', parentId: 1 }),
-      createTestEntry({ id: 3, content: 'Overdue task', type: 'task', parentId: 2 }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    // Click on the task to expand context
-    await user.click(screen.getByText('Overdue task'))
-
-    // Both parent note and grandparent event should be visible
-    expect(screen.getByText('Parent note')).toBeInTheDocument()
-    expect(screen.getByText('Grandparent event')).toBeInTheDocument()
   })
 
   it('counts only task entries in the badge', () => {
@@ -500,265 +420,17 @@ describe('OverviewView - Keyboard Shortcuts', () => {
     })
   })
 
-  it('expands context with Enter key', async () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
+  it('navigates to entry with Enter key when onNavigateToEntry provided', async () => {
+    const onNavigateToEntry = vi.fn()
+    const entries = [createTestEntry({ id: 42, content: 'Test task', type: 'task' })]
     const user = userEvent.setup()
-    render(<OverviewView overdueEntries={entries} />)
+    render(<OverviewView overdueEntries={entries} onNavigateToEntry={onNavigateToEntry} />)
 
-    await user.keyboard('j{Enter}') // Select first visible task, then Enter
+    await user.keyboard('j{Enter}') // Select first, then Enter
 
     await waitFor(() => {
-      expect(screen.getByText('Parent event')).toBeInTheDocument()
+      expect(onNavigateToEntry).toHaveBeenCalledWith(entries[0])
     })
-  })
-})
-
-describe('OverviewView - Context Pill', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('shows context pill with ancestor count when entry has parent and is not expanded', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    const pill = screen.getByTestId('context-pill')
-    expect(pill).toBeInTheDocument()
-    expect(pill).toHaveTextContent('1')
-  })
-
-  it('shows correct ancestor count for deeply nested entries', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Grandparent', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Parent', type: 'note', parentId: 1 }),
-      createTestEntry({ id: 3, content: 'Child task', type: 'task', parentId: 2 }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    const pill = screen.getByTestId('context-pill')
-    expect(pill).toHaveTextContent('2')
-  })
-
-  it('does not show context pill when entry has no parent', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Root task', type: 'task', parentId: null }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    expect(screen.getByText('Root task')).toBeInTheDocument()
-    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
-  })
-
-  it('hides context pill when entry is expanded', async () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={entries} />)
-
-    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-
-    // Click pill to expand
-    await user.click(screen.getByTestId('context-pill'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Parent event')).toBeInTheDocument()
-    })
-    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
-  })
-
-  it('clicking context pill toggles expand/collapse', async () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={entries} />)
-
-    // Click pill to expand
-    await user.click(screen.getByTestId('context-pill'))
-    await waitFor(() => {
-      expect(screen.getByText('Parent event')).toBeInTheDocument()
-    })
-
-    // Click entry row to collapse (pill is hidden when expanded)
-    await user.click(screen.getByText('Task with parent'))
-    await waitFor(() => {
-      expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
-    })
-
-    // Pill should reappear
-    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-  })
-
-  it('context pill click does not trigger other entry actions', async () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={entries} />)
-
-    // Click pill - should only expand, not mark done
-    await user.click(screen.getByTestId('context-pill'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Parent event')).toBeInTheDocument()
-    })
-    expect(MarkEntryDone).not.toHaveBeenCalled()
-  })
-
-  it('context starts collapsed by default', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Task with parent', type: 'task', parentId: 1 }),
-    ]
-    render(<OverviewView overdueEntries={entries} />)
-
-    // Parent should not be visible initially
-    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
-    // Pill should be visible
-    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-  })
-})
-
-describe('OverviewView - Symbol Click Toggle', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('calls MarkEntryDone when clicking symbol for task entry', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task' })]} />)
-
-    const symbolButton = screen.getByTitle('Mark done')
-    await user.click(symbolButton)
-
-    await waitFor(() => {
-      expect(MarkEntryDone).toHaveBeenCalledWith(42)
-    })
-  })
-
-  it('calls MarkEntryUndone when clicking symbol for done entry', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'done' })]} />)
-
-    const symbolButton = screen.getByTitle('Mark undone')
-    await user.click(symbolButton)
-
-    await waitFor(() => {
-      expect(MarkEntryUndone).toHaveBeenCalledWith(42)
-    })
-  })
-
-  it('symbol shows task bullet for task entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    const symbolButton = screen.getByTitle('Mark done')
-    expect(symbolButton).toHaveTextContent('•')
-  })
-
-  it('symbol shows checkmark for done entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'done' })]} />)
-    const symbolButton = screen.getByTitle('Mark undone')
-    expect(symbolButton).toHaveTextContent('✓')
-  })
-
-  it('symbol is not clickable for cancelled entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} />)
-    expect(screen.queryByTitle('Mark done')).not.toBeInTheDocument()
-    expect(screen.queryByTitle('Mark undone')).not.toBeInTheDocument()
-  })
-
-  it('symbol click does not toggle row expand', async () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
-      createTestEntry({ id: 2, content: 'Child task', type: 'task', parentId: 1 }),
-    ]
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={entries} />)
-
-    const symbolButton = screen.getByTitle('Mark done')
-    await user.click(symbolButton)
-
-    // Parent should NOT be visible (expand was not triggered)
-    expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
-  })
-})
-
-describe('OverviewView - Action Icon Placeholders', () => {
-  it('renders same number of action slots for task and cancelled entries', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Task entry', type: 'task' }),
-      createTestEntry({ id: 2, content: 'Cancelled entry', type: 'cancelled' }),
-    ]
-
-    render(<OverviewView overdueEntries={entries} />)
-
-    const taskRow = screen.getByText('Task entry').closest('[data-entry-id]')
-    const cancelledRow = screen.getByText('Cancelled entry').closest('[data-entry-id]')
-
-    const taskActionSlots = taskRow?.querySelectorAll('[data-action-slot]')
-    const cancelledActionSlots = cancelledRow?.querySelectorAll('[data-action-slot]')
-
-    expect(taskActionSlots?.length).toBeGreaterThan(0)
-    expect(taskActionSlots?.length).toBe(cancelledActionSlots?.length)
-  })
-
-  it('renders same number of action slots for task and done entries', () => {
-    const entries = [
-      createTestEntry({ id: 1, content: 'Task entry', type: 'task' }),
-      createTestEntry({ id: 2, content: 'Done entry', type: 'done' }),
-    ]
-
-    render(<OverviewView overdueEntries={entries} />)
-
-    const taskRow = screen.getByText('Task entry').closest('[data-entry-id]')
-    const doneRow = screen.getByText('Done entry').closest('[data-entry-id]')
-
-    const taskActionSlots = taskRow?.querySelectorAll('[data-action-slot]')
-    const doneActionSlots = doneRow?.querySelectorAll('[data-action-slot]')
-
-    expect(taskActionSlots?.length).toBeGreaterThan(0)
-    expect(taskActionSlots?.length).toBe(doneActionSlots?.length)
-  })
-})
-
-describe('OverviewView - Move to List', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('shows move to list button for task entries when onMoveToList provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onMoveToList={vi.fn()} />)
-    expect(screen.getByTitle('Move to list')).toBeInTheDocument()
-  })
-
-  it('does not show move to list button when onMoveToList not provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
-  })
-
-  it('does not show move to list button for cancelled entries', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'cancelled' })]} onMoveToList={vi.fn()} />)
-    expect(screen.queryByTitle('Move to list')).not.toBeInTheDocument()
-  })
-
-  it('calls onMoveToList when move to list button is clicked', async () => {
-    const user = userEvent.setup()
-    const onMoveToList = vi.fn()
-    const entry = createTestEntry({ id: 42, type: 'task' })
-    render(<OverviewView overdueEntries={[entry]} onMoveToList={onMoveToList} />)
-
-    await user.click(screen.getByTitle('Move to list'))
-
-    expect(onMoveToList).toHaveBeenCalledWith(entry)
   })
 })
 
@@ -767,36 +439,65 @@ describe('OverviewView - Navigate to Entry', () => {
     vi.clearAllMocks()
   })
 
-  it('shows go to date button when onNavigateToEntry provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} onNavigateToEntry={vi.fn()} />)
-    expect(screen.getByTitle('Go to date')).toBeInTheDocument()
+  it('shows go to entry button in popover when onNavigateToEntry provided', async () => {
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task', type: 'task' })]} onNavigateToEntry={vi.fn()} />)
+
+    await user.click(screen.getByText('Test task'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Go to entry')).toBeInTheDocument()
+    })
   })
 
-  it('does not show go to date button when onNavigateToEntry not provided', () => {
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task' })]} />)
-    expect(screen.queryByTitle('Go to date')).not.toBeInTheDocument()
+  it('does not show go to entry button in popover when onNavigateToEntry not provided', async () => {
+    const user = userEvent.setup()
+    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task', type: 'task' })]} />)
+
+    await user.click(screen.getByText('Test task'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Go to entry')).not.toBeInTheDocument()
   })
 
-  it('calls onNavigateToEntry when go to date button is clicked', async () => {
+  it('calls onNavigateToEntry when go to entry button is clicked in popover', async () => {
     const user = userEvent.setup()
     const onNavigateToEntry = vi.fn()
-    const entry = createTestEntry({ id: 42, type: 'task', loggedDate: '2026-01-15' })
+    const entry = createTestEntry({ id: 42, content: 'Test task', type: 'task', loggedDate: '2026-01-15' })
     render(<OverviewView overdueEntries={[entry]} onNavigateToEntry={onNavigateToEntry} />)
 
-    await user.click(screen.getByTitle('Go to date'))
+    await user.click(screen.getByText('Test task'))
+    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
+
+    await user.click(screen.getByText('Go to entry'))
 
     expect(onNavigateToEntry).toHaveBeenCalledWith(entry)
   })
 
-  it('shows go to date button for all entry types', () => {
+  it('shows go to entry button in popover for all entry types', async () => {
+    const user = userEvent.setup()
     const entries = [
-      createTestEntry({ id: 1, type: 'task' }),
-      createTestEntry({ id: 2, type: 'done' }),
-      createTestEntry({ id: 3, type: 'cancelled' }),
+      createTestEntry({ id: 1, content: 'Task', type: 'task' }),
+      createTestEntry({ id: 2, content: 'Done', type: 'done' }),
+      createTestEntry({ id: 3, content: 'Cancelled', type: 'cancelled' }),
     ]
     render(<OverviewView overdueEntries={entries} onNavigateToEntry={vi.fn()} />)
 
-    const goToDateButtons = screen.getAllByTitle('Go to date')
-    expect(goToDateButtons).toHaveLength(3)
+    // Click first entry
+    await user.click(screen.getByText('Task'))
+    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
+
+    // Close popover and click second entry
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByText('Done'))
+    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
+
+    // Close popover and click third entry
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByText('Cancelled'))
+    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
   })
 })

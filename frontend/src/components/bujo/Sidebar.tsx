@@ -50,6 +50,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
           <button
             key={view}
             onClick={() => onViewChange(view)}
+            aria-pressed={currentView === view}
             className={cn(
               'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
               currentView === view
@@ -67,6 +68,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       <div className="p-3 border-t border-sidebar-border">
         <button
           onClick={() => onViewChange('settings')}
+          aria-pressed={currentView === 'settings'}
           className={cn(
             'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
             currentView === 'settings'

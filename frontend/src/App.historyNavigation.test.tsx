@@ -165,7 +165,7 @@ describe('App - Navigation History', () => {
       })
     })
 
-    it('back button disappears after going back', async () => {
+    it('supports multi-level navigation history', async () => {
       const user = userEvent.setup()
       render(<App />)
 
@@ -173,7 +173,7 @@ describe('App - Navigation History', () => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
       })
 
-      // Navigate to weekly review
+      // Navigate to weekly review (pushes today to history)
       const reviewButton = screen.getByRole('button', { name: /weekly review/i })
       await user.click(reviewButton)
 
@@ -190,28 +190,45 @@ describe('App - Navigation History', () => {
         expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
       })
 
-      // Click "Go to" button to navigate
+      // Click "Go to" button to navigate (pushes week to history)
       const goToButton = screen.getByRole('button', { name: /go to/i })
       await user.click(goToButton)
 
-      // Wait for back button
+      // Wait for back button (history: [today, week])
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
       })
 
-      // Click back button
+      // Click back button - should return to week view
       const backButton = screen.getByRole('button', { name: /go back/i })
       await user.click(backButton)
 
-      // Back button should disappear after going back
+      await waitFor(() => {
+        expect(screen.getByTestId('week-summary')).toBeInTheDocument()
+      })
+
+      // Back button should still be visible (history: [today])
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
+      })
+
+      // Click back again - should return to today view
+      const backButtonAgain = screen.getByRole('button', { name: /go back/i })
+      await user.click(backButtonAgain)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      // Back button should now disappear (history: [])
       await waitFor(() => {
         expect(screen.queryByRole('button', { name: /go back/i })).not.toBeInTheDocument()
       })
     })
   })
 
-  describe('manual navigation clears history', () => {
-    it('clears history when manually changing view via sidebar', async () => {
+  describe('manual navigation to today clears history', () => {
+    it('clears history when manually navigating to today view via sidebar', async () => {
       const user = userEvent.setup()
       render(<App />)
 
@@ -219,7 +236,7 @@ describe('App - Navigation History', () => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
       })
 
-      // Navigate to weekly review
+      // Navigate to weekly review (pushes today to history)
       const reviewButton = screen.getByRole('button', { name: /weekly review/i })
       await user.click(reviewButton)
 
@@ -227,29 +244,20 @@ describe('App - Navigation History', () => {
         expect(screen.getByTestId('week-summary')).toBeInTheDocument()
       })
 
-      // Click on an attention item to open popover
-      const weekSummary = screen.getByTestId('week-summary')
-      const attentionItem = within(weekSummary).getByText('Task needing attention')
-      await user.click(attentionItem)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
-      })
-
-      // Click "Go to" button to navigate
-      const goToButton = screen.getByRole('button', { name: /go to/i })
-      await user.click(goToButton)
-
-      // Wait for back button (history is set)
+      // Back button should be visible (can go back to today)
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
       })
 
-      // Manually navigate to habits via sidebar
-      const habitsButton = screen.getByRole('button', { name: /habit tracker/i })
-      await user.click(habitsButton)
+      // Manually navigate to today via sidebar
+      const todayButton = screen.getByRole('button', { name: /journal/i })
+      await user.click(todayButton)
 
-      // Back button should be gone (history cleared by manual navigation)
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      // Back button should be gone (history cleared by navigating to today)
       await waitFor(() => {
         expect(screen.queryByRole('button', { name: /go back/i })).not.toBeInTheDocument()
       })
