@@ -1,9 +1,7 @@
-import { DayEntries, Entry } from '@/types/bujo';
+import { DayEntries, Entry, ActionType } from '@/types/bujo';
 import { calculateAttentionScore, sortByAttentionScore } from '@/lib/attentionScore';
 import { cn } from '@/lib/utils';
 import { EntryContextPopover } from './EntryContextPopover';
-
-type ActionType = 'done' | 'cancel' | 'priority' | 'migrate';
 
 interface WeekSummaryProps {
   days: DayEntries[];
@@ -13,6 +11,9 @@ interface WeekSummaryProps {
 }
 
 const MAX_ATTENTION_ITEMS = 5;
+
+const NOOP_ACTION = () => {};
+const NOOP_NAVIGATE = () => {};
 
 function flattenEntries(entries: Entry[]): Entry[] {
   const result: Entry[] = [];
@@ -148,7 +149,17 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
                 );
               }
 
-              return <div key={entry.id}>{attentionItem}</div>;
+              return (
+                <EntryContextPopover
+                  key={entry.id}
+                  entry={entry}
+                  entries={allEntries}
+                  onAction={NOOP_ACTION}
+                  onNavigate={NOOP_NAVIGATE}
+                >
+                  {attentionItem}
+                </EntryContextPopover>
+              );
             })
           )}
           {hasMoreThanLimit && (

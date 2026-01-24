@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Entry, ENTRY_SYMBOLS } from '@/types/bujo'
 import { cn } from '@/lib/utils'
 
@@ -10,7 +11,7 @@ interface EntryTreeProps {
 const INDENT_PX = 16
 
 export function EntryTree({ entries, highlightedEntryId, rootEntryId }: EntryTreeProps) {
-  const entriesById = new Map(entries.map(e => [e.id, e]))
+  const entriesById = useMemo(() => new Map(entries.map(e => [e.id, e])), [entries])
 
   function buildPath(entryId: number): Entry[] {
     const path: Entry[] = []

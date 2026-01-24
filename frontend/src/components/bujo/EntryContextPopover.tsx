@@ -1,9 +1,7 @@
-import { ReactNode, useState, useCallback, useEffect } from 'react'
+import { ReactNode, useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import * as Popover from '@radix-ui/react-popover'
-import { Entry } from '@/types/bujo'
+import { Entry, ActionType } from '@/types/bujo'
 import { EntryTree } from './EntryTree'
-
-type ActionType = 'done' | 'cancel' | 'priority' | 'migrate'
 
 interface EntryContextPopoverProps {
   entry: Entry
@@ -29,8 +27,7 @@ function getAvailableActions(entry: Entry): ActionType[] {
   }
 }
 
-function findRootId(entry: Entry, entries: Entry[]): number {
-  const entriesById = new Map(entries.map(e => [e.id, e]))
+function findRootId(entry: Entry, entriesById: Map<number, Entry>): number {
   let current = entry
   while (current.parentId) {
     const parent = entriesById.get(current.parentId)
@@ -49,19 +46,32 @@ export function EntryContextPopover({
 }: EntryContextPopoverProps) {
   const [open, setOpen] = useState(false)
   const availableActions = getAvailableActions(entry)
-  const rootId = findRootId(entry, entries)
+  const entriesById = useMemo(() => new Map(entries.map(e => [e.id, e])), [entries])
+  const rootId = useMemo(() => findRootId(entry, entriesById), [entry, entriesById])
+
+  const onActionRef = useRef(onAction)
+  const onNavigateRef = useRef(onNavigate)
+  const entryRef = useRef(entry)
+  const setOpenRef = useRef(setOpen)
+
+  useEffect(() => {
+    onActionRef.current = onAction
+    onNavigateRef.current = onNavigate
+    entryRef.current = entry
+    setOpenRef.current = setOpen
+  })
 
   const handleAction = useCallback((action: ActionType) => {
-    onAction(entry, action)
+    onActionRef.current(entryRef.current, action)
     if (action === 'done' || action === 'cancel') {
-      setOpen(false)
+      setOpenRef.current(false)
     }
-  }, [entry, onAction])
+  }, [])
 
   const handleNavigate = useCallback(() => {
-    onNavigate(entry)
-    setOpen(false)
-  }, [entry, onNavigate])
+    onNavigateRef.current(entryRef.current)
+    setOpenRef.current(false)
+  }, [])
 
   useEffect(() => {
     if (!open) return

@@ -53,26 +53,42 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   ref
 ) {
   const [content, setContent] = useState(() => {
-    return localStorage.getItem(DRAFT_KEY) || ''
+    try {
+      return localStorage.getItem(DRAFT_KEY) || ''
+    } catch {
+      return ''
+    }
   })
   const [selectedType, setSelectedType] = useState<CaptureType>(() => {
-    const stored = localStorage.getItem(TYPE_KEY) as CaptureType | null
-    return stored && TYPES.includes(stored) ? stored : 'task'
+    try {
+      const stored = localStorage.getItem(TYPE_KEY) as CaptureType | null
+      return stored && TYPES.includes(stored) ? stored : 'task'
+    } catch {
+      return 'task'
+    }
   })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useImperativeHandle(ref, () => textareaRef.current as HTMLTextAreaElement)
 
   useEffect(() => {
-    if (content) {
-      localStorage.setItem(DRAFT_KEY, content)
-    } else {
-      localStorage.removeItem(DRAFT_KEY)
+    try {
+      if (content) {
+        localStorage.setItem(DRAFT_KEY, content)
+      } else {
+        localStorage.removeItem(DRAFT_KEY)
+      }
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
     }
   }, [content])
 
   useEffect(() => {
-    localStorage.setItem(TYPE_KEY, selectedType)
+    try {
+      localStorage.setItem(TYPE_KEY, selectedType)
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
+    }
   }, [selectedType])
 
   useEffect(() => {
@@ -95,7 +111,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     }
 
     setContent('')
-    localStorage.removeItem(DRAFT_KEY)
+    try {
+      localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // Ignore localStorage errors (e.g., incognito mode)
+    }
     textareaRef.current?.focus()
   }, [content, selectedType, parentEntry, onSubmitChild, onSubmit])
 
@@ -139,7 +159,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
       e.preventDefault()
       if (content) {
         setContent('')
-        localStorage.removeItem(DRAFT_KEY)
+        try {
+          localStorage.removeItem(DRAFT_KEY)
+        } catch {
+          // Ignore localStorage errors (e.g., incognito mode)
+        }
       } else {
         textareaRef.current?.blur()
       }
