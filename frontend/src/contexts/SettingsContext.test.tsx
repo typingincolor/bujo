@@ -59,4 +59,19 @@ describe('SettingsContext', () => {
     const parsed = JSON.parse(stored!)
     expect(parsed.theme).toBe('light')
   })
+
+  it('should persist default view changes to localStorage', () => {
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    })
+
+    act(() => {
+      result.current.setDefaultView('week')
+    })
+
+    const stored = localStorage.getItem('bujo-settings')
+    expect(stored).toBeDefined()
+    const parsed = JSON.parse(stored!)
+    expect(parsed.defaultView).toBe('week')
+  })
 })
