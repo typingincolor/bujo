@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { renderHook, act } from '@testing-library/react'
 import { SettingsProvider, useSettings } from './SettingsContext'
@@ -73,5 +73,35 @@ describe('SettingsContext', () => {
     expect(stored).toBeDefined()
     const parsed = JSON.parse(stored!)
     expect(parsed.defaultView).toBe('week')
+  })
+
+  it('should fall back to defaults when localStorage contains invalid JSON', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    localStorage.setItem('bujo-settings', 'invalid json{')
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(screen.getByTestId('theme').textContent).toBe(DEFAULT_SETTINGS.theme)
+    expect(screen.getByTestId('defaultView').textContent).toBe(DEFAULT_SETTINGS.defaultView)
+    expect(consoleWarnSpy).toHaveBeenCalled()
+
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('should merge valid stored settings with defaults', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'light' }))
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(screen.getByTestId('theme').textContent).toBe('light')
+    expect(screen.getByTestId('defaultView').textContent).toBe(DEFAULT_SETTINGS.defaultView)
   })
 })
