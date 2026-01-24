@@ -9,6 +9,8 @@ interface EntryContextPopoverProps {
   onAction: (entry: Entry, action: ActionType) => void
   onNavigate?: (entry: Entry) => void
   children: ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 function getAvailableActions(entry: Entry): ActionType[] {
@@ -43,8 +45,12 @@ export function EntryContextPopover({
   onAction,
   onNavigate,
   children,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: EntryContextPopoverProps) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen
   const availableActions = getAvailableActions(entry)
   const entriesById = useMemo(() => new Map(entries.map(e => [e.id, e])), [entries])
   const rootId = useMemo(() => findRootId(entry, entriesById), [entry, entriesById])
@@ -59,7 +65,7 @@ export function EntryContextPopover({
     onNavigateRef.current = onNavigate
     entryRef.current = entry
     setOpenRef.current = setOpen
-  }, [onAction, onNavigate, entry])
+  }, [onAction, onNavigate, entry, setOpen])
 
   const handleAction = useCallback((action: ActionType) => {
     onActionRef.current(entryRef.current, action)
@@ -131,7 +137,7 @@ export function EntryContextPopover({
                   onClick={() => handleAction('done')}
                   aria-label="Mark done"
                   className="p-2 rounded hover:bg-muted"
-                  title="Done (Space)"
+                  title="Mark done (Space)"
                 >
                   ✓
                 </button>
@@ -168,14 +174,12 @@ export function EntryContextPopover({
               )}
             </div>
 
-            {onNavigate && (
-              <button
-                onClick={handleNavigate}
-                className="text-sm text-primary hover:underline"
-              >
-                Go to entry
-              </button>
-            )}
+            <button
+              onClick={handleNavigate}
+              className="text-sm text-primary hover:underline"
+            >
+              Go to entry
+            </button>
           </div>
 
           <Popover.Arrow className="fill-border" />
