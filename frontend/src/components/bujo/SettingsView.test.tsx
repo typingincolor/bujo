@@ -1,10 +1,18 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SettingsView } from './SettingsView'
 import { SettingsProvider } from '../../contexts/SettingsContext'
+import * as WailsApp from '@/wailsjs/go/wails/App'
+
+vi.mock('@/wailsjs/go/wails/App', () => ({
+  GetVersion: vi.fn(() => Promise.resolve('1.0.0')),
+}))
 
 describe('SettingsView', () => {
+  beforeEach(() => {
+    vi.mocked(WailsApp.GetVersion).mockResolvedValue('1.0.0')
+  })
   it('renders settings title', () => {
     render(
       <SettingsProvider>
@@ -59,14 +67,14 @@ describe('SettingsView', () => {
     expect(screen.getByText(/about/i)).toBeInTheDocument()
   })
 
-  it('displays version info', () => {
+  it('displays version info', async () => {
     render(
       <SettingsProvider>
         <SettingsView />
       </SettingsProvider>
     )
     expect(screen.getByText('Version')).toBeInTheDocument()
-    expect(screen.getByText('1.0.0')).toBeInTheDocument()
+    expect(await screen.findByText('1.0.0')).toBeInTheDocument()
   })
 
   it('displays default view setting', () => {
@@ -183,5 +191,19 @@ describe('SettingsView', () => {
     const stored = localStorage.getItem('bujo-settings')
     const parsed = JSON.parse(stored!)
     expect(parsed.defaultView).toBe('search')
+  })
+
+  it('displays backend version from API', async () => {
+    vi.mocked(WailsApp.GetVersion).mockResolvedValue('v0.1.0-nightly+85d8787')
+
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('v0.1.0-nightly+85d8787')).toBeInTheDocument()
+    })
   })
 })

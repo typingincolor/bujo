@@ -1,9 +1,16 @@
+import { useState, useEffect } from 'react';
 import { Settings, Palette, Database, Info } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import type { Theme, DefaultView } from '../../types/settings';
+import { GetVersion } from '@/wailsjs/go/wails/App';
 
 export function SettingsView() {
   const { theme, setTheme, defaultView, setDefaultView } = useSettings();
+  const [version, setVersion] = useState<string>('Loading...');
+
+  useEffect(() => {
+    GetVersion().then(setVersion).catch(() => setVersion('Unknown'));
+  }, []);
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -69,7 +76,7 @@ export function SettingsView() {
             label="Version"
             description="Current application version"
           >
-            <span className="text-sm text-muted-foreground">1.0.0</span>
+            <span className="text-sm text-muted-foreground">{version}</span>
           </SettingRow>
           <SettingRow
             label="bujo"
