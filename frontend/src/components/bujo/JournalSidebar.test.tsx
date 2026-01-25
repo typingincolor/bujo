@@ -30,6 +30,30 @@ describe('JournalSidebar', () => {
       expect(screen.getByText(/pending tasks.*\(2\)/i)).toBeInTheDocument()
     })
 
+    it('only shows task entries, filtering out notes and events', () => {
+      const mixedEntries = [
+        createTestEntry({ id: 1, content: 'Task entry', type: 'task' }),
+        createTestEntry({ id: 2, content: 'Note entry', type: 'note' }),
+        createTestEntry({ id: 3, content: 'Event entry', type: 'event' }),
+        createTestEntry({ id: 4, content: 'Another task', type: 'task' }),
+        createTestEntry({ id: 5, content: 'Question entry', type: 'question' }),
+      ]
+
+      render(<JournalSidebar overdueEntries={mixedEntries} now={now} />)
+
+      // Only tasks should appear
+      expect(screen.getByText('Task entry')).toBeInTheDocument()
+      expect(screen.getByText('Another task')).toBeInTheDocument()
+
+      // Non-tasks should not appear
+      expect(screen.queryByText('Note entry')).not.toBeInTheDocument()
+      expect(screen.queryByText('Event entry')).not.toBeInTheDocument()
+      expect(screen.queryByText('Question entry')).not.toBeInTheDocument()
+
+      // Count should only include tasks (2, not 5)
+      expect(screen.getByText(/pending tasks.*\(2\)/i)).toBeInTheDocument()
+    })
+
     it('is not collapsible - no collapse button exists', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
       // Should not have a button role for section header

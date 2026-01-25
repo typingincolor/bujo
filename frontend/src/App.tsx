@@ -120,7 +120,7 @@ function App() {
       setReviewDays(transformedReviewDays)
       const transformedOverdue = (agendaData?.Overdue || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
-      setOverdueCount(transformedOverdue.length)
+      setOverdueCount(transformedOverdue.filter(e => e.type === 'task').length)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))

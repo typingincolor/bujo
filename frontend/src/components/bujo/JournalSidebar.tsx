@@ -95,21 +95,27 @@ export function JournalSidebar({
 }: JournalSidebarProps) {
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
+  // Filter to only show task entries (not notes, events, questions, etc.)
+  const taskEntries = useMemo(
+    () => overdueEntries.filter((e) => e.type === 'task'),
+    [overdueEntries]
+  );
+
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
       {/* Pending Tasks Section */}
       <div>
         <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
-          <span>Pending Tasks ({overdueEntries.length})</span>
+          <span>Pending Tasks ({taskEntries.length})</span>
         </div>
 
         <div className="px-1 py-1 max-h-80 overflow-y-auto">
-          {overdueEntries.length === 0 ? (
+          {taskEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground px-2 py-2">
               No pending tasks
             </p>
           ) : (
-            overdueEntries.map((entry) => (
+            taskEntries.map((entry) => (
               <OverdueItem
                 key={entry.id}
                 entry={entry}

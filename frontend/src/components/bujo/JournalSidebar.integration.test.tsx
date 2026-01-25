@@ -17,7 +17,7 @@ function createTestEntry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function buildAncestorPath(entry: Entry, entries: Entry[]): Entry[] {
+function buildContextTree(entry: Entry, entries: Entry[]): Entry[] {
   const entriesById = new Map(entries.map(e => [e.id, e]))
   const path: Entry[] = []
   let current: Entry | undefined = entry
@@ -28,8 +28,8 @@ function buildAncestorPath(entry: Entry, entries: Entry[]): Entry[] {
     current = entriesById.get(current.parentId)
   }
 
-  // Return ancestors only (excluding the entry itself)
-  return path.slice(0, -1)
+  // Return full path including the entry itself
+  return path
 }
 
 // Integration wrapper that mimics App's selection behavior
@@ -44,7 +44,7 @@ function SelectionIntegrationWrapper({
   const now = new Date('2026-01-25T12:00:00Z')
 
   const ancestors = selectedEntry
-    ? buildAncestorPath(selectedEntry, allEntries)
+    ? buildContextTree(selectedEntry, allEntries)
     : []
 
   return (
@@ -53,7 +53,7 @@ function SelectionIntegrationWrapper({
         overdueEntries={overdueEntries}
         now={now}
         selectedEntry={selectedEntry ?? undefined}
-        ancestors={ancestors}
+        contextTree={ancestors}
         onSelectEntry={setSelectedEntry}
       />
       <div data-testid="selection-state">
