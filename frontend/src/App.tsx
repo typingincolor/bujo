@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -84,6 +84,7 @@ function App() {
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
   const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
+  const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
@@ -146,12 +147,21 @@ function App() {
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
-  // Ancestors for sidebar-selected overdue entry (empty for now - overdue entries don't have tree context)
-  const sidebarSelectedAncestors = useMemo(() => {
-    if (!sidebarSelectedEntry) return []
-    // Overdue entries are displayed in a flat list, ancestors not available
-    // Could be fetched from backend if needed in future
-    return []
+  // Fetch full context tree for sidebar-selected entry from backend
+  useEffect(() => {
+    if (!sidebarSelectedEntry) {
+      setSidebarContextTree([])
+      return
+    }
+
+    GetEntryContext(sidebarSelectedEntry.id)
+      .then((entries) => {
+        setSidebarContextTree(entries.map(transformEntry))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch entry context:', err)
+        setSidebarContextTree([])
+      })
   }, [sidebarSelectedEntry])
 
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
@@ -766,7 +776,7 @@ function App() {
             overdueEntries={overdueEntries}
             now={currentDate}
             selectedEntry={sidebarSelectedEntry ?? undefined}
-            ancestors={sidebarSelectedAncestors}
+            contextTree={sidebarContextTree}
             onSelectEntry={setSidebarSelectedEntry}
           />
         </aside>

@@ -102,11 +102,15 @@ describe('JournalSidebar', () => {
       expect(screen.getByText('Context')).toBeInTheDocument()
     })
 
-    it('shows ancestor hierarchy in Context when entry selected', () => {
-      const selectedEntry = createTestEntry({ id: 3, content: 'Selected' })
-      const ancestors = [
-        createTestEntry({ id: 2, content: 'Parent' }),
-        createTestEntry({ id: 1, content: 'Grandparent' }),
+    it('shows full tree structure in Context when entry selected', () => {
+      const selectedEntry = createTestEntry({ id: 3, content: 'Selected', parentId: 2 })
+      // Context tree is a flat list that gets built into a tree
+      // Root -> Child1 (selected entry's sibling) and Child2 (parent of selected) -> Selected
+      const contextTree = [
+        createTestEntry({ id: 1, content: 'Root', parentId: null }),
+        createTestEntry({ id: 2, content: 'Parent', parentId: 1 }),
+        createTestEntry({ id: 3, content: 'Selected', parentId: 2 }),
+        createTestEntry({ id: 4, content: 'Sibling', parentId: 2 }),
       ]
 
       render(
@@ -114,37 +118,39 @@ describe('JournalSidebar', () => {
           overdueEntries={[]}
           now={now}
           selectedEntry={selectedEntry}
-          ancestors={ancestors}
+          contextTree={contextTree}
         />
       )
 
-      expect(screen.getByText('Grandparent')).toBeInTheDocument()
+      expect(screen.getByText('Root')).toBeInTheDocument()
       expect(screen.getByText('Parent')).toBeInTheDocument()
       expect(screen.getByText('Selected')).toBeInTheDocument()
+      expect(screen.getByText('Sibling')).toBeInTheDocument()
     })
 
-    it('shows "No context" when no entry selected', () => {
+    it('shows "No entry selected" when no entry selected', () => {
       render(<JournalSidebar overdueEntries={[]} now={now} />)
       expect(screen.getByText(/no entry selected/i)).toBeInTheDocument()
     })
 
-    it('shows "No context" when entry has no ancestors', () => {
+    it('shows "No context" when entry is selected but tree is empty', () => {
       const selectedEntry = createTestEntry({ id: 1, content: 'Orphan' })
       render(
         <JournalSidebar
           overdueEntries={[]}
           now={now}
           selectedEntry={selectedEntry}
-          ancestors={[]}
+          contextTree={[]}
         />
       )
       expect(screen.getByText(/no context/i)).toBeInTheDocument()
     })
 
-    it('shows entry symbols for each ancestor level', () => {
-      const selectedEntry = createTestEntry({ id: 2, content: 'Child', type: 'task' })
-      const ancestors = [
-        createTestEntry({ id: 1, content: 'Parent', type: 'note' }),
+    it('shows entry symbols for each tree level', () => {
+      const selectedEntry = createTestEntry({ id: 2, content: 'Child', type: 'task', parentId: 1 })
+      const contextTree = [
+        createTestEntry({ id: 1, content: 'Parent', type: 'note', parentId: null }),
+        createTestEntry({ id: 2, content: 'Child', type: 'task', parentId: 1 }),
       ]
 
       render(
@@ -152,13 +158,34 @@ describe('JournalSidebar', () => {
           overdueEntries={[]}
           now={now}
           selectedEntry={selectedEntry}
-          ancestors={ancestors}
+          contextTree={contextTree}
         />
       )
 
       const contextSection = screen.getByTestId('context-section')
       expect(contextSection).toHaveTextContent('–') // note symbol
       expect(contextSection).toHaveTextContent('•') // task symbol
+    })
+
+    it('highlights the selected entry in the tree', () => {
+      const selectedEntry = createTestEntry({ id: 2, content: 'Selected Child', type: 'task', parentId: 1 })
+      const contextTree = [
+        createTestEntry({ id: 1, content: 'Parent', type: 'note', parentId: null }),
+        createTestEntry({ id: 2, content: 'Selected Child', type: 'task', parentId: 1 }),
+      ]
+
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={now}
+          selectedEntry={selectedEntry}
+          contextTree={contextTree}
+        />
+      )
+
+      // The selected entry should have font-medium class
+      const selectedText = screen.getByText('Selected Child')
+      expect(selectedText.closest('div')).toHaveClass('font-medium')
     })
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Entry, ENTRY_SYMBOLS } from '@/types/bujo';
@@ -9,18 +9,95 @@ interface JournalSidebarProps {
   overdueEntries: Entry[];
   now: Date;
   selectedEntry?: Entry;
-  ancestors?: Entry[];
+  contextTree?: Entry[];
   onSelectEntry?: (entry: Entry) => void;
+}
+
+interface TreeNode {
+  entry: Entry;
+  children: TreeNode[];
+}
+
+function buildTree(entries: Entry[]): TreeNode[] {
+  if (entries.length === 0) return [];
+
+  const entryMap = new Map<number, Entry>();
+  const childrenMap = new Map<number | null, Entry[]>();
+
+  for (const entry of entries) {
+    entryMap.set(entry.id, entry);
+    const parentId = entry.parentId;
+    if (!childrenMap.has(parentId)) {
+      childrenMap.set(parentId, []);
+    }
+    childrenMap.get(parentId)!.push(entry);
+  }
+
+  function buildNode(entry: Entry): TreeNode {
+    const children = childrenMap.get(entry.id) || [];
+    return {
+      entry,
+      children: children.map(buildNode),
+    };
+  }
+
+  const roots = childrenMap.get(null) || [];
+  return roots.map(buildNode);
+}
+
+interface ContextTreeProps {
+  nodes: TreeNode[];
+  selectedEntryId?: number;
+  depth?: number;
+}
+
+function ContextTree({ nodes, selectedEntryId, depth = 0 }: ContextTreeProps) {
+  return (
+    <>
+      {nodes.map((node) => (
+        <div key={node.entry.id}>
+          <div
+            className={cn(
+              'flex items-center gap-2 text-sm py-0.5 font-mono',
+              node.entry.id === selectedEntryId
+                ? 'font-medium'
+                : 'text-muted-foreground'
+            )}
+            style={{ paddingLeft: `${depth * 12}px` }}
+          >
+            <span className="text-muted-foreground">
+              {ENTRY_SYMBOLS[node.entry.type]}
+            </span>
+            <span className={cn(
+              'truncate',
+              node.entry.id === selectedEntryId && 'text-foreground'
+            )}>
+              {node.entry.content}
+            </span>
+          </div>
+          {node.children.length > 0 && (
+            <ContextTree
+              nodes={node.children}
+              selectedEntryId={selectedEntryId}
+              depth={depth + 1}
+            />
+          )}
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function JournalSidebar({
   overdueEntries,
   now,
   selectedEntry,
-  ancestors = [],
+  contextTree = [],
   onSelectEntry,
 }: JournalSidebarProps) {
   const [isOverdueOpen, setIsOverdueOpen] = useState(true);
+
+  const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
@@ -73,46 +150,13 @@ export function JournalSidebar({
         <div className="px-3 py-2">
           {!selectedEntry ? (
             <p className="text-sm text-muted-foreground">No entry selected</p>
-          ) : ancestors.length === 0 ? (
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
-                  {ENTRY_SYMBOLS[selectedEntry.type]}
-                </span>
-                <span>{selectedEntry.content}</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">No context</p>
-            </div>
+          ) : treeNodes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No context</p>
           ) : (
-            <div className="space-y-1">
-              {/* Ancestors in order from root to parent */}
-              {[...ancestors].reverse().map((ancestor, index) => (
-                <div
-                  key={ancestor.id}
-                  className={cn(
-                    'flex items-center gap-2 text-sm',
-                    index > 0 && 'ml-3'
-                  )}
-                >
-                  <span className="text-muted-foreground">
-                    {ENTRY_SYMBOLS[ancestor.type]}
-                  </span>
-                  <span className="text-muted-foreground">{ancestor.content}</span>
-                </div>
-              ))}
-              {/* Selected entry */}
-              <div
-                className={cn(
-                  'flex items-center gap-2 text-sm',
-                  ancestors.length > 0 && 'ml-3'
-                )}
-              >
-                <span className="text-muted-foreground">
-                  {ENTRY_SYMBOLS[selectedEntry.type]}
-                </span>
-                <span className="font-medium">{selectedEntry.content}</span>
-              </div>
-            </div>
+            <ContextTree
+              nodes={treeNodes}
+              selectedEntryId={selectedEntry.id}
+            />
           )}
         </div>
       </div>

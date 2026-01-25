@@ -82,6 +82,10 @@ export function GetEntryAncestors(arg1) {
   return window['go']['wails']['App']['GetEntryAncestors'](arg1);
 }
 
+export function GetEntryContext(arg1) {
+  return window['go']['wails']['App']['GetEntryContext'](arg1);
+}
+
 export function GetGoals(arg1) {
   return window['go']['wails']['App']['GetGoals'](arg1);
 }
