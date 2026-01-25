@@ -16,7 +16,7 @@ describe('EntrySymbol', () => {
 
     it('renders event symbol as circle', () => {
       render(<EntrySymbol type="event" />)
-      expect(screen.getByText('○')).toBeInTheDocument()
+      expect(screen.getByText('⚬')).toBeInTheDocument()
     })
 
     it('renders done symbol as check mark', () => {

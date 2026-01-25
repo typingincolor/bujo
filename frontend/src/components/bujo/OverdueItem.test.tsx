@@ -41,7 +41,7 @@ describe('OverdueItem', () => {
     it('renders entry symbol for event', () => {
       const entry = createTestEntry({ type: 'event' })
       render(<OverdueItem entry={entry} now={now} />)
-      expect(screen.getByTestId('entry-symbol')).toHaveTextContent('○')
+      expect(screen.getByTestId('entry-symbol')).toHaveTextContent('⚬')
     })
 
     it('renders entry symbol for question', () => {

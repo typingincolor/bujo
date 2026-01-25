@@ -312,7 +312,6 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
                       className={cn(
                         'text-lg w-5 text-center',
                         result.type === 'note' && 'text-bujo-note',
-                        result.type === 'event' && 'text-bujo-event',
                         result.type === 'cancelled' && 'text-bujo-cancelled',
                       )}
                     >

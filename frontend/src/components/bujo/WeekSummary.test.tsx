@@ -136,7 +136,7 @@ describe('WeekSummary', () => {
       render(<WeekSummary days={days} />)
 
       const meetingSection = screen.getByTestId('week-summary-meetings')
-      expect(meetingSection).toHaveTextContent('○') // event symbol
+      expect(meetingSection).toHaveTextContent('⚬') // event symbol
     })
 
     it('shows task symbol in attention section for tasks', () => {

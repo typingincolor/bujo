@@ -70,7 +70,7 @@ export interface Goal {
 export const ENTRY_SYMBOLS: Record<EntryType, string> = {
   task: '•',
   note: '–',
-  event: '○',
+  event: '⚬',
   done: '✓',
   migrated: '→',
   cancelled: '✗',
