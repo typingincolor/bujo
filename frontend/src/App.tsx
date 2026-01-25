@@ -32,7 +32,6 @@ import { transformDayEntries, transformEntry, transformHabit, transformList, tra
 import { startOfDay, cn } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
 import { scrollToPosition } from '@/lib/scrollUtils'
-import { JOURNAL_SIDEBAR_WIDTH_CLASS } from '@/lib/layoutConstants'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
