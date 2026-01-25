@@ -1,6 +1,4 @@
-import { useState, useMemo } from 'react';
-import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useMemo } from 'react';
 import { Entry, ENTRY_SYMBOLS } from '@/types/bujo';
 import { OverdueItem } from './OverdueItem';
 import { cn } from '@/lib/utils';
@@ -95,48 +93,34 @@ export function JournalSidebar({
   contextTree = [],
   onSelectEntry,
 }: JournalSidebarProps) {
-  const [isOverdueOpen, setIsOverdueOpen] = useState(true);
-
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
-      {/* Overdue Section */}
-      <Collapsible.Root open={isOverdueOpen} onOpenChange={setIsOverdueOpen}>
-        <Collapsible.Trigger asChild>
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium hover:bg-secondary/50 rounded-lg"
-            aria-label="Overdue"
-          >
-            {isOverdueOpen ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
-            <span>Overdue ({overdueEntries.length})</span>
-          </button>
-        </Collapsible.Trigger>
+      {/* Pending Tasks Section */}
+      <div>
+        <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
+          <span>Pending Tasks ({overdueEntries.length})</span>
+        </div>
 
-        <Collapsible.Content>
-          <div className="px-1 py-1 max-h-80 overflow-y-auto">
-            {overdueEntries.length === 0 ? (
-              <p className="text-sm text-muted-foreground px-2 py-2">
-                No overdue items
-              </p>
-            ) : (
-              overdueEntries.map((entry) => (
-                <OverdueItem
-                  key={entry.id}
-                  entry={entry}
-                  now={now}
-                  onSelect={onSelectEntry}
-                  isSelected={selectedEntry?.id === entry.id}
-                />
-              ))
-            )}
-          </div>
-        </Collapsible.Content>
-      </Collapsible.Root>
+        <div className="px-1 py-1 max-h-80 overflow-y-auto">
+          {overdueEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground px-2 py-2">
+              No pending tasks
+            </p>
+          ) : (
+            overdueEntries.map((entry) => (
+              <OverdueItem
+                key={entry.id}
+                entry={entry}
+                now={now}
+                onSelect={onSelectEntry}
+                isSelected={selectedEntry?.id === entry.id}
+              />
+            ))
+          )}
+        </div>
+      </div>
 
       {/* Divider */}
       <hr className="my-4 border-border" />

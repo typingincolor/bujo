@@ -25,57 +25,34 @@ describe('JournalSidebar', () => {
   ]
 
   describe('Overdue section', () => {
-    it('renders Overdue Items section', () => {
+    it('renders Pending Tasks section header', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-      expect(screen.getByRole('button', { name: 'Overdue' })).toBeInTheDocument()
+      expect(screen.getByText(/pending tasks.*\(2\)/i)).toBeInTheDocument()
     })
 
-    it('renders overdue entries with attention scores', () => {
+    it('is not collapsible - no collapse button exists', () => {
+      render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
+      // Should not have a button role for section header
+      expect(screen.queryByRole('button', { name: /pending tasks/i })).not.toBeInTheDocument()
+    })
+
+    it('renders overdue entries', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
 
-      // Section is expanded by default
       expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
       expect(screen.getByText('Overdue task 2')).toBeInTheDocument()
     })
 
     it('shows entry count in section header', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-      expect(screen.getByText(/overdue.*\(2\)/i)).toBeInTheDocument()
+      expect(screen.getByText(/pending tasks.*\(2\)/i)).toBeInTheDocument()
     })
 
-    it('starts expanded by default', () => {
+    it('always shows entries without collapse functionality', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-      // Section is expanded by default, entries visible
+      // Entries always visible - no interaction needed
       expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
-    })
-
-    it('collapses Overdue Items section when clicking header', async () => {
-      const user = userEvent.setup()
-      render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-
-      const triggerButton = screen.getByRole('button', { name: 'Overdue' })
-
-      // Starts expanded
-      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
-
-      // Click to collapse
-      await user.click(triggerButton)
-      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-    })
-
-    it('expands Overdue Items section when clicking header after collapse', async () => {
-      const user = userEvent.setup()
-      render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-
-      const triggerButton = screen.getByRole('button', { name: 'Overdue' })
-
-      // Collapse first
-      await user.click(triggerButton)
-      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-
-      // Expand again
-      await user.click(triggerButton)
-      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      expect(screen.getByText('Overdue task 2')).toBeInTheDocument()
     })
 
     it('calls onSelectEntry when clicking overdue item', async () => {
@@ -90,7 +67,6 @@ describe('JournalSidebar', () => {
         />
       )
 
-      // Section is expanded by default
       await user.click(screen.getByText('Overdue task 1'))
       expect(onSelectEntry).toHaveBeenCalledWith(mockOverdueEntries[0])
     })
@@ -190,11 +166,11 @@ describe('JournalSidebar', () => {
   })
 
   describe('empty state', () => {
-    it('shows empty message when no overdue entries', () => {
+    it('shows empty message when no pending tasks', () => {
       render(<JournalSidebar overdueEntries={[]} now={now} />)
 
-      // Section is expanded by default
-      expect(screen.getByText(/no overdue items/i)).toBeInTheDocument()
+      // Empty message always visible since section is not collapsible
+      expect(screen.getByText(/no pending tasks/i)).toBeInTheDocument()
     })
   })
 
@@ -209,11 +185,10 @@ describe('JournalSidebar', () => {
         />
       )
 
-      // Section is expanded by default
-      // Find the button containing the text (within the overdue items, not the header)
+      // Find the button containing the text
       const allButtons = screen.getAllByRole('button')
       const overdueItem = allButtons.find(
-        (btn) => btn.textContent?.includes('Overdue task 1') && btn.getAttribute('aria-label') !== 'Overdue'
+        (btn) => btn.textContent?.includes('Overdue task 1')
       )
       expect(overdueItem).toHaveClass('bg-accent')
     })
