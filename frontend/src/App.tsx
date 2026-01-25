@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext, CyclePriority } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -473,6 +473,35 @@ function App() {
     }
   }, [loadData])
 
+  const handleSidebarMarkDone = useCallback(async (entry: Entry) => {
+    try {
+      await MarkEntryDone(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to mark entry done:', err)
+      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
+    }
+  }, [loadData])
+
+  const handleSidebarCyclePriority = useCallback(async (entry: Entry) => {
+    try {
+      await CyclePriority(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to cycle priority:', err)
+      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
+    }
+  }, [loadData])
+
+  const sidebarCallbacks = useMemo(() => ({
+    onMarkDone: handleSidebarMarkDone,
+    onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
+    onEdit: (entry: Entry) => setEditModalEntry(entry),
+    onDelete: handleDeleteEntryRequest,
+    onCyclePriority: handleSidebarCyclePriority,
+    onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
+  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority])
+
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
     try {
@@ -778,6 +807,7 @@ function App() {
             selectedEntry={sidebarSelectedEntry ?? undefined}
             contextTree={sidebarContextTree}
             onSelectEntry={setSidebarSelectedEntry}
+            callbacks={sidebarCallbacks}
           />
         </aside>
       )}

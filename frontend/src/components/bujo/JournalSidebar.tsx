@@ -1,14 +1,25 @@
 import { useMemo } from 'react';
-import { Entry, ENTRY_SYMBOLS } from '@/types/bujo';
-import { OverdueItem } from './OverdueItem';
+import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
+import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
+import { calculateAttentionScore } from '@/lib/attentionScore';
+
+export interface JournalSidebarCallbacks {
+  onMarkDone?: (entry: Entry) => void;
+  onMigrate?: (entry: Entry) => void;
+  onEdit?: (entry: Entry) => void;
+  onDelete?: (entry: Entry) => void;
+  onCyclePriority?: (entry: Entry) => void;
+  onMoveToList?: (entry: Entry) => void;
+}
 
 interface JournalSidebarProps {
-  overdueEntries: Entry[];
-  now: Date;
+  overdueEntries?: Entry[];
+  now?: Date;
   selectedEntry?: Entry;
   contextTree?: Entry[];
   onSelectEntry?: (entry: Entry) => void;
+  callbacks?: JournalSidebarCallbacks;
 }
 
 interface TreeNode {
@@ -87,11 +98,12 @@ function ContextTree({ nodes, selectedEntryId, depth = 0 }: ContextTreeProps) {
 }
 
 export function JournalSidebar({
-  overdueEntries,
-  now,
+  overdueEntries = [],
+  now = new Date(),
   selectedEntry,
   contextTree = [],
   onSelectEntry,
+  callbacks = {},
 }: JournalSidebarProps) {
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
@@ -100,6 +112,15 @@ export function JournalSidebar({
     () => overdueEntries.filter((e) => e.type === 'task'),
     [overdueEntries]
   );
+
+  const createEntryCallbacks = (entry: Entry) => ({
+    onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
+    onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
+    onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
+    onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
+    onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
+    onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
+  });
 
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
@@ -115,15 +136,72 @@ export function JournalSidebar({
               No pending tasks
             </p>
           ) : (
-            taskEntries.map((entry) => (
-              <OverdueItem
-                key={entry.id}
-                entry={entry}
-                now={now}
-                onSelect={onSelectEntry}
-                isSelected={selectedEntry?.id === entry.id}
-              />
-            ))
+            taskEntries.map((entry) => {
+              const attentionResult = calculateAttentionScore(entry, now);
+              const symbol = ENTRY_SYMBOLS[entry.type];
+              const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
+              const hasParent = entry.parentId !== null;
+
+              return (
+                <div
+                  key={entry.id}
+                  className={cn(
+                    'group flex flex-col gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors hover:bg-secondary/50',
+                    selectedEntry?.id === entry.id && 'bg-accent'
+                  )}
+                >
+                  <button
+                    onClick={() => onSelectEntry?.(entry)}
+                    className="flex items-center gap-2 text-left min-w-0"
+                  >
+                    <span
+                      data-testid="context-dot-container"
+                      className="w-2 flex-shrink-0 flex items-center justify-center"
+                    >
+                      {hasParent && (
+                        <span
+                          data-testid="context-dot"
+                          className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
+                        />
+                      )}
+                    </span>
+
+                    <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
+                      {symbol}
+                    </span>
+
+                    {prioritySymbol && (
+                      <span
+                        data-testid="priority-indicator"
+                        className="text-orange-500 font-medium flex-shrink-0"
+                      >
+                        {prioritySymbol}
+                      </span>
+                    )}
+
+                    <span className="flex-1 truncate">{entry.content}</span>
+
+                    <span
+                      data-testid="attention-badge"
+                      className={cn(
+                        'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
+                        attentionResult.score >= 80 ? 'bg-red-500' :
+                        attentionResult.score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
+                      )}
+                    >
+                      {attentionResult.score}
+                    </span>
+                  </button>
+
+                  <EntryActionBar
+                    entry={entry}
+                    callbacks={createEntryCallbacks(entry)}
+                    variant="hover-reveal"
+                    size="sm"
+                  />
+                </div>
+              );
+            })
           )}
         </div>
       </div>
