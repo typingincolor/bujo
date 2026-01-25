@@ -172,54 +172,10 @@ describe('Bug #1 & #2: Weekly Review Data Display', () => {
 // Popover functionality was removed as part of UX change - context viewing
 // will be handled by a new ContextPanel, not popovers
 
-describe('Bug #5: Pending Tasks View Popover Integration', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    localStorage.clear()
-  })
-
-  it('Bug #5: pending tasks view uses popover instead of showing entries in boxes', async () => {
-    const overdueData = createMockAgenda({
-      Overdue: [
-        createMockEntry({ ID: 1, Type: 'Task', Content: 'Overdue task 1', Priority: 'high' }),
-        createMockEntry({ ID: 2, Type: 'Task', Content: 'Overdue task 2', Priority: 'none' }),
-      ],
-      Days: [],
-    })
-
-    vi.mocked(GetAgenda).mockResolvedValue(overdueData)
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => expect(screen.getByText('Overdue task 1')).toBeInTheDocument())
-
-    // Navigate to pending tasks (overview) view
-    await userEvent.click(screen.getByRole('button', { name: /pending tasks/i }))
-
-    await waitFor(() => {
-      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
-    })
-
-    // Click on an overdue task
-    const task = screen.getByText('Overdue task 1')
-    await userEvent.click(task)
-
-    // Should open popover, NOT show entry details in a box
-    await waitFor(() => {
-      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
-    })
-
-    // Should have quick action buttons in popover
-    expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /migrate/i })).toBeInTheDocument()
-
-    // Should NOT have EntryItem action bar visible (that's the "box" style)
-    expect(screen.queryByTestId('entry-action-bar')).not.toBeInTheDocument()
-  })
-})
+// Bug #5 test removed: Pending tasks view no longer uses popovers
+// Popover functionality was removed as part of UX change - context viewing
+// is handled by the ContextPanel, not popovers. See OverviewView.test.tsx
+// for current behavior tests.
 
 describe('Bug #6 & #7: CaptureBar Typography Issues', () => {
   beforeEach(() => {
