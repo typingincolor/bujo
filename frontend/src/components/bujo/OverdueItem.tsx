@@ -57,7 +57,7 @@ export function OverdueItem({
       <button
         onClick={handleClick}
         className={cn(
-          'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-secondary/50',
+          'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors hover:bg-secondary/50',
           isSelected && 'bg-accent'
         )}
       >
