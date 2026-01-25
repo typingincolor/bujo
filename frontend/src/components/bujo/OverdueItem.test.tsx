@@ -41,7 +41,7 @@ describe('OverdueItem', () => {
     it('renders entry symbol for event', () => {
       const entry = createTestEntry({ type: 'event' })
       render(<OverdueItem entry={entry} now={now} />)
-      expect(screen.getByTestId('entry-symbol')).toHaveTextContent('○')
+      expect(screen.getByTestId('entry-symbol')).toHaveTextContent('⚬')
     })
 
     it('renders entry symbol for question', () => {
@@ -62,6 +62,13 @@ describe('OverdueItem', () => {
       const entry = createTestEntry({ parentId: null })
       render(<OverdueItem entry={entry} now={now} />)
       expect(screen.queryByTestId('context-dot')).not.toBeInTheDocument()
+    })
+
+    it('always reserves space for context dot to keep symbols aligned', () => {
+      const entry = createTestEntry({ parentId: null })
+      render(<OverdueItem entry={entry} now={now} />)
+      // A placeholder container should exist even when dot is not shown
+      expect(screen.getByTestId('context-dot-container')).toBeInTheDocument()
     })
   })
 
@@ -201,14 +208,14 @@ describe('OverdueItem', () => {
       const entry = createTestEntry()
       render(<OverdueItem entry={entry} now={now} isSelected />)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-accent')
+      expect(button).toHaveClass('ring-primary/30')
     })
 
     it('does not show selected styling when isSelected is false', () => {
       const entry = createTestEntry()
       render(<OverdueItem entry={entry} now={now} isSelected={false} />)
       const button = screen.getByRole('button')
-      expect(button).not.toHaveClass('bg-accent')
+      expect(button).not.toHaveClass('ring-primary/30')
     })
   })
 })

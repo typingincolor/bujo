@@ -46,6 +46,8 @@ export function GetEntry(arg1:number):Promise<domain.Entry>;
 
 export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;
 
+export function GetEntryContext(arg1:number):Promise<Array<domain.Entry>>;
+
 export function GetGoals(arg1:time.Time):Promise<Array<domain.Goal>>;
 
 export function GetHabits(arg1:number):Promise<service.TrackerStatus>;

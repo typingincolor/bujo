@@ -299,7 +299,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
                       onClick={(e) => result.type === 'task' ? handleMarkDone(result.id, e) : handleMarkUndone(result.id, e)}
                       title={result.type === 'task' ? 'Task' : 'Done'}
                       className={cn(
-                        'text-lg font-mono w-5 text-center cursor-pointer hover:opacity-70 transition-opacity',
+                        'text-lg w-5 text-center cursor-pointer hover:opacity-70 transition-opacity',
                         result.type === 'done' && 'text-bujo-done',
                         result.type === 'task' && 'text-bujo-task',
                       )}
@@ -310,9 +310,8 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
                     <span
                       data-testid="entry-symbol"
                       className={cn(
-                        'text-lg font-mono w-5 text-center',
+                        'text-lg w-5 text-center',
                         result.type === 'note' && 'text-bujo-note',
-                        result.type === 'event' && 'text-bujo-event',
                         result.type === 'cancelled' && 'text-bujo-cancelled',
                       )}
                     >

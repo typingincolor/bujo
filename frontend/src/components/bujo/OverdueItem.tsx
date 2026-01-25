@@ -57,16 +57,21 @@ export function OverdueItem({
       <button
         onClick={handleClick}
         className={cn(
-          'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-secondary/50',
-          isSelected && 'bg-accent'
+          'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors hover:bg-secondary/50',
+          isSelected && 'bg-primary/10 ring-1 ring-primary/30'
         )}
       >
-        {hasParent && (
-          <span
-            data-testid="context-dot"
-            className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 flex-shrink-0"
-          />
-        )}
+        <span
+          data-testid="context-dot-container"
+          className="w-2 flex-shrink-0 flex items-center justify-center"
+        >
+          {hasParent && (
+            <span
+              data-testid="context-dot"
+              className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
+            />
+          )}
+        </span>
 
         <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
           {symbol}

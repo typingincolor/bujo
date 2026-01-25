@@ -87,7 +87,7 @@ export function StatsView({ days, habits, goals }: StatsViewProps) {
             icon={Calendar}
             label="Events"
             value={eventCount}
-            color="text-bujo-event"
+            color="text-foreground"
           />
         </div>
       </div>

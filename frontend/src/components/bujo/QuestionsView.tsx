@@ -276,7 +276,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                               )}
                               style={{ marginLeft: `${index * 16}px` }}
                             >
-                              <span className="w-5 text-center font-mono">
+                              <span className="w-5 text-center">
                                 {ENTRY_SYMBOLS[parent.type]}
                               </span>
                               <span className="flex-1 text-sm">{parent.content}</span>
@@ -303,7 +303,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                             )}
                             <span
                               data-testid="entry-symbol"
-                              className="w-5 text-center text-bujo-question font-mono"
+                              className="w-5 text-center text-bujo-question"
                             >
                               {ENTRY_SYMBOLS[entry.type]}
                             </span>

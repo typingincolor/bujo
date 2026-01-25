@@ -17,7 +17,7 @@ function createTestEntry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function buildAncestorPath(entry: Entry, entries: Entry[]): Entry[] {
+function buildContextTree(entry: Entry, entries: Entry[]): Entry[] {
   const entriesById = new Map(entries.map(e => [e.id, e]))
   const path: Entry[] = []
   let current: Entry | undefined = entry
@@ -28,8 +28,8 @@ function buildAncestorPath(entry: Entry, entries: Entry[]): Entry[] {
     current = entriesById.get(current.parentId)
   }
 
-  // Return ancestors only (excluding the entry itself)
-  return path.slice(0, -1)
+  // Return full path including the entry itself
+  return path
 }
 
 // Integration wrapper that mimics App's selection behavior
@@ -44,7 +44,7 @@ function SelectionIntegrationWrapper({
   const now = new Date('2026-01-25T12:00:00Z')
 
   const ancestors = selectedEntry
-    ? buildAncestorPath(selectedEntry, allEntries)
+    ? buildContextTree(selectedEntry, allEntries)
     : []
 
   return (
@@ -53,7 +53,7 @@ function SelectionIntegrationWrapper({
         overdueEntries={overdueEntries}
         now={now}
         selectedEntry={selectedEntry ?? undefined}
-        ancestors={ancestors}
+        contextTree={ancestors}
         onSelectEntry={setSelectedEntry}
       />
       <div data-testid="selection-state">
@@ -80,9 +80,7 @@ describe('JournalSidebar Selection Integration', () => {
 
     expect(screen.getByTestId('selection-state')).toHaveTextContent('No selection')
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('Overdue task 1'))
 
     expect(screen.getByTestId('selection-state')).toHaveTextContent('Selected: Overdue task 1')
@@ -104,9 +102,7 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('Child task'))
 
     // Context section should show ancestor hierarchy
@@ -130,9 +126,7 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('First task'))
     expect(screen.getByTestId('selection-state')).toHaveTextContent('Selected: First task')
 
@@ -153,14 +147,13 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     const button = screen.getByRole('button', { name: /overdue task/i })
-    expect(button).not.toHaveClass('bg-accent')
+    const container = button.parentElement!
+    expect(container).not.toHaveClass('ring-primary/30')
 
     await user.click(button)
 
-    expect(button).toHaveClass('bg-accent')
+    expect(container).toHaveClass('ring-primary/30')
   })
 })

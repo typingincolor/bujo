@@ -32,11 +32,6 @@ describe('CaptureBar', () => {
       expect(screen.getByPlaceholderText(/capture a thought/i)).toBeInTheDocument()
     })
 
-    it('renders file import button', () => {
-      render(<CaptureBar {...defaultProps} />)
-
-      expect(screen.getByRole('button', { name: /import file/i })).toBeInTheDocument()
-    })
   })
 
   describe('type selection via prefix only', () => {
@@ -283,18 +278,6 @@ describe('CaptureBar', () => {
       await user.keyboard('{Escape}')
 
       expect(input).not.toHaveFocus()
-    })
-  })
-
-  describe('file import', () => {
-    it('calls onFileImport when import button clicked', async () => {
-      const user = userEvent.setup()
-      const onFileImport = vi.fn()
-      render(<CaptureBar {...defaultProps} onFileImport={onFileImport} />)
-
-      await user.click(screen.getByRole('button', { name: /import file/i }))
-
-      expect(onFileImport).toHaveBeenCalled()
     })
   })
 

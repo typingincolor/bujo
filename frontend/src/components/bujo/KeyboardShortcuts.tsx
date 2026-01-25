@@ -16,7 +16,7 @@ function KeyboardHint({ keys, action }: KeyboardHintProps) {
       <div className="flex items-center gap-0.5">
         {keys.map((key, i) => (
           <span key={i}>
-            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">
+            <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border text-[10px]">
               {key}
             </kbd>
             {i < keys.length - 1 && <span className="mx-0.5 text-muted-foreground">/</span>}
@@ -46,6 +46,7 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
           <KeyboardHint keys={['h']} action="Previous day" />
           <KeyboardHint keys={['l']} action="Next day" />
           <KeyboardHint keys={['T']} action="Go to today" />
+          <KeyboardHint keys={['[']} action="Toggle sidebar" />
           <KeyboardHint keys={['Space']} action="Toggle done" />
           <KeyboardHint keys={['x']} action="Cancel/uncancel" />
           <KeyboardHint keys={['p']} action="Cycle priority" />

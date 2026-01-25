@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
-import { Calendar, FileEdit, Smile, Cloud, MapPin } from 'lucide-react';
+import { Calendar, FileEdit, Smile, Cloud, MapPin, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SetMood, SetWeather, SetLocation, GetLocationHistory } from '@/wailsjs/go/wails/App';
 
@@ -49,6 +49,7 @@ interface HeaderProps {
   onBack?: () => void;
   actions?: React.ReactNode;
   showContextPickers?: boolean;
+  onUpload?: () => void;
 }
 
 export function Header({
@@ -65,6 +66,7 @@ export function Header({
   onBack,
   actions,
   showContextPickers = true,
+  onUpload,
 }: HeaderProps) {
   const displayDate = currentDate ?? new Date();
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -273,6 +275,20 @@ export function Header({
 
       <div className="flex items-center gap-2">
         {actions}
+        {/* Upload button */}
+        {onUpload && (
+          <button
+            onClick={onUpload}
+            title="Upload file"
+            className={cn(
+              'px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Upload className="w-4 h-4" />
+            <span className="text-sm">Upload</span>
+          </button>
+        )}
         {/* Capture button */}
         {onCapture && (
           <button

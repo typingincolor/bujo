@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -32,7 +32,6 @@ import { transformDayEntries, transformEntry, transformHabit, transformList, tra
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
 import { scrollToPosition } from '@/lib/scrollUtils'
-import { JOURNAL_SIDEBAR_WIDTH_CLASS } from '@/lib/layoutConstants'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
@@ -84,7 +83,12 @@ function App() {
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
   const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
+  const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
+  const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
+  const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
@@ -119,7 +123,7 @@ function App() {
       setReviewDays(transformedReviewDays)
       const transformedOverdue = (agendaData?.Overdue || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
-      setOverdueCount(transformedOverdue.length)
+      setOverdueCount(transformedOverdue.filter(e => e.type === 'task').length)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
@@ -146,12 +150,21 @@ function App() {
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
-  // Ancestors for sidebar-selected overdue entry (empty for now - overdue entries don't have tree context)
-  const sidebarSelectedAncestors = useMemo(() => {
-    if (!sidebarSelectedEntry) return []
-    // Overdue entries are displayed in a flat list, ancestors not available
-    // Could be fetched from backend if needed in future
-    return []
+  // Fetch full context tree for sidebar-selected entry from backend
+  useEffect(() => {
+    if (!sidebarSelectedEntry) {
+      setSidebarContextTree([])
+      return
+    }
+
+    GetEntryContext(sidebarSelectedEntry.id)
+      .then((entries) => {
+        setSidebarContextTree(entries.map(transformEntry))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch entry context:', err)
+        setSidebarContextTree([])
+      })
   }, [sidebarSelectedEntry])
 
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
@@ -253,6 +266,11 @@ function App() {
           handleGoToToday()
           return
         }
+        if (e.key === '[') {
+          e.preventDefault()
+          setIsSidebarCollapsed(prev => !prev)
+          return
+        }
       }
 
       // Habit view shortcuts
@@ -305,7 +323,63 @@ function App() {
         }
       }
 
-      if (view !== 'today' || flatEntries.length === 0) return
+      if (view !== 'today') return
+
+      // Get sidebar task entries (filtered the same way as JournalSidebar)
+      const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
+
+      // Tab key switches focus between main panel and sidebar
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        if (focusedPanel === 'main') {
+          // Switch to sidebar
+          setFocusedPanel('sidebar')
+          setSelectedIndex(-1) // Clear main panel selection
+          setSelectedEntry(null)
+          if (sidebarTaskEntries.length > 0) {
+            setSidebarSelectedIndex(0)
+            setSidebarSelectedEntry(sidebarTaskEntries[0])
+          }
+        } else {
+          // Switch to main panel
+          setFocusedPanel('main')
+          setSidebarSelectedIndex(-1)
+          setSidebarSelectedEntry(null)
+          if (flatEntries.length > 0) {
+            setSelectedIndex(0)
+            setSelectedEntry(flatEntries[0])
+          }
+        }
+        return
+      }
+
+      // Navigation keys depend on which panel is focused
+      if (focusedPanel === 'sidebar') {
+        switch (e.key) {
+          case 'j':
+          case 'ArrowDown': {
+            e.preventDefault()
+            if (sidebarTaskEntries.length === 0) return
+            const nextIndex = Math.min(sidebarSelectedIndex + 1, sidebarTaskEntries.length - 1)
+            setSidebarSelectedIndex(nextIndex)
+            setSidebarSelectedEntry(sidebarTaskEntries[nextIndex])
+            break
+          }
+          case 'k':
+          case 'ArrowUp': {
+            e.preventDefault()
+            if (sidebarTaskEntries.length === 0) return
+            const prevIndex = Math.max(sidebarSelectedIndex - 1, 0)
+            setSidebarSelectedIndex(prevIndex)
+            setSidebarSelectedEntry(sidebarTaskEntries[prevIndex])
+            break
+          }
+        }
+        return
+      }
+
+      // Main panel navigation
+      if (flatEntries.length === 0) return
 
       switch (e.key) {
         case 'j':
@@ -361,18 +435,44 @@ function App() {
           }
           break
         }
+        case 'p': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            CyclePriority(entry.id).then(() => loadData())
+          }
+          break
+        }
+        case 't': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            const cycleOrder = ['task', 'note', 'event', 'question'] as const
+            const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number])
+            if (currentIndex !== -1) {
+              const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
+              RetypeEntry(entry.id, nextType).then(() => loadData())
+            }
+          }
+          break
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
+  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
 
   useEffect(() => {
-    setSelectedIndex(0)
-    const entries = flattenEntries(days[0]?.entries || [])
-    setSelectedEntry(entries[0] ?? null)
-  }, [days])
+    // Only reset main panel selection if main panel is focused
+    // This prevents dual highlighting when sidebar has selection and data refreshes
+    if (focusedPanel === 'main') {
+      setSelectedIndex(0)
+      const entries = flattenEntries(days[0]?.entries || [])
+      setSelectedEntry(entries[0] ?? null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]) // Only run when days changes, focusedPanel is just a guard condition
 
   const handleViewChange = (newView: ViewType) => {
     if (newView === 'today') {
@@ -441,6 +541,10 @@ function App() {
     if (index !== -1) {
       setSelectedIndex(index)
       setSelectedEntry(flatEntries[index])
+      // Clear sidebar selection when main panel is selected
+      setSidebarSelectedEntry(null)
+      setSidebarSelectedIndex(-1)
+      setFocusedPanel('main')
     }
   }, [flatEntries])
 
@@ -453,6 +557,18 @@ function App() {
     }
   }, [flatEntries])
 
+  const handleSidebarSelectEntry = useCallback((entry: Entry) => {
+    // Find the index of this entry in the filtered task entries
+    const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
+    const index = sidebarTaskEntries.findIndex(e => e.id === entry.id)
+    setSidebarSelectedEntry(entry)
+    setSidebarSelectedIndex(index)
+    // Clear main panel selection when sidebar is selected
+    setSelectedIndex(-1)
+    setSelectedEntry(null)
+    setFocusedPanel('sidebar')
+  }, [overdueEntries])
+
   const handleMoveToRoot = useCallback(async (entry: Entry) => {
     try {
       await MoveEntryToRoot(entry.id)
@@ -462,6 +578,35 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to move entry to root')
     }
   }, [loadData])
+
+  const handleSidebarMarkDone = useCallback(async (entry: Entry) => {
+    try {
+      await MarkEntryDone(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to mark entry done:', err)
+      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
+    }
+  }, [loadData])
+
+  const handleSidebarCyclePriority = useCallback(async (entry: Entry) => {
+    try {
+      await CyclePriority(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to cycle priority:', err)
+      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
+    }
+  }, [loadData])
+
+  const sidebarCallbacks = useMemo(() => ({
+    onMarkDone: handleSidebarMarkDone,
+    onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
+    onEdit: (entry: Entry) => setEditModalEntry(entry),
+    onDelete: handleDeleteEntryRequest,
+    onCyclePriority: handleSidebarCyclePriority,
+    onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
+  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority])
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
@@ -606,11 +751,12 @@ function App() {
           onLocationChanged={loadData}
           canGoBack={canGoBack}
           onBack={handleBack}
+          onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-6">
               {/* Day Navigation */}
               <div className="flex items-center justify-center">
                 <DateNavigator
@@ -638,8 +784,9 @@ function App() {
                 onSubmit={handleCaptureBarSubmit}
                 onSubmitChild={handleCaptureBarSubmitChild}
                 onClearParent={handleCaptureBarClearParent}
-                onFileImport={handleCaptureBarFileImport}
                 parentEntry={captureParentEntry}
+                sidebarWidth={journalSidebarWidth}
+                isSidebarCollapsed={isSidebarCollapsed}
               />
             </div>
           )}
@@ -760,14 +907,21 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className={`${JOURNAL_SIDEBAR_WIDTH_CLASS} h-screen border-l border-border bg-background overflow-y-auto p-2`}
+          className="h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out"
+          style={{
+            width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
+          }}
         >
           <JournalSidebar
             overdueEntries={overdueEntries}
             now={currentDate}
             selectedEntry={sidebarSelectedEntry ?? undefined}
-            ancestors={sidebarSelectedAncestors}
-            onSelectEntry={setSidebarSelectedEntry}
+            contextTree={sidebarContextTree}
+            onSelectEntry={handleSidebarSelectEntry}
+            callbacks={sidebarCallbacks}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+            onWidthChange={setJournalSidebarWidth}
           />
         </aside>
       )}

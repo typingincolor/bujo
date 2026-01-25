@@ -1,6 +1,6 @@
 import { DayEntries, Entry } from '@/types/bujo';
 import { EntryItem } from './EntryItem';
-import { Calendar, MapPin, Cloud, Heart, Sparkles } from 'lucide-react';
+import { Calendar, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -66,9 +66,10 @@ interface EntryTreeProps {
   onMoveToRoot?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
   onAnswer?: (entry: Entry) => void;
+  showContextDot?: boolean;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer, showContextDot = true }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -99,6 +100,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
               onMoveToList={onMoveToList ? () => onMoveToList(entry) : undefined}
               onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
+              showContextDot={showContextDot}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -120,6 +122,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onMoveToRoot={onMoveToRoot}
                 onMoveToList={onMoveToList}
                 onAnswer={onAnswer}
+                showContextDot={showContextDot}
               />
             )}
           </div>
@@ -250,26 +253,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
           </span>
         </div>
         
-        {/* Context indicators */}
-        <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
-          {day.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {day.location}
-            </span>
-          )}
-          {day.weather && (
-            <span className="flex items-center gap-1">
-              <Cloud className="w-3.5 h-3.5" />
-              {day.weather}
-            </span>
-          )}
-          {day.mood && (
-            <span className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5" />
-              {day.mood}
-            </span>
-          )}
+        {/* AI Summary toggle */}
+        <div className="flex items-center ml-auto">
           <button
             onClick={handleToggleSummary}
             title="Toggle AI summary"
@@ -322,6 +307,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onMoveToRoot={handleMoveToRoot}
             onMoveToList={onMoveToList}
             onAnswer={onAnswerEntry}
+            showContextDot={false}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">

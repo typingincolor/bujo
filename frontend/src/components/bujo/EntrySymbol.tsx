@@ -10,7 +10,7 @@ interface EntrySymbolProps {
 const typeStyles: Record<EntryType, string> = {
   task: 'text-bujo-task',
   note: 'text-bujo-note',
-  event: 'text-bujo-event',
+  event: '',
   done: 'text-bujo-done',
   migrated: 'text-bujo-migrated',
   cancelled: 'text-bujo-cancelled',

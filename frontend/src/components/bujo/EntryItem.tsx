@@ -13,6 +13,7 @@ interface EntryItemProps {
   hasChildren?: boolean;
   hasParent?: boolean;
   childCount?: number;
+  showContextDot?: boolean;
   isSelected?: boolean;
   disableClick?: boolean;
   onToggleCollapse?: () => void;
@@ -52,6 +53,7 @@ export function EntryItem({
   hasChildren = false,
   hasParent = false,
   childCount = 0,
+  showContextDot = true,
   isSelected = false,
   disableClick = false,
   onToggleCollapse,
@@ -73,6 +75,29 @@ export function EntryItem({
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
   const canEdit = entry.type !== 'cancelled';
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isKeyboardNavigating, setIsKeyboardNavigating] = useState(false);
+
+  // Clear hover state when keyboard navigation occurs (arrow keys)
+  // Also temporarily block mouse hover to prevent immediate re-hover
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'j' || e.key === 'k') {
+        setIsHovered(false);
+        setIsKeyboardNavigating(true);
+      }
+    };
+    const handleMouseMove = () => {
+      // Re-enable hover after any mouse movement following keyboard navigation
+      setIsKeyboardNavigating(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
 
   const closeContextMenu = useCallback(() => {
     setContextMenuPos(null);
@@ -114,15 +139,17 @@ export function EntryItem({
       data-entry-id={entry.id}
       data-selected={isSelected}
       className={cn(
-        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative font-mono',
+        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative',
         'animate-fade-in',
-        !isSelected && 'hover:bg-secondary/50',
+        !isSelected && isHovered && 'bg-secondary/50',
         isToggleable && !disableClick && 'cursor-pointer',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
-      style={{ paddingLeft: `${depth * 20 + 8}px`, fontFamily: 'monospace' }}
+      style={{ paddingLeft: `${depth * 20 + 8}px` }}
       onClick={disableClick ? undefined : handleClick}
       onContextMenu={handleContextMenu}
+      onMouseEnter={() => !isKeyboardNavigating && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {/* Collapse indicator */}
       {hasChildren ? (
@@ -144,14 +171,16 @@ export function EntryItem({
       )}
 
       {/* Context dot - indicates entry has ancestors */}
-      {entry.parentId !== null ? (
-        <span
-          data-testid="context-dot"
-          className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
-          title="Has parent context"
-        />
-      ) : (
-        <span className="w-1.5" />
+      {showContextDot && (
+        entry.parentId !== null ? (
+          <span
+            data-testid="context-dot"
+            className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
+            title="Has parent context"
+          />
+        ) : (
+          <span className="w-1.5" />
+        )
       )}
 
       {/* Symbol - clickable for task/done entries */}
@@ -182,7 +211,7 @@ export function EntryItem({
         </span>
       )}
 
-      {/* Action buttons (shown on hover) */}
+      {/* Action buttons (shown on hover or when selected) */}
       <EntryActionBar
         entry={entry}
         callbacks={{
@@ -198,10 +227,15 @@ export function EntryItem({
         }}
         variant="hover-reveal"
         size="sm"
+        isSelected={isSelected}
+        isHovered={isHovered}
       />
 
       {/* Entry ID (shown on hover) */}
-      <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+      <span className={cn(
+        'text-xs text-muted-foreground transition-opacity',
+        isHovered ? 'opacity-100' : 'opacity-0'
+      )}>
         #{entry.id}
       </span>
 

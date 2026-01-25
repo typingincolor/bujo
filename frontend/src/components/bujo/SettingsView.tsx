@@ -56,7 +56,7 @@ export function SettingsView() {
             label="Database Location"
             description="Where your journal data is stored"
           >
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-xs text-muted-foreground">
               ~/.bujo/bujo.db
             </span>
           </SettingRow>

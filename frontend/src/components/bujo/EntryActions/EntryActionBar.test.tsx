@@ -185,18 +185,51 @@ describe('EntryActionBar', () => {
   });
 
   describe('variants', () => {
-    it('applies opacity-0 group-hover:opacity-100 focus-within:opacity-100 for hover-reveal variant', () => {
+    it('applies opacity-0 when not hovered/selected for hover-reveal variant', () => {
       render(
         <EntryActionBar
           entry={createEntry()}
           callbacks={{ onDelete: vi.fn() }}
           variant="hover-reveal"
+          isHovered={false}
+          isSelected={false}
         />
       );
 
       const container = document.querySelector('[data-testid="entry-action-bar"]');
       expect(container).toHaveClass('opacity-0');
-      expect(container).toHaveClass('group-hover:opacity-100');
+      expect(container).toHaveClass('focus-within:opacity-100');
+    });
+
+    it('applies opacity-100 when hovered for hover-reveal variant', () => {
+      render(
+        <EntryActionBar
+          entry={createEntry()}
+          callbacks={{ onDelete: vi.fn() }}
+          variant="hover-reveal"
+          isHovered={true}
+          isSelected={false}
+        />
+      );
+
+      const container = document.querySelector('[data-testid="entry-action-bar"]');
+      expect(container).toHaveClass('opacity-100');
+      expect(container).toHaveClass('focus-within:opacity-100');
+    });
+
+    it('applies opacity-100 when selected for hover-reveal variant', () => {
+      render(
+        <EntryActionBar
+          entry={createEntry()}
+          callbacks={{ onDelete: vi.fn() }}
+          variant="hover-reveal"
+          isHovered={false}
+          isSelected={true}
+        />
+      );
+
+      const container = document.querySelector('[data-testid="entry-action-bar"]');
+      expect(container).toHaveClass('opacity-100');
       expect(container).toHaveClass('focus-within:opacity-100');
     });
 

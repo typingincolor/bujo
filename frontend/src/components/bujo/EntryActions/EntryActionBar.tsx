@@ -21,6 +21,8 @@ interface EntryActionBarProps {
   variant?: EntryActionBarVariant;
   size?: ActionButtonSize;
   usePlaceholders?: boolean;
+  isSelected?: boolean;
+  isHovered?: boolean;
   className?: string;
 }
 
@@ -46,11 +48,15 @@ export function EntryActionBar({
   variant = 'hover-reveal',
   size = 'md',
   usePlaceholders = false,
+  isSelected = false,
+  isHovered = false,
   className,
 }: EntryActionBarProps) {
+  // Use JavaScript-controlled visibility instead of CSS group-hover to prevent stuck hover state
+  const shouldShow = variant !== 'hover-reveal' || isSelected || isHovered;
   const variantClasses =
     variant === 'hover-reveal'
-      ? 'opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'
+      ? `${shouldShow ? 'opacity-100' : 'opacity-0'} focus-within:opacity-100 transition-opacity`
       : '';
 
   const renderAction = (actionType: EntryActionType): React.ReactNode => {

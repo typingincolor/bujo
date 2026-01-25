@@ -466,14 +466,14 @@ describe('CaptureBar - Draft Persistence', () => {
   })
 })
 
-describe('CaptureBar - File Import', () => {
+describe('Header - File Upload', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
   })
 
-  it('shows file import button', async () => {
+  it('shows upload button in header', async () => {
     render(
       <SettingsProvider>
         <App />
@@ -484,10 +484,10 @@ describe('CaptureBar - File Import', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    expect(screen.getByRole('button', { name: /import/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /upload/i })).toBeInTheDocument()
   })
 
-  it('clicking import button opens file dialog', async () => {
+  it('clicking upload button opens file dialog', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -499,13 +499,13 @@ describe('CaptureBar - File Import', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const importButton = screen.getByRole('button', { name: /import/i })
-    await user.click(importButton)
+    const uploadButton = screen.getByRole('button', { name: /upload/i })
+    await user.click(uploadButton)
 
     expect(OpenFileDialog).toHaveBeenCalled()
   })
 
-  it('appends file content to input', async () => {
+  it('appends file content to capture bar input', async () => {
     const fileContent = 'Imported content'
     vi.mocked(OpenFileDialog).mockResolvedValueOnce(fileContent)
     const user = userEvent.setup()
@@ -523,8 +523,8 @@ describe('CaptureBar - File Import', () => {
     const input = screen.getByTestId('capture-bar-input')
     await user.type(input, 'Existing ')
 
-    const importButton = screen.getByRole('button', { name: /import/i })
-    await user.click(importButton)
+    const uploadButton = screen.getByRole('button', { name: /upload/i })
+    await user.click(uploadButton)
 
     await waitFor(() => {
       expect(input).toHaveValue('Existing Imported content')
@@ -587,5 +587,46 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
     expect(screen.queryByText(/adding to:/i)).not.toBeInTheDocument()
     expect(input).toHaveFocus()
+  })
+
+  describe('CaptureBar positioning with dynamic sidebar', () => {
+    it('does not use static right-[32rem] class', async () => {
+      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      const captureBar = screen.getByTestId('capture-bar')
+
+      // Should NOT have the static right-[32rem] class
+      expect(captureBar.className).not.toContain('right-[32rem]')
+    })
+
+    it('uses dynamic right positioning based on sidebar width', async () => {
+      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      const captureBar = screen.getByTestId('capture-bar')
+
+      // Should have inline style for right positioning
+      // Default sidebar width is 512px
+      expect(captureBar.style.right).toBe('512px')
+    })
   })
 })

@@ -202,6 +202,10 @@ func (a *App) GetEntryAncestors(id int64) ([]domain.Entry, error) {
 	return a.services.Bujo.GetEntryAncestors(a.ctx, id)
 }
 
+func (a *App) GetEntryContext(id int64) ([]domain.Entry, error) {
+	return a.services.Bujo.GetEntryContext(a.ctx, id, 100)
+}
+
 func (a *App) EditEntry(id int64, newContent string) error {
 	return a.services.Bujo.EditEntry(a.ctx, id, newContent)
 }
