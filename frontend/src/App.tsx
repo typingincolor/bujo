@@ -913,7 +913,7 @@ function App() {
         <aside
           className={cn(
             'h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out',
-            isSidebarCollapsed ? 'w-10' : JOURNAL_SIDEBAR_WIDTH_CLASS
+            isSidebarCollapsed && 'w-10'
           )}
         >
           <JournalSidebar

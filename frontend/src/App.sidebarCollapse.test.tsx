@@ -142,4 +142,54 @@ describe('App - Sidebar Collapse', () => {
       })
     })
   })
+
+  describe('Sidebar width styling', () => {
+    it('does not apply static width class when sidebar is expanded', async () => {
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+      })
+
+      // Find the sidebar's parent aside element
+      const sidebar = screen.getByTestId('overdue-sidebar')
+      const asideElement = sidebar.closest('aside')
+
+      expect(asideElement).toBeInTheDocument()
+
+      // Should NOT have the static width class w-[32rem] when expanded
+      expect(asideElement?.className).not.toContain('w-[32rem]')
+    })
+
+    it('applies w-10 class when sidebar is collapsed', async () => {
+      const user = userEvent.setup()
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+      })
+
+      // Collapse the sidebar
+      await user.keyboard('{[}')
+
+      await waitFor(() => {
+        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
+      })
+
+      // Find the sidebar's parent aside element
+      const sidebar = screen.getByTestId('overdue-sidebar')
+      const asideElement = sidebar.closest('aside')
+
+      // Should have w-10 class when collapsed
+      expect(asideElement?.className).toContain('w-10')
+    })
+  })
 })
