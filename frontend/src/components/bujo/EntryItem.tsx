@@ -114,13 +114,13 @@ export function EntryItem({
       data-entry-id={entry.id}
       data-selected={isSelected}
       className={cn(
-        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative font-mono',
+        'group flex items-center gap-2 py-1.5 px-2 rounded-md transition-colors relative',
         'animate-fade-in',
         !isSelected && 'hover:bg-secondary/50',
         isToggleable && !disableClick && 'cursor-pointer',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
-      style={{ paddingLeft: `${depth * 20 + 8}px`, fontFamily: 'monospace' }}
+      style={{ paddingLeft: `${depth * 20 + 8}px` }}
       onClick={disableClick ? undefined : handleClick}
       onContextMenu={handleContextMenu}
     >

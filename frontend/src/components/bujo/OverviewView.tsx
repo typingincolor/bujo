@@ -261,7 +261,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onNaviga
                           )}
                           <span
                             data-testid="entry-symbol"
-                            className="w-5 text-center text-muted-foreground font-mono"
+                            className="w-5 text-center text-muted-foreground"
                           >
                             {ENTRY_SYMBOLS[entry.type]}
                           </span>

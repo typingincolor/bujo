@@ -165,7 +165,7 @@ export function CaptureModal({
             className={cn(
               'w-full flex-1 px-3 py-2 rounded-md border bg-background',
               'focus:outline-none focus:ring-2 focus:ring-primary',
-              'placeholder:text-muted-foreground text-sm font-mono resize-none'
+              'placeholder:text-muted-foreground text-sm resize-none'
             )}
             autoFocus
           />

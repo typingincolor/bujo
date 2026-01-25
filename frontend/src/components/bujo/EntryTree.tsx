@@ -143,7 +143,7 @@ export function EntryTree({ entries, highlightedEntryId, rootEntryId }: EntryTre
             )}
             onClick={() => hasChildren && handleNavigateToEntry(entry.id)}
           >
-            <span className="font-mono mr-2">{symbol}</span>
+            <span className="mr-2">{symbol}</span>
             {entry.content}
           </div>
         )
