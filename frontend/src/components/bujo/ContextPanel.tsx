@@ -34,9 +34,19 @@ export function ContextPanel({ selectedEntry, entries }: ContextPanelProps) {
   }
 
   if (path.length === 1) {
+    const entry = path[0]
     return (
-      <div className="p-4 text-muted-foreground text-sm">
-        No context for this entry
+      <div className="p-4">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-3">
+          Selected Entry
+        </h3>
+        <div className="py-1 text-sm font-medium text-foreground">
+          <span className="mr-2">{ENTRY_SYMBOLS[entry.type]}</span>
+          <span>{entry.content}</span>
+        </div>
+        <p className="mt-2 text-muted-foreground text-xs">
+          No parent context
+        </p>
       </div>
     )
   }

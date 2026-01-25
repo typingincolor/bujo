@@ -82,6 +82,7 @@ function App() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [showContextPanel, setShowContextPanel] = useState(false)
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null)
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
@@ -310,15 +311,21 @@ function App() {
 
       switch (e.key) {
         case 'j':
-        case 'ArrowDown':
+        case 'ArrowDown': {
           e.preventDefault()
-          setSelectedIndex(prev => Math.min(prev + 1, flatEntries.length - 1))
+          const nextIndex = Math.min(selectedIndex + 1, flatEntries.length - 1)
+          setSelectedIndex(nextIndex)
+          setSelectedEntry(flatEntries[nextIndex])
           break
+        }
         case 'k':
-        case 'ArrowUp':
+        case 'ArrowUp': {
           e.preventDefault()
-          setSelectedIndex(prev => Math.max(prev - 1, 0))
+          const prevIndex = Math.max(selectedIndex - 1, 0)
+          setSelectedIndex(prevIndex)
+          setSelectedEntry(flatEntries[prevIndex])
           break
+        }
         case ' ': {
           e.preventDefault()
           const entry = flatEntries[selectedIndex]
@@ -365,6 +372,8 @@ function App() {
 
   useEffect(() => {
     setSelectedIndex(0)
+    const entries = flattenEntries(days[0]?.entries || [])
+    setSelectedEntry(entries[0] ?? null)
   }, [days])
 
   const handleViewChange = (newView: ViewType) => {
@@ -433,6 +442,7 @@ function App() {
     const index = flatEntries.findIndex(e => e.id === id)
     if (index !== -1) {
       setSelectedIndex(index)
+      setSelectedEntry(flatEntries[index])
     }
   }, [flatEntries])
 
@@ -510,6 +520,18 @@ function App() {
     const entryDate = new Date(result.date)
     setReviewAnchorDate(startOfDay(entryDate))
     setView('week')
+  }, [])
+
+  const handleSearchSelectEntry = useCallback((result: SearchResult) => {
+    setSelectedEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date,
+      ancestors: result.ancestors,
+    })
   }, [])
 
   const handleOverviewNavigate = useCallback((entry: Entry) => {
@@ -771,6 +793,7 @@ function App() {
               <SearchView
                 onMigrate={handleSearchMigrate}
                 onNavigateToEntry={handleSearchNavigate}
+                onSelectEntry={handleSearchSelectEntry}
               />
             </div>
           )}
@@ -803,7 +826,7 @@ function App() {
           className="w-64 h-screen border-l border-border bg-background overflow-y-auto"
         >
           <ContextPanel
-            selectedEntry={view === 'today' ? flatEntries[selectedIndex] ?? null : null}
+            selectedEntry={selectedEntry}
             entries={flatEntries}
           />
         </aside>

@@ -51,6 +51,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
+  Search: vi.fn().mockResolvedValue([]),
 }))
 
 import { GetAgenda } from './wailsjs/go/wails/App'
@@ -208,6 +209,57 @@ describe('App context panel toggle', () => {
     await waitFor(() => {
       const panel = screen.getByTestId('context-panel')
       expect(panel).toHaveTextContent('Child task')
+    })
+  })
+
+  it('updates context panel when search result is clicked', async () => {
+    // Mock search results
+    const { Search } = await import('./wailsjs/go/wails/App')
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Search result task', ParentID: null, CreatedAt: '2026-01-15T10:00:00Z' }),
+    ])
+
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Navigate to search view
+    const searchButton = screen.getByRole('button', { name: /^search$/i })
+    await user.click(searchButton)
+
+    // Wait for search view
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    })
+
+    // Open context panel with Shift+C
+    await user.keyboard('C')
+    expect(screen.getByTestId('context-panel')).toBeInTheDocument()
+
+    // Type in search box and search
+    const searchInput = screen.getByPlaceholderText(/search entries/i)
+    await user.type(searchInput, 'Search result')
+    await user.keyboard('{Enter}')
+
+    // Wait for search results
+    await waitFor(() => {
+      expect(screen.getByText('Search result task')).toBeInTheDocument()
+    })
+
+    // Click on search result
+    await user.click(screen.getByText('Search result task'))
+
+    // Panel should show the search result entry
+    await waitFor(() => {
+      const panel = screen.getByTestId('context-panel')
+      expect(panel).toHaveTextContent('Search result task')
     })
   })
 })

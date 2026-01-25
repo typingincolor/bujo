@@ -10,10 +10,11 @@ const mockEntries: Entry[] = [
 ]
 
 describe('ContextPanel', () => {
-  it('renders empty state when selectedEntry has no ancestors', () => {
+  it('renders selected entry with no parent context message when entry has no ancestors', () => {
     const rootEntry = mockEntries[0]
     render(<ContextPanel selectedEntry={rootEntry} entries={mockEntries} />)
-    expect(screen.getByText('No context for this entry')).toBeInTheDocument()
+    expect(screen.getByText('Root entry')).toBeInTheDocument()
+    expect(screen.getByText('No parent context')).toBeInTheDocument()
   })
 
   it('renders hierarchy tree when selectedEntry has ancestors', () => {
