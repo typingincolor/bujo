@@ -25,30 +25,30 @@ describe('DayBox', () => {
     expect(screen.getByText('Test entry')).toBeInTheDocument();
   });
 
-  it('passes selectedEntryId to WeekEntry', () => {
+  it('passes selectedEntry to WeekEntry', () => {
     render(
       <DayBox
         date={new Date('2026-01-20')}
         entries={[mockEntry]}
-        selectedEntryId={1}
+        selectedEntry={mockEntry}
       />
     );
     const container = screen.getByText('Test entry').closest('div');
     expect(container).toHaveClass('bg-primary/10');
   });
 
-  it('calls onEntrySelect when entry clicked', async () => {
+  it('calls onSelectEntry when entry clicked', async () => {
     const user = userEvent.setup();
-    const onEntrySelect = vi.fn();
+    const onSelectEntry = vi.fn();
     render(
       <DayBox
         date={new Date('2026-01-20')}
         entries={[mockEntry]}
-        onEntrySelect={onEntrySelect}
+        onSelectEntry={onSelectEntry}
       />
     );
 
     await user.click(screen.getByRole('button'));
-    expect(onEntrySelect).toHaveBeenCalledWith(1);
+    expect(onSelectEntry).toHaveBeenCalledWith(mockEntry);
   });
 });

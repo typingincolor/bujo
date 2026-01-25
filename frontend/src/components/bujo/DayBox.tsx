@@ -5,11 +5,11 @@ import { format } from 'date-fns';
 interface DayBoxProps {
   date: Date;
   entries: Entry[];
-  selectedEntryId?: number;
-  onEntrySelect?: (entryId: number) => void;
+  selectedEntry?: Entry;
+  onSelectEntry?: (entry: Entry) => void;
 }
 
-export function DayBox({ date, entries, selectedEntryId, onEntrySelect }: DayBoxProps) {
+export function DayBox({ date, entries, selectedEntry, onSelectEntry }: DayBoxProps) {
   const label = format(date, 'EEE M/d');
 
   return (
@@ -22,8 +22,8 @@ export function DayBox({ date, entries, selectedEntryId, onEntrySelect }: DayBox
           <WeekEntry
             key={entry.id}
             entry={entry}
-            isSelected={entry.id === selectedEntryId}
-            onSelect={() => onEntrySelect?.(entry.id)}
+            isSelected={selectedEntry?.id === entry.id}
+            onSelect={() => onSelectEntry?.(entry)}
           />
         ))}
       </div>
