@@ -143,6 +143,17 @@ export function EntryItem({
         <span className="w-4" />
       )}
 
+      {/* Context dot - indicates entry has ancestors */}
+      {entry.parentId !== null ? (
+        <span
+          data-testid="context-dot"
+          className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
+          title="Has parent context"
+        />
+      ) : (
+        <span className="w-1.5" />
+      )}
+
       {/* Symbol - clickable for task/done entries */}
       {isToggleable && onToggleDone ? (
         <button
