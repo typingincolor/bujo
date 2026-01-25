@@ -188,8 +188,8 @@ describe('App - Sidebar Collapse', () => {
       const sidebar = screen.getByTestId('overdue-sidebar')
       const asideElement = sidebar.closest('aside')
 
-      // Should have w-10 class when collapsed
-      expect(asideElement?.className).toContain('w-10')
+      // Should have width 2.5rem (w-10 equivalent) when collapsed
+      expect(asideElement).toHaveStyle({ width: '2.5rem' })
     })
   })
 })

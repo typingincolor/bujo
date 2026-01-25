@@ -739,12 +739,7 @@ function App() {
     <div className="flex h-screen bg-background">
       <Sidebar currentView={view} onViewChange={handleViewChange} />
 
-      <div
-        className="flex-1 flex flex-col overflow-hidden transition-[margin]"
-        style={{
-          marginRight: view === 'today' && !isSidebarCollapsed ? `${journalSidebarWidth}px` : '0'
-        }}
-      >
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header
           title={viewTitles[view]}
           currentMood={today?.mood}
@@ -912,10 +907,10 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className={cn(
-            'h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out',
-            isSidebarCollapsed && 'w-10'
-          )}
+          className="h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out"
+          style={{
+            width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
+          }}
         >
           <JournalSidebar
             overdueEntries={overdueEntries}
