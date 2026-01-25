@@ -25,6 +25,7 @@ import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekSummary } from '@/components/bujo/WeekSummary'
+import { ContextPanel } from '@/components/bujo/ContextPanel'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -80,6 +81,7 @@ function App() {
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
+  const [showContextPanel, setShowContextPanel] = useState(false)
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
@@ -226,6 +228,14 @@ function App() {
       }
 
       if (isInputFocused) return
+
+      // Shift+C toggles context panel (global, works in all views)
+      // Checking for uppercase 'C' is equivalent to Shift+c
+      if (e.key === 'C') {
+        e.preventDefault()
+        setShowContextPanel(prev => !prev)
+        return
+      }
 
       // Day navigation shortcuts (h/l/T) - always available in today view
       if (view === 'today') {
@@ -785,6 +795,19 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Context Panel - toggle with Shift+C */}
+      {showContextPanel && (
+        <aside
+          data-testid="context-panel"
+          className="w-64 h-screen border-l border-border bg-background overflow-y-auto"
+        >
+          <ContextPanel
+            selectedEntry={view === 'today' ? flatEntries[selectedIndex] ?? null : null}
+            entries={flatEntries}
+          />
+        </aside>
+      )}
 
       {/* Edit Entry Modal */}
       <EditEntryModal
