@@ -270,5 +270,46 @@ describe('JournalSidebar', () => {
       const selectedText = contextSection.querySelector('.font-medium')
       expect(selectedText).toBeInTheDocument()
     })
+
+    it('has scrollable container for context tree', () => {
+      const selectedEntry = createTestEntry({ id: 2, content: 'Selected', parentId: 1 })
+      const contextTree = [
+        createTestEntry({ id: 1, content: 'Root', parentId: null }),
+        createTestEntry({ id: 2, content: 'Selected', parentId: 1 }),
+      ]
+
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          selectedEntry={selectedEntry}
+          contextTree={contextTree}
+        />
+      )
+
+      const contextSection = screen.getByTestId('context-section')
+      const scrollableContainer = contextSection.querySelector('.overflow-y-auto')
+      expect(scrollableContainer).toBeInTheDocument()
+    })
+
+    it('context section uses flex-1 to fill available space', () => {
+      const selectedEntry = createTestEntry({ id: 2, content: 'Selected', parentId: 1 })
+      const contextTree = [
+        createTestEntry({ id: 1, content: 'Root', parentId: null }),
+        createTestEntry({ id: 2, content: 'Selected', parentId: 1 }),
+      ]
+
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          selectedEntry={selectedEntry}
+          contextTree={contextTree}
+        />
+      )
+
+      const contextSection = screen.getByTestId('context-section')
+      expect(contextSection).toHaveClass('flex-1')
+    })
   })
 })

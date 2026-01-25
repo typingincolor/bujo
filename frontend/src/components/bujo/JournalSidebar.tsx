@@ -277,12 +277,12 @@ export function JournalSidebar({
           <hr className="my-4 border-border" />
 
           {/* Context Section */}
-          <div data-testid="context-section">
+          <div data-testid="context-section" className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
               <span>Context</span>
             </div>
 
-            <div className="px-3 py-2">
+            <div className="px-3 py-2 flex-1 overflow-y-auto">
               {!selectedEntry ? (
                 <p className="text-sm text-muted-foreground">No entry selected</p>
               ) : selectedEntry.parentId === null ? (
