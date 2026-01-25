@@ -6,7 +6,6 @@ import { SearchView } from './SearchView'
 vi.mock('@/wailsjs/go/wails/App', () => ({
   Search: vi.fn().mockResolvedValue([]),
   GetEntry: vi.fn().mockResolvedValue(null),
-  GetEntryAncestors: vi.fn().mockResolvedValue([]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
   CancelEntry: vi.fn().mockResolvedValue(undefined),
@@ -18,7 +17,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { Search, GetEntryAncestors } from '@/wailsjs/go/wails/App'
+import { Search } from '@/wailsjs/go/wails/App'
 
 const createMockEntry = (overrides: Partial<{ ID: number; Content: string; Type: string; CreatedAt: string; ParentID: number | null }>) => ({
   ID: 1,

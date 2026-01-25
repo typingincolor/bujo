@@ -194,6 +194,12 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
             }
           }
           break;
+        case 'm':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            onMigrate?.(results[selectedIndex]);
+          }
+          break;
         case 'Enter':
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < results.length) {
@@ -205,7 +211,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [results, selectedIndex, refreshEntry, handleCycleTypeKeyboard, handleAnswer, onNavigateToEntry]);
+  }, [results, selectedIndex, refreshEntry, handleCycleTypeKeyboard, handleAnswer, onMigrate, onNavigateToEntry]);
 
   const formatDate = (dateStr: string) => {
     try {
