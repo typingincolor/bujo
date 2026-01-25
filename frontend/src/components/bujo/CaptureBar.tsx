@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { Entry } from '@/types/bujo'
+import { NAV_SIDEBAR_LEFT_CLASS, JOURNAL_SIDEBAR_RIGHT_CLASS } from '@/lib/layoutConstants'
 
 interface CaptureBarProps {
   onSubmit: (content: string) => void
@@ -95,7 +96,7 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   }
 
   return (
-    <div data-testid="capture-bar" className="fixed bottom-0 left-56 right-64 flex flex-col gap-2 p-3 bg-card border rounded-lg">
+    <div data-testid="capture-bar" className={`fixed bottom-0 ${NAV_SIDEBAR_LEFT_CLASS} ${JOURNAL_SIDEBAR_RIGHT_CLASS} flex flex-col gap-2 p-3 bg-card border rounded-lg`}>
       {parentEntry && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Adding to:</span>

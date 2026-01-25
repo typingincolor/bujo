@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { format, addDays, subDays, isSameDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths } from 'date-fns';
 import * as Popover from '@radix-ui/react-popover';
@@ -14,6 +14,10 @@ export function DateNavigator({ date, onDateChange }: DateNavigatorProps) {
   const [calendarMonth, setCalendarMonth] = useState(date);
   const today = new Date();
   const isToday = isSameDay(date, today);
+
+  useEffect(() => {
+    setCalendarMonth(date);
+  }, [date]);
 
   const handlePrevDay = () => {
     onDateChange(subDays(date, 1));

@@ -32,6 +32,7 @@ import { transformDayEntries, transformEntry, transformHabit, transformList, tra
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
 import { scrollToPosition } from '@/lib/scrollUtils'
+import { JOURNAL_SIDEBAR_WIDTH_CLASS } from '@/lib/layoutConstants'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
@@ -759,7 +760,7 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className="w-64 h-screen border-l border-border bg-background overflow-y-auto p-2"
+          className={`${JOURNAL_SIDEBAR_WIDTH_CLASS} h-screen border-l border-border bg-background overflow-y-auto p-2`}
         >
           <JournalSidebar
             overdueEntries={overdueEntries}

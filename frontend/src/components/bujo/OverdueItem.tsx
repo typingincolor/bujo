@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { calculateAttentionScore, AttentionIndicator } from '@/lib/attentionScore';
@@ -39,7 +40,10 @@ export function OverdueItem({
   onSelect,
   isSelected = false,
 }: OverdueItemProps) {
-  const attentionResult = calculateAttentionScore(entry, now);
+  const attentionResult = useMemo(
+    () => calculateAttentionScore(entry, now),
+    [entry, now]
+  );
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
   const hasParent = entry.parentId !== null;
