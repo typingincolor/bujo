@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
@@ -215,6 +215,9 @@ export function JournalSidebar({
   const [sidebarWidth, setSidebarWidth] = useState(512);
   const [isResizing, setIsResizing] = useState(false);
 
+  const handleResizeMoveRef = useRef<(e: MouseEvent) => void>(() => {});
+  const handleResizeEndRef = useRef<() => void>(() => {});
+
   const handleResizeMove = useCallback((e: MouseEvent) => {
     const newWidth = window.innerWidth - e.clientX;
     const clampedWidth = Math.max(384, Math.min(960, newWidth));
@@ -223,27 +226,34 @@ export function JournalSidebar({
 
   const handleResizeEnd = useCallback(() => {
     setIsResizing(false);
-    document.removeEventListener('mousemove', handleResizeMove);
-    document.removeEventListener('mouseup', handleResizeEnd);
-  }, [handleResizeMove]);
+    document.removeEventListener('mousemove', handleResizeMoveRef.current);
+    document.removeEventListener('mouseup', handleResizeEndRef.current);
+  }, []);
+
+  useEffect(() => {
+    handleResizeMoveRef.current = handleResizeMove;
+    handleResizeEndRef.current = handleResizeEnd;
+  }, [handleResizeMove, handleResizeEnd]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    document.addEventListener('mousemove', handleResizeMove);
-    document.addEventListener('mouseup', handleResizeEnd);
-  }, [handleResizeMove, handleResizeEnd]);
+    document.addEventListener('mousemove', handleResizeMoveRef.current);
+    document.addEventListener('mouseup', handleResizeEndRef.current);
+  }, []);
 
   useEffect(() => {
     return () => {
-      document.removeEventListener('mousemove', handleResizeMove);
-      document.removeEventListener('mouseup', handleResizeEnd);
+      document.removeEventListener('mousemove', handleResizeMoveRef.current);
+      document.removeEventListener('mouseup', handleResizeEndRef.current);
     };
-  }, [handleResizeMove, handleResizeEnd]);
+  }, []);
 
   useEffect(() => {
-    onWidthChange?.(sidebarWidth);
-  }, [sidebarWidth, onWidthChange]);
+    if (!isResizing) {
+      onWidthChange?.(sidebarWidth);
+    }
+  }, [isResizing, sidebarWidth, onWidthChange]);
 
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 

@@ -379,6 +379,10 @@ describe('JournalSidebar', () => {
         // Simulate mouse move to resize (window width 1920, clientX 1320 = 600px sidebar)
         const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 1320 })
         document.dispatchEvent(mouseMoveEvent)
+
+        // Complete resize
+        const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+        document.dispatchEvent(mouseUpEvent)
       })
 
       expect(onWidthChange).toHaveBeenCalledWith(600)
@@ -408,6 +412,10 @@ describe('JournalSidebar', () => {
 
         const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 1700 })
         document.dispatchEvent(mouseMoveEvent)
+
+        // Complete resize
+        const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+        document.dispatchEvent(mouseUpEvent)
       })
 
       // 1920 - 1700 = 220, should clamp to 384
@@ -438,6 +446,10 @@ describe('JournalSidebar', () => {
 
         const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 800 })
         document.dispatchEvent(mouseMoveEvent)
+
+        // Complete resize
+        const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+        document.dispatchEvent(mouseUpEvent)
       })
 
       // 1920 - 800 = 1120, should clamp to 960
