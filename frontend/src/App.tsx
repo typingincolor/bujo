@@ -791,6 +791,8 @@ function App() {
                 onSubmitChild={handleCaptureBarSubmitChild}
                 onClearParent={handleCaptureBarClearParent}
                 parentEntry={captureParentEntry}
+                sidebarWidth={journalSidebarWidth}
+                isSidebarCollapsed={isSidebarCollapsed}
               />
             </div>
           )}

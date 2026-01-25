@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { Entry } from '@/types/bujo'
-import { NAV_SIDEBAR_LEFT_CLASS, JOURNAL_SIDEBAR_RIGHT_CLASS } from '@/lib/layoutConstants'
+import { NAV_SIDEBAR_LEFT_CLASS } from '@/lib/layoutConstants'
 
 interface CaptureBarProps {
   onSubmit: (content: string) => void
   onSubmitChild?: (parentId: number, content: string) => void
   onClearParent?: () => void
   parentEntry?: Entry | null
+  sidebarWidth?: number
+  isSidebarCollapsed?: boolean
 }
 
 const DRAFT_KEY = 'bujo-capture-bar-draft'
@@ -17,6 +19,8 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     onSubmitChild,
     onClearParent,
     parentEntry,
+    sidebarWidth = 512,
+    isSidebarCollapsed = false,
   },
   ref
 ) {
@@ -94,7 +98,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   }
 
   return (
-    <div data-testid="capture-bar" className={`fixed bottom-0 ${NAV_SIDEBAR_LEFT_CLASS} ${JOURNAL_SIDEBAR_RIGHT_CLASS} flex flex-col gap-2 p-3 bg-card border rounded-lg`}>
+    <div
+      data-testid="capture-bar"
+      className={`fixed bottom-0 ${NAV_SIDEBAR_LEFT_CLASS} flex flex-col gap-2 p-3 bg-card border rounded-lg`}
+      style={{ right: isSidebarCollapsed ? 0 : `${sidebarWidth}px` }}
+    >
       {parentEntry && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Adding to:</span>

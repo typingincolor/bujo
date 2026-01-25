@@ -588,4 +588,45 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
     expect(screen.queryByText(/adding to:/i)).not.toBeInTheDocument()
     expect(input).toHaveFocus()
   })
+
+  describe('CaptureBar positioning with dynamic sidebar', () => {
+    it('does not use static right-[32rem] class', async () => {
+      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      const captureBar = screen.getByTestId('capture-bar')
+
+      // Should NOT have the static right-[32rem] class
+      expect(captureBar.className).not.toContain('right-[32rem]')
+    })
+
+    it('uses dynamic right positioning based on sidebar width', async () => {
+      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+      })
+
+      const captureBar = screen.getByTestId('capture-bar')
+
+      // Should have inline style for right positioning
+      // Default sidebar width is 512px
+      expect(captureBar.style.right).toBe('512px')
+    })
+  })
 })
