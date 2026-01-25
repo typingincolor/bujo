@@ -61,12 +61,17 @@ export function OverdueItem({
           isSelected && 'bg-accent'
         )}
       >
-        {hasParent && (
-          <span
-            data-testid="context-dot"
-            className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 flex-shrink-0"
-          />
-        )}
+        <span
+          data-testid="context-dot-container"
+          className="w-2 flex-shrink-0 flex items-center justify-center"
+        >
+          {hasParent && (
+            <span
+              data-testid="context-dot"
+              className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
+            />
+          )}
+        </span>
 
         <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
           {symbol}

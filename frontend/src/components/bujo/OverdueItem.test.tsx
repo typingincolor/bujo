@@ -63,6 +63,13 @@ describe('OverdueItem', () => {
       render(<OverdueItem entry={entry} now={now} />)
       expect(screen.queryByTestId('context-dot')).not.toBeInTheDocument()
     })
+
+    it('always reserves space for context dot to keep symbols aligned', () => {
+      const entry = createTestEntry({ parentId: null })
+      render(<OverdueItem entry={entry} now={now} />)
+      // A placeholder container should exist even when dot is not shown
+      expect(screen.getByTestId('context-dot-container')).toBeInTheDocument()
+    })
   })
 
   describe('priority indicator', () => {
