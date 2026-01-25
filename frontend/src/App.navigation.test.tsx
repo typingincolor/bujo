@@ -209,13 +209,9 @@ describe('App - Click Selection', () => {
     const firstTask = screen.getByText('First task').closest('[data-entry-id]')
     expect(firstTask).toHaveAttribute('data-selected', 'true')
 
-    // Click on the note entry to open popover
+    // Click on the note entry directly to select it
     const noteText = screen.getByText('A note')
     await user.click(noteText)
-
-    // Click "Go to entry" to select it
-    const goToButton = await screen.findByText('Go to entry')
-    await user.click(goToButton)
 
     // Now the note should be selected
     const noteEntry = screen.getByText('A note').closest('[data-entry-id]')
@@ -237,13 +233,9 @@ describe('App - Click Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    // Click second task to open popover
+    // Click second task directly to select it
     const secondTaskText = screen.getByText('Second task')
     await user.click(secondTaskText)
-
-    // Click "Go to entry" to select it
-    const goToButton = await screen.findByText('Go to entry')
-    await user.click(goToButton)
 
     const secondTask = screen.getByText('Second task').closest('[data-entry-id]')
     await waitFor(() => {

@@ -53,7 +53,7 @@ const createTestDay = (overrides: Partial<DayEntries> = {}): DayEntries => ({
 
 describe('DayView', () => {
   describe('entry selection', () => {
-    it('calls onSelectEntry when an entry is clicked', async () => {
+    it('calls onSelectEntry when an entry is clicked directly', () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -62,18 +62,14 @@ describe('DayView', () => {
         />
       )
 
-      // Click entry to open popover
+      // Click entry directly - no popover needed
       const noteEntry = screen.getByText('A note')
       fireEvent.click(noteEntry)
-
-      // Click "Go to entry" in popover
-      const goToButton = await screen.findByText('Go to entry')
-      fireEvent.click(goToButton)
 
       expect(onSelectEntry).toHaveBeenCalledWith(2)
     })
 
-    it('calls onSelectEntry with correct id for first entry', async () => {
+    it('calls onSelectEntry with correct id for first entry', () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -82,18 +78,14 @@ describe('DayView', () => {
         />
       )
 
-      // Click entry to open popover
+      // Click entry directly
       const taskEntry = screen.getByText('First task')
       fireEvent.click(taskEntry)
-
-      // Click "Go to entry" in popover
-      const goToButton = await screen.findByText('Go to entry')
-      fireEvent.click(goToButton)
 
       expect(onSelectEntry).toHaveBeenCalledWith(1)
     })
 
-    it('calls onSelectEntry with correct id for third entry', async () => {
+    it('calls onSelectEntry with correct id for third entry', () => {
       const onSelectEntry = vi.fn()
       render(
         <DayView
@@ -102,13 +94,9 @@ describe('DayView', () => {
         />
       )
 
-      // Click entry to open popover
+      // Click entry directly
       const eventEntry = screen.getByText('An event')
       fireEvent.click(eventEntry)
-
-      // Click "Go to entry" in popover
-      const goToButton = await screen.findByText('Go to entry')
-      fireEvent.click(goToButton)
 
       expect(onSelectEntry).toHaveBeenCalledWith(3)
     })
@@ -156,6 +144,26 @@ describe('DayView', () => {
       // There should be only one move to list button (for the task entry, not the note)
       const allMoveToListButtons = screen.getAllByTitle('Move to list')
       expect(allMoveToListButtons.length).toBe(1)
+    })
+  })
+
+  describe('DayView direct actions', () => {
+    it('does not wrap entries in popover', () => {
+      const mockDay: DayEntries = {
+        date: '2026-01-25',
+        entries: [
+          { id: 1, content: 'Task entry', type: 'task', priority: 'none', parentId: null, loggedDate: '2026-01-25' },
+        ],
+      }
+      // Render with onSelectEntry to ensure full functionality is enabled
+      render(<DayView day={mockDay} onSelectEntry={vi.fn()} onMigrateEntry={vi.fn()} />)
+
+      // Click on the entry to potentially trigger popover
+      const entry = screen.getByText('Task entry')
+      fireEvent.click(entry)
+
+      // No popover should exist - entries should be directly actionable
+      expect(screen.queryByTestId('entry-context-popover')).not.toBeInTheDocument()
     })
   })
 

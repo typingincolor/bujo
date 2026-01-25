@@ -194,7 +194,7 @@ describe('Missing Feature #2: Header back button', () => {
 })
 
 describe('Missing Feature #3: EntryContextPopover with Radix UI', () => {
-  it('should open Radix UI popover when clicking entry in EntryTree', async () => {
+  it('should select entry directly when clicking in DayView (no popover)', async () => {
     const agendaData = createMockAgenda({
       Days: [
         createMockDayEntries({
@@ -224,70 +224,22 @@ describe('Missing Feature #3: EntryContextPopover with Radix UI', () => {
       expect(screen.getByText(/Test task/i)).toBeInTheDocument()
     })
 
-    // Click on the entry (need to click the container, not just the text)
+    // Click on the entry directly selects it (no popover)
     const entry = screen.getByTestId('entry-item')
     await user.click(entry)
 
-    // Radix UI popover should open with quick actions (done, migrate, priority for tasks)
+    // Entry should be selected directly without opening a popover
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
-      expect(screen.getByLabelText(/mark done/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/migrate/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/cycle priority/i)).toBeInTheDocument()
-      expect(screen.getByText(/go to entry/i)).toBeInTheDocument()
-    })
-  })
-
-  it('should close popover when clicking outside', async () => {
-    const agendaData = createMockAgenda({
-      Days: [
-        createMockDayEntries({
-          Date: '2026-01-24T00:00:00Z',
-          Entries: [
-            createMockEntry({
-              ID: 1,
-              Content: 'Test task',
-              Type: 'Task',
-              Priority: 'None',
-              ParentID: null,
-            })
-          ]
-        })
-      ]
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(agendaData)
-
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-    const user = userEvent.setup()
-
-    await waitFor(() => {
-      expect(screen.getByText(/Test task/i)).toBeInTheDocument()
+      expect(entry).toHaveAttribute('data-selected', 'true')
     })
 
-    // Open popover
-    const entry = screen.getByText(/Test task/i)
-    await user.click(entry)
-
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
-    })
-
-    // Click outside (on the document body)
-    await user.click(document.body)
-
-    // Popover should close
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    })
+    // No popover dialog should be present
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 
-describe('Missing Feature #4: EntryTree back button integration', () => {
-  it('should show back button in EntryTree when viewing child entries', async () => {
+describe('Missing Feature #4: EntryTree hierarchical display', () => {
+  it('should show child entries indented under parent entries', async () => {
     const agendaData = createMockAgenda({
       Days: [
         createMockDayEntries({
@@ -318,33 +270,14 @@ describe('Missing Feature #4: EntryTree back button integration', () => {
         <App />
       </SettingsProvider>
     )
-    const user = userEvent.setup()
 
     await waitFor(() => {
       expect(screen.getByText(/Parent task/i)).toBeInTheDocument()
     })
 
-    // Click to expand/navigate to child
-    const parentEntry = screen.getByText(/Parent task/i)
-    await user.click(parentEntry)
-
-    // Should show child with back button to parent in the popover
-    let popover!: HTMLElement
-    await waitFor(() => {
-      popover = screen.getByRole('dialog')
-      expect(within(popover).getByText(/Child task/i)).toBeInTheDocument()
-      const backButton = within(popover).getByLabelText(/back to parent/i)
-      expect(backButton).toBeInTheDocument()
-    })
-
-    // Click back should return to parent view in the popover
-    const backToParent = within(popover).getByLabelText(/back to parent/i)
-    await user.click(backToParent)
-
-    await waitFor(() => {
-      expect(within(popover).getByText(/Parent task/i)).toBeInTheDocument()
-      expect(within(popover).queryByLabelText(/back to parent/i)).not.toBeInTheDocument()
-    })
+    // Both parent and child should be visible in the tree
+    expect(screen.getByText(/Parent task/i)).toBeInTheDocument()
+    expect(screen.getByText(/Child task/i)).toBeInTheDocument()
   })
 })
 
@@ -462,7 +395,7 @@ describe('Missing Feature #6: WeekSummary popover for attention items', () => {
 })
 
 describe('Missing Feature #7: Keyboard shortcut for migrate', () => {
-  it('should migrate entry when pressing "m" key in popover', async () => {
+  it('should migrate selected entry when pressing "m" key', async () => {
     const agendaData = createMockAgenda({
       Days: [
         createMockDayEntries({
@@ -492,15 +425,17 @@ describe('Missing Feature #7: Keyboard shortcut for migrate', () => {
       expect(screen.getByText(/Old task/i)).toBeInTheDocument()
     })
 
-    // Open popover
+    // Click entry to select it directly (no popover needed)
     const entry = screen.getByText(/Old task/i)
     await user.click(entry)
 
+    // Entry should be selected
+    const entryElement = entry.closest('[data-entry-id]')
     await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(entryElement).toHaveAttribute('data-selected', 'true')
     })
 
-    // Press 'm' key
+    // Press 'm' key to open migrate modal
     await user.keyboard('m')
 
     // Wait for migrate modal
