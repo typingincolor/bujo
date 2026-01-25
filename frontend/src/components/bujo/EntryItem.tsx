@@ -186,7 +186,7 @@ export function EntryItem({
         </span>
       )}
 
-      {/* Action buttons (shown on hover) */}
+      {/* Action buttons (shown on hover or when selected) */}
       <EntryActionBar
         entry={entry}
         callbacks={{
@@ -202,6 +202,7 @@ export function EntryItem({
         }}
         variant="hover-reveal"
         size="sm"
+        isSelected={isSelected}
       />
 
       {/* Entry ID (shown on hover) */}

@@ -21,6 +21,7 @@ interface EntryActionBarProps {
   variant?: EntryActionBarVariant;
   size?: ActionButtonSize;
   usePlaceholders?: boolean;
+  isSelected?: boolean;
   className?: string;
 }
 
@@ -46,10 +47,11 @@ export function EntryActionBar({
   variant = 'hover-reveal',
   size = 'md',
   usePlaceholders = false,
+  isSelected = false,
   className,
 }: EntryActionBarProps) {
   const variantClasses =
-    variant === 'hover-reveal'
+    variant === 'hover-reveal' && !isSelected
       ? 'opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity'
       : '';
 

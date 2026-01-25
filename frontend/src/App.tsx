@@ -84,6 +84,8 @@ function App() {
   const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
   const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
+  const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
+  const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
@@ -315,7 +317,63 @@ function App() {
         }
       }
 
-      if (view !== 'today' || flatEntries.length === 0) return
+      if (view !== 'today') return
+
+      // Get sidebar task entries (filtered the same way as JournalSidebar)
+      const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
+
+      // Tab key switches focus between main panel and sidebar
+      if (e.key === 'Tab') {
+        e.preventDefault()
+        if (focusedPanel === 'main') {
+          // Switch to sidebar
+          setFocusedPanel('sidebar')
+          setSelectedIndex(-1) // Clear main panel selection
+          setSelectedEntry(null)
+          if (sidebarTaskEntries.length > 0) {
+            setSidebarSelectedIndex(0)
+            setSidebarSelectedEntry(sidebarTaskEntries[0])
+          }
+        } else {
+          // Switch to main panel
+          setFocusedPanel('main')
+          setSidebarSelectedIndex(-1)
+          setSidebarSelectedEntry(null)
+          if (flatEntries.length > 0) {
+            setSelectedIndex(0)
+            setSelectedEntry(flatEntries[0])
+          }
+        }
+        return
+      }
+
+      // Navigation keys depend on which panel is focused
+      if (focusedPanel === 'sidebar') {
+        switch (e.key) {
+          case 'j':
+          case 'ArrowDown': {
+            e.preventDefault()
+            if (sidebarTaskEntries.length === 0) return
+            const nextIndex = Math.min(sidebarSelectedIndex + 1, sidebarTaskEntries.length - 1)
+            setSidebarSelectedIndex(nextIndex)
+            setSidebarSelectedEntry(sidebarTaskEntries[nextIndex])
+            break
+          }
+          case 'k':
+          case 'ArrowUp': {
+            e.preventDefault()
+            if (sidebarTaskEntries.length === 0) return
+            const prevIndex = Math.max(sidebarSelectedIndex - 1, 0)
+            setSidebarSelectedIndex(prevIndex)
+            setSidebarSelectedEntry(sidebarTaskEntries[prevIndex])
+            break
+          }
+        }
+        return
+      }
+
+      // Main panel navigation
+      if (flatEntries.length === 0) return
 
       switch (e.key) {
         case 'j':
@@ -376,7 +434,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
+  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -451,6 +509,10 @@ function App() {
     if (index !== -1) {
       setSelectedIndex(index)
       setSelectedEntry(flatEntries[index])
+      // Clear sidebar selection when main panel is selected
+      setSidebarSelectedEntry(null)
+      setSidebarSelectedIndex(-1)
+      setFocusedPanel('main')
     }
   }, [flatEntries])
 
@@ -462,6 +524,18 @@ function App() {
       captureBarRef.current?.focus()
     }
   }, [flatEntries])
+
+  const handleSidebarSelectEntry = useCallback((entry: Entry) => {
+    // Find the index of this entry in the filtered task entries
+    const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
+    const index = sidebarTaskEntries.findIndex(e => e.id === entry.id)
+    setSidebarSelectedEntry(entry)
+    setSidebarSelectedIndex(index)
+    // Clear main panel selection when sidebar is selected
+    setSelectedIndex(-1)
+    setSelectedEntry(null)
+    setFocusedPanel('sidebar')
+  }, [overdueEntries])
 
   const handleMoveToRoot = useCallback(async (entry: Entry) => {
     try {
@@ -806,7 +880,7 @@ function App() {
             now={currentDate}
             selectedEntry={sidebarSelectedEntry ?? undefined}
             contextTree={sidebarContextTree}
-            onSelectEntry={setSidebarSelectedEntry}
+            onSelectEntry={handleSidebarSelectEntry}
             callbacks={sidebarCallbacks}
           />
         </aside>
