@@ -2,6 +2,7 @@ import { DayEntries, Entry, ActionType } from '@/types/bujo';
 import { calculateAttentionScore, sortByAttentionScore } from '@/lib/attentionScore';
 import { cn } from '@/lib/utils';
 import { EntryContextPopover } from './EntryContextPopover';
+import { EntrySymbol } from './EntrySymbol';
 
 interface WeekSummaryProps {
   days: DayEntries[];
@@ -87,7 +88,10 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
                   type="button"
                   className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
                 >
-                  <span className="text-sm">{event.content}</span>
+                  <span className="flex items-center gap-2">
+                    <EntrySymbol type={event.type} priority={event.priority} />
+                    <span className="text-sm">{event.content}</span>
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {getChildCount(event.id)} items
                   </span>
@@ -143,7 +147,10 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
                   data-priority={isHighPriority ? 'high' : undefined}
                   className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
                 >
-                  <span className="text-sm">{entry.content}</span>
+                  <span className="flex items-center gap-2">
+                    <EntrySymbol type={entry.type} priority={entry.priority} />
+                    <span className="text-sm">{entry.content}</span>
+                  </span>
                   {indicators.length > 0 && (
                     <div className="flex gap-1" data-testid="attention-indicators">
                       {indicators.map(indicator => (
