@@ -606,6 +606,7 @@ function App() {
           onLocationChanged={loadData}
           canGoBack={canGoBack}
           onBack={handleBack}
+          onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
         <main className="flex-1 overflow-y-auto p-6">
@@ -638,7 +639,6 @@ function App() {
                 onSubmit={handleCaptureBarSubmit}
                 onSubmitChild={handleCaptureBarSubmitChild}
                 onClearParent={handleCaptureBarClearParent}
-                onFileImport={handleCaptureBarFileImport}
                 parentEntry={captureParentEntry}
               />
             </div>

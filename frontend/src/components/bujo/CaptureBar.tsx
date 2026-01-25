@@ -6,7 +6,6 @@ interface CaptureBarProps {
   onSubmit: (content: string) => void
   onSubmitChild?: (parentId: number, content: string) => void
   onClearParent?: () => void
-  onFileImport?: () => void
   parentEntry?: Entry | null
 }
 
@@ -17,7 +16,6 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     onSubmit,
     onSubmitChild,
     onClearParent,
-    onFileImport,
     parentEntry,
   },
   ref
@@ -111,41 +109,17 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
           </button>
         </div>
       )}
-      <div className="flex items-center gap-2">
-        <textarea
-          ref={textareaRef}
-          data-testid="capture-bar-input"
-          value={content}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Capture a thought..."
-          rows={1}
-          style={{ fontFamily: 'monospace' }}
-          className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none font-mono"
-        />
-        <button
-          type="button"
-          onClick={onFileImport}
-          aria-label="Import file"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-        </button>
-      </div>
+      <textarea
+        ref={textareaRef}
+        data-testid="capture-bar-input"
+        value={content}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="Capture a thought..."
+        rows={1}
+        style={{ fontFamily: 'monospace' }}
+        className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none font-mono"
+      />
     </div>
   )
 })
