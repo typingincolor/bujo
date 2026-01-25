@@ -13,6 +13,7 @@ interface EntryItemProps {
   hasChildren?: boolean;
   hasParent?: boolean;
   childCount?: number;
+  showContextDot?: boolean;
   isSelected?: boolean;
   disableClick?: boolean;
   onToggleCollapse?: () => void;
@@ -52,6 +53,7 @@ export function EntryItem({
   hasChildren = false,
   hasParent = false,
   childCount = 0,
+  showContextDot = true,
   isSelected = false,
   disableClick = false,
   onToggleCollapse,
@@ -144,14 +146,16 @@ export function EntryItem({
       )}
 
       {/* Context dot - indicates entry has ancestors */}
-      {entry.parentId !== null ? (
-        <span
-          data-testid="context-dot"
-          className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
-          title="Has parent context"
-        />
-      ) : (
-        <span className="w-1.5" />
+      {showContextDot && (
+        entry.parentId !== null ? (
+          <span
+            data-testid="context-dot"
+            className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
+            title="Has parent context"
+          />
+        ) : (
+          <span className="w-1.5" />
+        )
       )}
 
       {/* Symbol - clickable for task/done entries */}

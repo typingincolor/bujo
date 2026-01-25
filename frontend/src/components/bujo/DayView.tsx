@@ -66,9 +66,10 @@ interface EntryTreeProps {
   onMoveToRoot?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
   onAnswer?: (entry: Entry) => void;
+  showContextDot?: boolean;
 }
 
-function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer }: EntryTreeProps) {
+function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggleCollapse, onToggleDone, onSelect, onEdit, onDelete, onCancel, onUncancel, onCyclePriority, onMigrate, onCycleType, onAddChild, onMoveToRoot, onMoveToList, onAnswer, showContextDot = true }: EntryTreeProps) {
   return (
     <>
       {entries.map((entry) => {
@@ -99,6 +100,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
               onMoveToRoot={onMoveToRoot ? () => onMoveToRoot(entry) : undefined}
               onMoveToList={onMoveToList ? () => onMoveToList(entry) : undefined}
               onAnswer={onAnswer && entry.type === 'question' ? () => onAnswer(entry) : undefined}
+              showContextDot={showContextDot}
             />
             {hasChildren && !isCollapsed && (
               <EntryTree
@@ -120,6 +122,7 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
                 onMoveToRoot={onMoveToRoot}
                 onMoveToList={onMoveToList}
                 onAnswer={onAnswer}
+                showContextDot={showContextDot}
               />
             )}
           </div>
@@ -322,6 +325,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             onMoveToRoot={handleMoveToRoot}
             onMoveToList={onMoveToList}
             onAnswer={onAnswerEntry}
+            showContextDot={false}
           />
         ) : (
           <p className="text-sm text-muted-foreground italic py-4 text-center">
