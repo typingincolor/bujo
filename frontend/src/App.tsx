@@ -530,7 +530,6 @@ function App() {
       priority: result.priority,
       parentId: result.parentId,
       loggedDate: result.date,
-      ancestors: result.ancestors,
     })
   }, [])
 
