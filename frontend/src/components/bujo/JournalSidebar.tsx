@@ -61,8 +61,11 @@ export function JournalSidebar({
         </Collapsible.Content>
       </Collapsible.Root>
 
+      {/* Divider */}
+      <hr className="my-4 border-border" />
+
       {/* Context Section */}
-      <div className="mt-4" data-testid="context-section">
+      <div data-testid="context-section">
         <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
           <span>Context</span>
         </div>
