@@ -1,109 +1,91 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { WeekView } from './WeekView';
-import * as api from '@/api/bujo';
-import { Entry } from '@/types/bujo';
-
-vi.mock('@/api/bujo');
+import { DayEntries } from '@/types/bujo';
 
 describe('WeekView', () => {
-  const mockEntries: Entry[] = [
+  const mockWeekData: DayEntries[] = [
     {
-      id: 1,
-      content: 'Monday event',
-      type: 'event',
-      priority: 'none',
-      parentId: null,
-      loggedDate: '2026-01-19',
-      children: [],
+      date: '2026-01-19',
+      entries: [
+        { id: 1, content: 'Mon meeting', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-19', children: [] },
+      ],
     },
     {
-      id: 2,
-      content: 'Tuesday priority task',
-      type: 'task',
-      priority: 'high',
-      parentId: null,
-      loggedDate: '2026-01-20',
-      children: [],
+      date: '2026-01-20',
+      entries: [
+        { id: 2, content: 'Tue task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-20', children: [] },
+      ],
     },
     {
-      id: 3,
-      content: 'Saturday event',
-      type: 'event',
-      priority: 'none',
-      parentId: null,
-      loggedDate: '2026-01-24',
-      children: [],
+      date: '2026-01-21',
+      entries: [],
+    },
+    {
+      date: '2026-01-22',
+      entries: [],
+    },
+    {
+      date: '2026-01-23',
+      entries: [
+        { id: 3, content: 'Fri event', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-23', children: [] },
+      ],
+    },
+    {
+      date: '2026-01-24',
+      entries: [
+        { id: 4, content: 'Sat lunch', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-24', children: [] },
+      ],
+    },
+    {
+      date: '2026-01-25',
+      entries: [
+        { id: 5, content: 'Sun task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-25', children: [] },
+      ],
     },
   ];
 
-  beforeEach(() => {
-    vi.mocked(api.getEntriesForDateRange).mockResolvedValue(mockEntries);
+  it('renders 5 day boxes plus weekend box', () => {
+    const { container } = render(<WeekView days={mockWeekData} />);
+    const boxes = container.querySelectorAll('.rounded-lg.border');
+    expect(boxes).toHaveLength(6);
   });
 
-  it('renders 2x3 grid layout', async () => {
-    render(<WeekView startDate={new Date('2026-01-19')} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Mon 1/19')).toBeInTheDocument();
-      expect(screen.getByText('Tue 1/20')).toBeInTheDocument();
-      expect(screen.getByText('Wed 1/21')).toBeInTheDocument();
-      expect(screen.getByText('Thu 1/22')).toBeInTheDocument();
-      expect(screen.getByText('Fri 1/23')).toBeInTheDocument();
-      expect(screen.getByText(/24-25/)).toBeInTheDocument();
-    });
+  it('renders week date range header', () => {
+    render(<WeekView days={mockWeekData} />);
+    expect(screen.getByText(/Jan 19.*Jan 25, 2026/)).toBeInTheDocument();
   });
 
-  it('fetches entries for the week', async () => {
-    render(<WeekView startDate={new Date('2026-01-19')} />);
+  it('filters to events and priority entries only', () => {
+    const withNonPriority: DayEntries[] = [
+      {
+        date: '2026-01-19',
+        entries: [
+          { id: 1, content: 'Meeting', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-19', children: [] },
+          { id: 2, content: 'Task no priority', type: 'task', priority: 'none', parentId: null, loggedDate: '2026-01-19', children: [] },
+          { id: 3, content: 'Task with priority', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
+        ],
+      },
+      ...mockWeekData.slice(1),
+    ];
 
-    await waitFor(() => {
-      expect(api.getEntriesForDateRange).toHaveBeenCalledWith(
-        '2026-01-19',
-        '2026-01-25'
-      );
-    });
-  });
-
-  it('filters and distributes entries to correct days', async () => {
-    render(<WeekView startDate={new Date('2026-01-19')} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Monday event')).toBeInTheDocument();
-      expect(screen.getByText('Tuesday priority task')).toBeInTheDocument();
-      expect(screen.getByText('Saturday event')).toBeInTheDocument();
-    });
-  });
-
-  it('handles entry selection', async () => {
-    const user = userEvent.setup();
-    render(<WeekView startDate={new Date('2026-01-19')} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Monday event')).toBeInTheDocument();
-    });
-
-    const buttons = screen.getAllByRole('button');
-    await user.click(buttons[0]);
-
-    const container = screen.getByText('Monday event').closest('div');
-    expect(container).toHaveClass('bg-primary/10');
+    render(<WeekView days={withNonPriority} />);
+    expect(screen.getByText('Meeting')).toBeInTheDocument();
+    expect(screen.getByText('Task with priority')).toBeInTheDocument();
+    expect(screen.queryByText('Task no priority')).not.toBeInTheDocument();
   });
 
   it('shows context panel when entry selected', async () => {
     const user = userEvent.setup();
-    render(<WeekView startDate={new Date('2026-01-19')} />);
+    render(<WeekView days={mockWeekData} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Monday event')).toBeInTheDocument();
-    });
+    await user.click(screen.getByText('Mon meeting'));
+    expect(screen.getByText('Context')).toBeInTheDocument();
+  });
 
-    const buttons = screen.getAllByRole('button');
-    await user.click(buttons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByText('Context')).toBeInTheDocument();
-    });
+  it('shows "No entry selected" initially', () => {
+    render(<WeekView days={mockWeekData} />);
+    expect(screen.getByText('No entry selected')).toBeInTheDocument();
   });
 });

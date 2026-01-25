@@ -1,108 +1,155 @@
-import { useEffect, useState } from 'react';
-import { Entry } from '@/types/bujo';
-import { getEntriesForDateRange } from '@/api/bujo';
-import { filterWeekEntries } from '@/lib/weekView';
+import { useState, useMemo } from 'react';
+import { DayEntries, Entry } from '@/types/bujo';
 import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
-import { JournalSidebar } from './JournalSidebar';
-import { addDays, format } from 'date-fns';
+import { filterWeekEntries } from '@/lib/weekView';
+import { format, parseISO } from 'date-fns';
 
 interface WeekViewProps {
-  startDate: Date;
+  days: DayEntries[];
 }
 
-const DAYS_IN_WEEK = 7;
+interface TreeNode {
+  entry: Entry;
+  children: TreeNode[];
+}
 
-export function WeekView({ startDate }: WeekViewProps) {
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
+function buildTree(entries: Entry[]): TreeNode[] {
+  if (entries.length === 0) return [];
 
-  useEffect(() => {
-    const endDate = addDays(startDate, DAYS_IN_WEEK - 1);
-    const startStr = format(startDate, 'yyyy-MM-dd');
-    const endStr = format(endDate, 'yyyy-MM-dd');
+  const entryMap = new Map<number, Entry>();
+  const childrenMap = new Map<number | null, Entry[]>();
 
-    getEntriesForDateRange(startStr, endStr).then(data => {
-      setEntries(data);
-    });
-  }, [startDate]);
+  for (const entry of entries) {
+    entryMap.set(entry.id, entry);
+    const parentId = entry.parentId;
+    if (!childrenMap.has(parentId)) {
+      childrenMap.set(parentId, []);
+    }
+    childrenMap.get(parentId)!.push(entry);
+  }
 
-  const filteredEntries = filterWeekEntries(entries);
+  function buildNode(entry: Entry): TreeNode {
+    const children = childrenMap.get(entry.id) || [];
+    return {
+      entry,
+      children: children.map(buildNode),
+    };
+  }
 
-  const getEntriesForDay = (dayOffset: number): Entry[] => {
-    const day = addDays(startDate, dayOffset);
-    const dayStr = format(day, 'yyyy-MM-dd');
-    return filteredEntries.filter(e => e.loggedDate === dayStr);
-  };
+  const roots = childrenMap.get(null) || [];
+  return roots.map(buildNode);
+}
 
-  const monday = getEntriesForDay(0);
-  const tuesday = getEntriesForDay(1);
-  const wednesday = getEntriesForDay(2);
-  const thursday = getEntriesForDay(3);
-  const friday = getEntriesForDay(4);
-  const saturday = getEntriesForDay(5);
-  const sunday = getEntriesForDay(6);
+function ContextTree({ nodes, selectedEntryId, depth = 0 }: { nodes: TreeNode[]; selectedEntryId?: number; depth?: number }) {
+  return (
+    <>
+      {nodes.map((node) => (
+        <div key={node.entry.id}>
+          <div
+            className="flex items-center gap-2 text-sm py-0.5 font-mono"
+            style={{ paddingLeft: `${depth * 12}px` }}
+          >
+            <span className={node.entry.id === selectedEntryId ? 'text-foreground' : 'text-muted-foreground'}>
+              {node.entry.content}
+            </span>
+          </div>
+          {node.children.length > 0 && (
+            <ContextTree nodes={node.children} selectedEntryId={selectedEntryId} depth={depth + 1} />
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
 
-  const selectedEntry = selectedEntryId
-    ? filteredEntries.find(e => e.id === selectedEntryId) || null
-    : null;
+export function WeekView({ days }: WeekViewProps) {
+  const [selectedEntry, setSelectedEntry] = useState<Entry | undefined>();
 
-  const handleSelectEntry = (entry: Entry) => {
-    setSelectedEntryId(entry.id);
-  };
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  const weekDays = days.slice(0, 5).map((day, index) => ({
+    ...day,
+    dayName: dayNames[index],
+    dayNumber: parseISO(day.date).getDate(),
+  }));
+
+  const saturday = days[5];
+  const sunday = days[6];
+
+  const filteredWeekDays = weekDays.map(day => ({
+    ...day,
+    entries: filterWeekEntries(day.entries),
+  }));
+
+  const filteredSaturday = saturday ? filterWeekEntries(saturday.entries) : [];
+  const filteredSunday = sunday ? filterWeekEntries(sunday.entries) : [];
+
+  const startDate = days[0] ? parseISO(days[0].date) : new Date();
+  const endDate = days[6] ? parseISO(days[6].date) : new Date();
+  const dateRange = `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`;
+
+  const allEntries = days.flatMap(day => {
+    const flatten = (entries: Entry[]): Entry[] => {
+      const result: Entry[] = [];
+      for (const entry of entries) {
+        result.push(entry);
+        if (entry.children && entry.children.length > 0) {
+          result.push(...flatten(entry.children));
+        }
+      }
+      return result;
+    };
+    return flatten(day.entries);
+  });
+
+  const contextTree = useMemo(() => buildTree(allEntries), [allEntries]);
 
   return (
     <div className="flex h-full gap-4">
-      <div className="flex-1">
-        <div className="grid grid-cols-2 gap-4">
-          <DayBox
-            date={startDate}
-            entries={monday}
-            selectedEntryId={selectedEntryId || undefined}
-            onEntrySelect={setSelectedEntryId}
-          />
-          <DayBox
-            date={addDays(startDate, 1)}
-            entries={tuesday}
-            selectedEntryId={selectedEntryId || undefined}
-            onEntrySelect={setSelectedEntryId}
-          />
-          <DayBox
-            date={addDays(startDate, 2)}
-            entries={wednesday}
-            selectedEntryId={selectedEntryId || undefined}
-            onEntrySelect={setSelectedEntryId}
-          />
-          <DayBox
-            date={addDays(startDate, 3)}
-            entries={thursday}
-            selectedEntryId={selectedEntryId || undefined}
-            onEntrySelect={setSelectedEntryId}
-          />
-          <DayBox
-            date={addDays(startDate, 4)}
-            entries={friday}
-            selectedEntryId={selectedEntryId || undefined}
-            onEntrySelect={setSelectedEntryId}
-          />
-          <WeekendBox
-            startDay={parseInt(format(addDays(startDate, 5), 'd'))}
-            saturdayEntries={saturday}
-            sundayEntries={sunday}
-            selectedEntry={selectedEntry || undefined}
-            onSelectEntry={handleSelectEntry}
-          />
+      <div className="flex-1 overflow-y-auto">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Weekly Review</h2>
+          <p className="text-sm text-muted-foreground">{dateRange}</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {filteredWeekDays.map((day, index) => (
+            <DayBox
+              key={day.date}
+              dayNumber={day.dayNumber}
+              dayName={day.dayName}
+              entries={day.entries}
+              selectedEntry={selectedEntry}
+              onSelectEntry={setSelectedEntry}
+            />
+          ))}
+
+          {saturday && sunday && (
+            <WeekendBox
+              startDay={parseISO(saturday.date).getDate()}
+              saturdayEntries={filteredSaturday}
+              sundayEntries={filteredSunday}
+              selectedEntry={selectedEntry}
+              onSelectEntry={setSelectedEntry}
+            />
+          )}
         </div>
       </div>
 
-      {selectedEntry && (
-        <div className="w-80 border-l pl-4">
-          <JournalSidebar
-            selectedEntry={selectedEntry}
-            contextTree={entries}
-          />
+      <div className="w-96 border-l border-border pl-4 overflow-y-auto">
+        <div className="mb-3">
+          <h3 className="text-sm font-medium">Context</h3>
         </div>
-      )}
+
+        {!selectedEntry ? (
+          <p className="text-sm text-muted-foreground">No entry selected</p>
+        ) : selectedEntry.parentId === null ? (
+          <p className="text-sm text-muted-foreground">No context</p>
+        ) : (
+          <ContextTree nodes={contextTree} selectedEntryId={selectedEntry.id} />
+        )}
+      </div>
     </div>
   );
 }
