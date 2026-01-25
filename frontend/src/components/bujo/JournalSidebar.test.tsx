@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { JournalSidebar } from './JournalSidebar'
 import { Entry } from '@/types/bujo'
@@ -340,6 +340,148 @@ describe('JournalSidebar', () => {
         />
       )
       expect(screen.queryByTestId('resize-handle')).not.toBeInTheDocument()
+    })
+
+    it('calls onWidthChange on mount with default width', () => {
+      const onWidthChange = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onWidthChange={onWidthChange}
+        />
+      )
+      expect(onWidthChange).toHaveBeenCalledWith(512)
+    })
+
+    it('updates width on resize drag', async () => {
+      const onWidthChange = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onWidthChange={onWidthChange}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId('resize-handle')
+
+      // Clear the initial mount call
+      onWidthChange.mockClear()
+
+      // Simulate resize: mousedown, mousemove, mouseup
+      Object.defineProperty(window, 'innerWidth', { value: 1920, writable: true })
+
+      await act(async () => {
+        const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 0 })
+        resizeHandle.dispatchEvent(mouseDownEvent)
+
+        // Simulate mouse move to resize (window width 1920, clientX 1320 = 600px sidebar)
+        const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 1320 })
+        document.dispatchEvent(mouseMoveEvent)
+      })
+
+      expect(onWidthChange).toHaveBeenCalledWith(600)
+    })
+
+    it('clamps width to minimum 384px', async () => {
+      const onWidthChange = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onWidthChange={onWidthChange}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId('resize-handle')
+
+      // Clear the initial mount call
+      onWidthChange.mockClear()
+
+      // Simulate resize to very wide (should clamp to min)
+      Object.defineProperty(window, 'innerWidth', { value: 1920, writable: true })
+
+      await act(async () => {
+        const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 0 })
+        resizeHandle.dispatchEvent(mouseDownEvent)
+
+        const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 1700 })
+        document.dispatchEvent(mouseMoveEvent)
+      })
+
+      // 1920 - 1700 = 220, should clamp to 384
+      expect(onWidthChange).toHaveBeenCalledWith(384)
+    })
+
+    it('clamps width to maximum 960px', async () => {
+      const onWidthChange = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onWidthChange={onWidthChange}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId('resize-handle')
+
+      // Clear the initial mount call
+      onWidthChange.mockClear()
+
+      // Simulate resize to very narrow (should clamp to max)
+      Object.defineProperty(window, 'innerWidth', { value: 1920, writable: true })
+
+      await act(async () => {
+        const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 0 })
+        resizeHandle.dispatchEvent(mouseDownEvent)
+
+        const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 800 })
+        document.dispatchEvent(mouseMoveEvent)
+      })
+
+      // 1920 - 800 = 1120, should clamp to 960
+      expect(onWidthChange).toHaveBeenCalledWith(960)
+    })
+
+    it('stops resizing on mouse up', async () => {
+      const onWidthChange = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onWidthChange={onWidthChange}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId('resize-handle')
+
+      Object.defineProperty(window, 'innerWidth', { value: 1920, writable: true })
+
+      await act(async () => {
+        // Start resize
+        const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 0 })
+        resizeHandle.dispatchEvent(mouseDownEvent)
+
+        // Move once
+        const mouseMoveEvent1 = new MouseEvent('mousemove', { bubbles: true, clientX: 1320 })
+        document.dispatchEvent(mouseMoveEvent1)
+
+        // End resize
+        const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+        document.dispatchEvent(mouseUpEvent)
+      })
+
+      // Clear previous calls
+      onWidthChange.mockClear()
+
+      await act(async () => {
+        // Move again - should not trigger width change
+        const mouseMoveEvent2 = new MouseEvent('mousemove', { bubbles: true, clientX: 1200 })
+        document.dispatchEvent(mouseMoveEvent2)
+      })
+
+      expect(onWidthChange).not.toHaveBeenCalled()
     })
   })
 })
