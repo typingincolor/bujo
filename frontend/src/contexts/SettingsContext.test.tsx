@@ -186,4 +186,66 @@ describe('SettingsContext', () => {
 
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
+
+  it('should remove matchMedia listener when theme changes from system to another value', () => {
+    const removeEventListener = vi.fn()
+    const addEventListener = vi.fn()
+    const mockMatchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener,
+      removeEventListener,
+    }))
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia,
+    })
+
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'system', defaultView: 'today' }))
+
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    })
+
+    // Verify listener was added for system theme
+    expect(addEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+
+    // Change theme from system to dark
+    act(() => {
+      result.current.setTheme('dark')
+    })
+
+    // Verify listener was removed
+    expect(removeEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+  })
+
+  it('should remove matchMedia listener on unmount when using system theme', () => {
+    const removeEventListener = vi.fn()
+    const addEventListener = vi.fn()
+    const mockMatchMedia = vi.fn().mockImplementation(() => ({
+      matches: true,
+      addEventListener,
+      removeEventListener,
+    }))
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia,
+    })
+
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'system', defaultView: 'today' }))
+
+    const { unmount } = render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    // Verify listener was added
+    expect(addEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+
+    // Unmount the component
+    unmount()
+
+    // Verify listener was removed
+    expect(removeEventListener).toHaveBeenCalledWith('change', expect.any(Function))
+  })
 })

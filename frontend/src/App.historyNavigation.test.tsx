@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 beforeAll(() => {
@@ -73,7 +74,11 @@ describe('App - Navigation History', () => {
 
   describe('initial state', () => {
     it('Header does not show back button initially (canGoBack is false)', async () => {
-      render(<App />)
+      render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
       await waitFor(() => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -87,7 +92,11 @@ describe('App - Navigation History', () => {
   describe('navigation from WeekSummary', () => {
     it('shows back button after navigating from attention item popover', async () => {
       const user = userEvent.setup()
-      render(<App />)
+      render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
       await waitFor(() => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -123,7 +132,11 @@ describe('App - Navigation History', () => {
 
     it('clicking back button returns to previous view', async () => {
       const user = userEvent.setup()
-      render(<App />)
+      render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
       await waitFor(() => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -167,7 +180,11 @@ describe('App - Navigation History', () => {
 
     it('supports multi-level navigation history', async () => {
       const user = userEvent.setup()
-      render(<App />)
+      render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
       await waitFor(() => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -230,7 +247,11 @@ describe('App - Navigation History', () => {
   describe('manual navigation to today clears history', () => {
     it('clears history when manually navigating to today view via sidebar', async () => {
       const user = userEvent.setup()
-      render(<App />)
+      render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
       await waitFor(() => {
         expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()

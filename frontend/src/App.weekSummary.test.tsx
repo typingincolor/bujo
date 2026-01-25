@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -125,7 +126,11 @@ describe('WeekSummary - Task Flow', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithTaskFlow)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -144,7 +149,11 @@ describe('WeekSummary - Task Flow', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithTaskFlow)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -165,7 +174,11 @@ describe('WeekSummary - Task Flow', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithTaskFlow)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -184,7 +197,11 @@ describe('WeekSummary - Task Flow', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithTaskFlow)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -203,7 +220,11 @@ describe('WeekSummary - Task Flow', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithTaskFlow)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -228,7 +249,11 @@ describe('WeekSummary - Meetings', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithMeetings)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -251,7 +276,11 @@ describe('WeekSummary - Meetings', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithMeetings)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -272,7 +301,11 @@ describe('WeekSummary - Meetings', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithMeetings)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -301,7 +334,11 @@ describe('WeekSummary - Needs Attention', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithNeedsAttention)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -319,7 +356,11 @@ describe('WeekSummary - Needs Attention', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithNeedsAttention)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -341,7 +382,11 @@ describe('WeekSummary - Needs Attention', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithNeedsAttention)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -360,7 +405,11 @@ describe('WeekSummary - Needs Attention', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithNeedsAttention)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -381,7 +430,11 @@ describe('WeekSummary - Needs Attention', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithNeedsAttention)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()

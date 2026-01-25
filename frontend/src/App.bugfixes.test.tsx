@@ -20,6 +20,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -82,7 +83,11 @@ describe('Bug #1 & #2: Weekly Review Data Display', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(weekData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     // Navigate to week view
     await waitFor(() => expect(screen.getByText(/Day 0 task/)).toBeInTheDocument())
@@ -130,7 +135,11 @@ describe('Bug #1 & #2: Weekly Review Data Display', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(weekData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     // Wait for initial render, then navigate to week view
     await waitFor(() => expect(screen.getByRole('button', { name: /weekly review/i })).toBeInTheDocument())
@@ -176,7 +185,11 @@ describe('Bug #3 & #4: Popover Display Issues', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(weekData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => expect(screen.getByText('High priority task')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /weekly review/i }))
@@ -223,7 +236,11 @@ describe('Bug #3 & #4: Popover Display Issues', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(weekData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => expect(screen.getByText('Team standup')).toBeInTheDocument())
     await userEvent.click(screen.getByRole('button', { name: /weekly review/i }))
@@ -268,7 +285,11 @@ describe('Bug #5: Pending Tasks View Popover Integration', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(overdueData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => expect(screen.getByText('Overdue task 1')).toBeInTheDocument())
 
@@ -307,7 +328,11 @@ describe('Bug #6 & #7: CaptureBar Typography Issues', () => {
     const mockData = createMockAgenda({ Days: [] })
     vi.mocked(GetAgenda).mockResolvedValue(mockData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
@@ -338,7 +363,11 @@ describe('Bug #6 & #7: CaptureBar Typography Issues', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(mockData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText(/First line/)).toBeInTheDocument()
@@ -375,7 +404,11 @@ describe('Bug #8 & #9: Navigation Issues', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(mockData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Test task')).toBeInTheDocument()
@@ -427,7 +460,11 @@ describe('Bug #8 & #9: Navigation Issues', () => {
     })
 
     vi.mocked(GetAgenda).mockResolvedValue(weekData)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Attention task')).toBeInTheDocument()

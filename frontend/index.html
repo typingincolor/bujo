@@ -7,6 +7,27 @@
     <title>frontend</title>
   </head>
   <body>
+    <script>
+      // Prevent flash of unstyled content for dark mode
+      (function() {
+        try {
+          const settings = JSON.parse(localStorage.getItem('bujo-settings') || '{}');
+          const theme = settings.theme || 'dark';
+
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          } else if (theme === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (prefersDark) {
+              document.documentElement.classList.add('dark');
+            }
+          }
+        } catch (e) {
+          // If anything fails, default to dark mode
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
