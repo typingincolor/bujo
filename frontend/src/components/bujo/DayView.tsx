@@ -1,6 +1,6 @@
 import { DayEntries, Entry } from '@/types/bujo';
 import { EntryItem } from './EntryItem';
-import { Calendar, MapPin, Cloud, Heart, Sparkles } from 'lucide-react';
+import { Calendar, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -253,26 +253,8 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
           </span>
         </div>
         
-        {/* Context indicators */}
-        <div className="flex items-center gap-3 ml-auto text-xs text-muted-foreground">
-          {day.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {day.location}
-            </span>
-          )}
-          {day.weather && (
-            <span className="flex items-center gap-1">
-              <Cloud className="w-3.5 h-3.5" />
-              {day.weather}
-            </span>
-          )}
-          {day.mood && (
-            <span className="flex items-center gap-1">
-              <Heart className="w-3.5 h-3.5" />
-              {day.mood}
-            </span>
-          )}
+        {/* AI Summary toggle */}
+        <div className="flex items-center ml-auto">
           <button
             onClick={handleToggleSummary}
             title="Toggle AI summary"
