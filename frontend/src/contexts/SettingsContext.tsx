@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import type { Settings, Theme, DefaultView } from '../types/settings'
 import { DEFAULT_SETTINGS } from '../types/settings'
