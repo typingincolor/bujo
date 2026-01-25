@@ -1,8 +1,5 @@
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
-import { cn } from '@/lib/utils'
 import { Entry } from '@/types/bujo'
-
-type CaptureType = 'task' | 'note' | 'event' | 'question'
 
 interface CaptureBarProps {
   onSubmit: (content: string) => void
@@ -12,35 +9,7 @@ interface CaptureBarProps {
   parentEntry?: Entry | null
 }
 
-const TYPES: CaptureType[] = ['task', 'note', 'event', 'question']
-
-const TYPE_PREFIXES: Record<CaptureType, string> = {
-  task: '. ',
-  note: '- ',
-  event: 'o ',
-  question: '? ',
-}
-
-const TYPE_SYMBOLS: Record<CaptureType, string> = {
-  task: '.',
-  note: '-',
-  event: 'o',
-  question: '?',
-}
-
-const PREFIX_TO_TYPE: Record<string, CaptureType> = {
-  '. ': 'task',
-  '- ': 'note',
-  'o ': 'event',
-  '? ': 'question',
-}
-
 const DRAFT_KEY = 'bujo-capture-bar-draft'
-const TYPE_KEY = 'bujo-capture-bar-type'
-
-function getPlaceholder(type: CaptureType): string {
-  return `Add a ${type}...`
-}
 
 export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(function CaptureBar(
   {
@@ -57,14 +26,6 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
       return localStorage.getItem(DRAFT_KEY) || ''
     } catch {
       return ''
-    }
-  })
-  const [selectedType, setSelectedType] = useState<CaptureType>(() => {
-    try {
-      const stored = localStorage.getItem(TYPE_KEY) as CaptureType | null
-      return stored && TYPES.includes(stored) ? stored : 'task'
-    } catch {
-      return 'task'
     }
   })
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -84,14 +45,6 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   }, [content])
 
   useEffect(() => {
-    try {
-      localStorage.setItem(TYPE_KEY, selectedType)
-    } catch {
-      // Ignore localStorage errors (e.g., incognito mode)
-    }
-  }, [selectedType])
-
-  useEffect(() => {
     const textarea = textareaRef.current
     if (textarea) {
       textarea.style.height = 'auto'
@@ -102,12 +55,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   const handleSubmit = useCallback(() => {
     if (!content.trim()) return
 
-    const prefixedContent = TYPE_PREFIXES[selectedType] + content
-
+    // Submit content exactly as typed - user types their own prefix
     if (parentEntry && onSubmitChild) {
-      onSubmitChild(parentEntry.id, prefixedContent)
+      onSubmitChild(parentEntry.id, content)
     } else {
-      onSubmit(prefixedContent)
+      onSubmit(content)
     }
 
     setContent('')
@@ -117,44 +69,16 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
       // Ignore localStorage errors (e.g., incognito mode)
     }
     textareaRef.current?.focus()
-  }, [content, selectedType, parentEntry, onSubmitChild, onSubmit])
+  }, [content, parentEntry, onSubmitChild, onSubmit])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value
-
-    // Check for prefix at start of input or when completing a partial prefix
-    // (e.g., user typed "." and now types " " to complete ". ")
-    const isStartingPrefix = content === '' || Object.keys(PREFIX_TO_TYPE).some(
-      prefix => prefix.startsWith(content) && content.length < prefix.length
-    )
-
-    if (isStartingPrefix) {
-      for (const [prefix, type] of Object.entries(PREFIX_TO_TYPE)) {
-        if (newValue === prefix) {
-          setSelectedType(type)
-          setContent('')
-          return
-        }
-        if (newValue.startsWith(prefix) && newValue.length > prefix.length) {
-          setSelectedType(type)
-          setContent(newValue.slice(prefix.length))
-          return
-        }
-      }
-    }
-
-    setContent(newValue)
+    setContent(e.target.value)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
-    } else if (e.key === 'Tab' && !content) {
-      e.preventDefault()
-      const currentIndex = TYPES.indexOf(selectedType)
-      const nextIndex = (currentIndex + 1) % TYPES.length
-      setSelectedType(TYPES[nextIndex])
     } else if (e.key === 'Escape') {
       e.preventDefault()
       if (content) {
@@ -171,7 +95,7 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   }
 
   return (
-    <div data-testid="capture-bar" className="flex flex-col gap-2 p-3 bg-card border rounded-lg">
+    <div data-testid="capture-bar" className="fixed bottom-0 left-56 right-64 flex flex-col gap-2 p-3 bg-card border rounded-lg">
       {parentEntry && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Adding to:</span>
@@ -187,32 +111,13 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
         </div>
       )}
       <div className="flex items-center gap-2">
-        <div className="flex gap-1">
-          {TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setSelectedType(type)}
-              aria-pressed={selectedType === type}
-              aria-label={type}
-              className={cn(
-                'w-8 h-8 text-sm font-mono rounded',
-                selectedType === type
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              )}
-            >
-              {TYPE_SYMBOLS[type]}
-            </button>
-          ))}
-        </div>
         <textarea
           ref={textareaRef}
           data-testid="capture-bar-input"
           value={content}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
-          placeholder={getPlaceholder(selectedType)}
+          placeholder="Capture a thought..."
           rows={1}
           style={{ fontFamily: 'monospace' }}
           className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none font-mono"

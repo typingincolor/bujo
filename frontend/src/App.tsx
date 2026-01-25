@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useNavigationHistory } from '@/hooks/useNavigationHistory'
 import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
-import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { DateNavigator } from '@/components/bujo/DateNavigator'
 import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
@@ -25,13 +26,12 @@ import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekSummary } from '@/components/bujo/WeekSummary'
-import { ContextPanel } from '@/components/bujo/ContextPanel'
+import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
-import { formatDateForInput, parseDateFromInput } from '@/lib/dateUtils'
-import { scrollToElement, scrollToPosition } from '@/lib/scrollUtils'
+import { scrollToPosition } from '@/lib/scrollUtils'
 import './index.css'
 
 function flattenEntries(entries: Entry[]): Entry[] {
@@ -81,8 +81,8 @@ function App() {
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
-  const [showContextPanel, setShowContextPanel] = useState(false)
-  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null)
+  const [, setSelectedEntry] = useState<Entry | null>(null)
+  const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
@@ -145,6 +145,14 @@ function App() {
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
+  // Ancestors for sidebar-selected overdue entry (empty for now - overdue entries don't have tree context)
+  const sidebarSelectedAncestors = useMemo(() => {
+    if (!sidebarSelectedEntry) return []
+    // Overdue entries are displayed in a flat list, ancestors not available
+    // Could be fetched from backend if needed in future
+    return []
+  }, [sidebarSelectedEntry])
+
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
     try {
       const hasChildren = await HasChildren(entry.id)
@@ -176,6 +184,10 @@ function App() {
     setCurrentDate(startOfDay(new Date()))
   }, [])
 
+  const handleDateNavigatorChange = useCallback((date: Date) => {
+    setCurrentDate(startOfDay(date))
+  }, [])
+
   const handlePrevWeek = useCallback(() => {
     setReviewAnchorDate(prev => {
       const newDate = new Date(prev)
@@ -190,13 +202,6 @@ function App() {
       newDate.setDate(newDate.getDate() + 7)
       return newDate
     })
-  }, [])
-
-  const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = parseDateFromInput(e.target.value)
-    if (newDate) {
-      setCurrentDate(newDate)
-    }
   }, [])
 
   const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
@@ -229,14 +234,6 @@ function App() {
       }
 
       if (isInputFocused) return
-
-      // Shift+C toggles context panel (global, works in all views)
-      // Checking for uppercase 'C' is equivalent to Shift+c
-      if (e.key === 'C') {
-        e.preventDefault()
-        setShowContextPanel(prev => !prev)
-        return
-      }
 
       // Day navigation shortcuts (h/l/T) - always available in today view
       if (view === 'today') {
@@ -539,17 +536,6 @@ function App() {
     setView('week')
   }, [])
 
-  const handleNavigateToEntry = useCallback((entry: Entry) => {
-    pushHistory({
-      view: view,
-      scrollPosition: window.scrollY,
-      entryId: entry.id,
-    })
-    const entryDate = new Date(entry.loggedDate)
-    setCurrentDate(startOfDay(entryDate))
-    setView('today')
-    scrollToElement(`[data-entry-id="${entry.id}"]`)
-  }, [view, pushHistory])
 
   const handleBack = useCallback(() => {
     const previousState = goBack()
@@ -602,7 +588,6 @@ function App() {
 
   const today = days[0]
   const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
-  const isViewingToday = currentDate.toDateString() === new Date().toDateString()
 
   return (
     <div className="flex h-screen bg-background">
@@ -626,60 +611,13 @@ function App() {
           {view === 'today' && (
             <div className="max-w-3xl mx-auto space-y-6">
               {/* Day Navigation */}
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={handlePrevDay}
-                  aria-label="Previous day"
-                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <input
-                  type="date"
-                  aria-label="Pick date"
-                  value={formatDateForInput(currentDate)}
-                  onChange={handleDateChange}
-                  className="px-3 py-2 rounded-lg bg-secondary/50 hover:bg-secondary text-sm transition-colors border-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              <div className="flex items-center justify-center">
+                <DateNavigator
+                  date={currentDate}
+                  onDateChange={handleDateNavigatorChange}
                 />
-                <button
-                  onClick={handleNextDay}
-                  aria-label="Next day"
-                  className="p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                {!isViewingToday && (
-                  <button
-                    onClick={handleGoToToday}
-                    aria-label="Go to today"
-                    className="px-3 py-2 text-sm rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
-                  >
-                    Today
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowCaptureModal(true)}
-                  title="Open capture modal"
-                  className="p-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
-                >
-                  <PenLine className="w-5 h-5" />
-                </button>
               </div>
               <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
-              {overdueEntries.length > 0 && (
-                <OverviewView
-                  overdueEntries={overdueEntries}
-                  onEntryChanged={loadData}
-                  onError={setError}
-                  onMigrate={(entry) => setMigrateModalEntry(entry)}
-                  onEdit={(entry) => setEditModalEntry(entry)}
-                  onMoveToList={(entry) => setMoveToListEntry(entry)}
-                  onNavigateToEntry={handleNavigateToEntry}
-                  onAnswer={(entry) => setAnswerModalEntry(entry)}
-                  onAddChild={handleAddChild}
-                  onMoveToRoot={loadData}
-                />
-              )}
               {today && (
                 <DayView
                   day={today}
@@ -818,15 +756,17 @@ function App() {
         )}
       </div>
 
-      {/* Context Panel - toggle with Shift+C */}
-      {showContextPanel && (
+      {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
+      {view === 'today' && (
         <aside
-          data-testid="context-panel"
-          className="w-64 h-screen border-l border-border bg-background overflow-y-auto"
+          className="w-64 h-screen border-l border-border bg-background overflow-y-auto p-2"
         >
-          <ContextPanel
-            selectedEntry={selectedEntry}
-            entries={flatEntries}
+          <JournalSidebar
+            overdueEntries={overdueEntries}
+            now={currentDate}
+            selectedEntry={sidebarSelectedEntry ?? undefined}
+            ancestors={sidebarSelectedAncestors}
+            onSelectEntry={setSidebarSelectedEntry}
           />
         </aside>
       )}

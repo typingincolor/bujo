@@ -47,6 +47,8 @@ interface HeaderProps {
   onLocationChanged?: () => void;
   canGoBack?: boolean;
   onBack?: () => void;
+  actions?: React.ReactNode;
+  showContextPickers?: boolean;
 }
 
 export function Header({
@@ -61,6 +63,8 @@ export function Header({
   onLocationChanged,
   canGoBack,
   onBack,
+  actions,
+  showContextPickers = true,
 }: HeaderProps) {
   const displayDate = currentDate ?? new Date();
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -152,62 +156,64 @@ export function Header({
           {format(displayDate, 'EEEE, MMMM d, yyyy')}
         </span>
 
-        {/* Mood button */}
-        <div className="relative" ref={moodPickerRef}>
-          <button
-            onClick={() => setShowMoodPicker(!showMoodPicker)}
-            title="Set mood"
-            className={cn(
-              'p-2 rounded-lg transition-colors flex items-center gap-1',
-              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {currentMood ? getMoodEmoji(currentMood) : <Smile className="w-4 h-4" />}
-          </button>
-          {showMoodPicker && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
-              {MOOD_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleMoodSelect(option.value)}
-                  className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
-                >
-                  {option.emoji}
-                </button>
-              ))}
+        {showContextPickers && (
+          <>
+            {/* Mood button */}
+            <div className="relative" ref={moodPickerRef}>
+              <button
+                onClick={() => setShowMoodPicker(!showMoodPicker)}
+                title="Set mood"
+                className={cn(
+                  'p-2 rounded-lg transition-colors flex items-center gap-1',
+                  'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {currentMood ? getMoodEmoji(currentMood) : <Smile className="w-4 h-4" />}
+              </button>
+              {showMoodPicker && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
+                  {MOOD_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleMoodSelect(option.value)}
+                      className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
+                    >
+                      {option.emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Weather button */}
-        <div className="relative" ref={weatherPickerRef}>
-          <button
-            onClick={() => setShowWeatherPicker(!showWeatherPicker)}
-            title="Set weather"
-            className={cn(
-              'p-2 rounded-lg transition-colors flex items-center gap-1',
-              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
-            )}
-          >
-            {currentWeather ? getWeatherEmoji(currentWeather) : <Cloud className="w-4 h-4" />}
-          </button>
-          {showWeatherPicker && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
-              {WEATHER_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleWeatherSelect(option.value)}
-                  className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
-                >
-                  {option.emoji}
-                </button>
-              ))}
+            {/* Weather button */}
+            <div className="relative" ref={weatherPickerRef}>
+              <button
+                onClick={() => setShowWeatherPicker(!showWeatherPicker)}
+                title="Set weather"
+                className={cn(
+                  'p-2 rounded-lg transition-colors flex items-center gap-1',
+                  'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {currentWeather ? getWeatherEmoji(currentWeather) : <Cloud className="w-4 h-4" />}
+              </button>
+              {showWeatherPicker && (
+                <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 p-2 flex gap-2">
+                  {WEATHER_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleWeatherSelect(option.value)}
+                      className="p-2 hover:bg-secondary/50 rounded transition-colors text-lg"
+                    >
+                      {option.emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Location button */}
-        <div className="relative" ref={locationPickerRef}>
+            {/* Location button */}
+            <div className="relative" ref={locationPickerRef}>
           <button
             onClick={() => setShowLocationPicker(!showLocationPicker)}
             title="Set location"
@@ -260,22 +266,27 @@ export function Header({
               )}
             </div>
           )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Capture button */}
-      {onCapture && (
-        <button
-          onClick={onCapture}
-          title="Capture entries"
-          className={cn(
-            'p-2 rounded-lg transition-colors',
-            'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
-          )}
-        >
-          <FileEdit className="w-4 h-4" />
-        </button>
-      )}
+      <div className="flex items-center gap-2">
+        {actions}
+        {/* Capture button */}
+        {onCapture && (
+          <button
+            onClick={onCapture}
+            title="Capture entries"
+            className={cn(
+              'p-2 rounded-lg transition-colors',
+              'bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <FileEdit className="w-4 h-4" />
+          </button>
+        )}
+      </div>
     </header>
   );
 }

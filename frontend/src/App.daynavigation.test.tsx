@@ -85,7 +85,7 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    expect(screen.getByLabelText(/pick date/i)).toBeInTheDocument()
+    expect(screen.getByTestId('date-picker')).toBeInTheDocument()
   })
 
   // Skipped: HTML date input change events don't work reliably in jsdom CI.

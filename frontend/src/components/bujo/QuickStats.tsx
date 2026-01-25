@@ -67,12 +67,12 @@ interface StatCardProps {
 function StatCard({ icon: Icon, label, value, subtext, color }: StatCardProps) {
   const testId = `stat-card-${label.toLowerCase().replace(/\s+/g, '-')}`;
   return (
-    <div className="rounded-lg border border-border bg-card p-4 hover:bg-secondary/30 transition-colors" data-testid={testId}>
+    <div className="rounded-lg border border-border bg-card p-3 hover:bg-secondary/30 transition-colors" data-testid={testId}>
       <div className="flex items-center gap-2 mb-2">
-        <Icon className={cn('w-4 h-4', color)} />
+        <Icon className={cn('h-4 w-4', color)} data-testid="stat-icon" />
         <span className="text-xs text-muted-foreground">{label}</span>
       </div>
-      <div className="font-display text-2xl font-semibold">{value}</div>
+      <div className="font-display text-xl font-semibold" data-testid="stat-count">{value}</div>
       <div className="text-xs text-muted-foreground">{subtext}</div>
     </div>
   );

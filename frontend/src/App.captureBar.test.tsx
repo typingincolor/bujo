@@ -84,7 +84,7 @@ describe('CaptureBar - Always Visible', () => {
     expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
   })
 
-  it('shows type selection buttons (Task, Note, Event, Question)', async () => {
+  it('does NOT show type selection buttons (prefix characters are sufficient)', async () => {
     render(
       <SettingsProvider>
         <App />
@@ -96,13 +96,14 @@ describe('CaptureBar - Always Visible', () => {
     })
 
     const captureBar = screen.getByTestId('capture-bar')
-    expect(within(captureBar).getByRole('button', { name: /task/i })).toBeInTheDocument()
-    expect(within(captureBar).getByRole('button', { name: /note/i })).toBeInTheDocument()
-    expect(within(captureBar).getByRole('button', { name: /event/i })).toBeInTheDocument()
-    expect(within(captureBar).getByRole('button', { name: /question/i })).toBeInTheDocument()
+    expect(within(captureBar).queryByRole('button', { name: /task/i })).not.toBeInTheDocument()
+    expect(within(captureBar).queryByRole('button', { name: /note/i })).not.toBeInTheDocument()
+    expect(within(captureBar).queryByRole('button', { name: /event/i })).not.toBeInTheDocument()
+    expect(within(captureBar).queryByRole('button', { name: /question/i })).not.toBeInTheDocument()
   })
 
-  it('has Task selected by default', async () => {
+  it('uses prefix characters for type selection instead of buttons', async () => {
+    const user = userEvent.setup()
     render(
       <SettingsProvider>
         <App />
@@ -113,20 +114,22 @@ describe('CaptureBar - Always Visible', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
-    const taskButton = within(captureBar).getByRole('button', { name: /task/i })
-    expect(taskButton).toHaveAttribute('aria-pressed', 'true')
+    const input = screen.getByTestId('capture-bar-input')
+    await user.type(input, '. Task item')
+
+    // Prefix is kept in input
+    expect(input).toHaveValue('. Task item')
   })
 })
 
-describe('CaptureBar - Type Selection', () => {
+describe('CaptureBar - Prefix-Based Type Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
   })
 
-  it('clicking type button changes selection', async () => {
+  it('Tab blurs input (no type cycling)', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -138,49 +141,15 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
-    const noteButton = within(captureBar).getByRole('button', { name: /note/i })
-    await user.click(noteButton)
-
-    expect(noteButton).toHaveAttribute('aria-pressed', 'true')
-    const taskButton = within(captureBar).getByRole('button', { name: /task/i })
-    expect(taskButton).toHaveAttribute('aria-pressed', 'false')
-  })
-
-  it('Tab cycles through types when input is empty', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
     await user.click(input)
 
-    // Start with Task selected, Tab should cycle to Note
+    // Tab should blur the input, not cycle type
     await user.keyboard('{Tab}')
-    expect(within(captureBar).getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
-
-    // Tab to Event
-    await user.keyboard('{Tab}')
-    expect(within(captureBar).getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
-
-    // Tab to Question
-    await user.keyboard('{Tab}')
-    expect(within(captureBar).getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
-
-    // Tab wraps back to Task
-    await user.keyboard('{Tab}')
-    expect(within(captureBar).getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(input).not.toHaveFocus()
   })
 
-  it('typing ". " prefix changes type to Task', async () => {
+  it('typing ". " prefix keeps prefix in input for task', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -192,18 +161,13 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
-    // First select Note type
-    const noteButton = within(captureBar).getByRole('button', { name: /note/i })
-    await user.click(noteButton)
-
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, '. ')
+    await user.type(input, '. test task')
 
-    expect(within(captureBar).getByRole('button', { name: /task/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(input).toHaveValue('. test task')
   })
 
-  it('typing "- " prefix changes type to Note', async () => {
+  it('typing "- " prefix keeps prefix in input for note', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -215,14 +179,13 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, '- ')
+    await user.type(input, '- test note')
 
-    expect(within(captureBar).getByRole('button', { name: /note/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(input).toHaveValue('- test note')
   })
 
-  it('typing "o " prefix changes type to Event', async () => {
+  it('typing "o " prefix keeps prefix in input for event', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -234,14 +197,13 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, 'o ')
+    await user.type(input, 'o test event')
 
-    expect(within(captureBar).getByRole('button', { name: /event/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(input).toHaveValue('o test event')
   })
 
-  it('typing "? " prefix changes type to Question', async () => {
+  it('typing "? " prefix keeps prefix in input for question', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -253,11 +215,10 @@ describe('CaptureBar - Type Selection', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    const captureBar = screen.getByTestId('capture-bar')
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, '? ')
+    await user.type(input, '? test question')
 
-    expect(within(captureBar).getByRole('button', { name: /question/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(input).toHaveValue('? test question')
   })
 })
 
@@ -268,7 +229,7 @@ describe('CaptureBar - Entry Submission', () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
   })
 
-  it('Enter submits entry with selected type prefix', async () => {
+  it('Enter submits content exactly as typed (user types prefix)', async () => {
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -281,7 +242,7 @@ describe('CaptureBar - Entry Submission', () => {
     })
 
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, 'Buy groceries{Enter}')
+    await user.type(input, '. Buy groceries{Enter}')
 
     await waitFor(() => {
       expect(AddEntry).toHaveBeenCalledWith('. Buy groceries', expect.any(String))
@@ -400,7 +361,7 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
     })
 
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, 'Child task{Enter}')
+    await user.type(input, '. Child task{Enter}')
 
     await waitFor(() => {
       expect(AddChildEntry).toHaveBeenCalledWith(1, '. Child task', expect.any(String))
