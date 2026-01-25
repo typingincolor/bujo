@@ -4,29 +4,28 @@ import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
 
-interface OverdueEntryItemProps {
-  entry: Entry;
-  now: Date;
-  isSelected: boolean;
-  onSelect?: () => void;
-  callbacks: ReturnType<typeof createEntryCallbacksType>;
-}
-
-type createEntryCallbacksType = (entry: Entry) => {
+interface EntryCallbacks {
   onCancel?: () => void;
   onMigrate?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
   onCyclePriority?: () => void;
   onMoveToList?: () => void;
-};
+}
+
+interface OverdueEntryItemProps {
+  entry: Entry;
+  now: Date;
+  isSelected: boolean;
+  onSelect?: () => void;
+  callbacks: EntryCallbacks;
+}
 
 function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: OverdueEntryItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const attentionResult = calculateAttentionScore(entry, now);
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
-  const hasParent = entry.parentId !== null;
 
   // Clear hover state when keyboard navigation occurs
   useEffect(() => {
@@ -53,18 +52,6 @@ function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: Overd
         onClick={onSelect}
         className="flex items-center gap-2 text-left min-w-0 w-full"
       >
-        <span
-          data-testid="context-dot-container"
-          className="w-2 flex-shrink-0 flex items-center justify-center"
-        >
-          {hasParent && (
-            <span
-              data-testid="context-dot"
-              className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
-            />
-          )}
-        </span>
-
         <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
           {symbol}
         </span>

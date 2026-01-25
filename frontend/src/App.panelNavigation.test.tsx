@@ -253,7 +253,6 @@ describe('App - Mutual Exclusion of Selection', () => {
   })
 
   it('only one entry is highlighted across entire screen', async () => {
-    const user = userEvent.setup()
     render(
       <SettingsProvider>
         <App />
