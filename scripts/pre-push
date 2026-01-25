@@ -3,46 +3,56 @@
 # Pre-push hook for bujo
 # Runs quality checks appropriate to the files being pushed
 #
+# Output is suppressed to reduce context consumption in AI tools.
+# Full logs are written to /tmp/pre-push-*.log on failure.
+#
 # Installation:
 #   cp scripts/pre-push .git/hooks/pre-push
 #   chmod +x .git/hooks/pre-push
 
 set -e  # Exit on first error
 
+# Log file for verbose output
+LOG_FILE="/tmp/pre-push-$$.log"
+cleanup() { rm -f "$LOG_FILE" 2>/dev/null; }
+trap cleanup EXIT
+
+# Run command silently, show summary only
+run_check() {
+    local name="$1"
+    shift
+    printf "  %s... " "$name"
+    if "$@" >> "$LOG_FILE" 2>&1; then
+        echo "✓"
+        return 0
+    else
+        echo "✗"
+        return 1
+    fi
+}
+
 # Read push info from stdin
-# Format: <local ref> <local sha1> <remote ref> <remote sha1>
 ZERO_SHA="0000000000000000000000000000000000000000"
 has_code_changes=false
 changed_files=""
 
 while read local_ref local_sha remote_ref remote_sha; do
-    # Skip deletions (local sha is all zeros)
     if [ "$local_sha" = "$ZERO_SHA" ]; then
         continue
     fi
-
-    # Skip tag pushes
     case "$local_ref" in
-        refs/tags/*)
-            continue
-            ;;
+        refs/tags/*) continue ;;
     esac
-
-    # Determine the range of commits being pushed
     if [ "$remote_sha" = "$ZERO_SHA" ]; then
-        # New branch - compare against merge-base with main/master
         base=$(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD origin/master 2>/dev/null || echo "")
         if [ -n "$base" ]; then
             range="$base..$local_sha"
         else
-            # Fallback: just check the last commit
             range="$local_sha~1..$local_sha"
         fi
     else
         range="$remote_sha..$local_sha"
     fi
-
-    # Get list of changed files
     files=$(git diff --name-only "$range" 2>/dev/null || echo "")
     if [ -n "$files" ]; then
         has_code_changes=true
@@ -52,19 +62,17 @@ $files"
 done
 
 if [ "$has_code_changes" = "false" ]; then
-    echo "ℹ️  No code changes to validate (tag push or branch deletion). Skipping checks."
+    echo "ℹ️  No code changes. Skipping checks."
     exit 0
 fi
 
-# Deduplicate changed files
 changed_files=$(echo "$changed_files" | sort -u | grep -v '^$' || true)
-
 if [ -z "$changed_files" ]; then
-    echo "ℹ️  No file changes detected. Skipping checks."
+    echo "ℹ️  No file changes. Skipping checks."
     exit 0
 fi
 
-# Detect what types of changes we have
+# Detect change types
 has_go_changes=false
 has_frontend_changes=false
 has_workflow_changes=false
@@ -72,188 +80,93 @@ has_code_changes=false
 
 for file in $changed_files; do
     case "$file" in
-        *.go|go.mod|go.sum)
-            has_go_changes=true
-            has_code_changes=true
-            ;;
-        frontend/*)
-            has_frontend_changes=true
-            has_code_changes=true
-            ;;
-        .github/workflows/*.yml|.github/workflows/*.yaml)
-            has_workflow_changes=true
-            # Workflows are config but should be linted
-            ;;
-        *.md|docs/*|.github/*|LICENSE|.gitignore|.claude/*|scripts/*)
-            # Documentation/config - doesn't set has_code_changes
-            ;;
-        *)
-            # Unknown file type - treat as code change to be safe
-            has_code_changes=true
-            ;;
+        *.go|go.mod|go.sum) has_go_changes=true; has_code_changes=true ;;
+        frontend/*) has_frontend_changes=true; has_code_changes=true ;;
+        .github/workflows/*.yml|.github/workflows/*.yaml) has_workflow_changes=true ;;
+        *.md|docs/*|.github/*|LICENSE|.gitignore|.claude/*|scripts/*) ;;
+        *) has_code_changes=true ;;
     esac
 done
 
-# If only docs/config changed (and no workflows), skip all checks
 if [ "$has_code_changes" = "false" ] && [ "$has_workflow_changes" = "false" ]; then
-    echo "ℹ️  Only documentation/config changes. Skipping code checks."
+    echo "ℹ️  Only docs/config changes. Skipping checks."
     exit 0
 fi
 
-echo "🔍 Running pre-push checks..."
-echo "   Changed files:"
-echo "$changed_files" | head -10 | sed 's/^/     /'
 total=$(echo "$changed_files" | wc -l | tr -d ' ')
-if [ "$total" -gt 10 ]; then
-    echo "     ... and $((total - 10)) more"
-fi
-echo ""
+echo "🔍 Pre-push checks ($total files)"
 
-# Go checks (only if Go files changed)
+failed=false
+
+# Go checks
 if [ "$has_go_changes" = "true" ]; then
-    echo "📦 Go changes detected - running Go checks..."
+    echo "📦 Go:"
 
-    # 1. Check formatting
-    echo "Checking gofmt..."
-    unformatted=$(gofmt -l .)
+    # gofmt
+    printf "  gofmt... "
+    unformatted=$(gofmt -l . 2>/dev/null)
     if [ -n "$unformatted" ]; then
-        echo "❌ Files need formatting:"
-        echo "$unformatted"
-        echo ""
-        echo "Run: gofmt -w ."
-        exit 1
+        echo "✗ (run: gofmt -w .)"
+        echo "Unformatted: $unformatted" >> "$LOG_FILE"
+        failed=true
+    else
+        echo "✓"
     fi
-    echo "✅ gofmt passed"
 
-    # 2. Check go.mod tidy
-    echo "Checking go.mod is tidy..."
-    cp go.mod go.mod.backup
-    cp go.sum go.sum.backup
-    go mod tidy
+    # go mod tidy
+    printf "  go mod tidy... "
+    cp go.mod go.mod.backup 2>/dev/null
+    cp go.sum go.sum.backup 2>/dev/null
+    go mod tidy >> "$LOG_FILE" 2>&1
     if ! diff -q go.mod go.mod.backup > /dev/null 2>&1 || ! diff -q go.sum go.sum.backup > /dev/null 2>&1; then
-        echo "❌ go.mod or go.sum is not tidy. Run 'go mod tidy' and commit changes."
+        echo "✗ (run: go mod tidy)"
         mv go.mod.backup go.mod
         mv go.sum.backup go.sum
-        exit 1
-    fi
-    rm go.mod.backup go.sum.backup
-    echo "✅ go.mod is tidy"
-
-    # 3. Build all Go code
-    echo "Building Go code..."
-    if ! go build ./cmd/bujo; then
-        echo "❌ CLI build failed. Push aborted."
-        exit 1
-    fi
-    if ! go build ./internal/...; then
-        echo "❌ Internal packages build failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ Go build passed"
-
-    # 4. Run tests
-    echo "Running Go tests..."
-    if ! go test ./...; then
-        echo "❌ Tests failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ Go tests passed"
-
-    # 5. Run go vet
-    echo "Running go vet..."
-    if ! go vet ./...; then
-        echo "❌ go vet failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ go vet passed"
-
-    # 6. Run golangci-lint
-    echo "Running golangci-lint..."
-    if ! command -v golangci-lint &> /dev/null; then
-        echo "⚠️  golangci-lint not found, skipping"
+        failed=true
     else
-        if ! golangci-lint run; then
-            echo "❌ golangci-lint failed. Push aborted."
-            exit 1
-        fi
-        echo "✅ golangci-lint passed"
+        rm -f go.mod.backup go.sum.backup
+        echo "✓"
     fi
-else
-    echo "ℹ️  No Go changes - skipping Go checks"
+
+    run_check "go build" go build ./cmd/bujo ./internal/... || failed=true
+    run_check "go test" go test ./... || failed=true
+    run_check "go vet" go vet ./... || failed=true
+
+    if command -v golangci-lint &> /dev/null; then
+        run_check "golangci-lint" golangci-lint run || failed=true
+    fi
 fi
 
-# Frontend checks (only if frontend files changed)
+# Frontend checks
 if [ "$has_frontend_changes" = "true" ] && [ -d "frontend" ]; then
-    echo ""
-    echo "🌐 Frontend changes detected - running frontend checks..."
-
-    echo "Running frontend lint..."
-    if ! (cd frontend && npm run lint); then
-        echo "❌ Frontend lint failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ Frontend lint passed"
-
-    echo "Running TypeScript check..."
-    if ! (cd frontend && npx tsc --noEmit); then
-        echo "❌ TypeScript check failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ TypeScript check passed"
-
-    echo "Running frontend tests..."
-    if ! (cd frontend && npm test); then
-        echo "❌ Frontend tests failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ Frontend tests passed"
-
-    echo "Running frontend build..."
-    if ! (cd frontend && npm run build); then
-        echo "❌ Frontend build failed. Push aborted."
-        exit 1
-    fi
-    echo "✅ Frontend build passed"
-
-    echo "Running npm audit..."
-    if ! (cd frontend && npm audit --audit-level=high); then
-        echo "❌ npm audit found high severity vulnerabilities. Push aborted."
-        exit 1
-    fi
-    echo "✅ npm audit passed"
-elif [ "$has_frontend_changes" = "true" ]; then
-    echo "ℹ️  Frontend changes but no frontend directory - skipping frontend checks"
-else
-    echo "ℹ️  No frontend changes - skipping frontend checks"
+    echo "🌐 Frontend:"
+    (cd frontend && run_check "lint" npm run lint) || failed=true
+    (cd frontend && run_check "tsc" npx tsc --noEmit) || failed=true
+    (cd frontend && run_check "test" npm test) || failed=true
+    (cd frontend && run_check "build" npm run build) || failed=true
+    (cd frontend && run_check "audit" npm audit --audit-level=high) || failed=true
 fi
 
-# Workflow checks (only if workflow files changed)
+# Workflow checks
 if [ "$has_workflow_changes" = "true" ]; then
-    echo ""
-    echo "⚙️  Workflow changes detected - running workflow checks..."
-
-    echo "Running actionlint..."
-    if ! command -v actionlint &> /dev/null; then
-        echo "⚠️  actionlint not found, skipping (install: brew install actionlint)"
-    else
-        # Find changed workflow files
+    echo "⚙️  Workflows:"
+    if command -v actionlint &> /dev/null; then
         workflow_files=$(echo "$changed_files" | grep -E '\.github/workflows/.*\.ya?ml$' || true)
-        if [ -n "$workflow_files" ]; then
-            for wf in $workflow_files; do
-                if [ -f "$wf" ]; then
-                    echo "  Linting $wf..."
-                    if ! actionlint "$wf"; then
-                        echo "❌ actionlint failed for $wf. Push aborted."
-                        exit 1
-                    fi
-                fi
-            done
-            echo "✅ actionlint passed"
-        fi
+        for wf in $workflow_files; do
+            if [ -f "$wf" ]; then
+                run_check "actionlint $wf" actionlint "$wf" || failed=true
+            fi
+        done
+    else
+        echo "  actionlint... ⚠️  (not installed)"
     fi
-else
-    echo "ℹ️  No workflow changes - skipping workflow checks"
 fi
 
-echo ""
-echo "✅ All pre-push checks passed. Proceeding with push."
+if [ "$failed" = "true" ]; then
+    echo ""
+    echo "❌ Pre-push failed. Logs: $LOG_FILE"
+    trap - EXIT  # Keep log file on failure
+    exit 1
+fi
+
+echo "✅ All checks passed"
