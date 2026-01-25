@@ -29,7 +29,7 @@ import { WeekSummary } from '@/components/bujo/WeekSummary'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
-import { startOfDay } from '@/lib/utils'
+import { startOfDay, cn } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
 import { scrollToPosition } from '@/lib/scrollUtils'
 import { JOURNAL_SIDEBAR_WIDTH_CLASS } from '@/lib/layoutConstants'
@@ -88,6 +88,7 @@ function App() {
   const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
@@ -263,6 +264,11 @@ function App() {
         if (e.key === 'T') {
           e.preventDefault()
           handleGoToToday()
+          return
+        }
+        if (e.key === '[') {
+          e.preventDefault()
+          setIsSidebarCollapsed(prev => !prev)
           return
         }
       }
@@ -899,7 +905,10 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className={`${JOURNAL_SIDEBAR_WIDTH_CLASS} h-screen border-l border-border bg-background overflow-y-auto p-2`}
+          className={cn(
+            'h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out',
+            isSidebarCollapsed ? 'w-10' : JOURNAL_SIDEBAR_WIDTH_CLASS
+          )}
         >
           <JournalSidebar
             overdueEntries={overdueEntries}
@@ -908,6 +917,8 @@ function App() {
             contextTree={sidebarContextTree}
             onSelectEntry={handleSidebarSelectEntry}
             callbacks={sidebarCallbacks}
+            isCollapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
           />
         </aside>
       )}

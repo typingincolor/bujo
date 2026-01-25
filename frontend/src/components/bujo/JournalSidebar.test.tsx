@@ -123,6 +123,69 @@ describe('JournalSidebar', () => {
     })
   })
 
+  describe('Collapse functionality', () => {
+    it('renders collapse toggle button when onToggleCollapse provided', () => {
+      const onToggleCollapse = vi.fn()
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onToggleCollapse={onToggleCollapse}
+        />
+      )
+      expect(screen.getByRole('button', { name: /toggle sidebar/i })).toBeInTheDocument()
+    })
+
+    it('does not render toggle button when onToggleCollapse not provided', () => {
+      render(<JournalSidebar overdueEntries={[]} now={new Date()} />)
+      expect(screen.queryByRole('button', { name: /toggle sidebar/i })).not.toBeInTheDocument()
+    })
+
+    it('calls onToggleCollapse when collapse button clicked', async () => {
+      const user = userEvent.setup()
+      const onToggleCollapse = vi.fn()
+
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          onToggleCollapse={onToggleCollapse}
+        />
+      )
+
+      await user.click(screen.getByRole('button', { name: /toggle sidebar/i }))
+      expect(onToggleCollapse).toHaveBeenCalledTimes(1)
+    })
+
+    it('hides content when collapsed', () => {
+      const entries = [createTestEntry({ id: 1, content: 'Task 1' })]
+      render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          isCollapsed={true}
+        />
+      )
+
+      expect(screen.queryByText('Pending Tasks (1)')).not.toBeInTheDocument()
+      expect(screen.queryByText('Task 1')).not.toBeInTheDocument()
+    })
+
+    it('shows content when expanded', () => {
+      const entries = [createTestEntry({ id: 1, content: 'Task 1' })]
+      render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          isCollapsed={false}
+        />
+      )
+
+      expect(screen.getByText('Pending Tasks (1)')).toBeInTheDocument()
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+    })
+  })
+
   describe('Context section', () => {
     it('shows Context section header', () => {
       render(<JournalSidebar overdueEntries={[]} now={new Date()} />)

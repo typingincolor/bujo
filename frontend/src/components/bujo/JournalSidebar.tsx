@@ -3,6 +3,7 @@ import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EntryCallbacks {
   onCancel?: () => void;
@@ -120,6 +121,8 @@ interface JournalSidebarProps {
   contextTree?: Entry[];
   onSelectEntry?: (entry: Entry) => void;
   callbacks?: JournalSidebarCallbacks;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 interface TreeNode {
@@ -204,6 +207,8 @@ export function JournalSidebar({
   contextTree = [],
   onSelectEntry,
   callbacks = {},
+  isCollapsed = false,
+  onToggleCollapse,
 }: JournalSidebarProps) {
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
@@ -224,11 +229,29 @@ export function JournalSidebar({
 
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
-      {/* Pending Tasks Section */}
-      <div>
-        <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
-          <span>Pending Tasks ({taskEntries.length})</span>
-        </div>
+      {/* Collapse Toggle Button */}
+      {onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          aria-label="Toggle sidebar"
+          className="absolute top-2 right-2 p-1.5 hover:bg-secondary rounded-md transition-colors"
+        >
+          {isCollapsed ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
+      )}
+
+      {/* Content - hidden when collapsed */}
+      {!isCollapsed && (
+        <>
+          {/* Pending Tasks Section */}
+          <div>
+            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
+              <span>Pending Tasks ({taskEntries.length})</span>
+            </div>
 
         <div className="px-1 py-1 max-h-80 overflow-y-auto">
           {taskEntries.length === 0 ? (
@@ -250,28 +273,30 @@ export function JournalSidebar({
         </div>
       </div>
 
-      {/* Divider */}
-      <hr className="my-4 border-border" />
+          {/* Divider */}
+          <hr className="my-4 border-border" />
 
-      {/* Context Section */}
-      <div data-testid="context-section">
-        <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
-          <span>Context</span>
-        </div>
+          {/* Context Section */}
+          <div data-testid="context-section">
+            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
+              <span>Context</span>
+            </div>
 
-        <div className="px-3 py-2">
-          {!selectedEntry ? (
-            <p className="text-sm text-muted-foreground">No entry selected</p>
-          ) : selectedEntry.parentId === null ? (
-            <p className="text-sm text-muted-foreground">No context</p>
-          ) : (
-            <ContextTree
-              nodes={treeNodes}
-              selectedEntryId={selectedEntry.id}
-            />
-          )}
-        </div>
-      </div>
+            <div className="px-3 py-2">
+              {!selectedEntry ? (
+                <p className="text-sm text-muted-foreground">No entry selected</p>
+              ) : selectedEntry.parentId === null ? (
+                <p className="text-sm text-muted-foreground">No context</p>
+              ) : (
+                <ContextTree
+                  nodes={treeNodes}
+                  selectedEntryId={selectedEntry.id}
+                />
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

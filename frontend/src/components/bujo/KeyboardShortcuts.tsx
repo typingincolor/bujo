@@ -46,6 +46,7 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
           <KeyboardHint keys={['h']} action="Previous day" />
           <KeyboardHint keys={['l']} action="Next day" />
           <KeyboardHint keys={['T']} action="Go to today" />
+          <KeyboardHint keys={['[']} action="Toggle sidebar" />
           <KeyboardHint keys={['Space']} action="Toggle done" />
           <KeyboardHint keys={['x']} action="Cancel/uncancel" />
           <KeyboardHint keys={['p']} action="Cycle priority" />
