@@ -184,4 +184,30 @@ describe('App context panel toggle', () => {
     await user.keyboard('C')
     expect(screen.getByTestId('context-panel')).toBeInTheDocument()
   })
+
+  it('updates context panel when entry is clicked', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Parent task')).toBeInTheDocument()
+    })
+
+    // Show context panel first with Shift+C
+    await user.keyboard('C')
+    expect(screen.getByTestId('context-panel')).toBeInTheDocument()
+
+    // Click on child entry
+    await user.click(screen.getByText('Child task'))
+
+    // Panel should show the child task
+    await waitFor(() => {
+      const panel = screen.getByTestId('context-panel')
+      expect(panel).toHaveTextContent('Child task')
+    })
+  })
 })
