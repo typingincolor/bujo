@@ -140,7 +140,7 @@ export function JournalSidebar({
         <div className="px-3 py-2">
           {!selectedEntry ? (
             <p className="text-sm text-muted-foreground">No entry selected</p>
-          ) : treeNodes.length === 0 ? (
+          ) : selectedEntry.parentId === null ? (
             <p className="text-sm text-muted-foreground">No context</p>
           ) : (
             <ContextTree
