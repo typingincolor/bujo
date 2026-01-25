@@ -20,7 +20,7 @@ export function JournalSidebar({
   ancestors = [],
   onSelectEntry,
 }: JournalSidebarProps) {
-  const [isOverdueOpen, setIsOverdueOpen] = useState(false);
+  const [isOverdueOpen, setIsOverdueOpen] = useState(true);
 
   return (
     <div data-testid="overdue-sidebar" className="flex flex-col h-full">
@@ -41,7 +41,7 @@ export function JournalSidebar({
         </Collapsible.Trigger>
 
         <Collapsible.Content>
-          <div className="px-1 py-1">
+          <div className="px-1 py-1 max-h-80 overflow-y-auto">
             {overdueEntries.length === 0 ? (
               <p className="text-sm text-muted-foreground px-2 py-2">
                 No overdue items

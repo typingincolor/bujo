@@ -30,13 +30,10 @@ describe('JournalSidebar', () => {
       expect(screen.getByRole('button', { name: 'Overdue' })).toBeInTheDocument()
     })
 
-    it('renders overdue entries with attention scores', async () => {
-      const user = userEvent.setup()
+    it('renders overdue entries with attention scores', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
 
-      // Expand the collapsed section
-      await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+      // Section is expanded by default
       expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
       expect(screen.getByText('Overdue task 2')).toBeInTheDocument()
     })
@@ -46,34 +43,39 @@ describe('JournalSidebar', () => {
       expect(screen.getByText(/overdue.*\(2\)/i)).toBeInTheDocument()
     })
 
-    it('starts collapsed by default', () => {
+    it('starts expanded by default', () => {
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-      // Radix Collapsible removes content from DOM when collapsed
-      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-    })
-
-    it('expands Overdue Items section when clicking header', async () => {
-      const user = userEvent.setup()
-      render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
-
-      const triggerButton = screen.getByRole('button', { name: 'Overdue' })
-      await user.click(triggerButton)
+      // Section is expanded by default, entries visible
       expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
     })
 
-    it('collapses Overdue Items section when clicking header again', async () => {
+    it('collapses Overdue Items section when clicking header', async () => {
       const user = userEvent.setup()
       render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
 
       const triggerButton = screen.getByRole('button', { name: 'Overdue' })
 
-      // Expand
-      await user.click(triggerButton)
+      // Starts expanded
       expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
 
-      // Collapse
+      // Click to collapse
       await user.click(triggerButton)
       expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
+    })
+
+    it('expands Overdue Items section when clicking header after collapse', async () => {
+      const user = userEvent.setup()
+      render(<JournalSidebar overdueEntries={mockOverdueEntries} now={now} />)
+
+      const triggerButton = screen.getByRole('button', { name: 'Overdue' })
+
+      // Collapse first
+      await user.click(triggerButton)
+      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
+
+      // Expand again
+      await user.click(triggerButton)
+      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
     })
 
     it('calls onSelectEntry when clicking overdue item', async () => {
@@ -88,9 +90,7 @@ describe('JournalSidebar', () => {
         />
       )
 
-      // Expand the collapsed section
-      await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+      // Section is expanded by default
       await user.click(screen.getByText('Overdue task 1'))
       expect(onSelectEntry).toHaveBeenCalledWith(mockOverdueEntries[0])
     })
@@ -163,20 +163,16 @@ describe('JournalSidebar', () => {
   })
 
   describe('empty state', () => {
-    it('shows empty message when no overdue entries', async () => {
-      const user = userEvent.setup()
+    it('shows empty message when no overdue entries', () => {
       render(<JournalSidebar overdueEntries={[]} now={now} />)
 
-      // Expand the collapsed section
-      await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+      // Section is expanded by default
       expect(screen.getByText(/no overdue items/i)).toBeInTheDocument()
     })
   })
 
   describe('highlight selected entry', () => {
-    it('highlights selected entry in overdue list', async () => {
-      const user = userEvent.setup()
+    it('highlights selected entry in overdue list', () => {
       const selectedEntry = mockOverdueEntries[0]
       render(
         <JournalSidebar
@@ -186,9 +182,7 @@ describe('JournalSidebar', () => {
         />
       )
 
-      // Expand the collapsed section
-      await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+      // Section is expanded by default
       // Find the button containing the text (within the overdue items, not the header)
       const allButtons = screen.getAllByRole('button')
       const overdueItem = allButtons.find(

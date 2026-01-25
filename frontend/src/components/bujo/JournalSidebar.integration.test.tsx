@@ -80,9 +80,7 @@ describe('JournalSidebar Selection Integration', () => {
 
     expect(screen.getByTestId('selection-state')).toHaveTextContent('No selection')
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('Overdue task 1'))
 
     expect(screen.getByTestId('selection-state')).toHaveTextContent('Selected: Overdue task 1')
@@ -104,9 +102,7 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('Child task'))
 
     // Context section should show ancestor hierarchy
@@ -130,9 +126,7 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     await user.click(screen.getByText('First task'))
     expect(screen.getByTestId('selection-state')).toHaveTextContent('Selected: First task')
 
@@ -153,9 +147,7 @@ describe('JournalSidebar Selection Integration', () => {
       />
     )
 
-    // Expand the collapsed section
-    await user.click(screen.getByRole('button', { name: 'Overdue' }))
-
+    // Section is expanded by default
     const button = screen.getByRole('button', { name: /overdue task/i })
     expect(button).not.toHaveClass('bg-accent')
 
