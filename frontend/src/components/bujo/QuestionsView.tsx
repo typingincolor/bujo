@@ -1,7 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo'
 import { cn } from '@/lib/utils'
 import { HelpCircle, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
-import { ContextPill } from './ContextPill'
 import { format, parseISO } from 'date-fns'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
@@ -264,7 +263,6 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                     {grouped.get(dateStr)!.map((entry) => {
                       const isExpanded = expandedIds.has(entry.id)
                       const parentChain = buildParentChain(entry, entriesById)
-                      const ancestorCount = parentChain.length
                       const isSelected = entryToFlatIndex.get(entry.id) === selectedIndex
                       return (
                         <div key={entry.id} className="space-y-1">
@@ -295,11 +293,12 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                             )}
                             style={{ marginLeft: isExpanded ? `${parentChain.length * 16}px` : undefined }}
                           >
-                            {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
-                            {ancestorCount > 0 && !isExpanded && (
-                              <ContextPill
-                                count={ancestorCount}
-                                onClick={() => toggleExpanded(entry.id)}
+                            {/* Context dot - indicates entry has ancestors */}
+                            {entry.parentId !== null && (
+                              <span
+                                data-testid="context-dot"
+                                className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
+                                title="Has parent context"
                               />
                             )}
                             <span
