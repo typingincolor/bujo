@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -74,7 +75,11 @@ describe('App - No flicker on data refresh', () => {
     let loadingSpinnerShownDuringRefresh = false
     let initialLoadComplete = false
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     // Wait for initial load to complete
     await waitFor(() => {
@@ -148,7 +153,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(mockWithMood)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -168,7 +177,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(mockWithWeather)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -188,7 +201,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(mockWithLocation)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -203,7 +220,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -227,7 +248,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -251,7 +276,11 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
     const user = userEvent.setup()
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -291,7 +320,11 @@ describe('App - CaptureModal integration', () => {
 
   it('pressing c opens CaptureModal', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -306,7 +339,11 @@ describe('App - CaptureModal integration', () => {
 
   it('clicking capture button opens CaptureModal', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -322,7 +359,11 @@ describe('App - CaptureModal integration', () => {
 
   it('closing CaptureModal returns focus to main view', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -344,7 +385,11 @@ describe('App - CaptureModal integration', () => {
 
   it('CaptureModal refreshes data after creating entries', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigationHistory } from '@/hooks/useNavigationHistory'
+import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
 import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, CyclePriority, CancelEntry } from './wailsjs/go/wails/App'
@@ -53,7 +54,8 @@ function isValidView(view: unknown): view is ViewType {
 }
 
 function App() {
-  const [view, setView] = useState<ViewType>('today')
+  const { defaultView } = useSettings()
+  const [view, setView] = useState<ViewType>(defaultView)
   const [days, setDays] = useState<DayEntries[]>([])
   const [habits, setHabits] = useState<Habit[]>([])
   const [lists, setLists] = useState<BujoList[]>([])

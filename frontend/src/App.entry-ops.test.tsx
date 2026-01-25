@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -69,7 +70,11 @@ describe('App - Cancel/Uncancel Entry', () => {
 
   it('clicking cancel button calls CancelEntry binding', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -85,7 +90,11 @@ describe('App - Cancel/Uncancel Entry', () => {
 
   it('clicking uncancel button calls UncancelEntry binding', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Cancelled task')).toBeInTheDocument()
@@ -101,7 +110,11 @@ describe('App - Cancel/Uncancel Entry', () => {
 
   it('refreshes data after cancelling entry', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -119,7 +132,11 @@ describe('App - Cancel/Uncancel Entry', () => {
 
   it('refreshes data after uncancelling entry', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Cancelled task')).toBeInTheDocument()
@@ -143,7 +160,11 @@ describe('App - Priority Cycling', () => {
   })
 
   it('clicking priority button calls CyclePriority binding', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -158,7 +179,11 @@ describe('App - Priority Cycling', () => {
   })
 
   it('refreshes data after cycling priority', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -184,7 +209,11 @@ describe('App - Delete Entry', () => {
 
   it('pressing d opens delete confirmation for selected entry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -199,7 +228,11 @@ describe('App - Delete Entry', () => {
 
   it('calls DeleteEntry binding when confirming delete', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -224,7 +257,11 @@ describe('App - Delete Entry', () => {
   it('shows warning when entry has children', async () => {
     vi.mocked(HasChildren).mockResolvedValue(true)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -239,7 +276,11 @@ describe('App - Delete Entry', () => {
 
   it('closes delete dialog on cancel', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -270,7 +311,11 @@ describe('App - Task Migration', () => {
   })
 
   it('clicking migrate button opens migrate modal', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -285,7 +330,11 @@ describe('App - Task Migration', () => {
   })
 
   it('shows entry content in migrate modal', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -302,7 +351,11 @@ describe('App - Task Migration', () => {
   })
 
   it('calls MigrateEntry binding when confirming migration', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -332,7 +385,11 @@ describe('App - Task Migration', () => {
   })
 
   it('closes migrate modal on cancel', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -357,7 +414,11 @@ describe('App - Task Migration', () => {
   })
 
   it('refreshes data after migrating entry', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()

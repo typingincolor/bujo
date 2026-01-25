@@ -58,6 +58,8 @@ export function GetOutstandingQuestions():Promise<Array<domain.Entry>>;
 
 export function GetSummary(arg1:time.Time):Promise<string>;
 
+export function GetVersion():Promise<string>;
+
 export function Greet(arg1:string):Promise<string>;
 
 export function HasChildren(arg1:number):Promise<boolean>;

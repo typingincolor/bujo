@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -60,7 +61,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 
   it('pressing r focuses CaptureBar for root entry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -76,7 +81,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 
   it('pressing i focuses CaptureBar', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -92,7 +101,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 
   it('pressing A focuses CaptureBar with selected entry as parent', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -112,7 +125,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 
   it('submitting CaptureBar calls AddEntry and refreshes data', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -135,7 +152,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 
   it('pressing Escape clears CaptureBar content', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -155,7 +176,11 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
   })
 
   it('CaptureBar is visible in today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -173,7 +198,11 @@ describe('App - Go to Today', () => {
 
   it('shows Go to today button when viewing a different day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -190,7 +219,11 @@ describe('App - Go to Today', () => {
   })
 
   it('hides Go to today button when viewing today', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -202,7 +235,11 @@ describe('App - Go to Today', () => {
 
   it('clicking Go to today button navigates back to today', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -235,7 +272,11 @@ describe('App - Go to Today', () => {
 
   it('pressing T navigates to today when viewing a different day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -272,7 +313,11 @@ describe('App - Review View (formerly Past Week)', () => {
   })
 
   it('shows "Weekly Review" label in sidebar navigation', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -284,7 +329,11 @@ describe('App - Review View (formerly Past Week)', () => {
 
   it('shows "Weekly Review" as header title when review view is selected', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -302,7 +351,11 @@ describe('App - Review View (formerly Past Week)', () => {
 
   it('shows navigation controls in review view', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -321,7 +374,11 @@ describe('App - Review View (formerly Past Week)', () => {
 
   it('disables next week button when viewing current week', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()

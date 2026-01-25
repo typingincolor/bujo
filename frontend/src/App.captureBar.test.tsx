@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -70,7 +71,11 @@ describe('CaptureBar - Always Visible', () => {
   })
 
   it('shows capture bar at bottom of today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -80,7 +85,11 @@ describe('CaptureBar - Always Visible', () => {
   })
 
   it('shows type selection buttons (Task, Note, Event, Question)', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -94,7 +103,11 @@ describe('CaptureBar - Always Visible', () => {
   })
 
   it('has Task selected by default', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -115,7 +128,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('clicking type button changes selection', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -132,7 +149,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('Tab cycles through types when input is empty', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -161,7 +182,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('typing ". " prefix changes type to Task', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -180,7 +205,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('typing "- " prefix changes type to Note', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -195,7 +224,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('typing "o " prefix changes type to Event', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -210,7 +243,11 @@ describe('CaptureBar - Type Selection', () => {
 
   it('typing "? " prefix changes type to Question', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -233,7 +270,11 @@ describe('CaptureBar - Entry Submission', () => {
 
   it('Enter submits entry with selected type prefix', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -249,7 +290,11 @@ describe('CaptureBar - Entry Submission', () => {
 
   it('clears input after submission', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -267,7 +312,11 @@ describe('CaptureBar - Entry Submission', () => {
 
   it('keeps focus after submission for rapid entry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -285,7 +334,11 @@ describe('CaptureBar - Entry Submission', () => {
 
   it('Escape clears input', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -307,7 +360,11 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
 
   it('pressing A on selected entry shows parent context', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -325,7 +382,11 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
 
   it('submitting in child mode calls AddChildEntry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -348,7 +409,11 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
 
   it('clicking X clears parent context', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -382,7 +447,11 @@ describe('CaptureBar - Draft Persistence', () => {
 
   it('saves draft to localStorage on input', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -399,7 +468,11 @@ describe('CaptureBar - Draft Persistence', () => {
   it('restores draft on mount', async () => {
     mockStorage['bujo-capture-bar-draft'] = 'Saved draft'
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -413,7 +486,11 @@ describe('CaptureBar - Draft Persistence', () => {
     mockStorage['bujo-capture-bar-draft'] = 'Draft to clear'
     const user = userEvent.setup()
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -436,7 +513,11 @@ describe('CaptureBar - File Import', () => {
   })
 
   it('shows file import button', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -447,7 +528,11 @@ describe('CaptureBar - File Import', () => {
 
   it('clicking import button opens file dialog', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -464,7 +549,11 @@ describe('CaptureBar - File Import', () => {
     vi.mocked(OpenFileDialog).mockResolvedValueOnce(fileContent)
     const user = userEvent.setup()
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -491,7 +580,11 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
   it('i key focuses capture bar', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -505,7 +598,11 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
   it('r key focuses capture bar in root mode (clears parent context)', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()

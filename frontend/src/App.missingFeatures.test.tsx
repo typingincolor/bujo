@@ -19,6 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 import { GetAgenda, MigrateEntry } from './wailsjs/go/wails/App'
 
@@ -72,7 +73,11 @@ beforeEach(() => {
 
 describe('Missing Feature #1: useNavigationHistory hook', () => {
   it('should track navigation history when switching views', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -117,7 +122,11 @@ describe('Missing Feature #1: useNavigationHistory hook', () => {
   })
 
   it('should clear history when navigating to today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -147,7 +156,11 @@ describe('Missing Feature #1: useNavigationHistory hook', () => {
 
 describe('Missing Feature #2: Header back button', () => {
   it('should show back button in header when navigation history exists', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -169,7 +182,11 @@ describe('Missing Feature #2: Header back button', () => {
   })
 
   it('should hide back button when no navigation history', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     // On initial load (today view), no back button
     expect(screen.queryByLabelText(/go back/i)).not.toBeInTheDocument()
@@ -196,7 +213,11 @@ describe('Missing Feature #3: EntryContextPopover with Radix UI', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -236,7 +257,11 @@ describe('Missing Feature #3: EntryContextPopover with Radix UI', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -288,7 +313,11 @@ describe('Missing Feature #4: EntryTree back button integration', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -346,7 +375,11 @@ describe('Missing Feature #5: WeekSummary popover for meetings', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -395,7 +428,11 @@ describe('Missing Feature #6: WeekSummary popover for attention items', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -444,7 +481,11 @@ describe('Missing Feature #7: Keyboard shortcut for migrate', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -537,7 +578,11 @@ describe('Missing Feature #8: Full attention scoring algorithm', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {
@@ -605,7 +650,11 @@ describe('Missing Feature #8: Full attention scoring algorithm', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaData)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
     const user = userEvent.setup()
 
     await waitFor(() => {

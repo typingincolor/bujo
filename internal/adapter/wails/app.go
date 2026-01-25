@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/typingincolor/bujo/cmd/bujo/cmd"
 	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
@@ -360,6 +361,10 @@ func (a *App) GetSummary(date time.Time) (string, error) {
 		return "", nil
 	}
 	return summary.Content, nil
+}
+
+func (a *App) GetVersion() string {
+	return cmd.Version()
 }
 
 const maxFileSize = 1024 * 1024

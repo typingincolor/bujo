@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -60,7 +61,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('pressing j moves selection down', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -74,7 +79,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('pressing k moves selection up', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -88,7 +97,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('pressing down arrow moves selection down', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -102,7 +115,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('pressing up arrow moves selection up', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -116,7 +133,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('pressing Space toggles done on selected task', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -131,7 +152,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('does not go above first entry when pressing k at top', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -145,7 +170,11 @@ describe('App - Keyboard Navigation', () => {
 
   it('does not go below last entry when pressing j at bottom', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -166,7 +195,11 @@ describe('App - Click Selection', () => {
 
   it('clicking an entry updates the selection to that entry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -194,7 +227,11 @@ describe('App - Click Selection', () => {
 
   it('clicking second task updates selection', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -223,7 +260,11 @@ describe('App - Edit Entry', () => {
 
   it('pressing e opens edit modal for selected entry', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -239,7 +280,11 @@ describe('App - Edit Entry', () => {
 
   it('calls EditEntry binding when saving edit', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -264,7 +309,11 @@ describe('App - Edit Entry', () => {
 
   it('closes edit modal on cancel', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -295,7 +344,11 @@ describe('App - QuickStats', () => {
   })
 
   it('renders QuickStats component in today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -320,7 +373,11 @@ describe('App - QuickStats', () => {
     })
     vi.mocked(GetAgenda).mockResolvedValue(agendaWithOverdue)
 
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Today task')).toBeInTheDocument()

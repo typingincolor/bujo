@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 const mockEntriesAgenda = createMockAgenda({
@@ -59,7 +60,11 @@ describe('App - Day Navigation', () => {
   })
 
   it('renders prev/next day navigation buttons in today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -70,7 +75,11 @@ describe('App - Day Navigation', () => {
   })
 
   it('renders date picker in today view', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -82,7 +91,11 @@ describe('App - Day Navigation', () => {
   // Skipped: HTML date input change events don't work reliably in jsdom CI.
   // Navigation behavior is tested via prev/next buttons and keyboard shortcuts (h/l).
   it.skip('changing date picker navigates to selected date', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -102,7 +115,11 @@ describe('App - Day Navigation', () => {
 
   it('clicking next day navigates to next day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -120,7 +137,11 @@ describe('App - Day Navigation', () => {
 
   it('clicking prev day navigates to previous day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -138,7 +159,11 @@ describe('App - Day Navigation', () => {
 
   it('pressing h navigates to previous day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -155,7 +180,11 @@ describe('App - Day Navigation', () => {
 
   it('pressing l navigates to next day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('First task')).toBeInTheDocument()
@@ -179,7 +208,11 @@ describe('App - Habit View Toggle', () => {
 
   it('refetches habits with different day count when period changes', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -210,7 +243,11 @@ describe('App - Habit View Toggle', () => {
 
   it('pressing w key cycles habit period from week to month', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -254,7 +291,11 @@ describe('App - Keyboard Shortcuts Panel Toggle', () => {
   })
 
   it('keyboard shortcuts panel is hidden by default', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
@@ -265,7 +306,11 @@ describe('App - Keyboard Shortcuts Panel Toggle', () => {
   })
 
   it('? key toggles keyboard shortcuts panel visibility', async () => {
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()

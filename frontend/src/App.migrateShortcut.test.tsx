@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -78,7 +79,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
   it('pressing m opens migrate modal when a task entry is selected', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockTaskEntry)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Task to migrate')).toBeInTheDocument()
@@ -94,7 +99,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
   it('pressing m opens migrate modal when a question entry is selected', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockQuestionEntry)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Question to migrate')).toBeInTheDocument()
@@ -110,7 +119,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
   it('pressing m does NOT open migrate modal for done entries', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Done task')).toBeInTheDocument()
@@ -127,7 +140,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
   it('pressing m does NOT open migrate modal for note entries', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('A note')).toBeInTheDocument()
@@ -145,7 +162,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
   it('pressing m does NOT open migrate modal for event entries', async () => {
     vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('An event')).toBeInTheDocument()
@@ -167,7 +188,11 @@ describe('App - Migrate Keyboard Shortcut', () => {
       Overdue: [],
     }))
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()

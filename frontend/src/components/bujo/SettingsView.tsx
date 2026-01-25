@@ -1,6 +1,16 @@
+import { useState, useEffect } from 'react';
 import { Settings, Palette, Database, Info } from 'lucide-react';
+import { useSettings } from '../../contexts/SettingsContext';
+import type { Theme, DefaultView } from '../../types/settings';
+import { GetVersion } from '@/wailsjs/go/wails/App';
 
 export function SettingsView() {
+  const { theme, setTheme, defaultView, setDefaultView } = useSettings();
+  const [version, setVersion] = useState<string>('Loading...');
+
+  useEffect(() => {
+    GetVersion().then(setVersion).catch(() => setVersion('Unknown'));
+  }, []);
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -22,13 +32,13 @@ export function SettingsView() {
             label="Theme"
             description="Choose your preferred color theme"
           >
-            <span className="text-sm text-muted-foreground">Dark</span>
+            <ThemeSelector currentTheme={theme} onThemeChange={setTheme} />
           </SettingRow>
           <SettingRow
             label="Default View"
             description="The view shown when you open the app"
           >
-            <span className="text-sm text-muted-foreground">Today</span>
+            <DefaultViewSelector currentView={defaultView} onViewChange={setDefaultView} />
           </SettingRow>
         </div>
       </section>
@@ -66,7 +76,7 @@ export function SettingsView() {
             label="Version"
             description="Current application version"
           >
-            <span className="text-sm text-muted-foreground">1.0.0</span>
+            <span className="text-sm text-muted-foreground">{version}</span>
           </SettingRow>
           <SettingRow
             label="bujo"
@@ -101,6 +111,69 @@ function SettingRow({ label, description, children }: SettingRowProps) {
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+interface ThemeSelectorProps {
+  currentTheme: Theme;
+  onThemeChange: (theme: Theme) => void;
+}
+
+function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
+  const themes: { value: Theme; label: string }[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {themes.map(({ value, label }) => (
+        <button
+          key={value}
+          onClick={() => onThemeChange(value)}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            currentTheme === value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface DefaultViewSelectorProps {
+  currentView: DefaultView;
+  onViewChange: (view: DefaultView) => void;
+}
+
+function DefaultViewSelector({ currentView, onViewChange }: DefaultViewSelectorProps) {
+  const views: { value: DefaultView; label: string }[] = [
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'Week' },
+    { value: 'overview', label: 'Overview' },
+    { value: 'search', label: 'Search' },
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {views.map(({ value, label }) => (
+        <button
+          key={value}
+          onClick={() => onViewChange(value)}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            currentView === value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

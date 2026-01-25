@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
+import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
 import { startOfDay, subDays, format } from 'date-fns'
 
@@ -86,7 +87,11 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
 
   it('AddEntry receives currentDate when submitting after navigating to past day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Today task')).toBeInTheDocument()
@@ -118,7 +123,11 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
 
   it('AddChildEntry receives currentDate when submitting child after navigating to past day', async () => {
     const user = userEvent.setup()
-    render(<App />)
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Today task')).toBeInTheDocument()
