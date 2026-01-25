@@ -261,4 +261,18 @@ describe('WeekSummary', () => {
       expect(screen.getByText(/show all/i)).toBeInTheDocument()
     })
   })
+
+  describe('WeekSummary without popover', () => {
+    it('does not render entry context popover wrapper', () => {
+      const days: DayEntries[] = [{
+        date: '2026-01-25',
+        entries: [
+          { id: 1, content: 'Event', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-25' },
+          { id: 2, content: 'Child', type: 'task', priority: 'none', parentId: 1, loggedDate: '2026-01-25' },
+        ],
+      }]
+      render(<WeekSummary days={days} />)
+      expect(screen.queryByTestId('entry-context-popover')).not.toBeInTheDocument()
+    })
+  })
 })

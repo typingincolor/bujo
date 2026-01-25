@@ -528,29 +528,6 @@ function App() {
     }
   }, [goBack])
 
-  const handleWeekSummaryAction = useCallback(async (entry: Entry, action: 'done' | 'cancel' | 'priority' | 'migrate') => {
-    try {
-      switch (action) {
-        case 'done':
-          await MarkEntryDone(entry.id)
-          break
-        case 'cancel':
-          await CancelEntry(entry.id)
-          break
-        case 'priority':
-          await CyclePriority(entry.id)
-          break
-        case 'migrate':
-          setMigrateModalEntry(entry)
-          return
-      }
-      loadData()
-    } catch (err) {
-      console.error(`Failed to ${action} entry:`, err)
-      setError(err instanceof Error ? err.message : `Failed to ${action} entry`)
-    }
-  }, [loadData])
-
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
@@ -722,8 +699,6 @@ function App() {
               </div>
               <WeekSummary
                 days={reviewDays}
-                onAction={handleWeekSummaryAction}
-                onNavigate={handleNavigateToEntry}
                 onShowAllAttention={() => setView('overview')}
               />
             </div>
