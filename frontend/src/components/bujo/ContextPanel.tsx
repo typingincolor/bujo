@@ -24,14 +24,14 @@ function buildAncestorPath(entry: Entry, entries: Entry[]): Entry[] {
 }
 
 export function ContextPanel({ selectedEntry, entries }: ContextPanelProps) {
+  const path = useMemo(
+    () => selectedEntry ? buildAncestorPath(selectedEntry, entries) : [],
+    [selectedEntry, entries]
+  )
+
   if (selectedEntry === null) {
     return null
   }
-
-  const path = useMemo(
-    () => buildAncestorPath(selectedEntry, entries),
-    [selectedEntry, entries]
-  )
 
   if (path.length === 1) {
     return (
