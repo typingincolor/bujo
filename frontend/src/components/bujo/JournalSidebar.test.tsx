@@ -495,5 +495,35 @@ describe('JournalSidebar', () => {
 
       expect(onWidthChange).not.toHaveBeenCalled()
     })
+
+    it('sets global cursor during resize', async () => {
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+        />
+      )
+
+      const resizeHandle = screen.getByTestId('resize-handle')
+
+      expect(document.body.style.cursor).toBe('')
+      expect(document.body.style.userSelect).toBe('')
+
+      await act(async () => {
+        const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 100 })
+        resizeHandle.dispatchEvent(mouseDownEvent)
+      })
+
+      expect(document.body.style.cursor).toBe('col-resize')
+      expect(document.body.style.userSelect).toBe('none')
+
+      await act(async () => {
+        const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true })
+        document.dispatchEvent(mouseUpEvent)
+      })
+
+      expect(document.body.style.cursor).toBe('')
+      expect(document.body.style.userSelect).toBe('')
+    })
   })
 })

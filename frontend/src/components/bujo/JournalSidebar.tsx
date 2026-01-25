@@ -255,6 +255,16 @@ export function JournalSidebar({
     }
   }, [isResizing, sidebarWidth, onWidthChange]);
 
+  useEffect(() => {
+    if (isResizing) {
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  }, [isResizing]);
+
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   // Filter to only show task entries (not notes, events, questions, etc.)
