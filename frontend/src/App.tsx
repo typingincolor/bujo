@@ -3,7 +3,7 @@ import { useNavigationHistory } from '@/hooks/useNavigationHistory'
 import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, CyclePriority, CancelEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -25,6 +25,7 @@ import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekSummary } from '@/components/bujo/WeekSummary'
+import { ContextPanel } from '@/components/bujo/ContextPanel'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -80,6 +81,8 @@ function App() {
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
+  const [showContextPanel, setShowContextPanel] = useState(false)
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null)
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
@@ -227,6 +230,14 @@ function App() {
 
       if (isInputFocused) return
 
+      // Shift+C toggles context panel (global, works in all views)
+      // Checking for uppercase 'C' is equivalent to Shift+c
+      if (e.key === 'C') {
+        e.preventDefault()
+        setShowContextPanel(prev => !prev)
+        return
+      }
+
       // Day navigation shortcuts (h/l/T) - always available in today view
       if (view === 'today') {
         if (e.key === 'h') {
@@ -300,15 +311,21 @@ function App() {
 
       switch (e.key) {
         case 'j':
-        case 'ArrowDown':
+        case 'ArrowDown': {
           e.preventDefault()
-          setSelectedIndex(prev => Math.min(prev + 1, flatEntries.length - 1))
+          const nextIndex = Math.min(selectedIndex + 1, flatEntries.length - 1)
+          setSelectedIndex(nextIndex)
+          setSelectedEntry(flatEntries[nextIndex])
           break
+        }
         case 'k':
-        case 'ArrowUp':
+        case 'ArrowUp': {
           e.preventDefault()
-          setSelectedIndex(prev => Math.max(prev - 1, 0))
+          const prevIndex = Math.max(selectedIndex - 1, 0)
+          setSelectedIndex(prevIndex)
+          setSelectedEntry(flatEntries[prevIndex])
           break
+        }
         case ' ': {
           e.preventDefault()
           const entry = flatEntries[selectedIndex]
@@ -355,6 +372,8 @@ function App() {
 
   useEffect(() => {
     setSelectedIndex(0)
+    const entries = flattenEntries(days[0]?.entries || [])
+    setSelectedEntry(entries[0] ?? null)
   }, [days])
 
   const handleViewChange = (newView: ViewType) => {
@@ -423,6 +442,7 @@ function App() {
     const index = flatEntries.findIndex(e => e.id === id)
     if (index !== -1) {
       setSelectedIndex(index)
+      setSelectedEntry(flatEntries[index])
     }
   }, [flatEntries])
 
@@ -502,6 +522,17 @@ function App() {
     setView('week')
   }, [])
 
+  const handleSearchSelectEntry = useCallback((result: SearchResult) => {
+    setSelectedEntry({
+      id: result.id,
+      content: result.content,
+      type: result.type,
+      priority: result.priority,
+      parentId: result.parentId,
+      loggedDate: result.date,
+    })
+  }, [])
+
   const handleOverviewNavigate = useCallback((entry: Entry) => {
     const entryDate = new Date(entry.loggedDate)
     setReviewAnchorDate(startOfDay(entryDate))
@@ -527,29 +558,6 @@ function App() {
       scrollToPosition(previousState.scrollPosition)
     }
   }, [goBack])
-
-  const handleWeekSummaryAction = useCallback(async (entry: Entry, action: 'done' | 'cancel' | 'priority' | 'migrate') => {
-    try {
-      switch (action) {
-        case 'done':
-          await MarkEntryDone(entry.id)
-          break
-        case 'cancel':
-          await CancelEntry(entry.id)
-          break
-        case 'priority':
-          await CyclePriority(entry.id)
-          break
-        case 'migrate':
-          setMigrateModalEntry(entry)
-          return
-      }
-      loadData()
-    } catch (err) {
-      console.error(`Failed to ${action} entry:`, err)
-      setError(err instanceof Error ? err.message : `Failed to ${action} entry`)
-    }
-  }, [loadData])
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
@@ -722,8 +730,6 @@ function App() {
               </div>
               <WeekSummary
                 days={reviewDays}
-                onAction={handleWeekSummaryAction}
-                onNavigate={handleNavigateToEntry}
                 onShowAllAttention={() => setView('overview')}
               />
             </div>
@@ -786,6 +792,7 @@ function App() {
               <SearchView
                 onMigrate={handleSearchMigrate}
                 onNavigateToEntry={handleSearchNavigate}
+                onSelectEntry={handleSearchSelectEntry}
               />
             </div>
           )}
@@ -810,6 +817,19 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Context Panel - toggle with Shift+C */}
+      {showContextPanel && (
+        <aside
+          data-testid="context-panel"
+          className="w-64 h-screen border-l border-border bg-background overflow-y-auto"
+        >
+          <ContextPanel
+            selectedEntry={selectedEntry}
+            entries={flatEntries}
+          />
+        </aside>
+      )}
 
       {/* Edit Entry Modal */}
       <EditEntryModal

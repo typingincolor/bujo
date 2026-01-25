@@ -1,20 +1,15 @@
-import { DayEntries, Entry, ActionType } from '@/types/bujo';
+import { DayEntries, Entry } from '@/types/bujo';
 import { calculateAttentionScore, sortByAttentionScore } from '@/lib/attentionScore';
 import { cn } from '@/lib/utils';
-import { EntryContextPopover } from './EntryContextPopover';
+import { EntrySymbol } from './EntrySymbol';
 
 interface WeekSummaryProps {
   days: DayEntries[];
-  onAction?: (entry: Entry, action: ActionType) => void;
-  onNavigate?: (entry: Entry) => void;
   onShowAllAttention?: () => void;
 }
 
 const MAX_ATTENTION_ITEMS = 5;
 const MIN_ATTENTION_SCORE = 10;
-
-const NOOP_ACTION = () => {};
-const NOOP_NAVIGATE = () => {};
 
 function flattenEntries(entries: Entry[]): Entry[] {
   const result: Entry[] = [];
@@ -30,7 +25,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result;
 }
 
-export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: WeekSummaryProps) {
+export function WeekSummary({ days, onShowAllAttention }: WeekSummaryProps) {
   const allEntries = days.flatMap(day => flattenEntries(day.entries));
   const now = new Date();
 
@@ -81,45 +76,21 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
           {eventsWithChildren.length === 0 ? (
             <p className="text-sm text-muted-foreground">No meetings this week</p>
           ) : (
-            eventsWithChildren.map(event => {
-              const meetingItem = (
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
-                >
+            eventsWithChildren.map(event => (
+              <button
+                key={event.id}
+                type="button"
+                className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <EntrySymbol type={event.type} priority={event.priority} />
                   <span className="text-sm">{event.content}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {getChildCount(event.id)} items
-                  </span>
-                </button>
-              );
-
-              if (onAction && onNavigate) {
-                return (
-                  <EntryContextPopover
-                    key={event.id}
-                    entry={event}
-                    entries={allEntries}
-                    onAction={onAction}
-                    onNavigate={onNavigate}
-                  >
-                    {meetingItem}
-                  </EntryContextPopover>
-                );
-              }
-
-              return (
-                <EntryContextPopover
-                  key={event.id}
-                  entry={event}
-                  entries={allEntries}
-                  onAction={NOOP_ACTION}
-                  onNavigate={NOOP_NAVIGATE}
-                >
-                  {meetingItem}
-                </EntryContextPopover>
-              );
-            })
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {getChildCount(event.id)} items
+                </span>
+              </button>
+            ))
           )}
         </div>
       </section>
@@ -135,15 +106,19 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
             topAttentionEntries.map(entry => {
               const { indicators } = calculateAttentionScore(entry, now);
               const isHighPriority = entry.priority === 'high';
-              const attentionItem = (
+              return (
                 <button
+                  key={entry.id}
                   type="button"
                   data-testid="attention-item"
                   data-attention-item
                   data-priority={isHighPriority ? 'high' : undefined}
                   className="w-full flex items-center justify-between p-2 rounded-lg border border-border bg-card hover:bg-muted/50 cursor-pointer text-left"
                 >
-                  <span className="text-sm">{entry.content}</span>
+                  <span className="flex items-center gap-2">
+                    <EntrySymbol type={entry.type} priority={entry.priority} />
+                    <span className="text-sm">{entry.content}</span>
+                  </span>
                   {indicators.length > 0 && (
                     <div className="flex gap-1" data-testid="attention-indicators">
                       {indicators.map(indicator => (
@@ -165,32 +140,6 @@ export function WeekSummary({ days, onAction, onNavigate, onShowAllAttention }: 
                     </div>
                   )}
                 </button>
-              );
-
-              if (onAction && onNavigate) {
-                return (
-                  <EntryContextPopover
-                    key={entry.id}
-                    entry={entry}
-                    entries={allEntries}
-                    onAction={onAction}
-                    onNavigate={onNavigate}
-                  >
-                    {attentionItem}
-                  </EntryContextPopover>
-                );
-              }
-
-              return (
-                <EntryContextPopover
-                  key={entry.id}
-                  entry={entry}
-                  entries={allEntries}
-                  onAction={NOOP_ACTION}
-                  onNavigate={NOOP_NAVIGATE}
-                >
-                  {attentionItem}
-                </EntryContextPopover>
               );
             })
           )}

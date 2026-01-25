@@ -1,11 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Search as SearchIcon } from 'lucide-react';
-import { Search, GetEntry, GetEntryAncestors, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
-import { ContextPill } from './ContextPill';
-import { EntryContextPopover } from './EntryContextPopover';
+import { Search, GetEntry, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS, Entry, ActionType } from '@/types/bujo';
+import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { AnswerQuestionModal } from './AnswerQuestionModal';
 
 export interface SearchResult {
@@ -17,38 +15,22 @@ export interface SearchResult {
   parentId: number | null;
 }
 
-interface AncestorEntry {
-  id: number;
-  content: string;
-  type: EntryType;
-}
-
 interface SearchViewProps {
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
+  onSelectEntry?: (entry: SearchResult) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
+export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
-  const [ancestorsMap, setAncestorsMap] = useState<Map<number, AncestorEntry[]>>(new Map());
-  const [ancestorCounts, setAncestorCounts] = useState<Map<number, number>>(new Map());
-  const [loadingCounts, setLoadingCounts] = useState<Set<number>>(new Set());
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [answerModalOpen, setAnswerModalOpen] = useState(false);
   const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
-  const [popoverEntry, setPopoverEntry] = useState<SearchResult | null>(null);
-  const [allEntries, setAllEntries] = useState<Entry[]>([]);
-  const [openPopoverId, setOpenPopoverId] = useState<number | null>(null);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
-    setExpandedIds(new Set());
-    setAncestorsMap(new Map());
-    setAncestorCounts(new Map());
-    setLoadingCounts(new Set());
     setSelectedIndex(-1);
 
     if (!searchQuery.trim()) {
@@ -69,67 +51,12 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
       }));
       setResults(mappedResults);
       setHasSearched(true);
-
-      const resultsWithParents = mappedResults.filter(r => r.parentId !== null);
-      if (resultsWithParents.length > 0) {
-        setLoadingCounts(new Set(resultsWithParents.map(r => r.id)));
-        for (const result of resultsWithParents) {
-          try {
-            const ancestors = await GetEntryAncestors(result.id);
-            setAncestorCounts(prev => {
-              const next = new Map(prev);
-              next.set(result.id, (ancestors || []).length);
-              return next;
-            });
-          } catch {
-            setAncestorCounts(prev => {
-              const next = new Map(prev);
-              next.set(result.id, 1);
-              return next;
-            });
-          }
-          setLoadingCounts(prev => {
-            const next = new Set(prev);
-            next.delete(result.id);
-            return next;
-          });
-        }
-      }
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);
       setHasSearched(true);
     }
   }, []);
-
-  const toggleExpanded = useCallback(async (result: SearchResult) => {
-    const newExpanded = new Set(expandedIds);
-
-    if (newExpanded.has(result.id)) {
-      newExpanded.delete(result.id);
-    } else {
-      newExpanded.add(result.id);
-
-      if (!ancestorsMap.has(result.id) && result.parentId !== null) {
-        try {
-          const ancestors = await GetEntryAncestors(result.id);
-          setAncestorsMap(prev => {
-            const next = new Map(prev);
-            next.set(result.id, (ancestors || []).map(a => ({
-              id: a.ID,
-              content: a.Content,
-              type: a.Type as EntryType,
-            })));
-            return next;
-          });
-        } catch (error) {
-          console.error('Failed to load ancestors:', error);
-        }
-      }
-    }
-
-    setExpandedIds(newExpanded);
-  }, [expandedIds, ancestorsMap]);
 
   const refreshEntry = useCallback(async (oldId: number) => {
     const updated = await GetEntry(oldId);
@@ -193,6 +120,10 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
       await refreshEntry(answeredId);
     }
   }, [questionToAnswer, refreshEntry]);
+
+  const handleResultClick = useCallback((result: SearchResult) => {
+    onSelectEntry?.(result);
+  }, [onSelectEntry]);
 
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -263,10 +194,16 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
             }
           }
           break;
+        case 'm':
+          e.preventDefault();
+          if (selectedIndex >= 0 && selectedIndex < results.length) {
+            onMigrate?.(results[selectedIndex]);
+          }
+          break;
         case 'Enter':
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < results.length) {
-            toggleExpanded(results[selectedIndex]);
+            onNavigateToEntry?.(results[selectedIndex]);
           }
           break;
       }
@@ -274,7 +211,7 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [results, selectedIndex, refreshEntry, toggleExpanded, handleCycleTypeKeyboard, handleAnswer]);
+  }, [results, selectedIndex, refreshEntry, handleCycleTypeKeyboard, handleAnswer, onMigrate, onNavigateToEntry]);
 
   const formatDate = (dateStr: string) => {
     try {
@@ -288,92 +225,6 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
   const getSymbol = (type: EntryType): string => {
     return ENTRY_SYMBOLS[type] || '•';
   };
-
-  const convertToEntry = (result: SearchResult): Entry => ({
-    id: result.id,
-    content: result.content,
-    type: result.type,
-    priority: result.priority,
-    parentId: result.parentId,
-    loggedDate: result.date,
-  });
-
-  const handleEntryClick = useCallback(async (result: SearchResult) => {
-    // Fetch ancestors to build complete entry tree BEFORE opening popover
-    const ancestors = result.parentId !== null ? await GetEntryAncestors(result.id) : [];
-    const ancestorEntries = ancestors.map(a => convertToEntry({
-      id: a.ID,
-      content: a.Content,
-      type: (a.Type as string).toLowerCase() as EntryType,
-      priority: ((a.Priority as string)?.toLowerCase() || 'none') as Priority,
-      date: (a.CreatedAt as unknown as string) || '',
-      parentId: a.ParentID ?? null,
-    }));
-
-    const allEntries = [...ancestorEntries, convertToEntry(result)];
-    setAllEntries(allEntries);
-
-    // Set popoverEntry AFTER entries are loaded
-    setPopoverEntry(result);
-  }, []);
-
-  const handlePopoverAction = useCallback(async (entry: Entry, action: ActionType) => {
-    switch (action) {
-      case 'done':
-        await MarkEntryDone(entry.id);
-        break;
-      case 'cancel':
-        if (entry.type === 'done') {
-          await MarkEntryUndone(entry.id);
-        }
-        break;
-      case 'priority':
-        await CyclePriority(entry.id);
-        break;
-      case 'migrate':
-        onMigrate?.({ ...entry, date: entry.loggedDate });
-        break;
-      default: {
-        const _exhaustive: never = action;
-        console.warn(`Unhandled action: ${_exhaustive}`);
-      }
-    }
-    await refreshEntry(entry.id);
-    if (action === 'done' || action === 'cancel') {
-      setPopoverEntry(null);
-    }
-  }, [onMigrate, refreshEntry]);
-
-  const handlePopoverNavigate = useCallback((entry: Entry) => {
-    onNavigateToEntry?.({ ...entry, date: entry.loggedDate });
-    setPopoverEntry(null);
-    setOpenPopoverId(null);
-  }, [onNavigateToEntry]);
-
-  const handlePopoverOpenChange = useCallback(async (result: SearchResult, open: boolean) => {
-    if (open) {
-      // Reuse cached ancestors if available to avoid duplicate fetching
-      const cachedAncestors = ancestorsMap.get(result.id);
-      if (cachedAncestors && cachedAncestors.length > 0) {
-        const ancestorEntries = cachedAncestors.map(a => convertToEntry({
-          id: a.id,
-          content: a.content,
-          type: a.type,
-          priority: 'none' as Priority,
-          date: '',
-          parentId: null,
-        }));
-        setAllEntries([...ancestorEntries, convertToEntry(result)]);
-        setPopoverEntry(result);
-      } else {
-        await handleEntryClick(result);
-      }
-      setOpenPopoverId(result.id);
-    } else {
-      setOpenPopoverId(null);
-      setPopoverEntry(null);
-    }
-  }, [handleEntryClick, ancestorsMap]);
 
   return (
     <div className="space-y-6">
@@ -410,60 +261,36 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
         )}
 
         {results.map((result, index) => {
-          const isExpanded = expandedIds.has(result.id);
-          const ancestors = ancestorsMap.get(result.id) || [];
           const isSelected = index === selectedIndex;
-          const ancestorCount = ancestorCounts.get(result.id) ?? 0;
-          const isLoadingCount = loadingCounts.has(result.id);
 
           return (
-            <EntryContextPopover
+            <div
               key={result.id}
-              entry={convertToEntry(result)}
-              entries={popoverEntry?.id === result.id ? allEntries : [convertToEntry(result)]}
-              onAction={handlePopoverAction}
-              onNavigate={onNavigateToEntry ? handlePopoverNavigate : undefined}
-              open={openPopoverId === result.id}
-              onOpenChange={(open) => handlePopoverOpenChange(result, open)}
-            >
-              <div
-                onDoubleClick={() => onNavigateToEntry?.(result)}
-                className={cn(
-                  'p-3 rounded-lg border border-border cursor-pointer',
-                  'bg-card transition-colors group',
-                  !isSelected && 'hover:bg-secondary/30',
-                  isSelected && 'ring-2 ring-primary'
-                )}
-              >
-              {/* Legacy inline ancestor expansion - allows viewing context without opening popover */}
-              {isExpanded && ancestors.length > 0 && (
-                <div className="mb-2 pb-2 border-b border-border/50 space-y-1">
-                  {ancestors.map((ancestor, index) => (
-                    <div
-                      key={ancestor.id}
-                      className="flex items-center gap-2 text-xs text-muted-foreground"
-                      style={{ paddingLeft: `${index * 20}px` }}
-                    >
-                      <span className="font-mono">{getSymbol(ancestor.type)}</span>
-                      <span>{ancestor.content}</span>
-                    </div>
-                  ))}
-                </div>
+              onClick={() => handleResultClick(result)}
+              onDoubleClick={() => onNavigateToEntry?.(result)}
+              className={cn(
+                'p-3 rounded-lg border border-border cursor-pointer',
+                'bg-card transition-colors group',
+                !isSelected && 'hover:bg-secondary/30',
+                isSelected && 'ring-2 ring-primary'
               )}
-
+            >
               {/* Main result row */}
               <div
                 className="flex items-start gap-3"
                 data-result-id={result.id}
-                style={{ paddingLeft: isExpanded && ancestors.length > 0 ? `${ancestors.length * 20}px` : undefined }}
               >
-                {/* Context pill - shows ancestor count when entry has parent and isn't expanded */}
-                {result.parentId !== null && !isExpanded && (
-                  <ContextPill
-                    count={ancestorCount}
-                    isLoading={isLoadingCount}
+                {/* Context dot - indicates entry has ancestors */}
+                {result.parentId !== null ? (
+                  <span
+                    data-testid="context-dot"
+                    className="w-1.5 h-1.5 mt-2 rounded-full bg-muted-foreground flex-shrink-0"
+                    title="Has parent context"
                   />
+                ) : (
+                  <span className="w-1.5" />
                 )}
+
                 <span className="inline-flex items-center gap-1 flex-shrink-0">
                   {/* Symbol - clickable for task/done entries */}
                   {result.type === 'task' || result.type === 'done' ? (
@@ -516,13 +343,11 @@ export function SearchView({ onMigrate, onNavigateToEntry }: SearchViewProps) {
                   </p>
                 </div>
 
-
                 <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100">
                   #{result.id}
                 </span>
               </div>
-              </div>
-            </EntryContextPopover>
+            </div>
           );
         })}
       </div>

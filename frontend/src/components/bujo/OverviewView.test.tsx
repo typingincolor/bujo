@@ -78,72 +78,20 @@ describe('OverviewView - Display', () => {
   })
 })
 
-describe('OverviewView - Popover Interactions', () => {
+describe('OverviewView - Direct Click Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('opens popover when clicking entry', async () => {
+  it('calls onNavigateToEntry when clicking entry', async () => {
     const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task' })]} />)
+    const onNavigateToEntry = vi.fn()
+    const entry = createTestEntry({ id: 42, content: 'Test task' })
+    render(<OverviewView overdueEntries={[entry]} onNavigateToEntry={onNavigateToEntry} />)
 
     await user.click(screen.getByText('Test task'))
 
-    await waitFor(() => {
-      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
-    })
-  })
-
-  it('shows done button in popover for task entries', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task', content: 'Test task' })]} />)
-
-    await user.click(screen.getByText('Test task'))
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
-    })
-  })
-
-  it('calls MarkEntryDone when clicking done button in popover', async () => {
-    const user = userEvent.setup()
-    const onEntryChanged = vi.fn()
-    render(<OverviewView overdueEntries={[createTestEntry({ id: 42, type: 'task', content: 'Test task' })]} onEntryChanged={onEntryChanged} />)
-
-    await user.click(screen.getByText('Test task'))
-    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
-
-    await user.click(screen.getByRole('button', { name: /done/i }))
-
-    await waitFor(() => {
-      expect(MarkEntryDone).toHaveBeenCalledWith(42)
-      expect(onEntryChanged).toHaveBeenCalled()
-    })
-  })
-
-  it('shows migrate button in popover for task entries when onMigrate provided', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ type: 'task', content: 'Test task' })]} onMigrate={vi.fn()} />)
-
-    await user.click(screen.getByText('Test task'))
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /migrate/i })).toBeInTheDocument()
-    })
-  })
-
-  it('calls onMigrate when clicking migrate button in popover', async () => {
-    const user = userEvent.setup()
-    const onMigrate = vi.fn()
-    const entry = createTestEntry({ id: 42, type: 'task', content: 'Test task' })
-    render(<OverviewView overdueEntries={[entry]} onMigrate={onMigrate} />)
-
-    await user.click(screen.getByText('Test task'))
-    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
-
-    await user.click(screen.getByRole('button', { name: /migrate/i }))
-
-    expect(onMigrate).toHaveBeenCalledWith(entry)
+    expect(onNavigateToEntry).toHaveBeenCalledWith(entry)
   })
 })
 
@@ -244,22 +192,15 @@ describe('OverviewView - Entry Filtering', () => {
     expect(screen.queryByText('Parent event')).not.toBeInTheDocument()
   })
 
-  it('shows ancestor context in popover when clicking on a task', async () => {
-    const user = userEvent.setup()
+  it('shows context dot for task with parent', () => {
     const entries = [
       createTestEntry({ id: 1, content: 'Parent event', type: 'event', parentId: null }),
       createTestEntry({ id: 2, content: 'Overdue task', type: 'task', parentId: 1 }),
     ]
     render(<OverviewView overdueEntries={entries} />)
 
-    await user.click(screen.getByText('Overdue task'))
-
-    await waitFor(() => {
-      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
-    })
-
-    // Parent event should be visible in popover context
-    expect(screen.getByText('Parent event')).toBeInTheDocument()
+    // Child task should show context dot
+    expect(screen.getByTestId('context-dot')).toBeInTheDocument()
   })
 
   it('counts only task entries in the badge', () => {
@@ -434,70 +375,70 @@ describe('OverviewView - Keyboard Shortcuts', () => {
   })
 })
 
-describe('OverviewView - Navigate to Entry', () => {
+describe('OverviewView - Context Dot (No Popover)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('shows go to entry button in popover when onNavigateToEntry provided', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task', type: 'task' })]} onNavigateToEntry={vi.fn()} />)
-
-    await user.click(screen.getByText('Test task'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Go to entry')).toBeInTheDocument()
-    })
+  it('does not render entry context popover', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Task', type: 'task', priority: 'none', parentId: null, loggedDate: '2026-01-25' }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+    expect(screen.queryByTestId('entry-context-popover')).not.toBeInTheDocument()
   })
 
-  it('shows go to entry button in popover even when onNavigateToEntry not provided', async () => {
-    const user = userEvent.setup()
-    render(<OverviewView overdueEntries={[createTestEntry({ content: 'Test task', type: 'task' })]} />)
-
-    await user.click(screen.getByText('Test task'))
-
-    await waitFor(() => {
-      expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('Go to entry')).toBeInTheDocument()
+  it('shows context dot for entries with parent', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Child task', type: 'task', priority: 'none', parentId: 99, loggedDate: '2026-01-25' }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+    expect(screen.getByTestId('context-dot')).toBeInTheDocument()
   })
 
-  it('calls onNavigateToEntry when go to entry button is clicked in popover', async () => {
+  it('does not show context dot for root entries', () => {
+    const entries = [
+      createTestEntry({ id: 1, content: 'Root task', type: 'task', priority: 'none', parentId: null, loggedDate: '2026-01-25' }),
+    ]
+    render(<OverviewView overdueEntries={entries} />)
+    expect(screen.queryByTestId('context-dot')).not.toBeInTheDocument()
+  })
+})
+
+describe('OverviewView - Navigate to Entry (Direct Click)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls onNavigateToEntry when clicking entry directly', async () => {
     const user = userEvent.setup()
     const onNavigateToEntry = vi.fn()
     const entry = createTestEntry({ id: 42, content: 'Test task', type: 'task', loggedDate: '2026-01-15' })
     render(<OverviewView overdueEntries={[entry]} onNavigateToEntry={onNavigateToEntry} />)
 
     await user.click(screen.getByText('Test task'))
-    await waitFor(() => expect(screen.getByTestId('entry-context-popover')).toBeInTheDocument())
-
-    await user.click(screen.getByText('Go to entry'))
 
     expect(onNavigateToEntry).toHaveBeenCalledWith(entry)
   })
 
-  it('shows go to entry button in popover for all entry types', async () => {
+  it('navigates to any entry type when clicked', async () => {
     const user = userEvent.setup()
+    const onNavigateToEntry = vi.fn()
     const entries = [
       createTestEntry({ id: 1, content: 'Task', type: 'task' }),
       createTestEntry({ id: 2, content: 'Done', type: 'done' }),
       createTestEntry({ id: 3, content: 'Cancelled', type: 'cancelled' }),
     ]
-    render(<OverviewView overdueEntries={entries} onNavigateToEntry={vi.fn()} />)
+    render(<OverviewView overdueEntries={entries} onNavigateToEntry={onNavigateToEntry} />)
 
-    // Click first entry
+    // Click each entry
     await user.click(screen.getByText('Task'))
-    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
+    expect(onNavigateToEntry).toHaveBeenCalledWith(entries[0])
 
-    // Close popover and click second entry
-    await user.keyboard('{Escape}')
     await user.click(screen.getByText('Done'))
-    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
+    expect(onNavigateToEntry).toHaveBeenCalledWith(entries[1])
 
-    // Close popover and click third entry
-    await user.keyboard('{Escape}')
     await user.click(screen.getByText('Cancelled'))
-    await waitFor(() => expect(screen.getByText('Go to entry')).toBeInTheDocument())
+    expect(onNavigateToEntry).toHaveBeenCalledWith(entries[2])
   })
 })

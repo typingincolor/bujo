@@ -18,7 +18,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { Search, GetEntryAncestors, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
+import { Search, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'
 
 const createMockEntry = (overrides: Partial<{ ID: number; Content: string; Type: string; CreatedAt: string; ParentID: number | null }>) => ({
   ID: 1,
@@ -31,168 +31,6 @@ const createMockEntry = (overrides: Partial<{ ID: number; Content: string; Type:
   CreatedAt: '2024-01-15T10:00:00Z',
   convertValues: vi.fn(),
   ...overrides,
-})
-
-
-describe('SearchView - Context Pill', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('shows context pill when entry has parent and is not expanded', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'child')
-
-    await waitFor(() => {
-      const pill = screen.getByTestId('context-pill')
-      expect(pill).toBeInTheDocument()
-    })
-  })
-
-  it('does not show context pill when entry has no parent', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      createMockEntry({ ID: 1, Content: 'Root entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z', ParentID: null }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'root')
-
-    await waitFor(() => {
-      expect(screen.getByText('Root entry')).toBeInTheDocument()
-    })
-    expect(screen.queryByTestId('context-pill')).not.toBeInTheDocument()
-  })
-
-  it('shows context pill with popover integration', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
-    ] as never)
-    vi.mocked(GetEntryAncestors).mockResolvedValue([
-      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'child')
-
-    await waitFor(() => {
-      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-    })
-
-    // Click to open popover - pill remains visible as informational indicator
-    await user.click(screen.getByText('Child entry'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Parent entry')).toBeInTheDocument()
-    })
-    expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-  })
-
-  it('clicking context pill toggles expand/collapse', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
-    ] as never)
-    vi.mocked(GetEntryAncestors).mockResolvedValue([
-      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'child')
-
-    await waitFor(() => {
-      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-    })
-
-    // Click pill to expand
-    await user.click(screen.getByTestId('context-pill'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Parent entry')).toBeInTheDocument()
-    })
-  })
-
-  it('context pill click does not trigger other entry actions', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Child task', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
-    ] as never)
-    vi.mocked(GetEntryAncestors).mockResolvedValue([
-      createMockEntry({ ID: 5, Content: 'Parent entry', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'child')
-
-    await waitFor(() => {
-      expect(screen.getByTestId('context-pill')).toBeInTheDocument()
-    })
-
-    // Click pill - should only expand, not mark done
-    await user.click(screen.getByTestId('context-pill'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Parent entry')).toBeInTheDocument()
-    })
-    expect(MarkEntryDone).not.toHaveBeenCalled()
-  })
-
-  it('shows ancestor count in pill after loading', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Child entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 5 },
-    ] as never)
-    vi.mocked(GetEntryAncestors).mockResolvedValue([
-      createMockEntry({ ID: 5, Content: 'Parent', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: null }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'child')
-
-    await waitFor(() => {
-      const pill = screen.getByTestId('context-pill')
-      expect(pill).toHaveTextContent('1')
-    })
-  })
-
-  it('shows correct count for deeply nested entries', async () => {
-    vi.mocked(Search).mockResolvedValue([
-      { ...createMockEntry({ ID: 1, Content: 'Nested child', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }), ParentID: 3 },
-    ] as never)
-    vi.mocked(GetEntryAncestors).mockResolvedValue([
-      createMockEntry({ ID: 2, Content: 'Root', Type: 'event', CreatedAt: '2024-01-13T10:00:00Z', ParentID: null }),
-      createMockEntry({ ID: 3, Content: 'Parent', Type: 'note', CreatedAt: '2024-01-14T10:00:00Z', ParentID: 2 }),
-    ] as never)
-
-    const user = userEvent.setup()
-    render(<SearchView />)
-
-    const input = screen.getByPlaceholderText(/search entries/i)
-    await user.type(input, 'nested')
-
-    await waitFor(() => {
-      const pill = screen.getByTestId('context-pill')
-      expect(pill).toHaveTextContent('2')
-    })
-  })
 })
 
 describe('SearchView - Double Click Navigation', () => {
@@ -253,8 +91,6 @@ describe('SearchView - Double Click Navigation', () => {
     expect(onNavigateToEntry).not.toHaveBeenCalled()
   })
 })
-
-
 
 describe('SearchView - Symbol Click Toggle', () => {
   beforeEach(() => {
@@ -357,5 +193,40 @@ describe('SearchView - Symbol Click Toggle', () => {
     // Symbol for cancelled entries should not be a button with task/done title
     expect(screen.queryByTitle('Task')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Done')).not.toBeInTheDocument()
+  })
+})
+
+describe('SearchView - Entry Selection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls onSelectEntry when clicking a search result', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockEntry({ ID: 42, Content: 'Test entry', Type: 'task', CreatedAt: '2024-01-15T10:00:00Z' }),
+    ] as never)
+
+    const onSelectEntry = vi.fn()
+    const user = userEvent.setup()
+    render(<SearchView onSelectEntry={onSelectEntry} />)
+
+    const input = screen.getByPlaceholderText(/search entries/i)
+    await user.type(input, 'test')
+
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    const result = screen.getByText('Test entry').closest('[data-result-id]')
+    await user.click(result!)
+
+    expect(onSelectEntry).toHaveBeenCalledWith({
+      id: 42,
+      content: 'Test entry',
+      type: 'task',
+      priority: 'none',
+      date: '2024-01-15T10:00:00Z',
+      parentId: null,
+    })
   })
 })
