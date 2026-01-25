@@ -89,6 +89,7 @@ function App() {
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
@@ -739,7 +740,12 @@ function App() {
     <div className="flex h-screen bg-background">
       <Sidebar currentView={view} onViewChange={handleViewChange} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div
+        className="flex-1 flex flex-col overflow-hidden transition-[margin]"
+        style={{
+          marginRight: view === 'today' && !isSidebarCollapsed ? `${journalSidebarWidth}px` : '0'
+        }}
+      >
         <Header
           title={viewTitles[view]}
           currentMood={today?.mood}
@@ -919,6 +925,7 @@ function App() {
             callbacks={sidebarCallbacks}
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+            onWidthChange={setJournalSidebarWidth}
           />
         </aside>
       )}
