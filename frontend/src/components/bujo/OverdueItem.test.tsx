@@ -208,14 +208,14 @@ describe('OverdueItem', () => {
       const entry = createTestEntry()
       render(<OverdueItem entry={entry} now={now} isSelected />)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-accent')
+      expect(button).toHaveClass('ring-primary/30')
     })
 
     it('does not show selected styling when isSelected is false', () => {
       const entry = createTestEntry()
       render(<OverdueItem entry={entry} now={now} isSelected={false} />)
       const button = screen.getByRole('button')
-      expect(button).not.toHaveClass('bg-accent')
+      expect(button).not.toHaveClass('ring-primary/30')
     })
   })
 })

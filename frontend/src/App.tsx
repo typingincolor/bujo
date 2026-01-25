@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext, CyclePriority } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -429,6 +429,27 @@ function App() {
           }
           break
         }
+        case 'p': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            CyclePriority(entry.id).then(() => loadData())
+          }
+          break
+        }
+        case 't': {
+          e.preventDefault()
+          const entry = flatEntries[selectedIndex]
+          if (entry) {
+            const cycleOrder = ['task', 'note', 'event', 'question'] as const
+            const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number])
+            if (currentIndex !== -1) {
+              const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
+              RetypeEntry(entry.id, nextType).then(() => loadData())
+            }
+          }
+          break
+        }
       }
     }
 
@@ -437,10 +458,15 @@ function App() {
   }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
 
   useEffect(() => {
-    setSelectedIndex(0)
-    const entries = flattenEntries(days[0]?.entries || [])
-    setSelectedEntry(entries[0] ?? null)
-  }, [days])
+    // Only reset main panel selection if main panel is focused
+    // This prevents dual highlighting when sidebar has selection and data refreshes
+    if (focusedPanel === 'main') {
+      setSelectedIndex(0)
+      const entries = flattenEntries(days[0]?.entries || [])
+      setSelectedEntry(entries[0] ?? null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]) // Only run when days changes, focusedPanel is just a guard condition
 
   const handleViewChange = (newView: ViewType) => {
     if (newView === 'today') {

@@ -150,10 +150,10 @@ describe('JournalSidebar Selection Integration', () => {
     // Section is expanded by default
     const button = screen.getByRole('button', { name: /overdue task/i })
     const container = button.parentElement!
-    expect(container).not.toHaveClass('bg-accent')
+    expect(container).not.toHaveClass('ring-primary/30')
 
     await user.click(button)
 
-    expect(container).toHaveClass('bg-accent')
+    expect(container).toHaveClass('ring-primary/30')
   })
 })

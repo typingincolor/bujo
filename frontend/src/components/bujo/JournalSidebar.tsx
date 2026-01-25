@@ -147,7 +147,7 @@ export function JournalSidebar({
                   key={entry.id}
                   className={cn(
                     'group px-2 py-1.5 rounded-lg text-sm transition-colors hover:bg-secondary/50',
-                    selectedEntry?.id === entry.id && 'bg-accent'
+                    selectedEntry?.id === entry.id && 'bg-primary/10 ring-1 ring-primary/30'
                   )}
                 >
                   <button

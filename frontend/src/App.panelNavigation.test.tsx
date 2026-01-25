@@ -51,6 +51,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
   GetEntryContext: vi.fn().mockResolvedValue([]),
+  RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { GetAgenda } from './wailsjs/go/wails/App'
@@ -87,7 +88,7 @@ describe('App - Panel Navigation with Tab', () => {
         expect(mainPanelEntry).toHaveAttribute('data-selected', 'false')
         // First overdue entry in sidebar should be highlighted
         const sidebarEntry = screen.getByText('Overdue task 1').closest('.group')
-        expect(sidebarEntry).toHaveClass('bg-accent')
+        expect(sidebarEntry).toHaveClass('ring-primary/30')
       })
     })
 
@@ -131,7 +132,7 @@ describe('App - Panel Navigation with Tab', () => {
 
       await waitFor(() => {
         const firstEntry = screen.getByText('Overdue task 1').closest('.group')
-        expect(firstEntry).toHaveClass('bg-accent')
+        expect(firstEntry).toHaveClass('ring-primary/30')
       })
 
       // Press j to move to next overdue task
@@ -139,7 +140,7 @@ describe('App - Panel Navigation with Tab', () => {
 
       await waitFor(() => {
         const secondEntry = screen.getByText('Overdue task 2').closest('.group')
-        expect(secondEntry).toHaveClass('bg-accent')
+        expect(secondEntry).toHaveClass('ring-primary/30')
       })
     })
   })
@@ -168,7 +169,7 @@ describe('App - Mutual Exclusion of Selection', () => {
 
     await waitFor(() => {
       const sidebarEntry = screen.getByText('Overdue task 1').closest('.group')
-      expect(sidebarEntry).toHaveClass('bg-accent')
+      expect(sidebarEntry).toHaveClass('ring-primary/30')
     })
 
     // Click on main panel entry
@@ -180,7 +181,7 @@ describe('App - Mutual Exclusion of Selection', () => {
       expect(mainPanelEntry).toHaveAttribute('data-selected', 'true')
       // Sidebar entry should NOT be selected anymore
       const sidebarEntry = screen.getByText('Overdue task 1').closest('.group')
-      expect(sidebarEntry).not.toHaveClass('bg-accent')
+      expect(sidebarEntry).not.toHaveClass('ring-primary/30')
     })
   })
 
@@ -208,7 +209,46 @@ describe('App - Mutual Exclusion of Selection', () => {
       expect(mainPanelEntry).toHaveAttribute('data-selected', 'false')
       // Sidebar entry should be selected
       const sidebarEntry = screen.getByText('Overdue task 1').closest('.group')
-      expect(sidebarEntry).toHaveClass('bg-accent')
+      expect(sidebarEntry).toHaveClass('ring-primary/30')
+    })
+  })
+
+  it('clicking row then pressing arrow key results in only one highlight', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Initially first entry is selected
+    const firstEntry = screen.getByText('Main panel task').closest('[data-entry-id]')
+    expect(firstEntry).toHaveAttribute('data-selected', 'true')
+
+    // Click on second entry (note)
+    await user.click(screen.getByText('Main panel note'))
+
+    await waitFor(() => {
+      const noteEntry = screen.getByText('Main panel note').closest('[data-entry-id]')
+      expect(noteEntry).toHaveAttribute('data-selected', 'true')
+      // First entry should NOT be selected anymore
+      expect(firstEntry).toHaveAttribute('data-selected', 'false')
+    })
+
+    // Press down arrow
+    await user.keyboard('{ArrowDown}')
+
+    // After pressing arrow, only one entry should be selected
+    await waitFor(() => {
+      const allEntries = screen.getAllByTestId('entry-item')
+      const selectedEntries = allEntries.filter(
+        (el) => el.getAttribute('data-selected') === 'true'
+      )
+      expect(selectedEntries.length).toBe(1)
     })
   })
 
@@ -235,11 +275,131 @@ describe('App - Mutual Exclusion of Selection', () => {
       (el) => el.closest('.group')
     ).filter(Boolean)
     const selectedSidebarEntries = sidebarEntries.filter(
-      (el) => el?.classList.contains('bg-accent')
+      (el) => el?.classList.contains('ring-primary/30')
     )
 
     // Total selected should be exactly 1
     const totalSelected = selectedMainEntries.length + selectedSidebarEntries.length
     expect(totalSelected).toBe(1)
+  })
+
+  it('data refresh after sidebar selection does not cause dual highlight', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Click on sidebar entry
+    await user.click(screen.getByText('Overdue task 1'))
+
+    await waitFor(() => {
+      const sidebarEntry = screen.getByText('Overdue task 1').closest('.group')
+      expect(sidebarEntry).toHaveClass('ring-primary/30')
+    })
+
+    // Simulate data refresh by updating the mock and triggering re-render
+    vi.mocked(GetAgenda).mockResolvedValue(createMockAgenda({
+      Days: [createMockDayEntries({
+        Entries: [
+          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+          createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'Main panel note', CreatedAt: '2026-01-17T11:00:00Z' }),
+          createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'New task added', CreatedAt: '2026-01-17T12:00:00Z' }),
+        ],
+      })],
+      Overdue: [
+        createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
+        createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+      ],
+    }))
+
+    // Trigger a data refresh (e.g., by simulating an action that triggers loadData)
+    // For now, we'll simulate the 'data:changed' event
+    const { EventsOn } = await import('./wailsjs/runtime/runtime')
+    const eventCallback = vi.mocked(EventsOn).mock.calls[0]?.[1]
+    if (eventCallback) {
+      eventCallback()
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText('New task added')).toBeInTheDocument()
+    })
+
+    // After data refresh, should still only have one highlighted entry
+    // The sidebar selection should be preserved, main panel should NOT be highlighted
+    const mainPanelEntries = screen.getAllByTestId('entry-item')
+    const selectedMainEntries = mainPanelEntries.filter(
+      (el) => el.getAttribute('data-selected') === 'true'
+    )
+
+    const sidebarEntries = screen.getAllByText(/Overdue task/).map(
+      (el) => el.closest('.group')
+    ).filter(Boolean)
+    const selectedSidebarEntries = sidebarEntries.filter(
+      (el) => el?.classList.contains('ring-primary/30')
+    )
+
+    // Total selected should be exactly 1 (only sidebar)
+    const totalSelected = selectedMainEntries.length + selectedSidebarEntries.length
+    expect(totalSelected).toBe(1)
+    expect(selectedSidebarEntries.length).toBe(1) // Sidebar selection preserved
+    expect(selectedMainEntries.length).toBe(0) // No main panel selection
+  })
+})
+
+describe('App - Keyboard Action Shortcuts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(GetAgenda).mockResolvedValue(mockAgendaWithOverdue)
+  })
+
+  it('p key cycles priority on selected entry', async () => {
+    const user = userEvent.setup()
+    const { CyclePriority } = await import('./wailsjs/go/wails/App')
+
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Press p to cycle priority
+    await user.keyboard('p')
+
+    await waitFor(() => {
+      expect(CyclePriority).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it('t key cycles type on selected entry', async () => {
+    const user = userEvent.setup()
+    const { RetypeEntry } = await import('./wailsjs/go/wails/App')
+
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Press t to cycle type
+    await user.keyboard('t')
+
+    // Should call RetypeEntry to change type (task -> note)
+    await waitFor(() => {
+      expect(RetypeEntry).toHaveBeenCalledWith(1, 'note')
+    })
   })
 })

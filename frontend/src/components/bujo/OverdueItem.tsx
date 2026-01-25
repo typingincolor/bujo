@@ -58,7 +58,7 @@ export function OverdueItem({
         onClick={handleClick}
         className={cn(
           'w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-sm transition-colors hover:bg-secondary/50',
-          isSelected && 'bg-accent'
+          isSelected && 'bg-primary/10 ring-1 ring-primary/30'
         )}
       >
         <span
