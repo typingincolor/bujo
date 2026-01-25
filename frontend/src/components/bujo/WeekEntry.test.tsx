@@ -39,4 +39,9 @@ describe('WeekEntry', () => {
     const { container } = render(<WeekEntry entry={mockEntry} isSelected={true} />);
     expect(container.firstChild).toHaveClass('bg-primary/10');
   });
+
+  it('shows date prefix when provided', () => {
+    render(<WeekEntry entry={mockEntry} datePrefix="Sat:" />);
+    expect(screen.getByText('Sat:')).toBeInTheDocument();
+  });
 });
