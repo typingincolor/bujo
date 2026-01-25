@@ -26,55 +26,95 @@ describe('WeekendBox', () => {
   };
 
   it('renders "Weekend" label', () => {
-    render(<WeekendBox saturdayEntries={[]} sundayEntries={[]} />);
+    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[]} />);
     expect(screen.getByText('Weekend')).toBeInTheDocument();
   });
 
+  it('renders date range from startDay', () => {
+    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[]} />);
+    expect(screen.getByText('24-25')).toBeInTheDocument();
+  });
+
   it('renders Saturday entries with "Sat:" prefix', () => {
-    render(<WeekendBox saturdayEntries={[satEntry]} sundayEntries={[]} />);
+    render(<WeekendBox startDay={24} saturdayEntries={[satEntry]} sundayEntries={[]} />);
     expect(screen.getByText('Sat:')).toBeInTheDocument();
     expect(screen.getByText('Saturday event')).toBeInTheDocument();
   });
 
   it('renders Sunday entries with "Sun:" prefix', () => {
-    render(<WeekendBox saturdayEntries={[]} sundayEntries={[sunEntry]} />);
+    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[sunEntry]} />);
     expect(screen.getByText('Sun:')).toBeInTheDocument();
     expect(screen.getByText('Sunday event')).toBeInTheDocument();
   });
 
   it('renders both Saturday and Sunday entries together', () => {
     render(
-      <WeekendBox saturdayEntries={[satEntry]} sundayEntries={[sunEntry]} />
+      <WeekendBox startDay={24} saturdayEntries={[satEntry]} sundayEntries={[sunEntry]} />
     );
     expect(screen.getByText('Saturday event')).toBeInTheDocument();
     expect(screen.getByText('Sunday event')).toBeInTheDocument();
   });
 
-  it('passes selectedEntryId to WeekEntry', () => {
+  it('passes selectedEntry to WeekEntry', () => {
     render(
       <WeekendBox
+        startDay={24}
         saturdayEntries={[satEntry]}
         sundayEntries={[]}
-        selectedEntryId={1}
+        selectedEntry={satEntry}
       />
     );
     const container = screen.getByText('Saturday event').closest('div');
     expect(container).toHaveClass('bg-primary/10');
   });
 
-  it('calls onEntrySelect when entry clicked', async () => {
+  it('calls onSelectEntry when entry clicked', async () => {
     const user = userEvent.setup();
-    const onEntrySelect = vi.fn();
+    const onSelectEntry = vi.fn();
     render(
       <WeekendBox
+        startDay={24}
         saturdayEntries={[satEntry]}
         sundayEntries={[]}
-        onEntrySelect={onEntrySelect}
+        onSelectEntry={onSelectEntry}
       />
     );
 
     const buttons = screen.getAllByRole('button');
     await user.click(buttons[0]);
-    expect(onEntrySelect).toHaveBeenCalledWith(1);
+    expect(onSelectEntry).toHaveBeenCalledWith(satEntry);
+  });
+
+  it('shows "No events" when both days are empty', () => {
+    render(
+      <WeekendBox
+        startDay={24}
+        saturdayEntries={[]}
+        sundayEntries={[]}
+      />
+    );
+    expect(screen.getByText('No events')).toBeInTheDocument();
+  });
+
+  it('does not show "No events" when Saturday has entries', () => {
+    render(
+      <WeekendBox
+        startDay={24}
+        saturdayEntries={[satEntry]}
+        sundayEntries={[]}
+      />
+    );
+    expect(screen.queryByText('No events')).not.toBeInTheDocument();
+  });
+
+  it('does not show "No events" when Sunday has entries', () => {
+    render(
+      <WeekendBox
+        startDay={24}
+        saturdayEntries={[]}
+        sundayEntries={[sunEntry]}
+      />
+    );
+    expect(screen.queryByText('No events')).not.toBeInTheDocument();
   });
 });

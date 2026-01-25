@@ -2,42 +2,51 @@ import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
 
 interface WeekendBoxProps {
+  startDay: number;
   saturdayEntries: Entry[];
   sundayEntries: Entry[];
-  selectedEntryId?: number;
-  onEntrySelect?: (entryId: number) => void;
+  selectedEntry?: Entry;
+  onSelectEntry?: (entry: Entry) => void;
 }
 
 export function WeekendBox({
+  startDay,
   saturdayEntries,
   sundayEntries,
-  selectedEntryId,
-  onEntrySelect,
+  selectedEntry,
+  onSelectEntry,
 }: WeekendBoxProps) {
   return (
     <div className="border rounded-lg p-3 bg-card">
-      <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-        Weekend
-      </h3>
+      <div className="mb-3 flex items-baseline gap-2">
+        <span className="text-2xl font-semibold">{startDay}-{startDay + 1}</span>
+        <span className="text-sm text-muted-foreground">Weekend</span>
+      </div>
       <div className="space-y-1">
-        {saturdayEntries.map(entry => (
-          <WeekEntry
-            key={entry.id}
-            entry={entry}
-            datePrefix="Sat:"
-            isSelected={entry.id === selectedEntryId}
-            onSelect={() => onEntrySelect?.(entry.id)}
-          />
-        ))}
-        {sundayEntries.map(entry => (
-          <WeekEntry
-            key={entry.id}
-            entry={entry}
-            datePrefix="Sun:"
-            isSelected={entry.id === selectedEntryId}
-            onSelect={() => onEntrySelect?.(entry.id)}
-          />
-        ))}
+        {saturdayEntries.length === 0 && sundayEntries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No events</p>
+        ) : (
+          <>
+            {saturdayEntries.map(entry => (
+              <WeekEntry
+                key={entry.id}
+                entry={entry}
+                datePrefix="Sat:"
+                isSelected={selectedEntry?.id === entry.id}
+                onSelect={() => onSelectEntry?.(entry)}
+              />
+            ))}
+            {sundayEntries.map(entry => (
+              <WeekEntry
+                key={entry.id}
+                entry={entry}
+                datePrefix="Sun:"
+                isSelected={selectedEntry?.id === entry.id}
+                onSelect={() => onSelectEntry?.(entry)}
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
