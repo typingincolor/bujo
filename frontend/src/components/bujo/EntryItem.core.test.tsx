@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { EntryItem } from './EntryItem'
 import { Entry } from '@/types/bujo'
 
@@ -480,16 +481,31 @@ describe('EntryItem', () => {
   })
 
   describe('hover and selection highlighting', () => {
-    it('shows hover highlight on non-selected items', () => {
+    it('shows hover highlight on non-selected items', async () => {
+      const user = userEvent.setup()
       render(<EntryItem entry={createTestEntry()} isSelected={false} />)
-      const container = screen.getByText('Test entry').closest('[data-entry-id]')
-      expect(container).toHaveClass('hover:bg-secondary/50')
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      // Initially no hover highlight
+      expect(container).not.toHaveClass('bg-secondary/50')
+
+      // Hover shows highlight
+      await user.hover(container)
+      expect(container).toHaveClass('bg-secondary/50')
+
+      // Unhover removes highlight
+      await user.unhover(container)
+      expect(container).not.toHaveClass('bg-secondary/50')
     })
 
-    it('does not show hover highlight on selected items', () => {
+    it('does not show hover highlight on selected items', async () => {
+      const user = userEvent.setup()
       render(<EntryItem entry={createTestEntry()} isSelected={true} />)
-      const container = screen.getByText('Test entry').closest('[data-entry-id]')
-      expect(container).not.toHaveClass('hover:bg-secondary/50')
+      const container = screen.getByText('Test entry').closest('[data-entry-id]')!
+
+      // Even when hovered, selected items don't show hover highlight
+      await user.hover(container)
+      expect(container).not.toHaveClass('bg-secondary/50')
     })
 
     it('shows selection highlight on selected items', () => {

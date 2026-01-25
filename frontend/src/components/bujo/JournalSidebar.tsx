@@ -1,8 +1,121 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
+
+interface OverdueEntryItemProps {
+  entry: Entry;
+  now: Date;
+  isSelected: boolean;
+  onSelect?: () => void;
+  callbacks: ReturnType<typeof createEntryCallbacksType>;
+}
+
+type createEntryCallbacksType = (entry: Entry) => {
+  onCancel?: () => void;
+  onMigrate?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onCyclePriority?: () => void;
+  onMoveToList?: () => void;
+};
+
+function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: OverdueEntryItemProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const attentionResult = calculateAttentionScore(entry, now);
+  const symbol = ENTRY_SYMBOLS[entry.type];
+  const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
+  const hasParent = entry.parentId !== null;
+
+  // Clear hover state when keyboard navigation occurs
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'j' || e.key === 'k') {
+        setIsHovered(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  return (
+    <div
+      className={cn(
+        'group px-2 py-1.5 rounded-lg text-sm transition-colors',
+        !isSelected && isHovered && 'bg-secondary/50',
+        isSelected && 'bg-primary/10 ring-1 ring-primary/30'
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <button
+        onClick={onSelect}
+        className="flex items-center gap-2 text-left min-w-0 w-full"
+      >
+        <span
+          data-testid="context-dot-container"
+          className="w-2 flex-shrink-0 flex items-center justify-center"
+        >
+          {hasParent && (
+            <span
+              data-testid="context-dot"
+              className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
+            />
+          )}
+        </span>
+
+        <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
+          {symbol}
+        </span>
+
+        {prioritySymbol && (
+          <span
+            data-testid="priority-indicator"
+            className="text-orange-500 font-medium flex-shrink-0"
+          >
+            {prioritySymbol}
+          </span>
+        )}
+
+        <span className="flex-1 truncate">{entry.content}</span>
+
+        <span
+          data-testid="attention-badge"
+          className={cn(
+            'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
+            attentionResult.score >= 80 ? 'bg-red-500' :
+            attentionResult.score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
+          )}
+        >
+          {attentionResult.score}
+        </span>
+      </button>
+
+      {/* Action bar below entry - shown on hover */}
+      <div
+        className={cn(
+          'grid transition-all duration-150 ease-out grid-rows-[0fr]',
+          isHovered && 'grid-rows-[1fr]'
+        )}
+      >
+        <div className="overflow-hidden">
+          <div
+            className="pt-1"
+            style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
+          >
+            <EntryActionBar
+              entry={entry}
+              callbacks={callbacks}
+              variant="always-visible"
+              size="sm"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export interface JournalSidebarCallbacks {
   onMarkDone?: (entry: Entry) => void;
@@ -136,84 +249,16 @@ export function JournalSidebar({
               No pending tasks
             </p>
           ) : (
-            taskEntries.map((entry) => {
-              const attentionResult = calculateAttentionScore(entry, now);
-              const symbol = ENTRY_SYMBOLS[entry.type];
-              const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
-              const hasParent = entry.parentId !== null;
-
-              return (
-                <div
-                  key={entry.id}
-                  className={cn(
-                    'group px-2 py-1.5 rounded-lg text-sm transition-colors hover:bg-secondary/50',
-                    selectedEntry?.id === entry.id && 'bg-primary/10 ring-1 ring-primary/30'
-                  )}
-                >
-                  <button
-                    onClick={() => onSelectEntry?.(entry)}
-                    className="flex items-center gap-2 text-left min-w-0 w-full"
-                  >
-                    <span
-                      data-testid="context-dot-container"
-                      className="w-2 flex-shrink-0 flex items-center justify-center"
-                    >
-                      {hasParent && (
-                        <span
-                          data-testid="context-dot"
-                          className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50"
-                        />
-                      )}
-                    </span>
-
-                    <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
-                      {symbol}
-                    </span>
-
-                    {prioritySymbol && (
-                      <span
-                        data-testid="priority-indicator"
-                        className="text-orange-500 font-medium flex-shrink-0"
-                      >
-                        {prioritySymbol}
-                      </span>
-                    )}
-
-                    <span className="flex-1 truncate">{entry.content}</span>
-
-                    <span
-                      data-testid="attention-badge"
-                      className={cn(
-                        'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
-                        attentionResult.score >= 80 ? 'bg-red-500' :
-                        attentionResult.score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
-                      )}
-                    >
-                      {attentionResult.score}
-                    </span>
-                  </button>
-
-                  {/* Action bar below entry - hidden until hover */}
-                  <div
-                    className="grid transition-all duration-150 ease-out group-hover:grid-rows-[1fr] grid-rows-[0fr]"
-                  >
-                    <div className="overflow-hidden">
-                      <div
-                        className="pt-1"
-                        style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
-                      >
-                        <EntryActionBar
-                          entry={entry}
-                          callbacks={createEntryCallbacks(entry)}
-                          variant="always-visible"
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
+            taskEntries.map((entry) => (
+              <OverdueEntryItem
+                key={entry.id}
+                entry={entry}
+                now={now}
+                isSelected={selectedEntry?.id === entry.id}
+                onSelect={() => onSelectEntry?.(entry)}
+                callbacks={createEntryCallbacks(entry)}
+              />
+            ))
           )}
         </div>
       </div>
