@@ -146,13 +146,13 @@ export function JournalSidebar({
                 <div
                   key={entry.id}
                   className={cn(
-                    'group flex flex-col gap-1 px-2 py-1.5 rounded-lg text-sm transition-colors hover:bg-secondary/50',
+                    'group px-2 py-1.5 rounded-lg text-sm transition-colors hover:bg-secondary/50',
                     selectedEntry?.id === entry.id && 'bg-accent'
                   )}
                 >
                   <button
                     onClick={() => onSelectEntry?.(entry)}
-                    className="flex items-center gap-2 text-left min-w-0"
+                    className="flex items-center gap-2 text-left min-w-0 w-full"
                   >
                     <span
                       data-testid="context-dot-container"
@@ -193,12 +193,24 @@ export function JournalSidebar({
                     </span>
                   </button>
 
-                  <EntryActionBar
-                    entry={entry}
-                    callbacks={createEntryCallbacks(entry)}
-                    variant="hover-reveal"
-                    size="sm"
-                  />
+                  {/* Action bar below entry - hidden until hover */}
+                  <div
+                    className="grid transition-all duration-150 ease-out group-hover:grid-rows-[1fr] grid-rows-[0fr]"
+                  >
+                    <div className="overflow-hidden">
+                      <div
+                        className="pt-1"
+                        style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
+                      >
+                        <EntryActionBar
+                          entry={entry}
+                          callbacks={createEntryCallbacks(entry)}
+                          variant="always-visible"
+                          size="sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })
