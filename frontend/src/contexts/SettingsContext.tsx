@@ -35,7 +35,23 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   }, [settings])
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', settings.theme === 'dark')
+    const applyTheme = () => {
+      if (settings.theme === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.classList.toggle('dark', prefersDark)
+      } else {
+        document.documentElement.classList.toggle('dark', settings.theme === 'dark')
+      }
+    }
+
+    applyTheme()
+
+    if (settings.theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+      const handleChange = () => applyTheme()
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
   }, [settings.theme])
 
   const setTheme = (theme: Theme) => {

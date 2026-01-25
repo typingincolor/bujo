@@ -136,4 +136,54 @@ describe('SettingsContext', () => {
 
     expect(document.documentElement.classList.contains('dark')).toBe(false)
   })
+
+  it('should apply dark class when theme is system and prefers-color-scheme is dark', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'system', defaultView: 'today' }))
+    document.documentElement.classList.remove('dark')
+
+    // Mock matchMedia to return dark preference
+    const mockMatchMedia = vi.fn().mockImplementation((query) => ({
+      matches: query === '(prefers-color-scheme: dark)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia,
+    })
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+  })
+
+  it('should remove dark class when theme is system and prefers-color-scheme is light', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'system', defaultView: 'today' }))
+    document.documentElement.classList.add('dark')
+
+    // Mock matchMedia to return light preference
+    const mockMatchMedia = vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }))
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: mockMatchMedia,
+    })
+
+    render(
+      <SettingsProvider>
+        <TestComponent />
+      </SettingsProvider>
+    )
+
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+  })
 })
