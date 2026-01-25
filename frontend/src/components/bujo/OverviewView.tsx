@@ -1,7 +1,6 @@
-import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS, ActionType } from '@/types/bujo';
+import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Clock, ChevronDown, ChevronRight } from 'lucide-react';
-import { EntryContextPopover } from './EntryContextPopover';
 import { format, parseISO } from 'date-fns';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
@@ -40,15 +39,9 @@ function formatDateHeader(dateStr: string): string {
   }
 }
 
-export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrate, onNavigateToEntry }: OverviewViewProps) {
+export function OverviewView({ overdueEntries, onEntryChanged, onError, onNavigateToEntry }: OverviewViewProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-
-  // Build a lookup map for all entries by ID
-  const entriesById = new Map<number, Entry>();
-  for (const entry of overdueEntries) {
-    entriesById.set(entry.id, entry);
-  }
 
   // Filter to only show task-related entries (task, done, or cancelled)
   const taskEntries = overdueEntries.filter(e => e.type === 'task' || e.type === 'done' || e.type === 'cancelled');
@@ -137,31 +130,6 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
     }
   }, [onEntryChanged, onError]);
 
-  const handleAction = useCallback(async (entry: Entry, action: ActionType) => {
-    switch (action) {
-      case 'done':
-        if (entry.type === 'task') {
-          await handleMarkDone(entry);
-        }
-        break;
-      case 'cancel':
-        if (entry.type === 'done') {
-          await handleMarkUndone(entry);
-        }
-        break;
-      case 'priority':
-        await handleCyclePriority(entry);
-        break;
-      case 'migrate':
-        onMigrate?.(entry);
-        break;
-    }
-  }, [handleMarkDone, handleMarkUndone, handleCyclePriority, onMigrate]);
-
-  const handleNavigate = useCallback((entry: Entry) => {
-    onNavigateToEntry?.(entry);
-  }, [onNavigateToEntry]);
-
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
@@ -221,7 +189,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
           e.preventDefault();
           if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
             const selected = flatEntries[selectedIndex];
-            handleNavigate(selected);
+            onNavigateToEntry?.(selected);
           }
           break;
       }
@@ -229,7 +197,7 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [flatEntries, selectedIndex, handleCancel, handleCyclePriority, handleCycleType, handleMarkDone, handleMarkUndone, handleUncancel, handleNavigate]);
+  }, [flatEntries, selectedIndex, handleCancel, handleCyclePriority, handleCycleType, handleMarkDone, handleMarkUndone, handleUncancel, onNavigateToEntry]);
 
   return (
     <div className="space-y-4">
@@ -270,10 +238,12 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                   <div className="space-y-1">
                     {grouped.get(dateStr)!.map((entry) => {
                       const isSelected = entryToFlatIndex.get(entry.id) === selectedIndex;
-                      const entryItem = (
+                      return (
                         <button
+                          key={entry.id}
                           type="button"
                           data-entry-id={entry.id}
+                          onClick={() => onNavigateToEntry?.(entry)}
                           className={cn(
                             'w-full flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
                             'bg-card transition-colors group text-left',
@@ -281,6 +251,14 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                             isSelected && 'ring-2 ring-primary'
                           )}
                         >
+                          {/* Context dot */}
+                          {entry.parentId !== null && (
+                            <span
+                              data-testid="context-dot"
+                              className="w-1.5 h-1.5 rounded-full bg-muted-foreground flex-shrink-0"
+                              title="Has parent context"
+                            />
+                          )}
                           <span
                             data-testid="entry-symbol"
                             className="w-5 text-center text-muted-foreground font-mono"
@@ -300,18 +278,6 @@ export function OverviewView({ overdueEntries, onEntryChanged, onError, onMigrat
                             </span>
                           )}
                         </button>
-                      );
-
-                      return (
-                        <EntryContextPopover
-                          key={entry.id}
-                          entry={entry}
-                          entries={overdueEntries}
-                          onAction={handleAction}
-                          onNavigate={onNavigateToEntry ? handleNavigate : undefined}
-                        >
-                          {entryItem}
-                        </EntryContextPopover>
                       );
                     })}
                   </div>
