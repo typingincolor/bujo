@@ -1,9 +1,9 @@
 import { Settings, Palette, Database, Info } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
-import type { Theme } from '../../types/settings';
+import type { Theme, DefaultView } from '../../types/settings';
 
 export function SettingsView() {
-  const { theme, setTheme } = useSettings();
+  const { theme, setTheme, defaultView, setDefaultView } = useSettings();
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -31,7 +31,7 @@ export function SettingsView() {
             label="Default View"
             description="The view shown when you open the app"
           >
-            <span className="text-sm text-muted-foreground">Today</span>
+            <DefaultViewSelector currentView={defaultView} onViewChange={setDefaultView} />
           </SettingRow>
         </div>
       </section>
@@ -128,6 +128,38 @@ function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
           onClick={() => onThemeChange(value)}
           className={`px-3 py-1 text-sm rounded transition-colors ${
             currentTheme === value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface DefaultViewSelectorProps {
+  currentView: DefaultView;
+  onViewChange: (view: DefaultView) => void;
+}
+
+function DefaultViewSelector({ currentView, onViewChange }: DefaultViewSelectorProps) {
+  const views: { value: DefaultView; label: string }[] = [
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'Week' },
+    { value: 'overview', label: 'Overview' },
+    { value: 'search', label: 'Search' },
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {views.map(({ value, label }) => (
+        <button
+          key={value}
+          onClick={() => onViewChange(value)}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            currentView === value
               ? 'bg-primary text-primary-foreground'
               : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
           }`}

@@ -136,4 +136,52 @@ describe('SettingsView', () => {
     const parsed = JSON.parse(stored!)
     expect(parsed.theme).toBe('system')
   })
+
+  it('displays current default view from settings context', () => {
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'light', defaultView: 'week' }))
+
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    expect(screen.getByText('Week')).toBeInTheDocument()
+  })
+
+  it('allows changing default view to overview', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'light', defaultView: 'today' }))
+
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const overviewOption = screen.getByText('Overview')
+    await user.click(overviewOption)
+
+    const stored = localStorage.getItem('bujo-settings')
+    const parsed = JSON.parse(stored!)
+    expect(parsed.defaultView).toBe('overview')
+  })
+
+  it('allows changing default view to search', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem('bujo-settings', JSON.stringify({ theme: 'light', defaultView: 'today' }))
+
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const searchOption = screen.getByText('Search')
+    await user.click(searchOption)
+
+    const stored = localStorage.getItem('bujo-settings')
+    const parsed = JSON.parse(stored!)
+    expect(parsed.defaultView).toBe('search')
+  })
 })
