@@ -1,6 +1,9 @@
 import { Settings, Palette, Database, Info } from 'lucide-react';
+import { useSettings } from '../../contexts/SettingsContext';
+import type { Theme } from '../../types/settings';
 
 export function SettingsView() {
+  const { theme, setTheme } = useSettings();
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -22,7 +25,7 @@ export function SettingsView() {
             label="Theme"
             description="Choose your preferred color theme"
           >
-            <span className="text-sm text-muted-foreground">Dark</span>
+            <ThemeSelector currentTheme={theme} onThemeChange={setTheme} />
           </SettingRow>
           <SettingRow
             label="Default View"
@@ -101,6 +104,37 @@ function SettingRow({ label, description, children }: SettingRowProps) {
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       {children}
+    </div>
+  );
+}
+
+interface ThemeSelectorProps {
+  currentTheme: Theme;
+  onThemeChange: (theme: Theme) => void;
+}
+
+function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
+  const themes: { value: Theme; label: string }[] = [
+    { value: 'light', label: 'Light' },
+    { value: 'dark', label: 'Dark' },
+    { value: 'system', label: 'System' },
+  ];
+
+  return (
+    <div className="flex gap-2">
+      {themes.map(({ value, label }) => (
+        <button
+          key={value}
+          onClick={() => onThemeChange(value)}
+          className={`px-3 py-1 text-sm rounded transition-colors ${
+            currentTheme === value
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
