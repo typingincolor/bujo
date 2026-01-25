@@ -611,7 +611,7 @@ function App() {
 
         <main className="flex-1 overflow-y-auto p-6">
           {view === 'today' && (
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="space-y-6">
               {/* Day Navigation */}
               <div className="flex items-center justify-center">
                 <DateNavigator
