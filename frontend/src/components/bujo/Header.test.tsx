@@ -256,6 +256,68 @@ describe('Header - Location', () => {
   })
 })
 
+describe('Header - Styling', () => {
+  it('renders with bg-card/50 background and border-b', () => {
+    render(<Header title="Journal" />)
+    const header = screen.getByRole('banner')
+    expect(header).toHaveClass('bg-card/50', 'border-b')
+  })
+
+  it('renders title with font-display styling', () => {
+    render(<Header title="Journal" />)
+    const title = screen.getByRole('heading', { level: 2 })
+    expect(title).toHaveClass('font-display', 'text-2xl', 'font-semibold')
+  })
+})
+
+describe('Header - Actions Slot', () => {
+  it('renders custom actions in the actions slot', () => {
+    render(
+      <Header title="Journal" actions={<button>Custom Action</button>} />
+    )
+    expect(screen.getByRole('button', { name: 'Custom Action' })).toBeInTheDocument()
+  })
+
+  it('renders multiple actions in the actions slot', () => {
+    render(
+      <Header
+        title="Journal"
+        actions={
+          <>
+            <button>Action 1</button>
+            <button>Action 2</button>
+          </>
+        }
+      />
+    )
+    expect(screen.getByRole('button', { name: 'Action 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Action 2' })).toBeInTheDocument()
+  })
+})
+
+describe('Header - Show Context Pickers', () => {
+  it('shows context pickers by default', () => {
+    render(<Header title="Journal" />)
+    expect(screen.getByTitle('Set mood')).toBeInTheDocument()
+    expect(screen.getByTitle('Set weather')).toBeInTheDocument()
+    expect(screen.getByTitle('Set location')).toBeInTheDocument()
+  })
+
+  it('hides context pickers when showContextPickers is false', () => {
+    render(<Header title="Journal" showContextPickers={false} />)
+    expect(screen.queryByTitle('Set mood')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Set weather')).not.toBeInTheDocument()
+    expect(screen.queryByTitle('Set location')).not.toBeInTheDocument()
+  })
+
+  it('shows context pickers when showContextPickers is true', () => {
+    render(<Header title="Journal" showContextPickers={true} />)
+    expect(screen.getByTitle('Set mood')).toBeInTheDocument()
+    expect(screen.getByTitle('Set weather')).toBeInTheDocument()
+    expect(screen.getByTitle('Set location')).toBeInTheDocument()
+  })
+})
+
 describe('Header - currentDate prop', () => {
   beforeEach(() => {
     vi.clearAllMocks()

@@ -16,6 +16,8 @@ bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It c
 
 **Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API
 
+**UI Mockup:** [bujo-canvas](https://github.com/typingincolor/bujo-canvas) - Lovable.dev mockup showing target UI design
+
 ## Build Commands
 
 ```bash

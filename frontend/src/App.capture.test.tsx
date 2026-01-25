@@ -143,7 +143,7 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
     })
 
     const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, 'New root task{Enter}')
+    await user.type(input, '. New root task{Enter}')
 
     await waitFor(() => {
       expect(AddEntry).toHaveBeenCalledWith('. New root task', expect.any(String))
@@ -212,9 +212,10 @@ describe('App - Go to Today', () => {
     const prevButton = screen.getByRole('button', { name: /previous day/i })
     await user.click(prevButton)
 
-    // Go to today button should appear (distinct from sidebar Today nav button)
+    // Go to today button should be visible (not invisible class)
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+      const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+      expect(jumpToTodayBtn).not.toHaveClass('invisible')
     })
   })
 
@@ -229,8 +230,9 @@ describe('App - Go to Today', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    // Go to today button should NOT be visible when viewing today
-    expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+    // Go to today button should have invisible class when viewing today
+    const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+    expect(jumpToTodayBtn).toHaveClass('invisible')
   })
 
   it('clicking Go to today button navigates back to today', async () => {
@@ -250,13 +252,14 @@ describe('App - Go to Today', () => {
     await user.click(prevButton)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+      const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+      expect(jumpToTodayBtn).not.toHaveClass('invisible')
     })
 
     vi.mocked(GetAgenda).mockClear()
 
     // Click Go to today button
-    const todayButton = screen.getByRole('button', { name: /go to today/i })
+    const todayButton = screen.getByTestId('jump-to-today')
     await user.click(todayButton)
 
     // Should trigger data refresh
@@ -264,9 +267,10 @@ describe('App - Go to Today', () => {
       expect(GetAgenda).toHaveBeenCalled()
     })
 
-    // Go to today button should disappear after navigating back to today
+    // Go to today button should become invisible after navigating back to today
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+      const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+      expect(jumpToTodayBtn).toHaveClass('invisible')
     })
   })
 
@@ -287,7 +291,8 @@ describe('App - Go to Today', () => {
     await user.click(prevButton)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /go to today/i })).toBeInTheDocument()
+      const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+      expect(jumpToTodayBtn).not.toHaveClass('invisible')
     })
 
     vi.mocked(GetAgenda).mockClear()
@@ -300,9 +305,10 @@ describe('App - Go to Today', () => {
       expect(GetAgenda).toHaveBeenCalled()
     })
 
-    // Go to today button should disappear
+    // Go to today button should become invisible
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /go to today/i })).not.toBeInTheDocument()
+      const jumpToTodayBtn = screen.getByTestId('jump-to-today')
+      expect(jumpToTodayBtn).toHaveClass('invisible')
     })
   })
 })
