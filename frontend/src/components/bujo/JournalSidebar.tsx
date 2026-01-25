@@ -123,6 +123,7 @@ interface JournalSidebarProps {
   callbacks?: JournalSidebarCallbacks;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onWidthChange?: (width: number) => void;
 }
 
 interface TreeNode {
@@ -209,7 +210,11 @@ export function JournalSidebar({
   callbacks = {},
   isCollapsed = false,
   onToggleCollapse,
+  onWidthChange,
 }: JournalSidebarProps) {
+  const [sidebarWidth, setSidebarWidth] = useState(512);
+  const [isResizing, setIsResizing] = useState(false);
+
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   // Filter to only show task entries (not notes, events, questions, etc.)
@@ -228,7 +233,22 @@ export function JournalSidebar({
   });
 
   return (
-    <div data-testid="overdue-sidebar" className="flex flex-col h-full">
+    <div
+      data-testid="overdue-sidebar"
+      className={cn(
+        "flex flex-col h-full relative",
+        isResizing && "select-none"
+      )}
+      style={{ width: `${sidebarWidth}px` }}
+    >
+      {/* Resize Handle */}
+      {!isCollapsed && (
+        <div
+          data-testid="resize-handle"
+          className="absolute left-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/10 transition-colors"
+        />
+      )}
+
       {/* Collapse Toggle Button */}
       {onToggleCollapse && (
         <button

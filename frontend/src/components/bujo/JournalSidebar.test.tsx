@@ -312,4 +312,34 @@ describe('JournalSidebar', () => {
       expect(contextSection).toHaveClass('flex-1')
     })
   })
+
+  describe('Resize functionality', () => {
+    it('renders with default width of 512px', () => {
+      render(<JournalSidebar overdueEntries={[]} now={new Date()} />)
+      const sidebar = screen.getByTestId('overdue-sidebar')
+      expect(sidebar).toHaveStyle({ width: '512px' })
+    })
+
+    it('renders resize handle when not collapsed', () => {
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          isCollapsed={false}
+        />
+      )
+      expect(screen.getByTestId('resize-handle')).toBeInTheDocument()
+    })
+
+    it('does not render resize handle when collapsed', () => {
+      render(
+        <JournalSidebar
+          overdueEntries={[]}
+          now={new Date()}
+          isCollapsed={true}
+        />
+      )
+      expect(screen.queryByTestId('resize-handle')).not.toBeInTheDocument()
+    })
+  })
 })
