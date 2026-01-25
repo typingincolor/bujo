@@ -250,10 +250,8 @@ export function JournalSidebar({
   }, []);
 
   useEffect(() => {
-    if (!isResizing) {
-      onWidthChange?.(sidebarWidth);
-    }
-  }, [isResizing, sidebarWidth, onWidthChange]);
+    onWidthChange?.(sidebarWidth);
+  }, [sidebarWidth, onWidthChange]);
 
   useEffect(() => {
     if (isResizing) {
