@@ -4,9 +4,20 @@ import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
 import { filterWeekEntries, flattenEntries } from '@/lib/weekView';
 import { format, parseISO } from 'date-fns';
+import { ActionCallbacks } from './EntryActions/types';
+
+export interface WeekViewCallbacks {
+  onMarkDone?: (entry: Entry) => void;
+  onMigrate?: (entry: Entry) => void;
+  onEdit?: (entry: Entry) => void;
+  onDelete?: (entry: Entry) => void;
+  onCyclePriority?: (entry: Entry) => void;
+  onMoveToList?: (entry: Entry) => void;
+}
 
 interface WeekViewProps {
   days: DayEntries[];
+  callbacks?: WeekViewCallbacks;
 }
 
 interface TreeNode {
@@ -63,10 +74,19 @@ function ContextTree({ nodes, selectedEntryId, depth = 0 }: { nodes: TreeNode[];
   );
 }
 
-export function WeekView({ days }: WeekViewProps) {
+export function WeekView({ days, callbacks = {} }: WeekViewProps) {
   const [selectedEntry, setSelectedEntry] = useState<Entry | undefined>();
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  const createEntryCallbacks = (entry: Entry): ActionCallbacks => ({
+    onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
+    onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
+    onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
+    onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
+    onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
+    onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
+  });
 
   const weekDays = days.slice(0, 5).map((day, index) => ({
     ...day,
@@ -102,7 +122,7 @@ export function WeekView({ days }: WeekViewProps) {
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          {filteredWeekDays.map((day, index) => (
+          {filteredWeekDays.map((day) => (
             <DayBox
               key={day.date}
               dayNumber={day.dayNumber}
@@ -110,6 +130,7 @@ export function WeekView({ days }: WeekViewProps) {
               entries={day.entries}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
+              createEntryCallbacks={createEntryCallbacks}
             />
           ))}
 
@@ -120,6 +141,7 @@ export function WeekView({ days }: WeekViewProps) {
               sundayEntries={filteredSunday}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
+              createEntryCallbacks={createEntryCallbacks}
             />
           )}
         </div>

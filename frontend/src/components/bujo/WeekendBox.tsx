@@ -1,5 +1,6 @@
 import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
+import { ActionCallbacks } from './EntryActions/types';
 
 interface WeekendBoxProps {
   startDay: number;
@@ -7,6 +8,7 @@ interface WeekendBoxProps {
   sundayEntries: Entry[];
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
+  createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
 export function WeekendBox({
@@ -15,6 +17,7 @@ export function WeekendBox({
   sundayEntries,
   selectedEntry,
   onSelectEntry,
+  createEntryCallbacks,
 }: WeekendBoxProps) {
   return (
     <div className="border rounded-lg p-3 bg-card">
@@ -34,6 +37,7 @@ export function WeekendBox({
                 datePrefix="Sat:"
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
+                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
             {sundayEntries.map(entry => (
@@ -43,6 +47,7 @@ export function WeekendBox({
                 datePrefix="Sun:"
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
+                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
           </>

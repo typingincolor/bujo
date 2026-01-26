@@ -1,5 +1,6 @@
 import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
+import { ActionCallbacks } from './EntryActions/types';
 
 interface DayBoxProps {
   dayNumber: number;
@@ -7,9 +8,10 @@ interface DayBoxProps {
   entries: Entry[];
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
+  createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
-export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEntry }: DayBoxProps) {
+export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-baseline gap-2">
@@ -27,6 +29,7 @@ export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEnt
               entry={entry}
               isSelected={selectedEntry?.id === entry.id}
               onSelect={onSelectEntry}
+              callbacks={createEntryCallbacks?.(entry)}
             />
           ))
         )}

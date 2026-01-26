@@ -88,4 +88,21 @@ describe('WeekView', () => {
     render(<WeekView days={mockWeekData} />);
     expect(screen.getByText('No entry selected')).toBeInTheDocument();
   });
+
+  it('accepts callbacks prop without errors', () => {
+    const callbacks = {
+      onMarkDone: vi.fn(),
+      onMigrate: vi.fn(),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onCyclePriority: vi.fn(),
+      onMoveToList: vi.fn(),
+    };
+
+    // This test verifies that WeekView accepts callbacks prop
+    // and doesn't throw during render
+    expect(() => {
+      render(<WeekView days={mockWeekData} callbacks={callbacks} />);
+    }).not.toThrow();
+  });
 });
