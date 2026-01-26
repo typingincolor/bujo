@@ -105,4 +105,70 @@ describe('WeekView', () => {
       render(<WeekView days={mockWeekData} callbacks={callbacks} />);
     }).not.toThrow();
   });
+
+  it('displays correct day numbers matching the dates', () => {
+    const { container } = render(<WeekView days={mockWeekData} />);
+    const dayBoxes = container.querySelectorAll('.rounded-lg.border');
+
+    // Mon Jan 19 should show "19"
+    expect(dayBoxes[0]).toHaveTextContent('19');
+
+    // Tue Jan 20 should show "20"
+    expect(dayBoxes[1]).toHaveTextContent('20');
+
+    // Wed Jan 21 should show "21"
+    expect(dayBoxes[2]).toHaveTextContent('21');
+
+    // Thu Jan 22 should show "22"
+    expect(dayBoxes[3]).toHaveTextContent('22');
+
+    // Fri Jan 23 should show "23"
+    expect(dayBoxes[4]).toHaveTextContent('23');
+  });
+
+  it('handles backend UTC dates correctly without timezone shift', () => {
+    // Backend returns dates as UTC strings like "2026-01-20T00:00:00Z"
+    // Frontend transforms to just date part "2026-01-20"
+    // This test verifies parseISO interprets correctly as local date
+    const backendFormat: DayEntries[] = [
+      {
+        date: '2026-01-20', // Transformed from backend's "2026-01-20T00:00:00Z"
+        entries: [],
+      },
+      {
+        date: '2026-01-21',
+        entries: [],
+      },
+      {
+        date: '2026-01-22',
+        entries: [],
+      },
+      {
+        date: '2026-01-23',
+        entries: [],
+      },
+      {
+        date: '2026-01-24',
+        entries: [],
+      },
+      {
+        date: '2026-01-25',
+        entries: [],
+      },
+      {
+        date: '2026-01-26',
+        entries: [],
+      },
+    ];
+
+    const { container } = render(<WeekView days={backendFormat} />);
+    const dayBoxes = container.querySelectorAll('.rounded-lg.border');
+
+    // Day numbers should match the dates exactly (20, 21, 22, 23, 24)
+    expect(dayBoxes[0]).toHaveTextContent('20');
+    expect(dayBoxes[1]).toHaveTextContent('21');
+    expect(dayBoxes[2]).toHaveTextContent('22');
+    expect(dayBoxes[3]).toHaveTextContent('23');
+    expect(dayBoxes[4]).toHaveTextContent('24');
+  });
 });

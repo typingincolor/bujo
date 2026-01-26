@@ -106,7 +106,9 @@ function App() {
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
       // Review view: past 7 days ending at reviewAnchorDate
-      const reviewEnd = new Date(reviewAnchorDate.getTime() + 24 * 60 * 60 * 1000) // Include anchor date
+      // Backend loop uses !d.After(to) which is INCLUSIVE of end date
+      // So we pass anchorDate directly as end, not anchorDate + 24h
+      const reviewEnd = reviewAnchorDate
       const reviewStart = new Date(reviewAnchorDate.getTime() - 6 * 24 * 60 * 60 * 1000)
 
       const [agendaData, reviewData, habitsData, listsData, goalsData, questionsData] = await Promise.all([
