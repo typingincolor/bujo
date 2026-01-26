@@ -66,7 +66,7 @@ describe('useNavigationHistory', () => {
   it('supports multi-level navigation history stack', () => {
     const { result } = renderHook(() => useNavigationHistory())
 
-    // Simulate: start on today, navigate to week, navigate to overview
+    // Simulate: start on today, navigate to week, navigate to search
     // Stack after: [today, week]
     act(() => {
       result.current.pushHistory({ view: 'today', scrollPosition: 0 })

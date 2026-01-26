@@ -155,7 +155,6 @@ function DefaultViewSelector({ currentView, onViewChange }: DefaultViewSelectorP
   const views: { value: DefaultView; label: string }[] = [
     { value: 'today', label: 'Today' },
     { value: 'week', label: 'Week' },
-    { value: 'overview', label: 'Overview' },
     { value: 'search', label: 'Search' },
   ];
 

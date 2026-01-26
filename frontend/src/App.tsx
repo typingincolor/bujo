@@ -4,13 +4,12 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, MoveEntryToRoot, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
+import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
-import { OverviewView } from '@/components/bujo/OverviewView'
 import { QuestionsView } from '@/components/bujo/QuestionsView'
 import { SearchView, SearchResult } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
@@ -25,7 +24,7 @@ import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
-import { WeekSummary } from '@/components/bujo/WeekSummary'
+import { WeekView } from '@/components/bujo/WeekView'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -48,7 +47,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'week', 'overview', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+const validViews: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -569,15 +568,15 @@ function App() {
     setFocusedPanel('sidebar')
   }, [overdueEntries])
 
-  const handleMoveToRoot = useCallback(async (entry: Entry) => {
-    try {
-      await MoveEntryToRoot(entry.id)
-      loadData()
-    } catch (err) {
-      console.error('Failed to move entry to root:', err)
-      setError(err instanceof Error ? err.message : 'Failed to move entry to root')
-    }
-  }, [loadData])
+  // const handleMoveToRoot = useCallback(async (entry: Entry) => {
+  //   try {
+  //     await MoveEntryToRoot(entry.id)
+  //     loadData()
+  //   } catch (err) {
+  //     console.error('Failed to move entry to root:', err)
+  //     setError(err instanceof Error ? err.message : 'Failed to move entry to root')
+  //   }
+  // }, [loadData])
 
   const handleSidebarMarkDone = useCallback(async (entry: Entry) => {
     try {
@@ -676,13 +675,6 @@ function App() {
     })
   }, [])
 
-  const handleOverviewNavigate = useCallback((entry: Entry) => {
-    const entryDate = new Date(entry.loggedDate)
-    setReviewAnchorDate(startOfDay(entryDate))
-    setView('week')
-  }, [])
-
-
   const handleBack = useCallback(() => {
     const previousState = goBack()
     if (previousState && isValidView(previousState.view)) {
@@ -694,7 +686,6 @@ function App() {
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
-    overview: 'Pending Tasks',
     questions: 'Open Questions',
     habits: 'Habit Tracker',
     lists: 'Lists',
@@ -792,7 +783,7 @@ function App() {
           )}
 
           {view === 'week' && (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-full mx-auto space-y-8 h-full flex flex-col">
               {/* Week Navigation */}
               <div className="flex items-center justify-center gap-4">
                 <button
@@ -814,26 +805,32 @@ function App() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-              <WeekSummary
+              <WeekView
                 days={reviewDays}
-                onShowAllAttention={() => setView('overview')}
-              />
-            </div>
-          )}
-
-          {view === 'overview' && (
-            <div className="max-w-3xl mx-auto">
-              <OverviewView
-                overdueEntries={overdueEntries}
-                onEntryChanged={loadData}
-                onError={setError}
-                onMigrate={(entry) => setMigrateModalEntry(entry)}
-                onMoveToList={(entry) => setMoveToListEntry(entry)}
-                onNavigateToEntry={handleOverviewNavigate}
-                onEdit={(entry) => setEditModalEntry(entry)}
-                onAnswer={(entry) => setAnswerModalEntry(entry)}
-                onAddChild={handleAddChild}
-                onMoveToRoot={handleMoveToRoot}
+                callbacks={{
+                  onMarkDone: async (entry) => {
+                    try {
+                      await MarkEntryDone(entry.id)
+                      loadData()
+                    } catch (err) {
+                      console.error('Failed to mark entry done:', err)
+                      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
+                    }
+                  },
+                  onMigrate: (entry) => setMigrateModalEntry(entry),
+                  onEdit: (entry) => setEditModalEntry(entry),
+                  onDelete: handleDeleteEntryRequest,
+                  onCyclePriority: async (entry) => {
+                    try {
+                      await CyclePriority(entry.id)
+                      loadData()
+                    } catch (err) {
+                      console.error('Failed to cycle priority:', err)
+                      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
+                    }
+                  },
+                  onMoveToList: (entry) => setMoveToListEntry(entry),
+                }}
               />
             </div>
           )}

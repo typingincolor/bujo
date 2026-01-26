@@ -67,7 +67,8 @@ describe('MigrateModal', () => {
 
     const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement
     fireEvent.change(dateInput, { target: { value: '2026-01-25' } })
-    fireEvent.click(screen.getByRole('button', { name: /^migrate$/i }))
+    const form = dateInput.closest('form') as HTMLFormElement
+    fireEvent.submit(form)
 
     expect(onMigrate).toHaveBeenCalledWith('2026-01-25')
   })

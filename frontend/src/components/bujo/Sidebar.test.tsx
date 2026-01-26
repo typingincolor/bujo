@@ -11,7 +11,6 @@ describe('Sidebar', () => {
     // Improved labels (Option B)
     expect(screen.getByText('Journal')).toBeInTheDocument();
     expect(screen.getByText('Weekly Review')).toBeInTheDocument();
-    expect(screen.getByText('Pending Tasks')).toBeInTheDocument();
     expect(screen.getByText('Open Questions')).toBeInTheDocument();
     expect(screen.getByText('Habit Tracker')).toBeInTheDocument();
     expect(screen.getByText('Lists')).toBeInTheDocument();

@@ -18,7 +18,7 @@ describe('Settings types', () => {
   })
 
   it('should allow valid default view values', () => {
-    const validViews: DefaultView[] = ['today', 'week', 'overview', 'search']
+    const validViews: DefaultView[] = ['today', 'week', 'search']
     validViews.forEach(view => {
       const settings: Settings = { ...DEFAULT_SETTINGS, defaultView: view }
       expect(settings.defaultView).toBe(view)

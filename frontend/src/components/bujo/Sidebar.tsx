@@ -9,11 +9,11 @@ import {
   BookOpen,
   Search,
   BarChart3,
-  Clock,
+  // Clock,
   HelpCircle
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'week' | 'overview' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
+export type ViewType = 'today' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -23,7 +23,6 @@ interface SidebarProps {
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'today', icon: Calendar, label: 'Journal' },
   { view: 'week', icon: CalendarDays, label: 'Weekly Review' },
-  { view: 'overview', icon: Clock, label: 'Pending Tasks' },
   { view: 'questions', icon: HelpCircle, label: 'Open Questions' },
   { view: 'habits', icon: Flame, label: 'Habit Tracker' },
   { view: 'lists', icon: List, label: 'Lists' },
