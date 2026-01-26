@@ -26,6 +26,7 @@ import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekSummary } from '@/components/bujo/WeekSummary'
+import { WeekView } from '@/components/bujo/WeekView'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -792,7 +793,7 @@ function App() {
           )}
 
           {view === 'week' && (
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-full mx-auto space-y-8 h-full flex flex-col">
               {/* Week Navigation */}
               <div className="flex items-center justify-center gap-4">
                 <button
@@ -814,9 +815,32 @@ function App() {
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
-              <WeekSummary
+              <WeekView
                 days={reviewDays}
-                onShowAllAttention={() => setView('overview')}
+                callbacks={{
+                  onMarkDone: async (entry) => {
+                    try {
+                      await MarkEntryDone(entry.id)
+                      loadData()
+                    } catch (err) {
+                      console.error('Failed to mark entry done:', err)
+                      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
+                    }
+                  },
+                  onMigrate: (entry) => setMigrateModalEntry(entry),
+                  onEdit: (entry) => setEditModalEntry(entry),
+                  onDelete: handleDeleteEntryRequest,
+                  onCyclePriority: async (entry) => {
+                    try {
+                      await CyclePriority(entry.id)
+                      loadData()
+                    } catch (err) {
+                      console.error('Failed to cycle priority:', err)
+                      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
+                    }
+                  },
+                  onMoveToList: (entry) => setMoveToListEntry(entry),
+                }}
               />
             </div>
           )}

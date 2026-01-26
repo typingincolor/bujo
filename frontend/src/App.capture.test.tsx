@@ -351,7 +351,8 @@ describe('App - Review View (formerly Past Week)', () => {
 
     // Header title should show "Weekly Review"
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /weekly review/i })).toBeInTheDocument()
+      const headings = screen.getAllByRole('heading', { name: /weekly review/i })
+      expect(headings.length).toBeGreaterThan(0)
     })
   })
 
