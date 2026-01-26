@@ -75,6 +75,14 @@ describe('App - Panel Navigation with Tab', () => {
         expect(screen.getByText('Main panel task')).toBeInTheDocument()
       })
 
+      // Expand sidebar (starts collapsed by default)
+      const toggleButton = screen.getByLabelText('Toggle sidebar')
+      await user.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      })
+
       // Initially main panel has selection
       const mainPanelEntry = screen.getByText('Main panel task').closest('[data-entry-id]')
       expect(mainPanelEntry).toHaveAttribute('data-selected', 'true')
@@ -104,6 +112,14 @@ describe('App - Panel Navigation with Tab', () => {
         expect(screen.getByText('Main panel task')).toBeInTheDocument()
       })
 
+      // Expand sidebar (starts collapsed by default)
+      const toggleButton = screen.getByLabelText('Toggle sidebar')
+      await user.click(toggleButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      })
+
       // Tab to sidebar, then Tab again back to main
       await user.keyboard('{Tab}{Tab}')
 
@@ -122,6 +138,14 @@ describe('App - Panel Navigation with Tab', () => {
           <App />
         </SettingsProvider>
       )
+
+      await waitFor(() => {
+        expect(screen.getByText('Main panel task')).toBeInTheDocument()
+      })
+
+      // Expand sidebar (starts collapsed by default)
+      const toggleButton = screen.getByLabelText('Toggle sidebar')
+      await user.click(toggleButton)
 
       await waitFor(() => {
         expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
@@ -164,6 +188,14 @@ describe('App - Mutual Exclusion of Selection', () => {
       expect(screen.getByText('Main panel task')).toBeInTheDocument()
     })
 
+    // Expand sidebar (starts collapsed by default)
+    const toggleButton = screen.getByLabelText('Toggle sidebar')
+    await user.click(toggleButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+    })
+
     // Tab to sidebar to select something there
     await user.keyboard('{Tab}')
 
@@ -195,6 +227,14 @@ describe('App - Mutual Exclusion of Selection', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Expand sidebar (starts collapsed by default)
+    const toggleButton = screen.getByLabelText('Toggle sidebar')
+    await user.click(toggleButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
     })
 
     // Initially main panel task is selected
@@ -253,6 +293,7 @@ describe('App - Mutual Exclusion of Selection', () => {
   })
 
   it('only one entry is highlighted across entire screen', async () => {
+    const user = userEvent.setup()
     render(
       <SettingsProvider>
         <App />
@@ -261,6 +302,14 @@ describe('App - Mutual Exclusion of Selection', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Expand sidebar (starts collapsed by default)
+    const toggleButton = screen.getByLabelText('Toggle sidebar')
+    await user.click(toggleButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
     })
 
     // Find all elements with selection indicators
@@ -292,6 +341,14 @@ describe('App - Mutual Exclusion of Selection', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Main panel task')).toBeInTheDocument()
+    })
+
+    // Expand sidebar (starts collapsed by default)
+    const toggleButton = screen.getByLabelText('Toggle sidebar')
+    await user.click(toggleButton)
+
+    await waitFor(() => {
+      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
     })
 
     // Click on sidebar entry
