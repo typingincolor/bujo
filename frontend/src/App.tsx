@@ -88,8 +88,10 @@ function App() {
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
+  const [activelyCyclingEntryId, setActivelyCyclingEntryId] = useState<number | null>(null)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
+  const cyclingTimeoutRef = useRef<number | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -145,6 +147,27 @@ function App() {
     })
     return unsubscribe
   }, [loadData])
+
+  // Clear cycling state when selection changes
+  useEffect(() => {
+    if (sidebarSelectedEntry && sidebarSelectedEntry.id !== activelyCyclingEntryId) {
+      setActivelyCyclingEntryId(null)
+      if (cyclingTimeoutRef.current !== null) {
+        clearTimeout(cyclingTimeoutRef.current)
+        cyclingTimeoutRef.current = null
+      }
+    }
+  }, [sidebarSelectedEntry, activelyCyclingEntryId])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (cyclingTimeoutRef.current !== null) {
+        clearTimeout(cyclingTimeoutRef.current)
+      }
+    }
+  }, [])
+
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
@@ -603,13 +626,27 @@ function App() {
     if (currentIndex === -1) return
     const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
     try {
+      // Mark entry as actively cycling before reload
+      setActivelyCyclingEntryId(entry.id)
+
+      // Clear any existing timeout
+      if (cyclingTimeoutRef.current !== null) {
+        clearTimeout(cyclingTimeoutRef.current)
+      }
+
+      // Change type and reload
       await RetypeEntry(entry.id, nextType)
-      // Reload immediately for clear, responsive feedback
-      // Note: Entries may disappear from "Pending Tasks" when changed to non-task types
       loadData()
+
+      // Clear cycling state after 3 seconds
+      cyclingTimeoutRef.current = window.setTimeout(() => {
+        setActivelyCyclingEntryId(null)
+        cyclingTimeoutRef.current = null
+      }, 3000)
     } catch (err) {
       console.error('Failed to cycle type:', err)
       setError(err instanceof Error ? err.message : 'Failed to cycle type')
+      setActivelyCyclingEntryId(null)
     }
   }, [loadData])
 
@@ -935,6 +972,7 @@ function App() {
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
             onWidthChange={setJournalSidebarWidth}
+            activelyCyclingEntryId={activelyCyclingEntryId}
           />
         </aside>
       )}

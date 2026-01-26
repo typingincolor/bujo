@@ -117,6 +117,7 @@ interface JournalSidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onWidthChange?: (width: number) => void;
+  activelyCyclingEntryId?: number | null;
 }
 
 interface TreeNode {
@@ -204,11 +205,10 @@ export function JournalSidebar({
   isCollapsed = false,
   onToggleCollapse,
   onWidthChange,
+  activelyCyclingEntryId = null,
 }: JournalSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(512);
   const [isResizing, setIsResizing] = useState(false);
-  const [activelyCyclingEntryId, setActivelyCyclingEntryId] = useState<number | null>(null);
-  const cyclingTimeoutRef = useRef<number | null>(null);
 
   const handleResizeMoveRef = useRef<(e: MouseEvent) => void>(() => {});
   const handleResizeEndRef = useRef<() => void>(() => {});
@@ -248,26 +248,6 @@ export function JournalSidebar({
     onWidthChange?.(sidebarWidth);
   }, [sidebarWidth, onWidthChange]);
 
-  // Clear active cycling state when selection changes
-  useEffect(() => {
-    if (selectedEntry && selectedEntry.id !== activelyCyclingEntryId) {
-      setActivelyCyclingEntryId(null);
-      if (cyclingTimeoutRef.current !== null) {
-        clearTimeout(cyclingTimeoutRef.current);
-        cyclingTimeoutRef.current = null;
-      }
-    }
-  }, [selectedEntry, activelyCyclingEntryId]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (cyclingTimeoutRef.current !== null) {
-        clearTimeout(cyclingTimeoutRef.current);
-      }
-    };
-  }, []);
-
   useEffect(() => {
     if (isResizing) {
       document.body.style.cursor = 'col-resize';
@@ -281,7 +261,7 @@ export function JournalSidebar({
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   // Filter to only show task entries (not notes, events, questions, etc.)
-  // Also include entries that are actively being cycled to give time to select the right type
+  // Also include entries that are actively being cycled (tracked in parent) to give time to select the right type
   const taskEntries = useMemo(
     () => overdueEntries.filter((e) => e.type === 'task' || e.id === activelyCyclingEntryId),
     [overdueEntries, activelyCyclingEntryId]
@@ -293,23 +273,7 @@ export function JournalSidebar({
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
-    onCycleType: callbacks.onCycleType ? () => {
-      // Mark this entry as actively cycling
-      setActivelyCyclingEntryId(entry.id);
-
-      // Clear any existing timeout
-      if (cyclingTimeoutRef.current !== null) {
-        clearTimeout(cyclingTimeoutRef.current);
-      }
-
-      // Clear the active cycling state after 3 seconds
-      cyclingTimeoutRef.current = window.setTimeout(() => {
-        setActivelyCyclingEntryId(null);
-        cyclingTimeoutRef.current = null;
-      }, 3000);
-
-      callbacks.onCycleType!(entry);
-    } : undefined,
+    onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
     onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
   });
 
