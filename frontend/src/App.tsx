@@ -90,7 +90,6 @@ function App() {
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
-  const cycleTypeTimeoutRef = useRef<number | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -146,15 +145,6 @@ function App() {
     })
     return unsubscribe
   }, [loadData])
-
-  useEffect(() => {
-    return () => {
-      if (cycleTypeTimeoutRef.current !== null) {
-        clearTimeout(cycleTypeTimeoutRef.current)
-      }
-    }
-  }, [])
-
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
@@ -614,17 +604,9 @@ function App() {
     const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
     try {
       await RetypeEntry(entry.id, nextType)
-
-      // Clear any existing timeout to prevent premature reload
-      if (cycleTypeTimeoutRef.current !== null) {
-        clearTimeout(cycleTypeTimeoutRef.current)
-      }
-
-      // Debounce the reload to allow multiple type cycles
-      cycleTypeTimeoutRef.current = window.setTimeout(() => {
-        loadData()
-        cycleTypeTimeoutRef.current = null
-      }, 2000)
+      // Reload immediately for clear, responsive feedback
+      // Note: Entries may disappear from "Pending Tasks" when changed to non-task types
+      loadData()
     } catch (err) {
       console.error('Failed to cycle type:', err)
       setError(err instanceof Error ? err.message : 'Failed to cycle type')
