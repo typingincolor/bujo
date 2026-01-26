@@ -84,6 +84,31 @@ describe('WeekView', () => {
     expect(screen.getByText('Context')).toBeInTheDocument();
   });
 
+  it('shows context tree for root-level entries', async () => {
+    const withRootEntry: DayEntries[] = [
+      {
+        date: '2026-01-19',
+        entries: [
+          { id: 1, content: 'Root task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
+          { id: 2, content: 'Another root', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
+        ],
+      },
+      ...mockWeekData.slice(1),
+    ];
+
+    const user = userEvent.setup();
+    render(<WeekView days={withRootEntry} />);
+
+    // Click root-level entry
+    await user.click(screen.getByText('Root task'));
+
+    // Should show context tree, not "No context"
+    expect(screen.queryByText('No context')).not.toBeInTheDocument();
+    // Both entries should be visible in context tree
+    expect(screen.getAllByText('Root task').length).toBeGreaterThan(1); // Once in day view, once in context
+    expect(screen.getAllByText('Another root').length).toBeGreaterThan(0); // Appears in context tree
+  });
+
   it('shows "No entry selected" initially', () => {
     render(<WeekView days={mockWeekData} />);
     expect(screen.getByText('No entry selected')).toBeInTheDocument();

@@ -154,7 +154,7 @@ export function WeekView({ days, callbacks = {} }: WeekViewProps) {
 
         {!selectedEntry ? (
           <p className="text-sm text-muted-foreground">No entry selected</p>
-        ) : selectedEntry.parentId === null ? (
+        ) : contextTree.length === 0 ? (
           <p className="text-sm text-muted-foreground">No context</p>
         ) : (
           <ContextTree nodes={contextTree} selectedEntryId={selectedEntry.id} />
