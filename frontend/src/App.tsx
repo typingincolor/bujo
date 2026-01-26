@@ -951,24 +951,30 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className="h-screen border-l border-border bg-background overflow-y-auto p-2 transition-all duration-300 ease-in-out"
+          className="flex flex-col self-stretch border-l border-border bg-background transition-all duration-300 ease-in-out"
           style={{
             width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
           }}
         >
-          <JournalSidebar
-            overdueEntries={overdueEntries}
-            now={currentDate}
-            selectedEntry={sidebarSelectedEntry ?? undefined}
-            contextTree={sidebarContextTree}
-            onSelectEntry={handleSidebarSelectEntry}
-            callbacks={sidebarCallbacks}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-            onWidthChange={setJournalSidebarWidth}
-            activelyCyclingEntry={activelyCyclingEntry ?? undefined}
-            cyclingEntryPosition={cyclingEntryPosition}
-          />
+          {/* Spacer to align with main content area (below header) */}
+          <div className="h-[73px] flex-shrink-0" />
+
+          {/* Scrollable sidebar content */}
+          <div className="flex-1 overflow-y-auto p-2">
+            <JournalSidebar
+              overdueEntries={overdueEntries}
+              now={currentDate}
+              selectedEntry={sidebarSelectedEntry ?? undefined}
+              contextTree={sidebarContextTree}
+              onSelectEntry={handleSidebarSelectEntry}
+              callbacks={sidebarCallbacks}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+              onWidthChange={setJournalSidebarWidth}
+              activelyCyclingEntry={activelyCyclingEntry ?? undefined}
+              cyclingEntryPosition={cyclingEntryPosition}
+            />
+          </div>
         </aside>
       )}
 
