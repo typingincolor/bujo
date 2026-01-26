@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { DayEntries, Entry } from '@/types/bujo';
 import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
-import { filterWeekEntries } from '@/lib/weekView';
+import { filterWeekEntries, flattenEntries } from '@/lib/weekView';
 import { format, parseISO } from 'date-fns';
 
 interface WeekViewProps {
@@ -89,19 +89,7 @@ export function WeekView({ days }: WeekViewProps) {
   const endDate = days[6] ? parseISO(days[6].date) : new Date();
   const dateRange = `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`;
 
-  const allEntries = days.flatMap(day => {
-    const flatten = (entries: Entry[]): Entry[] => {
-      const result: Entry[] = [];
-      for (const entry of entries) {
-        result.push(entry);
-        if (entry.children && entry.children.length > 0) {
-          result.push(...flatten(entry.children));
-        }
-      }
-      return result;
-    };
-    return flatten(day.entries);
-  });
+  const allEntries = days.flatMap(day => flattenEntries(day.entries));
 
   const contextTree = useMemo(() => buildTree(allEntries), [allEntries]);
 

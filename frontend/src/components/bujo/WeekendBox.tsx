@@ -33,7 +33,7 @@ export function WeekendBox({
                 entry={entry}
                 datePrefix="Sat:"
                 isSelected={selectedEntry?.id === entry.id}
-                onSelect={() => onSelectEntry?.(entry)}
+                onSelect={onSelectEntry}
               />
             ))}
             {sundayEntries.map(entry => (
@@ -42,7 +42,7 @@ export function WeekendBox({
                 entry={entry}
                 datePrefix="Sun:"
                 isSelected={selectedEntry?.id === entry.id}
-                onSelect={() => onSelectEntry?.(entry)}
+                onSelect={onSelectEntry}
               />
             ))}
           </>

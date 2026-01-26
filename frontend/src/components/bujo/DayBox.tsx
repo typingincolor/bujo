@@ -26,7 +26,7 @@ export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEnt
               key={entry.id}
               entry={entry}
               isSelected={selectedEntry?.id === entry.id}
-              onSelect={() => onSelectEntry?.(entry)}
+              onSelect={onSelectEntry}
             />
           ))
         )}

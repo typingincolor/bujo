@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 interface WeekEntryProps {
   entry: Entry;
   isSelected?: boolean;
-  onSelect?: () => void;
+  onSelect?: (entry: Entry) => void;
   datePrefix?: string;
 }
 
@@ -20,7 +20,7 @@ export function WeekEntry({ entry, isSelected, onSelect, datePrefix }: WeekEntry
       )}
     >
       <button
-        onClick={onSelect}
+        onClick={() => onSelect?.(entry)}
         className="flex items-center gap-2 text-left min-w-0 w-full"
       >
         {datePrefix && (
