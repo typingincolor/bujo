@@ -792,7 +792,7 @@ function App() {
           onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 pb-32">
           {view === 'today' && (
             <div className="space-y-6">
               {/* Day Navigation */}

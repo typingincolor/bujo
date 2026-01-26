@@ -309,7 +309,7 @@ export function JournalSidebar({
         "flex flex-col h-full relative",
         isResizing && "select-none"
       )}
-      style={{ width: `${sidebarWidth}px` }}
+      style={{ width: isCollapsed ? '100%' : `${sidebarWidth}px` }}
     >
       {/* Resize Handle */}
       {!isCollapsed && (
@@ -325,7 +325,10 @@ export function JournalSidebar({
         <button
           onClick={onToggleCollapse}
           aria-label="Toggle sidebar"
-          className="absolute top-2 right-2 p-1.5 hover:bg-secondary rounded-md transition-colors"
+          className={cn(
+            "absolute top-2 p-1.5 hover:bg-secondary rounded-md transition-colors z-10",
+            isCollapsed ? "left-1/2 -translate-x-1/2" : "right-2"
+          )}
         >
           {isCollapsed ? (
             <ChevronLeft className="h-4 w-4" />
