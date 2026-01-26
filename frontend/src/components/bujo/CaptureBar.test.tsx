@@ -349,7 +349,7 @@ describe('CaptureBar', () => {
     it('has fixed bottom positioning classes', () => {
       render(<CaptureBar {...defaultProps} />)
       const container = screen.getByTestId('capture-bar')
-      expect(container).toHaveClass('fixed', 'bottom-0')
+      expect(container).toHaveClass('fixed', 'bottom-3')
     })
   })
 })

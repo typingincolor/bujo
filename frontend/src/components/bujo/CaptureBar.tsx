@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { Entry } from '@/types/bujo'
-import { NAV_SIDEBAR_LEFT_CLASS } from '@/lib/layoutConstants'
 
 interface CaptureBarProps {
   onSubmit: (content: string) => void
@@ -47,13 +46,17 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
     }
   }, [content])
 
+  const adjustHeight = useCallback((textarea: HTMLTextAreaElement) => {
+    textarea.style.height = 'auto'
+    const newHeight = Math.max(textarea.scrollHeight, 24)
+    textarea.style.height = `${newHeight}px`
+  }, [])
+
   useEffect(() => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      textarea.style.height = 'auto'
-      textarea.style.height = `${textarea.scrollHeight}px`
+    if (textareaRef.current) {
+      adjustHeight(textareaRef.current)
     }
-  }, [content])
+  }, [content, adjustHeight])
 
   const handleSubmit = useCallback(() => {
     if (!content.trim()) return
@@ -75,7 +78,10 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   }, [content, parentEntry, onSubmitChild, onSubmit])
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value)
+    const textarea = e.target
+    setContent(textarea.value)
+    // Immediately adjust height on input
+    adjustHeight(textarea)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -100,8 +106,11 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   return (
     <div
       data-testid="capture-bar"
-      className={`fixed bottom-0 ${NAV_SIDEBAR_LEFT_CLASS} flex flex-col gap-2 p-3 bg-card border rounded-lg`}
-      style={{ right: isSidebarCollapsed ? 0 : `${sidebarWidth}px` }}
+      className="fixed bottom-3 flex flex-col gap-2 p-3 bg-card border rounded-lg"
+      style={{
+        right: isSidebarCollapsed ? '0.75rem' : `${sidebarWidth + 12}px`,
+        left: 'calc(14rem + 0.75rem)' // left-56 + 0.75rem gap
+      }}
     >
       {parentEntry && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -124,9 +133,7 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Capture a thought..."
-        rows={1}
-        style={{ fontFamily: 'monospace' }}
-        className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none font-mono"
+        className="w-full bg-transparent border-none outline-none text-sm placeholder:text-muted-foreground resize-none overflow-hidden font-mono"
       />
     </div>
   )

@@ -32,3 +32,6 @@ coverage.out
 /frontend/node_modules/
 /frontend/dist/
 
+# Git worktrees
+.worktrees/
+

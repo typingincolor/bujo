@@ -11,6 +11,7 @@ interface EntryCallbacks {
   onEdit?: () => void;
   onDelete?: () => void;
   onCyclePriority?: () => void;
+  onCycleType?: () => void;
   onMoveToList?: () => void;
 }
 
@@ -80,26 +81,17 @@ function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: Overd
         </span>
       </button>
 
-      {/* Action bar below entry - shown on hover */}
+      {/* Action bar below entry - always visible */}
       <div
-        className={cn(
-          'grid transition-all duration-150 ease-out grid-rows-[0fr]',
-          isHovered && 'grid-rows-[1fr]'
-        )}
+        className="pt-1"
+        style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
       >
-        <div className="overflow-hidden">
-          <div
-            className="pt-1"
-            style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
-          >
-            <EntryActionBar
-              entry={entry}
-              callbacks={callbacks}
-              variant="always-visible"
-              size="sm"
-            />
-          </div>
-        </div>
+        <EntryActionBar
+          entry={entry}
+          callbacks={callbacks}
+          variant="always-visible"
+          size="sm"
+        />
       </div>
     </div>
   );
@@ -111,6 +103,7 @@ export interface JournalSidebarCallbacks {
   onEdit?: (entry: Entry) => void;
   onDelete?: (entry: Entry) => void;
   onCyclePriority?: (entry: Entry) => void;
+  onCycleType?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
 }
 
@@ -124,6 +117,8 @@ interface JournalSidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onWidthChange?: (width: number) => void;
+  activelyCyclingEntry?: Entry;
+  cyclingEntryPosition?: number;
 }
 
 interface TreeNode {
@@ -211,6 +206,8 @@ export function JournalSidebar({
   isCollapsed = false,
   onToggleCollapse,
   onWidthChange,
+  activelyCyclingEntry,
+  cyclingEntryPosition = -1,
 }: JournalSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(512);
   const [isResizing, setIsResizing] = useState(false);
@@ -266,10 +263,34 @@ export function JournalSidebar({
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   // Filter to only show task entries (not notes, events, questions, etc.)
-  const taskEntries = useMemo(
-    () => overdueEntries.filter((e) => e.type === 'task'),
-    [overdueEntries]
-  );
+  // Also include entry being actively cycled (tracked in parent) to give time to select the right type
+  // IMPORTANT: Keep cycling entry in its original position using stored position index
+  const taskEntries = useMemo(() => {
+    // Filter entries, keeping cycling entry in its original position
+    let result = overdueEntries
+      .map((e) => {
+        // If this is the cycling entry, use the updated version from state (preserves position)
+        if (activelyCyclingEntry && e.id === activelyCyclingEntry.id) {
+          return activelyCyclingEntry
+        }
+        return e
+      })
+      .filter((e) => {
+        // Keep tasks, and keep the cycling entry even if it's not a task anymore
+        const isTask = e.type === 'task'
+        const isCycling = activelyCyclingEntry && e.id === activelyCyclingEntry.id
+        return isTask || isCycling
+      })
+
+    // If cycling entry is not in result but should be, insert it at its stored position
+    if (activelyCyclingEntry && cyclingEntryPosition >= 0 && !result.some(e => e.id === activelyCyclingEntry.id)) {
+      // cyclingEntryPosition is now the position in the filtered task list, so use it directly
+      const insertIndex = Math.min(cyclingEntryPosition, result.length)
+      result = [...result.slice(0, insertIndex), activelyCyclingEntry, ...result.slice(insertIndex)]
+    }
+
+    return result
+  }, [overdueEntries, activelyCyclingEntry, cyclingEntryPosition]);
 
   const createEntryCallbacks = (entry: Entry) => ({
     onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
@@ -277,6 +298,7 @@ export function JournalSidebar({
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
+    onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
     onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
   });
 
@@ -287,7 +309,7 @@ export function JournalSidebar({
         "flex flex-col h-full relative",
         isResizing && "select-none"
       )}
-      style={{ width: `${sidebarWidth}px` }}
+      style={{ width: isCollapsed ? '100%' : `${sidebarWidth}px` }}
     >
       {/* Resize Handle */}
       {!isCollapsed && (
@@ -303,7 +325,10 @@ export function JournalSidebar({
         <button
           onClick={onToggleCollapse}
           aria-label="Toggle sidebar"
-          className="absolute top-2 right-2 p-1.5 hover:bg-secondary rounded-md transition-colors"
+          className={cn(
+            "absolute top-2 p-1.5 hover:bg-secondary rounded-md transition-colors z-10",
+            isCollapsed ? "left-1/2 -translate-x-1/2" : "right-2"
+          )}
         >
           {isCollapsed ? (
             <ChevronLeft className="h-4 w-4" />

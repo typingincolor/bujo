@@ -86,8 +86,10 @@ function App() {
   const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
+  const [activelyCyclingEntry, setActivelyCyclingEntry] = useState<Entry | null>(null)
+  const [cyclingEntryPosition, setCyclingEntryPosition] = useState<number>(-1)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
@@ -145,6 +147,14 @@ function App() {
     })
     return unsubscribe
   }, [loadData])
+
+  // Clear cycling state when selection changes to a different entry
+  useEffect(() => {
+    if (sidebarSelectedEntry && sidebarSelectedEntry.id !== activelyCyclingEntry?.id) {
+      setActivelyCyclingEntry(null)
+      setCyclingEntryPosition(-1)
+    }
+  }, [sidebarSelectedEntry, activelyCyclingEntry])
 
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
@@ -598,14 +608,51 @@ function App() {
     }
   }, [loadData])
 
+  const handleSidebarCycleType = useCallback(async (entry: Entry) => {
+    const cycleOrder = ['task', 'note', 'event', 'question'] as const
+    const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number])
+    if (currentIndex === -1) return
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
+
+    try {
+      // Filter to task entries to find the entry's position in the FILTERED list
+      // This is the visual position the user sees in the "Pending Tasks" section
+      const taskEntries = overdueEntries.filter(e =>
+        e.type === 'task' || e.id === entry.id
+      )
+      const filteredPosition = taskEntries.findIndex(e => e.id === entry.id)
+
+      // Only update position if entry is found (don't overwrite with -1 on subsequent cycles)
+      if (filteredPosition !== -1) {
+        setCyclingEntryPosition(filteredPosition)
+      }
+
+      // Store the entry with updated type before reload
+      const updatedEntry = { ...entry, type: nextType }
+      setActivelyCyclingEntry(updatedEntry)
+
+      // Change type and reload
+      await RetypeEntry(entry.id, nextType)
+      loadData()
+
+      // Entry will stay visible until user selects a different entry
+    } catch (err) {
+      console.error('Failed to cycle type:', err)
+      setError(err instanceof Error ? err.message : 'Failed to cycle type')
+      setActivelyCyclingEntry(null)
+      setCyclingEntryPosition(-1)
+    }
+  }, [loadData, overdueEntries])
+
   const sidebarCallbacks = useMemo(() => ({
     onMarkDone: handleSidebarMarkDone,
     onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
     onEdit: (entry: Entry) => setEditModalEntry(entry),
     onDelete: handleDeleteEntryRequest,
     onCyclePriority: handleSidebarCyclePriority,
+    onCycleType: handleSidebarCycleType,
     onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
-  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority])
+  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType])
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
@@ -745,7 +792,7 @@ function App() {
           onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-6 pb-32">
           {view === 'today' && (
             <div className="space-y-6">
               {/* Day Navigation */}
@@ -919,6 +966,8 @@ function App() {
             isCollapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
             onWidthChange={setJournalSidebarWidth}
+            activelyCyclingEntry={activelyCyclingEntry ?? undefined}
+            cyclingEntryPosition={cyclingEntryPosition}
           />
         </aside>
       )}
