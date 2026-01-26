@@ -624,9 +624,8 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
       const captureBar = screen.getByTestId('capture-bar')
 
-      // Should have inline style for right positioning
-      // Default sidebar width is 512px
-      expect(captureBar.style.right).toBe('512px')
+      // Sidebar starts collapsed by default, so right should be 0.75rem
+      expect(captureBar.style.right).toBe('0.75rem')
     })
   })
 })

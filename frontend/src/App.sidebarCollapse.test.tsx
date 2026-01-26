@@ -58,27 +58,28 @@ describe('App - Sidebar Collapse', () => {
         </SettingsProvider>
       )
 
+      // Wait for app to load
       await waitFor(() => {
-        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+        expect(screen.getByTestId('overdue-sidebar')).toBeInTheDocument()
       })
 
-      // Sidebar should be visible initially
-      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      // Sidebar should be collapsed initially (starts collapsed by default)
+      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
 
-      // Press [ to collapse
+      // Press [ to expand
       await user.keyboard('{[}')
 
-      // Sidebar content should be hidden
-      await waitFor(() => {
-        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-      })
-
-      // Press [ again to expand
-      await user.keyboard('{[}')
-
-      // Sidebar content should be visible again
+      // Sidebar content should be visible
       await waitFor(() => {
         expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      })
+
+      // Press [ again to collapse
+      await user.keyboard('{[}')
+
+      // Sidebar content should be hidden again
+      await waitFor(() => {
+        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
       })
     })
 
@@ -90,8 +91,9 @@ describe('App - Sidebar Collapse', () => {
         </SettingsProvider>
       )
 
+      // Wait for app to load
       await waitFor(() => {
-        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+        expect(screen.getByTestId('overdue-sidebar')).toBeInTheDocument()
       })
 
       // Switch to a different view (habits)
@@ -118,41 +120,51 @@ describe('App - Sidebar Collapse', () => {
         </SettingsProvider>
       )
 
+      // Wait for app to load
       await waitFor(() => {
-        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+        expect(screen.getByTestId('overdue-sidebar')).toBeInTheDocument()
       })
 
-      // Sidebar should be visible initially
-      expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      // Sidebar should be collapsed initially (starts collapsed by default)
+      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
 
-      // Click the toggle button
+      // Click the toggle button to expand
       await user.click(screen.getByRole('button', { name: /toggle sidebar/i }))
 
-      // Sidebar content should be hidden
-      await waitFor(() => {
-        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-      })
-
-      // Click again to expand
-      await user.click(screen.getByRole('button', { name: /toggle sidebar/i }))
-
-      // Sidebar content should be visible again
+      // Sidebar content should be visible
       await waitFor(() => {
         expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
+      })
+
+      // Click again to collapse
+      await user.click(screen.getByRole('button', { name: /toggle sidebar/i }))
+
+      // Sidebar content should be hidden again
+      await waitFor(() => {
+        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
       })
     })
   })
 
   describe('Sidebar width styling', () => {
     it('does not apply static width class when sidebar is expanded', async () => {
+      const user = userEvent.setup()
       render(
         <SettingsProvider>
           <App />
         </SettingsProvider>
       )
 
+      // Wait for app to load
       await waitFor(() => {
-        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+        expect(screen.getByTestId('overdue-sidebar')).toBeInTheDocument()
+      })
+
+      // Expand the sidebar (starts collapsed by default)
+      await user.keyboard('{[}')
+
+      await waitFor(() => {
+        expect(screen.getByText('Overdue task 1')).toBeInTheDocument()
       })
 
       // Find the sidebar's parent aside element
@@ -166,23 +178,19 @@ describe('App - Sidebar Collapse', () => {
     })
 
     it('applies w-10 class when sidebar is collapsed', async () => {
-      const user = userEvent.setup()
       render(
         <SettingsProvider>
           <App />
         </SettingsProvider>
       )
 
+      // Wait for app to load
       await waitFor(() => {
-        expect(screen.getByText('Pending Tasks (2)')).toBeInTheDocument()
+        expect(screen.getByTestId('overdue-sidebar')).toBeInTheDocument()
       })
 
-      // Collapse the sidebar
-      await user.keyboard('{[}')
-
-      await waitFor(() => {
-        expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
-      })
+      // Sidebar starts collapsed by default
+      expect(screen.queryByText('Overdue task 1')).not.toBeInTheDocument()
 
       // Find the sidebar's parent aside element
       const sidebar = screen.getByTestId('overdue-sidebar')
