@@ -568,15 +568,15 @@ function App() {
     setFocusedPanel('sidebar')
   }, [overdueEntries])
 
-  const handleMoveToRoot = useCallback(async (entry: Entry) => {
-    try {
-      await MoveEntryToRoot(entry.id)
-      loadData()
-    } catch (err) {
-      console.error('Failed to move entry to root:', err)
-      setError(err instanceof Error ? err.message : 'Failed to move entry to root')
-    }
-  }, [loadData])
+  // const handleMoveToRoot = useCallback(async (entry: Entry) => {
+  //   try {
+  //     await MoveEntryToRoot(entry.id)
+  //     loadData()
+  //   } catch (err) {
+  //     console.error('Failed to move entry to root:', err)
+  //     setError(err instanceof Error ? err.message : 'Failed to move entry to root')
+  //   }
+  // }, [loadData])
 
   const handleSidebarMarkDone = useCallback(async (entry: Entry) => {
     try {

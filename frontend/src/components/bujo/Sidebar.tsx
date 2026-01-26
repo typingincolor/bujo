@@ -9,7 +9,7 @@ import {
   BookOpen,
   Search,
   BarChart3,
-  Clock,
+  // Clock,
   HelpCircle
 } from 'lucide-react';
 
