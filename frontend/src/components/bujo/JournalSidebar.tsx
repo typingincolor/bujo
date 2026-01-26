@@ -80,26 +80,17 @@ function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: Overd
         </span>
       </button>
 
-      {/* Action bar below entry - shown on hover */}
+      {/* Action bar below entry - always visible */}
       <div
-        className={cn(
-          'grid transition-all duration-150 ease-out grid-rows-[0fr]',
-          isHovered && 'grid-rows-[1fr]'
-        )}
+        className="pt-1"
+        style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
       >
-        <div className="overflow-hidden">
-          <div
-            className="pt-1"
-            style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
-          >
-            <EntryActionBar
-              entry={entry}
-              callbacks={callbacks}
-              variant="always-visible"
-              size="sm"
-            />
-          </div>
-        </div>
+        <EntryActionBar
+          entry={entry}
+          callbacks={callbacks}
+          variant="always-visible"
+          size="sm"
+        />
       </div>
     </div>
   );

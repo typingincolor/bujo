@@ -140,6 +140,29 @@ describe('JournalSidebar', () => {
       await user.click(screen.getByTitle('Change type'))
       expect(callbacks.onCycleType).toHaveBeenCalledWith(entries[0])
     })
+
+    it('action bar is visible without hover on pending task', () => {
+      const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
+      const callbacks = {
+        onCycleType: vi.fn(),
+      }
+
+      const { container } = render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          callbacks={callbacks}
+        />
+      )
+
+      // Find the action bar wrapper div
+      const actionBarWrapper = container.querySelector('[data-testid="entry-action-bar"]')?.parentElement?.parentElement
+      expect(actionBarWrapper).toBeTruthy()
+
+      // Check that it doesn't have grid-rows-[0fr] which would hide it
+      const classes = actionBarWrapper?.className || ''
+      expect(classes).not.toContain('grid-rows-[0fr]')
+    })
   })
 
   describe('Collapse functionality', () => {
