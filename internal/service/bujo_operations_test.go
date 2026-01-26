@@ -213,6 +213,42 @@ func TestBujoService_MigrateEntry_WithChildren(t *testing.T) {
 	assert.Equal(t, domain.EntryTypeTask, childTypes["Child task"])
 }
 
+func TestBujoService_MigrateEntry_PreservesChildDepth(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Create parent with child at depth 1
+	ids, err := service.LogEntries(ctx, `. Parent task
+  - Child note`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 2)
+
+	parentID := ids[0]
+	childNoteID := ids[1]
+
+	// Verify original child has depth 1
+	originalChild, err := entryRepo.GetByID(ctx, childNoteID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, originalChild.Depth, "Original child should have depth 1")
+
+	// Migrate parent
+	newParentID, err := service.MigrateEntry(ctx, parentID, tomorrow)
+	require.NoError(t, err)
+
+	// Get new children
+	newChildren, err := entryRepo.GetChildren(ctx, newParentID)
+	require.NoError(t, err)
+	require.Len(t, newChildren, 1)
+
+	// Verify new child has depth 1 (this will FAIL if bug exists)
+	newChild := newChildren[0]
+	assert.Equal(t, "Child note", newChild.Content)
+	assert.Equal(t, 1, newChild.Depth, "Migrated child must preserve depth 1, not default to 0")
+}
+
 func TestBujoService_MoveEntry_ChangeParent(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

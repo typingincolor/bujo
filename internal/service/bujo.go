@@ -569,6 +569,7 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 			Type:          originalChildTypes[i],
 			Content:       child.Content,
 			ParentID:      &newParentID,
+			Depth:         child.Depth,
 			ScheduledDate: &toDate,
 			CreatedAt:     time.Now(),
 		}

@@ -444,3 +444,73 @@ describe('App - Task Migration', () => {
     })
   })
 })
+
+describe('App - Migrate Entry with Children', () => {
+  const mockAfterMigration = createMockAgenda({
+    Days: [
+      createMockDayEntries({
+        Date: '2026-01-17T00:00:00Z',
+        Entries: [
+          createMockEntry({
+            ID: 1,
+            EntityID: 'e1',
+            Type: 'Migrated',
+            Content: 'Parent task',
+            ParentID: null,
+            Depth: 0,
+            CreatedAt: '2026-01-17T10:00:00Z'
+          }),
+          createMockEntry({
+            ID: 2,
+            EntityID: 'e2',
+            Type: 'Migrated',
+            Content: 'Child note',
+            ParentID: 1,
+            Depth: 1,
+            CreatedAt: '2026-01-17T10:01:00Z'
+          }),
+        ],
+      }),
+    ],
+    Overdue: [],
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('maintains correct indentation for migrated child notes', async () => {
+    // Show the old location after migration
+    vi.mocked(GetAgenda).mockResolvedValue(mockAfterMigration)
+
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    // Wait for render
+    await waitFor(() => {
+      expect(screen.getByText('Parent task')).toBeInTheDocument()
+      expect(screen.getByText('Child note')).toBeInTheDocument()
+    })
+
+    // Check that both parent and child are rendered as migrated
+    const allEntries = screen.getAllByTestId('entry-item')
+
+    // Find entries by checking data-entry-id attribute
+    const parent = allEntries.find(el => el.getAttribute('data-entry-id') === '1')
+    const child = allEntries.find(el => el.getAttribute('data-entry-id') === '2')
+
+    expect(parent).toBeDefined()
+    expect(child).toBeDefined()
+
+    // Check indentation: parent should have depth 0 (8px), child should have depth 1 (28px)
+    const parentPadding = window.getComputedStyle(parent!).paddingLeft
+    const childPadding = window.getComputedStyle(child!).paddingLeft
+
+    // This test will FAIL if the bug exists - migrated children lose indentation
+    expect(parentPadding).toBe('8px')
+    expect(childPadding).toBe('28px')  // depth 1 = 1 * 20 + 8 = 28px
+  })
+})
