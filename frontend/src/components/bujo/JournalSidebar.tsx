@@ -11,6 +11,7 @@ interface EntryCallbacks {
   onEdit?: () => void;
   onDelete?: () => void;
   onCyclePriority?: () => void;
+  onCycleType?: () => void;
   onMoveToList?: () => void;
 }
 

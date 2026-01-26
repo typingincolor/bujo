@@ -163,6 +163,25 @@ describe('JournalSidebar', () => {
       const classes = actionBarWrapper?.className || ''
       expect(classes).not.toContain('grid-rows-[0fr]')
     })
+
+    it('cycleType button appears when callback is provided', () => {
+      const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
+      const callbacks = {
+        onCycleType: vi.fn(),
+      }
+
+      const { getByTitle } = render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          callbacks={callbacks}
+        />
+      )
+
+      // The "Change type" button should be present
+      const changeTypeButton = getByTitle('Change type')
+      expect(changeTypeButton).toBeInTheDocument()
+    })
   })
 
   describe('Collapse functionality', () => {
