@@ -111,6 +111,7 @@ export interface JournalSidebarCallbacks {
   onEdit?: (entry: Entry) => void;
   onDelete?: (entry: Entry) => void;
   onCyclePriority?: (entry: Entry) => void;
+  onCycleType?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
 }
 
@@ -277,6 +278,7 @@ export function JournalSidebar({
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
+    onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
     onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
   });
 

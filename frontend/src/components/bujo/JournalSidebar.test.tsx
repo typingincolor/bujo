@@ -121,6 +121,25 @@ describe('JournalSidebar', () => {
       expect(screen.queryByText('A note')).not.toBeInTheDocument()
       expect(screen.queryByText('An event')).not.toBeInTheDocument()
     })
+
+    it('calls onCycleType when cycle type button clicked on pending task', async () => {
+      const user = userEvent.setup()
+      const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
+      const callbacks = {
+        onCycleType: vi.fn(),
+      }
+
+      render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          callbacks={callbacks}
+        />
+      )
+
+      await user.click(screen.getByTitle('Change type'))
+      expect(callbacks.onCycleType).toHaveBeenCalledWith(entries[0])
+    })
   })
 
   describe('Collapse functionality', () => {

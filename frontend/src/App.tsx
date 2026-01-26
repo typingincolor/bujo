@@ -90,6 +90,7 @@ function App() {
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
+  const cycleTypeTimeoutRef = useRef<number | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -145,6 +146,14 @@ function App() {
     })
     return unsubscribe
   }, [loadData])
+
+  useEffect(() => {
+    return () => {
+      if (cycleTypeTimeoutRef.current !== null) {
+        clearTimeout(cycleTypeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
@@ -598,14 +607,39 @@ function App() {
     }
   }, [loadData])
 
+  const handleSidebarCycleType = useCallback(async (entry: Entry) => {
+    const cycleOrder = ['task', 'note', 'event', 'question'] as const
+    const currentIndex = cycleOrder.indexOf(entry.type as typeof cycleOrder[number])
+    if (currentIndex === -1) return
+    const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
+    try {
+      await RetypeEntry(entry.id, nextType)
+
+      // Clear any existing timeout to prevent premature reload
+      if (cycleTypeTimeoutRef.current !== null) {
+        clearTimeout(cycleTypeTimeoutRef.current)
+      }
+
+      // Debounce the reload to allow multiple type cycles
+      cycleTypeTimeoutRef.current = window.setTimeout(() => {
+        loadData()
+        cycleTypeTimeoutRef.current = null
+      }, 2000)
+    } catch (err) {
+      console.error('Failed to cycle type:', err)
+      setError(err instanceof Error ? err.message : 'Failed to cycle type')
+    }
+  }, [loadData])
+
   const sidebarCallbacks = useMemo(() => ({
     onMarkDone: handleSidebarMarkDone,
     onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
     onEdit: (entry: Entry) => setEditModalEntry(entry),
     onDelete: handleDeleteEntryRequest,
     onCyclePriority: handleSidebarCyclePriority,
+    onCycleType: handleSidebarCycleType,
     onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
-  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority])
+  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType])
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
