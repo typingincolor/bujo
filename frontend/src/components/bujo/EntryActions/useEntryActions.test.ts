@@ -110,7 +110,7 @@ describe('useEntryActions', () => {
       const actions = getApplicableBarActions(task);
       const types = actions.map(a => a.type);
 
-      const expectedOrder = ['cancel', 'cyclePriority', 'cycleType', 'migrate', 'moveToList', 'navigateToEntry', 'edit', 'delete'];
+      const expectedOrder = ['markDone', 'cancel', 'cyclePriority', 'cycleType', 'migrate', 'moveToList', 'navigateToEntry', 'edit', 'delete'];
       expect(types).toEqual(expectedOrder);
     });
 

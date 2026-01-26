@@ -65,7 +65,7 @@ describe('JournalSidebar', () => {
         />
       )
 
-      await user.click(screen.getByTitle('Cancel entry'))
+      await user.click(screen.getByTitle('Mark as done'))
       expect(callbacks.onMarkDone).toHaveBeenCalledWith(entries[0])
     })
 

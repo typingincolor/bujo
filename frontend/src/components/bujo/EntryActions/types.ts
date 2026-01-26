@@ -25,10 +25,11 @@
  * When modifying validation rules, update BOTH files.
  */
 import { Entry, EntryType } from '@/types/bujo';
-import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, Pencil, Trash2, CornerDownRight, ArrowUpToLine, ListPlus, Calendar } from 'lucide-react';
+import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, Pencil, Trash2, CornerDownRight, ArrowUpToLine, ListPlus, Calendar, Check } from 'lucide-react';
 
 export type EntryActionType =
   | 'answer'
+  | 'markDone'
   | 'cancel'
   | 'uncancel'
   | 'cyclePriority'
@@ -64,6 +65,7 @@ export interface EntryLike {
 
 export interface ActionCallbacks {
   onAnswer?: () => void;
+  onMarkDone?: () => void;
   onCancel?: () => void;
   onUncancel?: () => void;
   onCyclePriority?: () => void;
@@ -89,6 +91,16 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     showInBar: true,
     showInMenu: true,
     hoverClass: 'hover:bg-bujo-question/20 hover:text-bujo-question',
+  },
+  markDone: {
+    type: 'markDone',
+    icon: Check,
+    label: 'Mark done',
+    title: 'Mark as done',
+    appliesTo: (entry) => entry.type === 'task',
+    showInBar: true,
+    showInMenu: true,
+    hoverClass: 'hover:bg-bujo-done/20 hover:text-bujo-done',
   },
   cancel: {
     type: 'cancel',
@@ -204,6 +216,7 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
 
 export const BAR_ACTION_ORDER: EntryActionType[] = [
   'answer',
+  'markDone',
   'cancel',
   'uncancel',
   'cyclePriority',
@@ -217,6 +230,7 @@ export const BAR_ACTION_ORDER: EntryActionType[] = [
 
 export const MENU_ACTION_ORDER: EntryActionType[] = [
   'answer',
+  'markDone',
   'cancel',
   'uncancel',
   'migrate',

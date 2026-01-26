@@ -6,7 +6,7 @@ import { calculateAttentionScore } from '@/lib/attentionScore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface EntryCallbacks {
-  onCancel?: () => void;
+  onMarkDone?: () => void;
   onMigrate?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -293,7 +293,7 @@ export function JournalSidebar({
   }, [overdueEntries, activelyCyclingEntry, cyclingEntryPosition]);
 
   const createEntryCallbacks = (entry: Entry) => ({
-    onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
+    onMarkDone: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
     onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
