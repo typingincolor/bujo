@@ -10,7 +10,6 @@ import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
-import { OverviewView } from '@/components/bujo/OverviewView'
 import { QuestionsView } from '@/components/bujo/QuestionsView'
 import { SearchView, SearchResult } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
@@ -25,7 +24,6 @@ import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { QuickStats } from '@/components/bujo/QuickStats'
 import { CaptureBar } from '@/components/bujo/CaptureBar'
-import { WeekSummary } from '@/components/bujo/WeekSummary'
 import { WeekView } from '@/components/bujo/WeekView'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
@@ -49,7 +47,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'week', 'overview', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+const validViews: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -677,13 +675,6 @@ function App() {
     })
   }, [])
 
-  const handleOverviewNavigate = useCallback((entry: Entry) => {
-    const entryDate = new Date(entry.loggedDate)
-    setReviewAnchorDate(startOfDay(entryDate))
-    setView('week')
-  }, [])
-
-
   const handleBack = useCallback(() => {
     const previousState = goBack()
     if (previousState && isValidView(previousState.view)) {
@@ -695,7 +686,6 @@ function App() {
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
     week: 'Weekly Review',
-    overview: 'Pending Tasks',
     questions: 'Open Questions',
     habits: 'Habit Tracker',
     lists: 'Lists',
@@ -841,23 +831,6 @@ function App() {
                   },
                   onMoveToList: (entry) => setMoveToListEntry(entry),
                 }}
-              />
-            </div>
-          )}
-
-          {view === 'overview' && (
-            <div className="max-w-3xl mx-auto">
-              <OverviewView
-                overdueEntries={overdueEntries}
-                onEntryChanged={loadData}
-                onError={setError}
-                onMigrate={(entry) => setMigrateModalEntry(entry)}
-                onMoveToList={(entry) => setMoveToListEntry(entry)}
-                onNavigateToEntry={handleOverviewNavigate}
-                onEdit={(entry) => setEditModalEntry(entry)}
-                onAnswer={(entry) => setAnswerModalEntry(entry)}
-                onAddChild={handleAddChild}
-                onMoveToRoot={handleMoveToRoot}
               />
             </div>
           )}

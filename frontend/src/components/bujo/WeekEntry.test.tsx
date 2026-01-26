@@ -11,7 +11,7 @@ describe('WeekEntry', () => {
     type: 'task',
     priority: 'high',
     parentId: null,
-    createdAt: '2026-01-20T10:00:00Z',
+    loggedDate: '2026-01-20',
     children: [],
   };
 

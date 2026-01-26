@@ -375,9 +375,9 @@ describe('App - Task Migration', () => {
     const dateInput = modal!.querySelector('input[type="date"]') as HTMLInputElement
     fireEvent.change(dateInput, { target: { value: '2026-01-25' } })
 
-    // Click the Migrate submit button in the modal
-    const migrateSubmitButton = modal!.querySelector('button[type="submit"]') as HTMLButtonElement
-    fireEvent.click(migrateSubmitButton)
+    // Submit the form
+    const form = dateInput.closest('form') as HTMLFormElement
+    fireEvent.submit(form)
 
     await waitFor(() => {
       expect(MigrateEntry).toHaveBeenCalledWith(1, expect.any(String))

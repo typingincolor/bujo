@@ -77,18 +77,6 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
         </div>
       )}
 
-      {view === 'overview' && (
-        <div className="grid grid-cols-2 gap-2">
-          <KeyboardHint keys={['j', '↓']} action="Move down" />
-          <KeyboardHint keys={['k', '↑']} action="Move up" />
-          <KeyboardHint keys={['Space']} action="Toggle done" />
-          <KeyboardHint keys={['x']} action="Cancel/uncancel" />
-          <KeyboardHint keys={['p']} action="Cycle priority" />
-          <KeyboardHint keys={['t']} action="Cycle type" />
-          <KeyboardHint keys={['Enter']} action="Expand context" />
-        </div>
-      )}
-
       {view === 'questions' && (
         <div className="grid grid-cols-2 gap-2">
           <KeyboardHint keys={['j', '↓']} action="Move down" />
@@ -101,7 +89,7 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
         </div>
       )}
 
-      {!['today', 'habits', 'search', 'overview', 'questions'].includes(view) && (
+      {!['today', 'habits', 'search', 'questions'].includes(view) && (
         <div className="text-xs text-muted-foreground">
           No shortcuts for this view
         </div>

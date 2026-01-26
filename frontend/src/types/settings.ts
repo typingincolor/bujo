@@ -1,5 +1,5 @@
 export type Theme = 'light' | 'dark' | 'system'
-export type DefaultView = 'today' | 'week' | 'overview' | 'search'
+export type DefaultView = 'today' | 'week' | 'search'
 
 export interface Settings {
   theme: Theme

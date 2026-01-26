@@ -33,9 +33,9 @@ describe('DateNavigator', () => {
   })
 
   it('navigates to previous day when clicking prev button', async () => {
-    vi.useRealTimers() // Use real timers for userEvent
-    const user = userEvent.setup()
     render(<DateNavigator date={today} onDateChange={mockOnDateChange} />)
+    vi.useRealTimers()
+    const user = userEvent.setup()
 
     await user.click(screen.getByLabelText('Previous day'))
     expect(mockOnDateChange).toHaveBeenCalledTimes(1)
@@ -46,9 +46,9 @@ describe('DateNavigator', () => {
   })
 
   it('navigates to next day when clicking next button', async () => {
-    vi.useRealTimers() // Use real timers for userEvent
-    const user = userEvent.setup()
     render(<DateNavigator date={today} onDateChange={mockOnDateChange} />)
+    vi.useRealTimers()
+    const user = userEvent.setup()
 
     await user.click(screen.getByLabelText('Next day'))
     expect(mockOnDateChange).toHaveBeenCalledTimes(1)
@@ -73,10 +73,10 @@ describe('DateNavigator', () => {
   })
 
   it('navigates to today when clicking Today button', async () => {
-    vi.useRealTimers() // Use real timers for userEvent
-    const user = userEvent.setup()
     const otherDate = new Date('2026-01-20T12:00:00')
     render(<DateNavigator date={otherDate} onDateChange={mockOnDateChange} />)
+    vi.useRealTimers()
+    const user = userEvent.setup()
 
     await user.click(screen.getByRole('button', { name: /jump to today/i }))
     expect(mockOnDateChange).toHaveBeenCalledTimes(1)
@@ -87,9 +87,9 @@ describe('DateNavigator', () => {
   })
 
   it('opens calendar popover when clicking date button', async () => {
-    vi.useRealTimers() // Use real timers for userEvent
-    const user = userEvent.setup()
     render(<DateNavigator date={today} onDateChange={mockOnDateChange} />)
+    vi.useRealTimers()
+    const user = userEvent.setup()
 
     // Click the date button (has Calendar icon and "Today" text)
     const dateButton = screen.getByLabelText('Today')
@@ -98,9 +98,9 @@ describe('DateNavigator', () => {
   })
 
   it('calls onDateChange when selecting date from calendar', async () => {
-    vi.useRealTimers() // Use real timers for userEvent
-    const user = userEvent.setup()
     render(<DateNavigator date={today} onDateChange={mockOnDateChange} />)
+    vi.useRealTimers()
+    const user = userEvent.setup()
 
     // Click the date button to open calendar
     const dateButton = screen.getByLabelText('Today')

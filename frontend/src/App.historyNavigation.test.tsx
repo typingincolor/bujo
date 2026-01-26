@@ -111,7 +111,7 @@ describe('App - Navigation History', () => {
       await user.click(reviewButton)
 
       await waitFor(() => {
-        expect(screen.getByTestId('week-summary')).toBeInTheDocument()
+        expect(screen.getByText(/–.*\d{4}/)).toBeInTheDocument()
       })
 
       // Back button should be visible (can go back to today)
