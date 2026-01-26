@@ -117,7 +117,8 @@ interface JournalSidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onWidthChange?: (width: number) => void;
-  activelyCyclingEntryId?: number | null;
+  activelyCyclingEntry?: Entry;
+  cyclingEntryPosition?: number;
 }
 
 interface TreeNode {
@@ -205,7 +206,8 @@ export function JournalSidebar({
   isCollapsed = false,
   onToggleCollapse,
   onWidthChange,
-  activelyCyclingEntryId = null,
+  activelyCyclingEntry,
+  cyclingEntryPosition = -1,
 }: JournalSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(512);
   const [isResizing, setIsResizing] = useState(false);
@@ -261,11 +263,34 @@ export function JournalSidebar({
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
   // Filter to only show task entries (not notes, events, questions, etc.)
-  // Also include entries that are actively being cycled (tracked in parent) to give time to select the right type
-  const taskEntries = useMemo(
-    () => overdueEntries.filter((e) => e.type === 'task' || e.id === activelyCyclingEntryId),
-    [overdueEntries, activelyCyclingEntryId]
-  );
+  // Also include entry being actively cycled (tracked in parent) to give time to select the right type
+  // IMPORTANT: Keep cycling entry in its original position using stored position index
+  const taskEntries = useMemo(() => {
+    // Filter entries, keeping cycling entry in its original position
+    let result = overdueEntries
+      .map((e) => {
+        // If this is the cycling entry, use the updated version from state (preserves position)
+        if (activelyCyclingEntry && e.id === activelyCyclingEntry.id) {
+          return activelyCyclingEntry
+        }
+        return e
+      })
+      .filter((e) => {
+        // Keep tasks, and keep the cycling entry even if it's not a task anymore
+        const isTask = e.type === 'task'
+        const isCycling = activelyCyclingEntry && e.id === activelyCyclingEntry.id
+        return isTask || isCycling
+      })
+
+    // If cycling entry is not in result but should be, insert it at its stored position
+    if (activelyCyclingEntry && cyclingEntryPosition >= 0 && !result.some(e => e.id === activelyCyclingEntry.id)) {
+      // cyclingEntryPosition is now the position in the filtered task list, so use it directly
+      const insertIndex = Math.min(cyclingEntryPosition, result.length)
+      result = [...result.slice(0, insertIndex), activelyCyclingEntry, ...result.slice(insertIndex)]
+    }
+
+    return result
+  }, [overdueEntries, activelyCyclingEntry, cyclingEntryPosition]);
 
   const createEntryCallbacks = (entry: Entry) => ({
     onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
