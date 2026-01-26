@@ -86,7 +86,7 @@ function App() {
   const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
