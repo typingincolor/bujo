@@ -141,6 +141,25 @@ describe('JournalSidebar', () => {
       expect(callbacks.onCycleType).toHaveBeenCalledWith(entries[0])
     })
 
+    it('calls onCancel when cancel button clicked on pending task', async () => {
+      const user = userEvent.setup()
+      const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
+      const callbacks = {
+        onCancel: vi.fn(),
+      }
+
+      render(
+        <JournalSidebar
+          overdueEntries={entries}
+          now={new Date()}
+          callbacks={callbacks}
+        />
+      )
+
+      await user.click(screen.getByTitle('Cancel entry'))
+      expect(callbacks.onCancel).toHaveBeenCalledWith(entries[0])
+    })
+
     it('action bar is visible without hover on pending task', () => {
       const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
       const callbacks = {

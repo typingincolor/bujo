@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -687,6 +687,26 @@ function App() {
     }
   }, [loadData, overdueEntries])
 
+  const handleSidebarCancel = useCallback(async (entry: Entry) => {
+    try {
+      await CancelEntry(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to cancel entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to cancel entry')
+    }
+  }, [loadData])
+
+  const handleSidebarUncancel = useCallback(async (entry: Entry) => {
+    try {
+      await UncancelEntry(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to uncancel entry:', err)
+      setError(err instanceof Error ? err.message : 'Failed to uncancel entry')
+    }
+  }, [loadData])
+
   const sidebarCallbacks = useMemo(() => ({
     onMarkDone: handleSidebarMarkDone,
     onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
@@ -695,7 +715,9 @@ function App() {
     onCyclePriority: handleSidebarCyclePriority,
     onCycleType: handleSidebarCycleType,
     onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
-  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType])
+    onCancel: handleSidebarCancel,
+    onUncancel: handleSidebarUncancel,
+  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType, handleSidebarCancel, handleSidebarUncancel])
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {

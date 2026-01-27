@@ -15,6 +15,8 @@ interface EntryCallbacks {
   onCyclePriority?: () => void;
   onCycleType?: () => void;
   onMoveToList?: () => void;
+  onCancel?: () => void;
+  onUncancel?: () => void;
 }
 
 interface OverdueEntryItemProps {
@@ -107,6 +109,8 @@ export interface JournalSidebarCallbacks {
   onCyclePriority?: (entry: Entry) => void;
   onCycleType?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
+  onCancel?: (entry: Entry) => void;
+  onUncancel?: (entry: Entry) => void;
 }
 
 interface JournalSidebarProps {
@@ -228,6 +232,8 @@ export function JournalSidebar({
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
     onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
     onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
+    onCancel: callbacks.onCancel ? () => callbacks.onCancel!(entry) : undefined,
+    onUncancel: callbacks.onUncancel ? () => callbacks.onUncancel!(entry) : undefined,
   });
 
   return (
