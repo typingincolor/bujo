@@ -106,10 +106,10 @@ export const CaptureBar = forwardRef<HTMLTextAreaElement, CaptureBarProps>(funct
   return (
     <div
       data-testid="capture-bar"
-      className="fixed bottom-3 flex flex-col gap-2 p-3 bg-card border rounded-lg"
+      className="fixed bottom-0 flex flex-col gap-2 p-3 bg-card border"
       style={{
-        right: isSidebarCollapsed ? '0.75rem' : `${sidebarWidth + 12}px`,
-        left: 'calc(14rem + 0.75rem)' // left-56 + 0.75rem gap
+        right: isSidebarCollapsed ? '2.5rem' : `${sidebarWidth}px`,
+        left: '14rem'
       }}
     >
       {parentEntry && (

@@ -629,8 +629,8 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
       const captureBar = screen.getByTestId('capture-bar')
 
-      // Sidebar starts collapsed by default, so right should be 0.75rem
-      expect(captureBar.style.right).toBe('0.75rem')
+      // Sidebar starts collapsed by default (2.5rem wide), capture bar leaves room for it
+      expect(captureBar.style.right).toBe('2.5rem')
     })
   })
 })

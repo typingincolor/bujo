@@ -346,10 +346,34 @@ describe('CaptureBar', () => {
   })
 
   describe('fixed positioning', () => {
-    it('has fixed bottom positioning classes', () => {
+    it('has fixed positioning flush with bottom of window', () => {
       render(<CaptureBar {...defaultProps} />)
       const container = screen.getByTestId('capture-bar')
-      expect(container).toHaveClass('fixed', 'bottom-3')
+      expect(container).toHaveClass('fixed', 'bottom-0')
+    })
+
+    it('has no rounded corners', () => {
+      render(<CaptureBar {...defaultProps} />)
+      const container = screen.getByTestId('capture-bar')
+      expect(container).not.toHaveClass('rounded-lg')
+      expect(container).not.toHaveClass('rounded')
+    })
+
+    it('fills exact width of main panel with no gaps', () => {
+      render(<CaptureBar {...defaultProps} sidebarWidth={512} isSidebarCollapsed={false} />)
+      const container = screen.getByTestId('capture-bar')
+      // Should align exactly with left sidebar edge (14rem/224px)
+      expect(container.style.left).toBe('14rem')
+      // Should align exactly with right sidebar edge
+      expect(container.style.right).toBe('512px')
+    })
+
+    it('fills exact width when sidebar is collapsed (leaves room for collapse button)', () => {
+      render(<CaptureBar {...defaultProps} isSidebarCollapsed={true} />)
+      const container = screen.getByTestId('capture-bar')
+      expect(container.style.left).toBe('14rem')
+      // Collapsed sidebar is 2.5rem wide, capture bar must not overlap it
+      expect(container.style.right).toBe('2.5rem')
     })
   })
 })
