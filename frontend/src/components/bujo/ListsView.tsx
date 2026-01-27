@@ -14,6 +14,7 @@ interface ListCardProps {
   list: BujoList
   otherLists: BujoList[]
   isExpanded: boolean
+  showCompleted: boolean
   onToggle: () => void
   onToggleItem: (itemId: number, done: boolean) => void
   onAddItem: (listId: number, content: string) => void
@@ -26,7 +27,7 @@ interface ListCardProps {
   onMoveItem: (itemId: number, targetListId: number) => void
 }
 
-function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem, onCancelItem, onUncancelItem, onMoveItem }: ListCardProps) {
+function ListCard({ list, otherLists, isExpanded, showCompleted, onToggle, onToggleItem, onAddItem, onDeleteItem, onDeleteList, onRenameList, onEditItem, onCancelItem, onUncancelItem, onMoveItem }: ListCardProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
   const [movingItemId, setMovingItemId] = useState<number | null>(null)
@@ -206,7 +207,9 @@ function ListCard({ list, otherLists, isExpanded, onToggle, onToggleItem, onAddI
       {/* Items */}
       {isExpanded && (
         <div className="border-t border-border px-4 py-2 space-y-1">
-          {list.items.map((item) => (
+          {list.items
+            .filter((item) => showCompleted || item.type !== 'done')
+            .map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-3 py-1.5 group hover:bg-secondary/20 rounded px-2 -mx-2"
@@ -333,6 +336,7 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
   const [isCreatingList, setIsCreatingList] = useState(false)
   const [newListName, setNewListName] = useState('')
   const [listToDelete, setListToDelete] = useState<BujoList | null>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
   const createInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -476,9 +480,18 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
       <div className="flex items-center gap-2 mb-4">
         <List className="w-5 h-5 text-primary" />
         <h2 className="font-display text-xl font-semibold">Lists</h2>
+        <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showCompleted}
+            onChange={(e) => setShowCompleted(e.target.checked)}
+            className="rounded border-border"
+          />
+          Show completed
+        </label>
         <button
           onClick={() => setIsCreatingList(true)}
-          className="ml-auto px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
+          className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center gap-1"
           aria-label="New list"
         >
           <Plus className="w-3 h-3" />
@@ -514,6 +527,7 @@ export function ListsView({ lists, onListChanged }: ListsViewProps) {
             list={list}
             otherLists={lists.filter(l => l.id !== list.id)}
             isExpanded={expandedIds.has(list.id)}
+            showCompleted={showCompleted}
             onToggle={() => toggleExpanded(list.id)}
             onToggleItem={handleToggleItem}
             onAddItem={handleAddItem}

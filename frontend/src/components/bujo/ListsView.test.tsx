@@ -581,6 +581,8 @@ describe('ListsView - Circle Click to Toggle Completion', () => {
       items: [createTestItem({ id: 42, content: 'Buy milk', type: 'done', done: true })]
     })]} onListChanged={onListChanged} />)
 
+    // Enable show completed to make done items visible
+    await user.click(screen.getByRole('checkbox', { name: /show completed/i }))
     await user.click(screen.getByTitle('Mark as not done'))
 
     await waitFor(() => {
@@ -715,12 +717,76 @@ describe('ListsView - Move List Item', () => {
   })
 })
 
+describe('ListsView - Hide Completed Items', () => {
+  it('hides completed items by default', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [
+        createTestItem({ id: 1, content: 'Active task', type: 'task' }),
+        createTestItem({ id: 2, content: 'Done task', type: 'done' }),
+      ]
+    })]} />)
+
+    expect(screen.getByText('Active task')).toBeInTheDocument()
+    expect(screen.queryByText('Done task')).not.toBeInTheDocument()
+  })
+
+  it('shows completed items when toggle is enabled', async () => {
+    const user = userEvent.setup()
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [
+        createTestItem({ id: 1, content: 'Active task', type: 'task' }),
+        createTestItem({ id: 2, content: 'Done task', type: 'done' }),
+      ]
+    })]} />)
+
+    await user.click(screen.getByRole('checkbox', { name: /show completed/i }))
+
+    expect(screen.getByText('Active task')).toBeInTheDocument()
+    expect(screen.getByText('Done task')).toBeInTheDocument()
+  })
+
+  it('shows cancelled items (they are not completed)', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      items: [
+        createTestItem({ id: 1, content: 'Cancelled task', type: 'cancelled' }),
+      ]
+    })]} />)
+
+    expect(screen.getByText('Cancelled task')).toBeInTheDocument()
+  })
+
+  it('updates progress display to reflect visible vs total items', () => {
+    render(<ListsView lists={[createTestList({
+      name: 'Shopping',
+      doneCount: 2,
+      totalCount: 5,
+      items: [
+        createTestItem({ id: 1, type: 'task' }),
+        createTestItem({ id: 2, type: 'task' }),
+        createTestItem({ id: 3, type: 'task' }),
+        createTestItem({ id: 4, type: 'done' }),
+        createTestItem({ id: 5, type: 'done' }),
+      ]
+    })]} />)
+
+    // Should still show 2/5 (done/total) even when done items are hidden
+    expect(screen.getByText('2/5')).toBeInTheDocument()
+  })
+})
+
 describe('ListsView - Visual Styling', () => {
-  it('renders done items with success color (not strikethrough)', () => {
+  it('renders done items with success color (not strikethrough)', async () => {
+    const user = userEvent.setup()
     render(<ListsView lists={[createTestList({
       name: 'Shopping',
       items: [createTestItem({ content: 'Done Item', type: 'done', done: true })]
     })]} />)
+
+    // Enable show completed to make done items visible
+    await user.click(screen.getByRole('checkbox', { name: /show completed/i }))
 
     const content = screen.getByText('Done Item')
     expect(content).toHaveClass('text-bujo-done')
