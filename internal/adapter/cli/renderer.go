@@ -21,8 +21,6 @@ var (
 	Strikethrough = color.New(color.CrossedOut).SprintFunc()
 )
 
-const separator = "---------------------------------------------------------"
-
 func RenderDaysWithOverdue(days []service.DayEntries, overdue []domain.Entry, today time.Time) string {
 	var sb strings.Builder
 

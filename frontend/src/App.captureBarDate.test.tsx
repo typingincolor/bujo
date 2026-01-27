@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries } from './test/mocks'
-import type { wails as wailsTypes } from './wailsjs/go/models'
+import type { service, domain } from './wailsjs/go/models'
 import { startOfDay, subDays, format } from 'date-fns'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -58,21 +58,21 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
   const yesterday = subDays(today, 1)
   const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
 
-  const mockTodayDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  const mockTodayDays: service.DayEntries[] = [createMockDayEntries({
     Date: today.toISOString(),
     Entries: [
       createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task', CreatedAt: today.toISOString() }),
     ],
   })]
 
-  const mockYesterdayDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  const mockYesterdayDays: service.DayEntries[] = [createMockDayEntries({
     Date: yesterday.toISOString(),
     Entries: [
       createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Yesterday task', CreatedAt: yesterday.toISOString() }),
     ],
   })]
 
-  const mockOverdue: wailsTypes.Entry[] = []
+  const mockOverdue: domain.Entry[] = []
 
   beforeEach(() => {
     vi.clearAllMocks()

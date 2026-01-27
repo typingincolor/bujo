@@ -4,16 +4,16 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries } from './test/mocks'
-import type { wails as wailsTypes } from './wailsjs/go/models'
+import type { service, domain } from './wailsjs/go/models'
 
-const mockDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+const mockDays: service.DayEntries[] = [createMockDayEntries({
   Entries: [
     createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
     createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
     createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
   ],
 })]
-const mockOverdue: wailsTypes.Entry[] = []
+const mockOverdue: domain.Entry[] = []
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -142,7 +142,7 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current mood emoji in header when mood is set', async () => {
-    const mockWithMood: wailsTypes.DayEntries[] = [createMockDayEntries({
+    const mockWithMood: service.DayEntries[] = [createMockDayEntries({
       Mood: 'happy',
       Entries: [],
     })]
@@ -164,7 +164,7 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current weather emoji in header when weather is set', async () => {
-    const mockWithWeather: wailsTypes.DayEntries[] = [createMockDayEntries({
+    const mockWithWeather: service.DayEntries[] = [createMockDayEntries({
       Weather: 'sunny',
       Entries: [],
     })]
@@ -186,7 +186,7 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current location in header when location is set', async () => {
-    const mockWithLocation: wailsTypes.DayEntries[] = [createMockDayEntries({
+    const mockWithLocation: service.DayEntries[] = [createMockDayEntries({
       Location: 'Home Office',
       Entries: [],
     })]

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { createMockEntry, createMockDayEntries } from './test/mocks'
-import type { wails as wailsTypes } from './wailsjs/go/models'
+import type { service, domain } from './wailsjs/go/models'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -42,19 +42,19 @@ vi.mock('./wailsjs/go/wails/App', () => ({
 import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 describe('App - Migrate Keyboard Shortcut', () => {
-  const mockTaskDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  const mockTaskDays: service.DayEntries[] = [createMockDayEntries({
     Entries: [
       createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Task to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
     ],
   })]
 
-  const mockQuestionDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  const mockQuestionDays: service.DayEntries[] = [createMockDayEntries({
     Entries: [
       createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Question', Content: 'Question to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
     ],
   })]
 
-  const mockNonMigratableDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  const mockNonMigratableDays: service.DayEntries[] = [createMockDayEntries({
     Entries: [
       createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Done task', CreatedAt: '2026-01-17T10:00:00Z' }),
       createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T11:00:00Z' }),
@@ -62,7 +62,7 @@ describe('App - Migrate Keyboard Shortcut', () => {
     ],
   })]
 
-  const mockOverdue: wailsTypes.Entry[] = []
+  const mockOverdue: domain.Entry[] = []
 
   beforeEach(() => {
     vi.clearAllMocks()
