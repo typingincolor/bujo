@@ -71,6 +71,10 @@
     --bujo-habit-empty: 40 10% 80%;
     --bujo-today: 35 90% 55%;
 
+    /* Scrollbar colors - subtle, blends with background */
+    --scrollbar-thumb: 40 20% 88%;
+    --scrollbar-thumb-hover: 35 15% 75%;
+
     /* Priority colors */
     --priority-high: 0 70% 55%;
     --priority-medium: 35 85% 55%;
@@ -134,6 +138,10 @@
     --bujo-habit-empty: 25 10% 30%;
     --bujo-today: 35 85% 60%;
 
+    /* Scrollbar colors - higher contrast for dark mode */
+    --scrollbar-thumb: 35 12% 40%;
+    --scrollbar-thumb-hover: 35 15% 50%;
+
     --priority-high: 0 60% 55%;
     --priority-medium: 35 75% 55%;
     --priority-low: 200 45% 55%;
@@ -167,15 +175,14 @@
     font-family: var(--font-display);
   }
 
-  /* Hide scrollbars but keep functionality */
+  /* Custom scrollbar styling - hidden until hover, overlay style */
   * {
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-width: none;
   }
 
   *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   *::-webkit-scrollbar-track {
@@ -184,11 +191,20 @@
 
   *::-webkit-scrollbar-thumb {
     background: transparent;
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
-  *:hover::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
+  /* Show scrollbar only when hovering over scrollable element */
+  .overflow-y-auto:hover::-webkit-scrollbar-thumb,
+  .overflow-x-auto:hover::-webkit-scrollbar-thumb,
+  .overflow-auto:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--scrollbar-thumb));
+  }
+
+  .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover,
+  .overflow-auto::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--scrollbar-thumb-hover));
   }
 }
 

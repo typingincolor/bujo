@@ -131,10 +131,13 @@ interface JournalSidebarProps {
   callbacks?: JournalSidebarCallbacks;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
-  onWidthChange?: (width: number) => void;
   onRefresh?: () => void;
 }
 
+
+const DIVIDER_STORAGE_KEY = 'bujo-journal-divider-ratio';
+const DEFAULT_DIVIDER_RATIO = 0.4;
+const MIN_SECTION_HEIGHT = 80;
 
 export function JournalSidebar({
   overdueEntries = [],
@@ -145,63 +148,76 @@ export function JournalSidebar({
   callbacks = {},
   isCollapsed = false,
   onToggleCollapse,
-  onWidthChange,
   onRefresh,
 }: JournalSidebarProps) {
-  const [sidebarWidth, setSidebarWidth] = useState(512);
-  const [isResizing, setIsResizing] = useState(false);
   const [snapshotEntries, setSnapshotEntries] = useState<Entry[]>([]);
   // Track local status changes (optimistic updates) - cleared on snapshot refresh
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Map<number, Entry['type']>>(new Map());
   const wasCollapsedRef = useRef(isCollapsed);
 
-  const handleResizeMoveRef = useRef<(e: MouseEvent) => void>(() => {});
-  const handleResizeEndRef = useRef<() => void>(() => {});
-
-  const handleResizeMove = useCallback((e: MouseEvent) => {
-    const newWidth = window.innerWidth - e.clientX;
-    const clampedWidth = Math.max(384, Math.min(960, newWidth));
-    setSidebarWidth(clampedWidth);
-  }, []);
-
-  const handleResizeEnd = useCallback(() => {
-    setIsResizing(false);
-    document.removeEventListener('mousemove', handleResizeMoveRef.current);
-    document.removeEventListener('mouseup', handleResizeEndRef.current);
-  }, []);
+  // Divider state for resizing between pending tasks and context
+  const [dividerRatio, setDividerRatio] = useState(() => {
+    const saved = localStorage.getItem(DIVIDER_STORAGE_KEY);
+    return saved ? parseFloat(saved) : DEFAULT_DIVIDER_RATIO;
+  });
+  const [isDividerResizing, setIsDividerResizing] = useState(false);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    handleResizeMoveRef.current = handleResizeMove;
-    handleResizeEndRef.current = handleResizeEnd;
-  }, [handleResizeMove, handleResizeEnd]);
-
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    document.addEventListener('mousemove', handleResizeMoveRef.current);
-    document.addEventListener('mouseup', handleResizeEndRef.current);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleResizeMoveRef.current);
-      document.removeEventListener('mouseup', handleResizeEndRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    onWidthChange?.(sidebarWidth);
-  }, [sidebarWidth, onWidthChange]);
-
-  useEffect(() => {
-    if (isResizing) {
-      document.body.style.cursor = 'col-resize';
+    if (isDividerResizing) {
+      document.body.style.cursor = 'row-resize';
       document.body.style.userSelect = 'none';
     } else {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
-  }, [isResizing]);
+  }, [isDividerResizing]);
+
+  // Divider resize handlers
+  const handleDividerResizeMoveRef = useRef<(e: MouseEvent) => void>(() => {});
+  const handleDividerResizeEndRef = useRef<() => void>(() => {});
+
+  const handleDividerResizeMove = useCallback((e: MouseEvent) => {
+    const container = contentContainerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const containerHeight = containerRect.height;
+    const relativeY = e.clientY - containerRect.top;
+
+    // Calculate ratio, clamping to ensure minimum heights
+    const minRatio = MIN_SECTION_HEIGHT / containerHeight;
+    const maxRatio = 1 - (MIN_SECTION_HEIGHT / containerHeight);
+    const newRatio = Math.max(minRatio, Math.min(maxRatio, relativeY / containerHeight));
+
+    setDividerRatio(newRatio);
+  }, []);
+
+  const handleDividerResizeEnd = useCallback(() => {
+    setIsDividerResizing(false);
+    localStorage.setItem(DIVIDER_STORAGE_KEY, dividerRatio.toString());
+    document.removeEventListener('mousemove', handleDividerResizeMoveRef.current);
+    document.removeEventListener('mouseup', handleDividerResizeEndRef.current);
+  }, [dividerRatio]);
+
+  useEffect(() => {
+    handleDividerResizeMoveRef.current = handleDividerResizeMove;
+    handleDividerResizeEndRef.current = handleDividerResizeEnd;
+  }, [handleDividerResizeMove, handleDividerResizeEnd]);
+
+  const handleDividerResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDividerResizing(true);
+    document.addEventListener('mousemove', handleDividerResizeMoveRef.current);
+    document.addEventListener('mouseup', handleDividerResizeEndRef.current);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleDividerResizeMoveRef.current);
+      document.removeEventListener('mouseup', handleDividerResizeEndRef.current);
+    };
+  }, []);
 
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
@@ -310,21 +326,8 @@ export function JournalSidebar({
   return (
     <div
       data-testid="overdue-sidebar"
-      className={cn(
-        "flex flex-col h-full relative",
-        isResizing && "select-none"
-      )}
-      style={{ width: isCollapsed ? '100%' : `${sidebarWidth}px` }}
+      className="flex flex-col h-full"
     >
-      {/* Resize Handle */}
-      {!isCollapsed && (
-        <div
-          data-testid="resize-handle"
-          className="absolute left-0 top-0 h-full w-2 cursor-col-resize hover:bg-primary/10 transition-colors"
-          onMouseDown={handleResizeStart}
-        />
-      )}
-
       {/* Collapse Toggle Button */}
       {onToggleCollapse && (
         <button
@@ -345,10 +348,10 @@ export function JournalSidebar({
 
       {/* Content - hidden when collapsed */}
       {!isCollapsed && (
-        <>
+        <div ref={contentContainerRef} className="flex-1 flex flex-col min-h-0">
           {/* Pending Tasks Section */}
-          <div>
-            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
+          <div style={{ height: `${dividerRatio * 100}%` }} className="flex flex-col min-h-0">
+            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium flex-shrink-0">
               <span>Pending Tasks ({taskEntries.length})</span>
               <button
                 onClick={refreshSnapshot}
@@ -359,32 +362,44 @@ export function JournalSidebar({
               </button>
             </div>
 
-        <div className="px-1 py-1 max-h-80 overflow-y-auto">
-          {taskEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground px-2 py-2">
-              No pending tasks
-            </p>
-          ) : (
-            taskEntries.map((entry) => (
-              <OverdueEntryItem
-                key={entry.id}
-                entry={entry}
-                now={now}
-                isSelected={selectedEntry?.id === entry.id}
-                onSelect={() => onSelectEntry?.(entry)}
-                callbacks={createEntryCallbacks(entry)}
-              />
-            ))
-          )}
-        </div>
-      </div>
+            <div className="px-1 py-1 flex-1 overflow-y-auto">
+              {taskEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground px-2 py-2">
+                  No pending tasks
+                </p>
+              ) : (
+                taskEntries.map((entry) => (
+                  <OverdueEntryItem
+                    key={entry.id}
+                    entry={entry}
+                    now={now}
+                    isSelected={selectedEntry?.id === entry.id}
+                    onSelect={() => onSelectEntry?.(entry)}
+                    callbacks={createEntryCallbacks(entry)}
+                  />
+                ))
+              )}
+            </div>
+          </div>
 
-          {/* Divider */}
-          <hr className="my-4 border-border" />
+          {/* Draggable Divider - outer div is the hit area, inner div is the visual line */}
+          <div
+            data-testid="section-divider"
+            className="py-2 cursor-row-resize flex-shrink-0 group"
+            onMouseDown={handleDividerResizeStart}
+          >
+            <div
+              className={cn(
+                "h-px bg-border transition-colors",
+                "group-hover:bg-primary/50",
+                isDividerResizing && "bg-primary/50"
+              )}
+            />
+          </div>
 
           {/* Context Section */}
           <div data-testid="context-section" className="flex-1 flex flex-col min-h-0">
-            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
+            <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium flex-shrink-0">
               <span>Context</span>
             </div>
 
@@ -401,7 +416,7 @@ export function JournalSidebar({
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
