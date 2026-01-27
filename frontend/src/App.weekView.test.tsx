@@ -62,7 +62,8 @@ describe('WeekView Integration', () => {
 
   it('pressing [ toggles context panel collapsed state in week view', async () => {
     const user = userEvent.setup()
-    vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithEntries)
+    vi.mocked(GetDayEntries).mockResolvedValue(weekDays)
+    vi.mocked(GetOverdue).mockResolvedValue(weekOverdue)
 
     render(
       <SettingsProvider>

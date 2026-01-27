@@ -447,21 +447,20 @@ describe('App - Task Migration', () => {
 })
 
 describe('App - Sidebar Entry Visibility After Actions', () => {
-  const mockWithOverdueEntries = createMockAgenda({
-    Days: [createMockDayEntries({
-      Entries: [
-        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      ],
-    })],
-    Overdue: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+  const mockDaysWithOverdue = createMockDays([createMockDayEntries({
+    Entries: [
+      createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
     ],
-  })
+  })])
+  const mockOverdueEntries = createMockOverdue([
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+  ])
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithOverdueEntries)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysWithOverdue)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueEntries)
   })
 
   it('keeps entry visible in sidebar after marking done', async () => {
@@ -490,21 +489,20 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     expect(screen.getByText('Overdue task 2')).toBeInTheDocument()
 
     // Mock the reload to return the entry as done (would normally disappear)
-    const mockAfterMarkDone = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    const mockDaysAfterMarkDone = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
       ],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterMarkDone)
+    })])
+    const mockOverdueAfterMarkDone = createMockOverdue([
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    ])
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterMarkDone)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueAfterMarkDone)
 
-    // Clear GetAgenda mock to track reload
-    vi.mocked(GetAgenda).mockClear()
+    // Clear mocks to track reload
+    vi.mocked(GetDayEntries).mockClear()
 
     // Click on first task in sidebar to select it (makes action bar visible)
     const sidebar = screen.getByTestId('overdue-sidebar')
@@ -519,7 +517,7 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
       expect(MarkEntryDone).toHaveBeenCalledWith(1)
     })
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
 
     // Give React time to process the state update from the reload
@@ -558,21 +556,20 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     expect(screen.getByText('Overdue task 2')).toBeInTheDocument()
 
     // Mock the reload to return the entry as cancelled (would normally disappear)
-    const mockAfterCancel = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Cancelled', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    const mockDaysAfterCancel = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Cancelled', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
       ],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterCancel)
+    })])
+    const mockOverdueAfterCancel = createMockOverdue([
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    ])
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterCancel)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueAfterCancel)
 
-    // Clear GetAgenda mock to track reload
-    vi.mocked(GetAgenda).mockClear()
+    // Clear mocks to track reload
+    vi.mocked(GetDayEntries).mockClear()
 
     // Click on first task in sidebar to select it (makes action bar visible)
     const sidebar = screen.getByTestId('overdue-sidebar')
@@ -587,7 +584,7 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
       expect(CancelEntry).toHaveBeenCalledWith(1)
     })
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
 
     // Give React time to process the state update from the reload
@@ -623,18 +620,17 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     })
 
     // Mock the reload to return the entry as done
-    const mockAfterMarkDone = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    const mockDaysAfterDone = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
       ],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterMarkDone)
+    })])
+    const mockOverdueAfterDone = createMockOverdue([
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+    ])
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterDone)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueAfterDone)
 
     // Click on first task in sidebar to select it (makes action bar visible)
     const sidebar = screen.getByTestId('overdue-sidebar')
@@ -649,7 +645,7 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
       expect(MarkEntryDone).toHaveBeenCalledWith(1)
     })
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
 
     // After marking done, the entry should show an "Unmark done" button
@@ -665,20 +661,19 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
 
   it('snapshots pending tasks when sidebar expands and keeps them stable until re-expanded', async () => {
     // Setup: three tasks in sidebar
-    const mockInitial = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
-        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    const mockInitialDays = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
       ],
-    })
+    })])
+    const mockInitialOverdue = createMockOverdue([
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    ])
 
-    vi.mocked(GetAgenda).mockResolvedValue(mockInitial)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockInitialDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockInitialOverdue)
     vi.mocked(MarkEntryDone).mockResolvedValue(undefined)
 
     const user = userEvent.setup()
@@ -703,18 +698,16 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     })
 
     // After marking task 1 done, server returns it as Done type (removed from Overdue)
-    const mockAfterFirst = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
-        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    const mockDaysAfterFirst = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Overdue task 1', CreatedAt: '2026-01-15T10:00:00Z' }),
       ],
-    })
+    })])
+    const mockOverdueAfterFirst = createMockOverdue([
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Overdue task 2', CreatedAt: '2026-01-15T11:00:00Z' }),
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    ])
 
     // Select first task to show action bar
     const sidebar = screen.getByTestId('overdue-sidebar')
@@ -724,7 +717,8 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     const doneButton = within(sidebar).getByTitle('Mark as done')
     await user.click(doneButton)
 
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterFirst)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterFirst)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueAfterFirst)
 
     await waitFor(() => {
       expect(MarkEntryDone).toHaveBeenCalledWith(1)
@@ -757,17 +751,16 @@ describe('App - Sidebar Entry Visibility After Actions', () => {
     expect(within(sidebarStable).getByText('Overdue task 3')).toBeInTheDocument()
 
     // Now collapse and re-expand the sidebar - this should refresh the snapshot
-    const mockAfterBoth = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    const mockDaysAfterBoth = createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 100, EntityID: 'e100', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
       ],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterBoth)
+    })])
+    const mockOverdueAfterBoth = createMockOverdue([
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Overdue task 3', CreatedAt: '2026-01-15T12:00:00Z' }),
+    ])
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterBoth)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdueAfterBoth)
 
     // Collapse sidebar
     await user.click(toggleButton)
