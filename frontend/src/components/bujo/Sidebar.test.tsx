@@ -26,4 +26,14 @@ describe('Sidebar', () => {
     // Improved tagline (Option C)
     expect(screen.getByText('Capture. Track. Reflect.')).toBeInTheDocument();
   });
+
+  it('settings button container has no border above it', () => {
+    render(<Sidebar currentView="today" onViewChange={mockOnViewChange} />);
+
+    const settingsButton = screen.getByRole('button', { name: /settings/i });
+    const footer = settingsButton.parentElement;
+
+    // Footer should NOT have border-t class (no line above settings)
+    expect(footer).not.toHaveClass('border-t');
+  });
 });

@@ -64,7 +64,7 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
       </nav>
       
       {/* Footer */}
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3">
         <button
           onClick={() => onViewChange('settings')}
           aria-pressed={currentView === 'settings'}
