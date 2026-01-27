@@ -29,6 +29,7 @@ interface EntryActionBarProps {
 const callbackMap: Record<EntryActionType, keyof ActionCallbacks> = {
   answer: 'onAnswer',
   markDone: 'onMarkDone',
+  unmarkDone: 'onUnmarkDone',
   cancel: 'onCancel',
   uncancel: 'onUncancel',
   cyclePriority: 'onCyclePriority',

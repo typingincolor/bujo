@@ -30,6 +30,7 @@ import { LucideIcon, MessageCircle, X, RotateCcw, Flag, RefreshCw, ArrowRight, P
 export type EntryActionType =
   | 'answer'
   | 'markDone'
+  | 'unmarkDone'
   | 'cancel'
   | 'uncancel'
   | 'cyclePriority'
@@ -66,6 +67,7 @@ export interface EntryLike {
 export interface ActionCallbacks {
   onAnswer?: () => void;
   onMarkDone?: () => void;
+  onUnmarkDone?: () => void;
   onCancel?: () => void;
   onUncancel?: () => void;
   onCyclePriority?: () => void;
@@ -102,6 +104,16 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     showInMenu: true,
     hoverClass: 'hover:bg-bujo-done/20 hover:text-bujo-done',
   },
+  unmarkDone: {
+    type: 'unmarkDone',
+    icon: RotateCcw,
+    label: 'Unmark done',
+    title: 'Unmark done',
+    appliesTo: (entry) => entry.type === 'done',
+    showInBar: true,
+    showInMenu: true,
+    hoverClass: 'hover:bg-bujo-task/20 hover:text-bujo-task',
+  },
   cancel: {
     type: 'cancel',
     icon: X,
@@ -110,7 +122,7 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     appliesTo: (entry) => entry.type !== 'cancelled',
     showInBar: true,
     showInMenu: true,
-    hoverClass: 'hover:bg-warning/20 hover:text-warning',
+    hoverClass: 'hover:bg-destructive/20 hover:text-destructive',
   },
   uncancel: {
     type: 'uncancel',
@@ -130,7 +142,7 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     appliesTo: () => true,
     showInBar: true,
     showInMenu: true,
-    hoverClass: 'hover:bg-warning/20 hover:text-warning',
+    hoverClass: 'hover:bg-accent/20 hover:text-accent',
   },
   cycleType: {
     type: 'cycleType',
@@ -160,7 +172,7 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
     appliesTo: (entry) => entry.type !== 'cancelled',
     showInBar: true,
     showInMenu: true,
-    hoverClass: 'hover:bg-secondary hover:text-foreground',
+    hoverClass: 'hover:bg-primary/20 hover:text-primary',
   },
   delete: {
     type: 'delete',
@@ -217,6 +229,7 @@ export const ACTION_REGISTRY: Record<EntryActionType, ActionConfig> = {
 export const BAR_ACTION_ORDER: EntryActionType[] = [
   'answer',
   'markDone',
+  'unmarkDone',
   'cancel',
   'uncancel',
   'cyclePriority',
@@ -231,6 +244,7 @@ export const BAR_ACTION_ORDER: EntryActionType[] = [
 export const MENU_ACTION_ORDER: EntryActionType[] = [
   'answer',
   'markDone',
+  'unmarkDone',
   'cancel',
   'uncancel',
   'migrate',

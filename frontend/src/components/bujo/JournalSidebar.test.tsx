@@ -32,7 +32,8 @@ describe('JournalSidebar', () => {
       expect(screen.getByText(/no pending tasks/i)).toBeInTheDocument()
     })
 
-    it('shows action buttons on each pending task', () => {
+    it('shows action buttons on each pending task when hovered', async () => {
+      const user = userEvent.setup()
       const entries = [createTestEntry({ id: 1, content: 'Task 1' })]
       const callbacks = {
         onMarkDone: vi.fn(),
@@ -46,6 +47,9 @@ describe('JournalSidebar', () => {
           callbacks={callbacks}
         />
       )
+
+      // Hover over the entry to reveal action bar
+      await user.hover(screen.getByText('Task 1'))
 
       expect(screen.getByTestId('entry-action-bar')).toBeInTheDocument()
     })
@@ -62,9 +66,11 @@ describe('JournalSidebar', () => {
           overdueEntries={entries}
           now={new Date()}
           callbacks={callbacks}
+          selectedEntry={entries[0]}
         />
       )
 
+      // Entry is selected, so action bar is visible
       await user.click(screen.getByTitle('Mark as done'))
       expect(callbacks.onMarkDone).toHaveBeenCalledWith(entries[0])
     })
@@ -81,9 +87,11 @@ describe('JournalSidebar', () => {
           overdueEntries={entries}
           now={new Date()}
           callbacks={callbacks}
+          selectedEntry={entries[0]}
         />
       )
 
+      // Entry is selected, so action bar is visible
       await user.click(screen.getByTitle('Migrate entry'))
       expect(callbacks.onMigrate).toHaveBeenCalledWith(entries[0])
     })
@@ -100,9 +108,11 @@ describe('JournalSidebar', () => {
           overdueEntries={entries}
           now={new Date()}
           callbacks={callbacks}
+          selectedEntry={entries[0]}
         />
       )
 
+      // Entry is selected, so action bar is visible
       await user.click(screen.getByTitle('Edit entry'))
       expect(callbacks.onEdit).toHaveBeenCalledWith(entries[0])
     })
@@ -134,9 +144,11 @@ describe('JournalSidebar', () => {
           overdueEntries={entries}
           now={new Date()}
           callbacks={callbacks}
+          selectedEntry={entries[0]}
         />
       )
 
+      // Entry is selected, so action bar is visible
       await user.click(screen.getByTitle('Change type'))
       expect(callbacks.onCycleType).toHaveBeenCalledWith(entries[0])
     })
@@ -153,20 +165,23 @@ describe('JournalSidebar', () => {
           overdueEntries={entries}
           now={new Date()}
           callbacks={callbacks}
+          selectedEntry={entries[0]}
         />
       )
 
+      // Entry is selected, so action bar is visible
       await user.click(screen.getByTitle('Cancel entry'))
       expect(callbacks.onCancel).toHaveBeenCalledWith(entries[0])
     })
 
-    it('action bar is visible without hover on pending task', () => {
+    it('action bar is hidden until hover on pending task', async () => {
+      const user = userEvent.setup()
       const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
       const callbacks = {
         onCycleType: vi.fn(),
       }
 
-      const { container } = render(
+      render(
         <JournalSidebar
           overdueEntries={entries}
           now={new Date()}
@@ -174,22 +189,24 @@ describe('JournalSidebar', () => {
         />
       )
 
-      // Find the action bar wrapper div
-      const actionBarWrapper = container.querySelector('[data-testid="entry-action-bar"]')?.parentElement?.parentElement
-      expect(actionBarWrapper).toBeTruthy()
+      // Action bar should not be visible initially
+      expect(screen.queryByTestId('entry-action-bar')).not.toBeInTheDocument()
 
-      // Check that it doesn't have grid-rows-[0fr] which would hide it
-      const classes = actionBarWrapper?.className || ''
-      expect(classes).not.toContain('grid-rows-[0fr]')
+      // Hover over the entry
+      await user.hover(screen.getByText('Task 1'))
+
+      // Now action bar should be visible
+      expect(screen.getByTestId('entry-action-bar')).toBeInTheDocument()
     })
 
-    it('cycleType button appears when callback is provided', () => {
+    it('cycleType button appears when callback is provided and hovered', async () => {
+      const user = userEvent.setup()
       const entries = [createTestEntry({ id: 1, content: 'Task 1', type: 'task' })]
       const callbacks = {
         onCycleType: vi.fn(),
       }
 
-      const { getByTitle } = render(
+      render(
         <JournalSidebar
           overdueEntries={entries}
           now={new Date()}
@@ -197,8 +214,11 @@ describe('JournalSidebar', () => {
         />
       )
 
+      // Hover over the entry to reveal action bar
+      await user.hover(screen.getByText('Task 1'))
+
       // The "Change type" button should be present
-      const changeTypeButton = getByTitle('Change type')
+      const changeTypeButton = screen.getByTitle('Change type')
       expect(changeTypeButton).toBeInTheDocument()
     })
   })

@@ -3,12 +3,13 @@ import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { buildTree } from '@/lib/buildTree';
 import { ContextTree } from './ContextTree';
 
 interface EntryCallbacks {
   onMarkDone?: () => void;
+  onUnmarkDone?: () => void;
   onMigrate?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -71,7 +72,12 @@ function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: Overd
           </span>
         )}
 
-        <span className="flex-1 truncate">{entry.content}</span>
+        <span className={cn(
+          "flex-1 truncate",
+          entry.type === 'cancelled' && "line-through text-muted-foreground"
+        )}>
+          {entry.content}
+        </span>
 
         <span
           data-testid="attention-badge"
@@ -85,24 +91,27 @@ function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: Overd
         </span>
       </button>
 
-      {/* Action bar below entry - always visible */}
-      <div
-        className="pt-1"
-        style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
-      >
-        <EntryActionBar
-          entry={entry}
-          callbacks={callbacks}
-          variant="always-visible"
-          size="sm"
-        />
-      </div>
+      {/* Action bar below entry - visible on hover or selection */}
+      {(isHovered || isSelected) && (
+        <div
+          className="pt-1"
+          style={{ paddingLeft: 'calc(0.5rem + 0.5rem + 1ch)' }}
+        >
+          <EntryActionBar
+            entry={entry}
+            callbacks={callbacks}
+            variant="always-visible"
+            size="sm"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 export interface JournalSidebarCallbacks {
   onMarkDone?: (entry: Entry) => void;
+  onUnmarkDone?: (entry: Entry) => void;
   onMigrate?: (entry: Entry) => void;
   onEdit?: (entry: Entry) => void;
   onDelete?: (entry: Entry) => void;
@@ -123,8 +132,7 @@ interface JournalSidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onWidthChange?: (width: number) => void;
-  activelyCyclingEntry?: Entry;
-  cyclingEntryPosition?: number;
+  onRefresh?: () => void;
 }
 
 
@@ -138,11 +146,14 @@ export function JournalSidebar({
   isCollapsed = false,
   onToggleCollapse,
   onWidthChange,
-  activelyCyclingEntry,
-  cyclingEntryPosition = -1,
+  onRefresh,
 }: JournalSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(512);
   const [isResizing, setIsResizing] = useState(false);
+  const [snapshotEntries, setSnapshotEntries] = useState<Entry[]>([]);
+  // Track local status changes (optimistic updates) - cleared on snapshot refresh
+  const [localStatusOverrides, setLocalStatusOverrides] = useState<Map<number, Entry['type']>>(new Map());
+  const wasCollapsedRef = useRef(isCollapsed);
 
   const handleResizeMoveRef = useRef<(e: MouseEvent) => void>(() => {});
   const handleResizeEndRef = useRef<() => void>(() => {});
@@ -194,46 +205,106 @@ export function JournalSidebar({
 
   const treeNodes = useMemo(() => buildTree(contextTree), [contextTree]);
 
-  // Filter to only show task entries (not notes, events, questions, etc.)
-  // Also include entry being actively cycled (tracked in parent) to give time to select the right type
-  // IMPORTANT: Keep cycling entry in its original position using stored position index
-  const taskEntries = useMemo(() => {
-    // Filter entries, keeping cycling entry in its original position
-    let result = overdueEntries
-      .map((e) => {
-        // If this is the cycling entry, use the updated version from state (preserves position)
-        if (activelyCyclingEntry && e.id === activelyCyclingEntry.id) {
-          return activelyCyclingEntry
-        }
-        return e
-      })
-      .filter((e) => {
-        // Keep tasks, and keep the cycling entry even if it's not a task anymore
-        const isTask = e.type === 'task'
-        const isCycling = activelyCyclingEntry && e.id === activelyCyclingEntry.id
-        return isTask || isCycling
-      })
+  // Helper to get filtered task entries from overdue entries
+  const getTaskEntries = useCallback(() => {
+    return overdueEntries.filter(e => e.type === 'task');
+  }, [overdueEntries]);
 
-    // If cycling entry is not in result but should be, insert it at its stored position
-    if (activelyCyclingEntry && cyclingEntryPosition >= 0 && !result.some(e => e.id === activelyCyclingEntry.id)) {
-      // cyclingEntryPosition is now the position in the filtered task list, so use it directly
-      const insertIndex = Math.min(cyclingEntryPosition, result.length)
-      result = [...result.slice(0, insertIndex), activelyCyclingEntry, ...result.slice(insertIndex)]
+  // Refresh the snapshot manually
+  const refreshSnapshot = useCallback(() => {
+    setSnapshotEntries(getTaskEntries());
+    setLocalStatusOverrides(new Map());
+  }, [getTaskEntries]);
+
+  // Track whether we have a valid snapshot
+  const hasSnapshotRef = useRef(false);
+  // Track whether we're waiting for fresh data after re-expand
+  const awaitingFreshDataRef = useRef(false);
+  // Track if sidebar has ever been expanded (to distinguish first expand from re-expand)
+  const hasEverExpandedRef = useRef(false);
+  // Track the overdueEntries reference to detect when fresh data arrives
+  const lastEntriesRef = useRef(overdueEntries);
+
+  // Handle sidebar expand/collapse transitions
+  useEffect(() => {
+    const wasCollapsed = wasCollapsedRef.current;
+    wasCollapsedRef.current = isCollapsed;
+
+    if (wasCollapsed && !isCollapsed) {
+      // Expanding
+      if (!hasEverExpandedRef.current) {
+        // First expand: capture snapshot immediately with current data
+        setSnapshotEntries(overdueEntries.filter(e => e.type === 'task'));
+        hasSnapshotRef.current = true;
+        hasEverExpandedRef.current = true;
+        onRefresh?.();
+      } else {
+        // Re-expand after collapse: wait for fresh data
+        awaitingFreshDataRef.current = true;
+        hasSnapshotRef.current = false;
+        onRefresh?.();
+      }
+    } else if (!wasCollapsed && isCollapsed) {
+      // Collapsing: clear snapshot and overrides so next expand gets fresh data
+      setSnapshotEntries([]);
+      setLocalStatusOverrides(new Map());
+      hasSnapshotRef.current = false;
+      awaitingFreshDataRef.current = false;
     }
+  }, [isCollapsed, onRefresh, overdueEntries]);
 
-    return result
-  }, [overdueEntries, activelyCyclingEntry, cyclingEntryPosition]);
+  // Capture snapshot when fresh data arrives after re-expand
+  useEffect(() => {
+    if (awaitingFreshDataRef.current && overdueEntries !== lastEntriesRef.current) {
+      // Fresh data arrived, capture snapshot
+      setSnapshotEntries(overdueEntries.filter(e => e.type === 'task'));
+      hasSnapshotRef.current = true;
+      awaitingFreshDataRef.current = false;
+    }
+    lastEntriesRef.current = overdueEntries;
+  }, [overdueEntries]);
+
+  // Handle initial state when sidebar starts expanded (not a transition)
+  useEffect(() => {
+    if (!isCollapsed && !hasSnapshotRef.current && !awaitingFreshDataRef.current && overdueEntries.length > 0) {
+      setSnapshotEntries(overdueEntries.filter(e => e.type === 'task'));
+      hasSnapshotRef.current = true;
+      hasEverExpandedRef.current = true;
+    }
+  }, [isCollapsed, overdueEntries]);
+
+  // Use snapshot if we have one, otherwise use live filtered entries
+  // This ensures backwards compatibility and handles initial state
+  const baseEntries = snapshotEntries.length > 0 ? snapshotEntries : getTaskEntries();
+  // Apply local status overrides (optimistic updates)
+  const taskEntries = baseEntries.map(entry => {
+    const override = localStatusOverrides.get(entry.id);
+    return override ? { ...entry, type: override } : entry;
+  });
 
   const createEntryCallbacks = (entry: Entry) => ({
-    onMarkDone: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
+    onMarkDone: callbacks.onMarkDone ? () => {
+      setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'done'));
+      callbacks.onMarkDone!(entry);
+    } : undefined,
+    onUnmarkDone: callbacks.onUnmarkDone ? () => {
+      setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'task'));
+      callbacks.onUnmarkDone!(entry);
+    } : undefined,
     onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
     onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
     onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
-    onCancel: callbacks.onCancel ? () => callbacks.onCancel!(entry) : undefined,
-    onUncancel: callbacks.onUncancel ? () => callbacks.onUncancel!(entry) : undefined,
+    onCancel: callbacks.onCancel ? () => {
+      setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'cancelled'));
+      callbacks.onCancel!(entry);
+    } : undefined,
+    onUncancel: callbacks.onUncancel ? () => {
+      setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'task'));
+      callbacks.onUncancel!(entry);
+    } : undefined,
   });
 
   return (
@@ -279,6 +350,13 @@ export function JournalSidebar({
           <div>
             <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium">
               <span>Pending Tasks ({taskEntries.length})</span>
+              <button
+                onClick={refreshSnapshot}
+                title="Refresh pending tasks"
+                className="p-1 hover:bg-secondary rounded-md transition-colors ml-auto"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
             </div>
 
         <div className="px-1 py-1 max-h-80 overflow-y-auto">

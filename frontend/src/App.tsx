@@ -92,8 +92,6 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
-  const [activelyCyclingEntry, setActivelyCyclingEntry] = useState<Entry | null>(null)
-  const [cyclingEntryPosition, setCyclingEntryPosition] = useState<number>(-1)
   const initialLoadCompleteRef = useRef(false)
   const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
@@ -106,6 +104,8 @@ function App() {
     setError(null)
     try {
       const now = new Date()
+      const today = startOfDay(now)
+      const todayWeekLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)
       const weekLater = new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000)
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
@@ -153,14 +153,6 @@ function App() {
     })
     return unsubscribe
   }, [loadData])
-
-  // Clear cycling state when selection changes to a different entry
-  useEffect(() => {
-    if (sidebarSelectedEntry && sidebarSelectedEntry.id !== activelyCyclingEntry?.id) {
-      setActivelyCyclingEntry(null)
-      setCyclingEntryPosition(-1)
-    }
-  }, [sidebarSelectedEntry, activelyCyclingEntry])
 
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
@@ -641,6 +633,16 @@ function App() {
     }
   }, [loadData])
 
+  const handleSidebarUnmarkDone = useCallback(async (entry: Entry) => {
+    try {
+      await MarkEntryUndone(entry.id)
+      loadData()
+    } catch (err) {
+      console.error('Failed to unmark entry done:', err)
+      setError(err instanceof Error ? err.message : 'Failed to unmark entry done')
+    }
+  }, [loadData])
+
   const handleSidebarCyclePriority = useCallback(async (entry: Entry) => {
     try {
       await CyclePriority(entry.id)
@@ -658,34 +660,13 @@ function App() {
     const nextType = cycleOrder[(currentIndex + 1) % cycleOrder.length]
 
     try {
-      // Filter to task entries to find the entry's position in the FILTERED list
-      // This is the visual position the user sees in the "Pending Tasks" section
-      const taskEntries = overdueEntries.filter(e =>
-        e.type === 'task' || e.id === entry.id
-      )
-      const filteredPosition = taskEntries.findIndex(e => e.id === entry.id)
-
-      // Only update position if entry is found (don't overwrite with -1 on subsequent cycles)
-      if (filteredPosition !== -1) {
-        setCyclingEntryPosition(filteredPosition)
-      }
-
-      // Store the entry with updated type before reload
-      const updatedEntry = { ...entry, type: nextType }
-      setActivelyCyclingEntry(updatedEntry)
-
-      // Change type and reload
       await RetypeEntry(entry.id, nextType)
       loadData()
-
-      // Entry will stay visible until user selects a different entry
     } catch (err) {
       console.error('Failed to cycle type:', err)
       setError(err instanceof Error ? err.message : 'Failed to cycle type')
-      setActivelyCyclingEntry(null)
-      setCyclingEntryPosition(-1)
     }
-  }, [loadData, overdueEntries])
+  }, [loadData])
 
   const handleSidebarCancel = useCallback(async (entry: Entry) => {
     try {
@@ -709,6 +690,7 @@ function App() {
 
   const sidebarCallbacks = useMemo(() => ({
     onMarkDone: handleSidebarMarkDone,
+    onUnmarkDone: handleSidebarUnmarkDone,
     onMigrate: (entry: Entry) => setMigrateModalEntry(entry),
     onEdit: (entry: Entry) => setEditModalEntry(entry),
     onDelete: handleDeleteEntryRequest,
@@ -717,7 +699,7 @@ function App() {
     onMoveToList: (entry: Entry) => setMoveToListEntry(entry),
     onCancel: handleSidebarCancel,
     onUncancel: handleSidebarUncancel,
-  }), [handleSidebarMarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType, handleSidebarCancel, handleSidebarUncancel])
+  }), [handleSidebarMarkDone, handleSidebarUnmarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType, handleSidebarCancel, handleSidebarUncancel])
 
 
   const handleCaptureBarSubmit = useCallback(async (content: string) => {
@@ -1033,7 +1015,7 @@ function App() {
           <div className="flex-1 overflow-y-auto p-2">
             <JournalSidebar
               overdueEntries={overdueEntries}
-              now={currentDate}
+              now={new Date()}
               selectedEntry={sidebarSelectedEntry ?? undefined}
               contextTree={sidebarContextTree}
               onSelectEntry={handleSidebarSelectEntry}
@@ -1041,8 +1023,7 @@ function App() {
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
               onWidthChange={setJournalSidebarWidth}
-              activelyCyclingEntry={activelyCyclingEntry ?? undefined}
-              cyclingEntryPosition={cyclingEntryPosition}
+              onRefresh={loadData}
             />
           </div>
         </aside>
