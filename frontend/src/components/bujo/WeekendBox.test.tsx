@@ -26,25 +26,26 @@ describe('WeekendBox', () => {
   };
 
   it('renders date range with "Weekend" label when no locations', () => {
-    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[]} />);
-    expect(screen.getByText('24 - 25 Weekend')).toBeInTheDocument();
+    render(<WeekendBox saturdayDay={24} sundayDay={25} saturdayEntries={[]} sundayEntries={[]} />);
+    expect(screen.getByText(/24 - 25/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
   });
 
   it('renders Saturday entries with "Sat:" prefix', () => {
-    render(<WeekendBox startDay={24} saturdayEntries={[satEntry]} sundayEntries={[]} />);
+    render(<WeekendBox saturdayDay={24} sundayDay={25} saturdayEntries={[satEntry]} sundayEntries={[]} />);
     expect(screen.getByText('Sat:')).toBeInTheDocument();
     expect(screen.getByText('Saturday event')).toBeInTheDocument();
   });
 
   it('renders Sunday entries with "Sun:" prefix', () => {
-    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[sunEntry]} />);
+    render(<WeekendBox saturdayDay={24} sundayDay={25} saturdayEntries={[]} sundayEntries={[sunEntry]} />);
     expect(screen.getByText('Sun:')).toBeInTheDocument();
     expect(screen.getByText('Sunday event')).toBeInTheDocument();
   });
 
   it('renders both Saturday and Sunday entries together', () => {
     render(
-      <WeekendBox startDay={24} saturdayEntries={[satEntry]} sundayEntries={[sunEntry]} />
+      <WeekendBox saturdayDay={24} sundayDay={25} saturdayEntries={[satEntry]} sundayEntries={[sunEntry]} />
     );
     expect(screen.getByText('Saturday event')).toBeInTheDocument();
     expect(screen.getByText('Sunday event')).toBeInTheDocument();
@@ -53,7 +54,8 @@ describe('WeekendBox', () => {
   it('passes selectedEntry to WeekEntry', () => {
     render(
       <WeekendBox
-        startDay={24}
+        saturdayDay={24}
+        sundayDay={25}
         saturdayEntries={[satEntry]}
         sundayEntries={[]}
         selectedEntry={satEntry}
@@ -68,7 +70,8 @@ describe('WeekendBox', () => {
     const onSelectEntry = vi.fn();
     render(
       <WeekendBox
-        startDay={24}
+        saturdayDay={24}
+        sundayDay={25}
         saturdayEntries={[satEntry]}
         sundayEntries={[]}
         onSelectEntry={onSelectEntry}
@@ -83,7 +86,8 @@ describe('WeekendBox', () => {
   it('shows "No events" when both days are empty', () => {
     render(
       <WeekendBox
-        startDay={24}
+        saturdayDay={24}
+        sundayDay={25}
         saturdayEntries={[]}
         sundayEntries={[]}
       />
@@ -94,7 +98,8 @@ describe('WeekendBox', () => {
   it('does not show "No events" when Saturday has entries', () => {
     render(
       <WeekendBox
-        startDay={24}
+        saturdayDay={24}
+        sundayDay={25}
         saturdayEntries={[satEntry]}
         sundayEntries={[]}
       />
@@ -105,7 +110,8 @@ describe('WeekendBox', () => {
   it('does not show "No events" when Sunday has entries', () => {
     render(
       <WeekendBox
-        startDay={24}
+        saturdayDay={24}
+        sundayDay={25}
         saturdayEntries={[]}
         sundayEntries={[sunEntry]}
       />
@@ -115,7 +121,8 @@ describe('WeekendBox', () => {
 
   it('handles month boundary correctly (Jan 31 - Feb 1)', () => {
     render(<WeekendBox saturdayDay={31} sundayDay={1} saturdayEntries={[]} sundayEntries={[]} />);
-    expect(screen.getByText('31 - 1 Weekend')).toBeInTheDocument();
+    expect(screen.getByText(/31 - 1/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
   });
 
   it('displays Saturday location with "not set" for Sunday', () => {
@@ -128,7 +135,9 @@ describe('WeekendBox', () => {
         saturdayLocation="Office"
       />
     );
-    expect(screen.getByText('24 - 25 Weekend (Office / not set)')).toBeInTheDocument();
+    expect(screen.getByText(/24 - 25/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
+    expect(screen.getByText(/Office \/ not set/)).toBeInTheDocument();
   });
 
   it('displays Sunday location with "not set" for Saturday', () => {
@@ -141,7 +150,9 @@ describe('WeekendBox', () => {
         sundayLocation="Home"
       />
     );
-    expect(screen.getByText('24 - 25 Weekend (not set / Home)')).toBeInTheDocument();
+    expect(screen.getByText(/24 - 25/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
+    expect(screen.getByText(/not set \/ Home/)).toBeInTheDocument();
   });
 
   it('displays both Saturday and Sunday locations when provided', () => {
@@ -155,7 +166,9 @@ describe('WeekendBox', () => {
         sundayLocation="Home"
       />
     );
-    expect(screen.getByText('24 - 25 Weekend (Office / Home)')).toBeInTheDocument();
+    expect(screen.getByText(/24 - 25/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
+    expect(screen.getByText(/Office \/ Home/)).toBeInTheDocument();
   });
 
   it('displays header without location info when not provided', () => {
@@ -167,6 +180,7 @@ describe('WeekendBox', () => {
         sundayEntries={[]}
       />
     );
-    expect(screen.getByText('24 - 25 Weekend')).toBeInTheDocument();
+    expect(screen.getByText(/24 - 25/)).toBeInTheDocument();
+    expect(screen.getByText('Weekend')).toBeInTheDocument();
   });
 });

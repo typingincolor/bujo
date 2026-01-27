@@ -4,9 +4,8 @@ import { HabitItem, HabitDisplay } from './HabitItem';
 import { ActionCallbacks } from './EntryActions/types';
 
 interface WeekendBoxProps {
-  startDay?: number;
-  saturdayDay?: number;
-  sundayDay?: number;
+  saturdayDay: number;
+  sundayDay: number;
   saturdayEntries: Entry[];
   sundayEntries: Entry[];
   saturdayHabits?: HabitDisplay[];
@@ -19,7 +18,6 @@ interface WeekendBoxProps {
 }
 
 export function WeekendBox({
-  startDay,
   saturdayDay,
   sundayDay,
   saturdayEntries,
@@ -34,21 +32,16 @@ export function WeekendBox({
 }: WeekendBoxProps) {
   const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0;
 
-  const satDay = saturdayDay ?? startDay ?? 0;
-  const sunDay = sundayDay ?? (startDay ? startDay + 1 : 0);
-
-  // Build header text based on location availability
-  let headerText = `${satDay} - ${sunDay} Weekend`;
-  if (saturdayLocation || sundayLocation) {
-    const satLoc = saturdayLocation || 'not set';
-    const sunLoc = sundayLocation || 'not set';
-    headerText = `${satDay} - ${sunDay} Weekend (${satLoc} / ${sunLoc})`;
-  }
-
   return (
     <div className="border rounded-lg p-3 bg-card">
-      <div className="mb-3">
-        <span className="text-lg font-semibold">{headerText}</span>
+      <div className="mb-3 flex items-baseline gap-2">
+        <span className="text-lg font-semibold">{saturdayDay} - {sundayDay}</span>
+        <span className="text-sm text-muted-foreground">Weekend</span>
+        {(saturdayLocation || sundayLocation) && (
+          <span className="text-sm text-muted-foreground">
+            ({saturdayLocation || 'not set'} / {sundayLocation || 'not set'})
+          </span>
+        )}
       </div>
       <div className="space-y-1">
         {!hasContent ? (

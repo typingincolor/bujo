@@ -12,7 +12,8 @@ describe('DayBox', () => {
 
   it('renders day number and name in format "NN ddd"', () => {
     render(<DayBox dayNumber={20} dayName="Mon" entries={[]} />);
-    expect(screen.getByText('20 Mon')).toBeInTheDocument();
+    expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getByText('Mon')).toBeInTheDocument();
   });
 
   it('shows "No events" when empty', () => {
@@ -45,7 +46,9 @@ describe('DayBox', () => {
 
   it('displays work location in format "NN ddd - location"', () => {
     render(<DayBox dayNumber={20} dayName="Mon" entries={[]} location="Office" />);
-    expect(screen.getByText('20 Mon - Office')).toBeInTheDocument();
+    expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getByText('Mon')).toBeInTheDocument();
+    expect(screen.getByText(/- Office/)).toBeInTheDocument();
   });
 
   it('does not display location when not provided', () => {
