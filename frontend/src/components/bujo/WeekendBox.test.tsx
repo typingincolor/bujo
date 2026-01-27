@@ -25,14 +25,9 @@ describe('WeekendBox', () => {
     children: [],
   };
 
-  it('renders "Weekend" label', () => {
+  it('renders date range with "Weekend" label when no locations', () => {
     render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[]} />);
-    expect(screen.getByText('Weekend')).toBeInTheDocument();
-  });
-
-  it('renders date range from startDay', () => {
-    render(<WeekendBox startDay={24} saturdayEntries={[]} sundayEntries={[]} />);
-    expect(screen.getByText('24-25')).toBeInTheDocument();
+    expect(screen.getByText('24 - 25 Weekend')).toBeInTheDocument();
   });
 
   it('renders Saturday entries with "Sat:" prefix', () => {
@@ -120,10 +115,10 @@ describe('WeekendBox', () => {
 
   it('handles month boundary correctly (Jan 31 - Feb 1)', () => {
     render(<WeekendBox saturdayDay={31} sundayDay={1} saturdayEntries={[]} sundayEntries={[]} />);
-    expect(screen.getByText('31-1')).toBeInTheDocument();
+    expect(screen.getByText('31 - 1 Weekend')).toBeInTheDocument();
   });
 
-  it('displays Saturday location when provided', () => {
+  it('displays Saturday location with "not set" for Sunday', () => {
     render(
       <WeekendBox
         saturdayDay={24}
@@ -133,10 +128,10 @@ describe('WeekendBox', () => {
         saturdayLocation="Office"
       />
     );
-    expect(screen.getByText('Sat: Office')).toBeInTheDocument();
+    expect(screen.getByText('24 - 25 Weekend (Office / not set)')).toBeInTheDocument();
   });
 
-  it('displays Sunday location when provided', () => {
+  it('displays Sunday location with "not set" for Saturday', () => {
     render(
       <WeekendBox
         saturdayDay={24}
@@ -146,7 +141,7 @@ describe('WeekendBox', () => {
         sundayLocation="Home"
       />
     );
-    expect(screen.getByText('Sun: Home')).toBeInTheDocument();
+    expect(screen.getByText('24 - 25 Weekend (not set / Home)')).toBeInTheDocument();
   });
 
   it('displays both Saturday and Sunday locations when provided', () => {
@@ -160,11 +155,10 @@ describe('WeekendBox', () => {
         sundayLocation="Home"
       />
     );
-    expect(screen.getByText('Sat: Office')).toBeInTheDocument();
-    expect(screen.getByText('Sun: Home')).toBeInTheDocument();
+    expect(screen.getByText('24 - 25 Weekend (Office / Home)')).toBeInTheDocument();
   });
 
-  it('does not display location when not provided', () => {
+  it('displays header without location info when not provided', () => {
     render(
       <WeekendBox
         saturdayDay={24}
@@ -173,6 +167,6 @@ describe('WeekendBox', () => {
         sundayEntries={[]}
       />
     );
-    expect(screen.queryByText(/Office|Home/)).not.toBeInTheDocument();
+    expect(screen.getByText('24 - 25 Weekend')).toBeInTheDocument();
   });
 });
