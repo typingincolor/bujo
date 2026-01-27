@@ -1001,11 +1001,39 @@ function App() {
       {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
       {view === 'today' && (
         <aside
-          className="flex flex-col self-stretch border-l border-border bg-background transition-all duration-300 ease-in-out"
+          className="flex flex-col self-stretch bg-background relative"
           style={{
             width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
           }}
         >
+          {/* Resize Handle - spans full height of aside, outer div is hit area, inner div is visual border */}
+          {!isSidebarCollapsed && (
+            <div
+              data-testid="sidebar-resize-handle"
+              className="absolute left-0 top-0 h-full w-4 cursor-col-resize group z-10"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const handleMouseMove = (moveEvent: MouseEvent) => {
+                  const newWidth = window.innerWidth - moveEvent.clientX;
+                  const clampedWidth = Math.max(384, Math.min(960, newWidth));
+                  setJournalSidebarWidth(clampedWidth);
+                };
+                const handleMouseUp = () => {
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
+                  document.body.style.cursor = '';
+                  document.body.style.userSelect = '';
+                };
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+              }}
+            >
+              <div className="w-px h-full bg-border transition-colors group-hover:bg-primary/50" />
+            </div>
+          )}
+
           {/* Spacer to align with main content area (below header) */}
           <div className="h-[73px] flex-shrink-0" />
 
@@ -1020,7 +1048,6 @@ function App() {
               callbacks={sidebarCallbacks}
               isCollapsed={isSidebarCollapsed}
               onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-              onWidthChange={setJournalSidebarWidth}
               onRefresh={loadData}
             />
           </div>
