@@ -253,3 +253,25 @@ jobs:
         run: |
           test -d build/bin/bujoapp.app
           echo "✅ App bundle created successfully"
+
+  # Required status check - always runs to satisfy branch protection
+  ci-status:
+    name: CI Status
+    if: always()
+    needs: [changes, lint, test-go-macos, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required jobs
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          TEST_RESULT: ${{ needs.test-go-macos.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+        run: |
+          # Check if any required job failed (not skipped)
+          if [[ "$LINT_RESULT" == "failure" ]] || \
+             [[ "$TEST_RESULT" == "failure" ]] || \
+             [[ "$FRONTEND_RESULT" == "failure" ]]; then
+            echo "❌ One or more required jobs failed"
+            exit 1
+          fi
+          echo "✅ All required jobs passed or were correctly skipped"
