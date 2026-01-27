@@ -8,12 +8,13 @@ interface DayBoxProps {
   dayName: string;
   entries: Entry[];
   habits?: HabitDisplay[];
+  location?: string;
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
   createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
-export function DayBox({ dayNumber, dayName, entries, habits = [], selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
+export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
   const hasContent = entries.length > 0 || habits.length > 0;
 
   return (
@@ -21,6 +22,7 @@ export function DayBox({ dayNumber, dayName, entries, habits = [], selectedEntry
       <div className="mb-3 flex items-baseline gap-2">
         <span className="text-2xl font-semibold">{dayNumber}</span>
         <span className="text-sm text-muted-foreground">{dayName}</span>
+        {location && <span className="text-sm text-muted-foreground">{location}</span>}
       </div>
 
       <div className="space-y-1 max-h-64 overflow-y-auto">

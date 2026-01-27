@@ -122,4 +122,57 @@ describe('WeekendBox', () => {
     render(<WeekendBox saturdayDay={31} sundayDay={1} saturdayEntries={[]} sundayEntries={[]} />);
     expect(screen.getByText('31-1')).toBeInTheDocument();
   });
+
+  it('displays Saturday location when provided', () => {
+    render(
+      <WeekendBox
+        saturdayDay={24}
+        sundayDay={25}
+        saturdayEntries={[]}
+        sundayEntries={[]}
+        saturdayLocation="Office"
+      />
+    );
+    expect(screen.getByText('Sat: Office')).toBeInTheDocument();
+  });
+
+  it('displays Sunday location when provided', () => {
+    render(
+      <WeekendBox
+        saturdayDay={24}
+        sundayDay={25}
+        saturdayEntries={[]}
+        sundayEntries={[]}
+        sundayLocation="Home"
+      />
+    );
+    expect(screen.getByText('Sun: Home')).toBeInTheDocument();
+  });
+
+  it('displays both Saturday and Sunday locations when provided', () => {
+    render(
+      <WeekendBox
+        saturdayDay={24}
+        sundayDay={25}
+        saturdayEntries={[]}
+        sundayEntries={[]}
+        saturdayLocation="Office"
+        sundayLocation="Home"
+      />
+    );
+    expect(screen.getByText('Sat: Office')).toBeInTheDocument();
+    expect(screen.getByText('Sun: Home')).toBeInTheDocument();
+  });
+
+  it('does not display location when not provided', () => {
+    render(
+      <WeekendBox
+        saturdayDay={24}
+        sundayDay={25}
+        saturdayEntries={[]}
+        sundayEntries={[]}
+      />
+    );
+    expect(screen.queryByText(/Office|Home/)).not.toBeInTheDocument();
+  });
 });

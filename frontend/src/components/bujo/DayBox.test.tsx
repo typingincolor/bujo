@@ -43,4 +43,14 @@ describe('DayBox', () => {
     const selectedItem = container.querySelector('.bg-primary\\/10');
     expect(selectedItem).toBeInTheDocument();
   });
+
+  it('displays work location in header when provided', () => {
+    render(<DayBox dayNumber={20} dayName="Mon" entries={[]} location="Office" />);
+    expect(screen.getByText('Office')).toBeInTheDocument();
+  });
+
+  it('does not display location when not provided', () => {
+    render(<DayBox dayNumber={20} dayName="Mon" entries={[]} />);
+    expect(screen.queryByText('Office')).not.toBeInTheDocument();
+  });
 });

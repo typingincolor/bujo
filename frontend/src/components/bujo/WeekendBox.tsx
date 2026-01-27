@@ -11,6 +11,8 @@ interface WeekendBoxProps {
   sundayEntries: Entry[];
   saturdayHabits?: HabitDisplay[];
   sundayHabits?: HabitDisplay[];
+  saturdayLocation?: string;
+  sundayLocation?: string;
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
   createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
@@ -24,11 +26,13 @@ export function WeekendBox({
   sundayEntries,
   saturdayHabits = [],
   sundayHabits = [],
+  saturdayLocation,
+  sundayLocation,
   selectedEntry,
   onSelectEntry,
   createEntryCallbacks,
 }: WeekendBoxProps) {
-  const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0;
+  const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0 || saturdayLocation || sundayLocation;
 
   const satDay = saturdayDay ?? startDay ?? 0;
   const sunDay = sundayDay ?? (startDay ? startDay + 1 : 0);
@@ -44,6 +48,9 @@ export function WeekendBox({
           <p className="text-sm text-muted-foreground">No events</p>
         ) : (
           <>
+            {saturdayLocation && (
+              <p className="text-sm text-muted-foreground">Sat: {saturdayLocation}</p>
+            )}
             {saturdayHabits.map((habit, index) => (
               <HabitItem
                 key={`habit-sat-${habit.name}-${index}`}
@@ -62,6 +69,9 @@ export function WeekendBox({
                 callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
+            {sundayLocation && (
+              <p className="text-sm text-muted-foreground">Sun: {sundayLocation}</p>
+            )}
             {sundayHabits.map((habit, index) => (
               <HabitItem
                 key={`habit-sun-${habit.name}-${index}`}

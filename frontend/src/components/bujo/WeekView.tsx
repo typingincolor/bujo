@@ -113,6 +113,7 @@ export function WeekView({
               dayName={day.dayName}
               entries={day.entries}
               habits={getHabitsForDate(day.date)}
+              location={day.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
               createEntryCallbacks={createEntryCallbacks}
@@ -127,6 +128,8 @@ export function WeekView({
               sundayEntries={filteredSunday}
               saturdayHabits={getHabitsForDate(saturday.date)}
               sundayHabits={getHabitsForDate(sunday.date)}
+              saturdayLocation={saturday.location}
+              sundayLocation={sunday.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
               createEntryCallbacks={createEntryCallbacks}
