@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
@@ -78,7 +79,7 @@ describe('WeekView', () => {
 
   it('shows context panel when entry selected', async () => {
     const user = userEvent.setup();
-    render(<WeekView days={mockWeekData} />);
+    render(<WeekView days={mockWeekData} isContextCollapsed={false} />);
 
     await user.click(screen.getByText('Mon meeting'));
     expect(screen.getByText('Context')).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe('WeekView', () => {
     ];
 
     const user = userEvent.setup();
-    render(<WeekView days={withRootEntry} />);
+    render(<WeekView days={withRootEntry} isContextCollapsed={false} />);
 
     // Click root-level entry
     await user.click(screen.getByText('Root task'));
@@ -110,7 +111,7 @@ describe('WeekView', () => {
   });
 
   it('shows "No entry selected" initially', () => {
-    render(<WeekView days={mockWeekData} />);
+    render(<WeekView days={mockWeekData} isContextCollapsed={false} />);
     expect(screen.getByText('No entry selected')).toBeInTheDocument();
   });
 
@@ -195,5 +196,127 @@ describe('WeekView', () => {
     expect(dayBoxes[2]).toHaveTextContent('22');
     expect(dayBoxes[3]).toHaveTextContent('23');
     expect(dayBoxes[4]).toHaveTextContent('24');
+  });
+
+  it('displays context tree from prop when entry selected', async () => {
+    const contextEntries = [
+      { id: 10, content: 'Parent task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
+      { id: 11, content: 'Child task', type: 'task', priority: 'high', parentId: 10, loggedDate: '2026-01-19', children: [] },
+    ];
+
+    const user = userEvent.setup();
+    render(
+      <WeekView
+        days={mockWeekData}
+        contextTree={contextEntries}
+        isContextCollapsed={false}
+      />
+    );
+
+    await user.click(screen.getByText('Mon meeting'));
+
+    expect(screen.getByText('Parent task')).toBeInTheDocument();
+    expect(screen.getByText('Child task')).toBeInTheDocument();
+  });
+
+  it('shows "No context" when contextTree prop is empty', async () => {
+    const user = userEvent.setup();
+    render(
+      <WeekView
+        days={mockWeekData}
+        contextTree={[]}
+        isContextCollapsed={false}
+      />
+    );
+
+    await user.click(screen.getByText('Mon meeting'));
+
+    expect(screen.getByText('No context')).toBeInTheDocument();
+  });
+
+  describe('Collapsible Context Panel', () => {
+    it('context panel is collapsed by default', () => {
+      render(<WeekView days={mockWeekData} />);
+
+      // When collapsed, context content should not be visible
+      expect(screen.queryByText('Context')).not.toBeInTheDocument();
+    });
+
+    it('shows collapse toggle button', () => {
+      render(<WeekView days={mockWeekData} />);
+
+      const toggleButton = screen.getByLabelText('Toggle context panel');
+      expect(toggleButton).toBeInTheDocument();
+    });
+
+    it('expands context panel when toggle clicked', async () => {
+      const user = userEvent.setup();
+
+      // Create a wrapper component that manages state
+      function WrapperComponent() {
+        const [isCollapsed, setIsCollapsed] = React.useState(true);
+        return (
+          <WeekView
+            days={mockWeekData}
+            isContextCollapsed={isCollapsed}
+            onToggleContextCollapse={() => setIsCollapsed(!isCollapsed)}
+          />
+        );
+      }
+
+      render(<WrapperComponent />);
+
+      // Initially collapsed - Context should not be visible
+      expect(screen.queryByText('Context')).not.toBeInTheDocument();
+
+      const toggleButton = screen.getByLabelText('Toggle context panel');
+      await user.click(toggleButton);
+
+      // After expanding, context section should be visible
+      expect(screen.getByText('Context')).toBeInTheDocument();
+    });
+
+    it('calls onToggleContextCollapse callback when toggle clicked', async () => {
+      const user = userEvent.setup();
+      const onToggleContextCollapse = vi.fn();
+
+      render(
+        <WeekView
+          days={mockWeekData}
+          onToggleContextCollapse={onToggleContextCollapse}
+        />
+      );
+
+      const toggleButton = screen.getByLabelText('Toggle context panel');
+      await user.click(toggleButton);
+
+      expect(onToggleContextCollapse).toHaveBeenCalledOnce();
+    });
+
+    it('shows ChevronLeft icon when collapsed', () => {
+      render(
+        <WeekView
+          days={mockWeekData}
+          isContextCollapsed={true}
+        />
+      );
+
+      const toggleButton = screen.getByLabelText('Toggle context panel');
+      // ChevronLeft points left, indicating expand action
+      expect(toggleButton.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('shows ChevronRight icon when expanded', () => {
+      render(
+        <WeekView
+          days={mockWeekData}
+          isContextCollapsed={false}
+        />
+      );
+
+      const toggleButton = screen.getByLabelText('Toggle context panel');
+      // ChevronRight points right, indicating collapse action
+      expect(toggleButton.querySelector('svg')).toBeInTheDocument();
+    });
   });
 });

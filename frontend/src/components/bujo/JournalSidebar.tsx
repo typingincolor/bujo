@@ -4,6 +4,8 @@ import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { buildTree } from '@/lib/buildTree';
+import { ContextTree } from './ContextTree';
 
 interface EntryCallbacks {
   onMarkDone?: () => void;
@@ -121,80 +123,6 @@ interface JournalSidebarProps {
   cyclingEntryPosition?: number;
 }
 
-interface TreeNode {
-  entry: Entry;
-  children: TreeNode[];
-}
-
-function buildTree(entries: Entry[]): TreeNode[] {
-  if (entries.length === 0) return [];
-
-  const entryMap = new Map<number, Entry>();
-  const childrenMap = new Map<number | null, Entry[]>();
-
-  for (const entry of entries) {
-    entryMap.set(entry.id, entry);
-    const parentId = entry.parentId;
-    if (!childrenMap.has(parentId)) {
-      childrenMap.set(parentId, []);
-    }
-    childrenMap.get(parentId)!.push(entry);
-  }
-
-  function buildNode(entry: Entry): TreeNode {
-    const children = childrenMap.get(entry.id) || [];
-    return {
-      entry,
-      children: children.map(buildNode),
-    };
-  }
-
-  const roots = childrenMap.get(null) || [];
-  return roots.map(buildNode);
-}
-
-interface ContextTreeProps {
-  nodes: TreeNode[];
-  selectedEntryId?: number;
-  depth?: number;
-}
-
-function ContextTree({ nodes, selectedEntryId, depth = 0 }: ContextTreeProps) {
-  return (
-    <>
-      {nodes.map((node) => (
-        <div key={node.entry.id}>
-          <div
-            className={cn(
-              'flex items-center gap-2 text-sm py-0.5 font-mono',
-              node.entry.id === selectedEntryId
-                ? 'font-medium'
-                : 'text-muted-foreground'
-            )}
-            style={{ paddingLeft: `${depth * 12}px` }}
-          >
-            <span className="text-muted-foreground">
-              {ENTRY_SYMBOLS[node.entry.type]}
-            </span>
-            <span className={cn(
-              'truncate',
-              node.entry.id === selectedEntryId && 'text-foreground'
-            )}>
-              {node.entry.content}
-            </span>
-          </div>
-          {node.children.length > 0 && (
-            <ContextTree
-              nodes={node.children}
-              selectedEntryId={selectedEntryId}
-              depth={depth + 1}
-            />
-          )}
-        </div>
-      ))}
-    </>
-  );
-}
 
 export function JournalSidebar({
   overdueEntries = [],

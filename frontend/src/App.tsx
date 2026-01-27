@@ -30,6 +30,7 @@ import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
+import { startOfWeek, endOfWeek } from 'date-fns'
 import { scrollToPosition } from '@/lib/scrollUtils'
 import './index.css'
 
@@ -85,9 +86,12 @@ function App() {
   const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
   const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
+  const [reviewSelectedEntry, setReviewSelectedEntry] = useState<Entry | null>(null)
+  const [reviewContextTree, setReviewContextTree] = useState<Entry[]>([])
   const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
+  const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
   const [activelyCyclingEntry, setActivelyCyclingEntry] = useState<Entry | null>(null)
   const [cyclingEntryPosition, setCyclingEntryPosition] = useState<number>(-1)
   const initialLoadCompleteRef = useRef(false)
@@ -105,11 +109,10 @@ function App() {
       const weekLater = new Date(currentDate.getTime() + 7 * 24 * 60 * 60 * 1000)
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-      // Review view: past 7 days ending at reviewAnchorDate
-      // Backend loop uses !d.After(to) which is INCLUSIVE of end date
-      // So we pass anchorDate directly as end, not anchorDate + 24h
-      const reviewEnd = reviewAnchorDate
-      const reviewStart = new Date(reviewAnchorDate.getTime() - 6 * 24 * 60 * 60 * 1000)
+      // Review view: show the full week (Mon-Sun) containing reviewAnchorDate
+      // Use date-fns to get proper week boundaries with Monday as first day
+      const reviewStart = startOfWeek(reviewAnchorDate, { weekStartsOn: 1 })
+      const reviewEnd = endOfWeek(reviewAnchorDate, { weekStartsOn: 1 })
 
       const [agendaData, reviewData, habitsData, listsData, goalsData, questionsData] = await Promise.all([
         GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
@@ -177,6 +180,23 @@ function App() {
         setSidebarContextTree([])
       })
   }, [sidebarSelectedEntry])
+
+  // Fetch full context tree for review-selected entry from backend
+  useEffect(() => {
+    if (!reviewSelectedEntry) {
+      setReviewContextTree([])
+      return
+    }
+
+    GetEntryContext(reviewSelectedEntry.id)
+      .then((entries) => {
+        setReviewContextTree(entries.map(transformEntry))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch entry context:', err)
+        setReviewContextTree([])
+      })
+  }, [reviewSelectedEntry])
 
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
     try {
@@ -880,6 +900,10 @@ function App() {
                   },
                   onMoveToList: (entry) => setMoveToListEntry(entry),
                 }}
+                onSelectEntry={(entry) => setReviewSelectedEntry(entry ?? null)}
+                contextTree={reviewContextTree}
+                isContextCollapsed={isWeekContextCollapsed}
+                onToggleContextCollapse={() => setIsWeekContextCollapsed(prev => !prev)}
               />
             </div>
           )}

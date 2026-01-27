@@ -1,10 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DayEntries, Entry } from '@/types/bujo';
 import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
 import { filterWeekEntries, flattenEntries } from '@/lib/weekView';
 import { format, parseISO } from 'date-fns';
 import { ActionCallbacks } from './EntryActions/types';
+import { buildTree } from '@/lib/buildTree';
+import { ContextTree } from './ContextTree';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface WeekViewCallbacks {
   onMarkDone?: (entry: Entry) => void;
@@ -18,66 +22,29 @@ export interface WeekViewCallbacks {
 interface WeekViewProps {
   days: DayEntries[];
   callbacks?: WeekViewCallbacks;
+  contextTree?: Entry[];
+  onSelectEntry?: (entry: Entry | undefined) => void;
+  isContextCollapsed?: boolean;
+  onToggleContextCollapse?: () => void;
 }
 
-interface TreeNode {
-  entry: Entry;
-  children: TreeNode[];
-}
-
-function buildTree(entries: Entry[]): TreeNode[] {
-  if (entries.length === 0) return [];
-
-  const entryMap = new Map<number, Entry>();
-  const childrenMap = new Map<number | null, Entry[]>();
-
-  for (const entry of entries) {
-    entryMap.set(entry.id, entry);
-    const parentId = entry.parentId;
-    if (!childrenMap.has(parentId)) {
-      childrenMap.set(parentId, []);
-    }
-    childrenMap.get(parentId)!.push(entry);
-  }
-
-  function buildNode(entry: Entry): TreeNode {
-    const children = childrenMap.get(entry.id) || [];
-    return {
-      entry,
-      children: children.map(buildNode),
-    };
-  }
-
-  const roots = childrenMap.get(null) || [];
-  return roots.map(buildNode);
-}
-
-function ContextTree({ nodes, selectedEntryId, depth = 0 }: { nodes: TreeNode[]; selectedEntryId?: number; depth?: number }) {
-  return (
-    <>
-      {nodes.map((node) => (
-        <div key={node.entry.id}>
-          <div
-            className="flex items-center gap-2 text-sm py-0.5 font-mono"
-            style={{ paddingLeft: `${depth * 12}px` }}
-          >
-            <span className={node.entry.id === selectedEntryId ? 'text-foreground' : 'text-muted-foreground'}>
-              {node.entry.content}
-            </span>
-          </div>
-          {node.children.length > 0 && (
-            <ContextTree nodes={node.children} selectedEntryId={selectedEntryId} depth={depth + 1} />
-          )}
-        </div>
-      ))}
-    </>
-  );
-}
-
-export function WeekView({ days, callbacks = {} }: WeekViewProps) {
+export function WeekView({
+  days,
+  callbacks = {},
+  contextTree: contextTreeProp,
+  onSelectEntry,
+  isContextCollapsed = true, // Default collapsed per user request
+  onToggleContextCollapse
+}: WeekViewProps) {
   const [selectedEntry, setSelectedEntry] = useState<Entry | undefined>();
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  useEffect(() => {
+    if (onSelectEntry) {
+      onSelectEntry(selectedEntry);
+    }
+  }, [selectedEntry, onSelectEntry]);
 
   const createEntryCallbacks = (entry: Entry): ActionCallbacks => ({
     onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
@@ -109,9 +76,13 @@ export function WeekView({ days, callbacks = {} }: WeekViewProps) {
   const endDate = days[6] ? parseISO(days[6].date) : new Date();
   const dateRange = `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`;
 
-  const allEntries = days.flatMap(day => flattenEntries(day.entries));
-
-  const contextTree = useMemo(() => buildTree(allEntries), [allEntries]);
+  const contextTree = useMemo(() => {
+    if (contextTreeProp !== undefined) {
+      return buildTree(contextTreeProp);
+    }
+    const allEntries = days.flatMap(day => flattenEntries(day.entries));
+    return buildTree(allEntries);
+  }, [contextTreeProp, days]);
 
   return (
     <div className="flex h-full gap-4">
@@ -147,17 +118,38 @@ export function WeekView({ days, callbacks = {} }: WeekViewProps) {
         </div>
       </div>
 
-      <div className="w-96 border-l border-border pl-4 overflow-y-auto">
-        <div className="mb-3">
-          <h3 className="text-sm font-medium">Context</h3>
-        </div>
+      <div className={cn("relative", isContextCollapsed ? "w-12" : "w-96")}>
+        {/* Collapse Toggle Button - always shown */}
+        <button
+          onClick={onToggleContextCollapse}
+          aria-label="Toggle context panel"
+          className={cn(
+            "absolute top-2 p-1.5 hover:bg-secondary rounded-md transition-colors z-10",
+            isContextCollapsed ? "left-1/2 -translate-x-1/2" : "right-2"
+          )}
+        >
+          {isContextCollapsed ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
 
-        {!selectedEntry ? (
-          <p className="text-sm text-muted-foreground">No entry selected</p>
-        ) : contextTree.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No context</p>
-        ) : (
-          <ContextTree nodes={contextTree} selectedEntryId={selectedEntry.id} />
+        {/* Context Panel Content - hidden when collapsed */}
+        {!isContextCollapsed && (
+          <div className="border-l border-border pl-4 overflow-y-auto h-full">
+            <div className="mb-3">
+              <h3 className="text-sm font-medium">Context</h3>
+            </div>
+
+            {!selectedEntry ? (
+              <p className="text-sm text-muted-foreground">No entry selected</p>
+            ) : contextTree.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No context</p>
+            ) : (
+              <ContextTree nodes={contextTree} selectedEntryId={selectedEntry.id} />
+            )}
+          </div>
         )}
       </div>
     </div>

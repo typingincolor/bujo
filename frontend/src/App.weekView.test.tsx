@@ -83,7 +83,10 @@ describe('WeekView Integration', () => {
 
     await waitFor(() => {
       const main = screen.getByRole('main')
-      expect(within(main).getByText('Context')).toBeInTheDocument()
+      // Context panel is collapsed by default, so Context heading should NOT be visible
+      expect(within(main).queryByText('Context')).not.toBeInTheDocument()
+      // Toggle button should be visible
+      expect(within(main).getByLabelText('Toggle context panel')).toBeInTheDocument()
     })
   })
 })
