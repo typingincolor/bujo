@@ -280,6 +280,17 @@ function App() {
 
       if (isInputFocused) return
 
+      // View navigation shortcuts (CMD+1 through CMD+9) - always available
+      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
+        e.preventDefault()
+        const viewMap: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+        const viewIndex = parseInt(e.key) - 1
+        if (viewIndex < viewMap.length) {
+          handleViewChange(viewMap[viewIndex])
+        }
+        return
+      }
+
       // Day navigation shortcuts (h/l/T) - always available in today view
       if (view === 'today') {
         if (e.key === 'h') {
