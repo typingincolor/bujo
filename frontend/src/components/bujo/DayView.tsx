@@ -3,7 +3,7 @@ import { EntryItem } from './EntryItem';
 import { Calendar, Sparkles } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, GetSummary, MoveEntryToRoot } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
@@ -132,13 +132,32 @@ function EntryTree({ entries, depth = 0, collapsedIds, selectedEntryId, onToggle
   );
 }
 
+function getParentIds(tree: Entry[]): Set<number> {
+  const parentIds = new Set<number>();
+  const visit = (entries: Entry[]) => {
+    entries.forEach(entry => {
+      if (entry.children && entry.children.length > 0) {
+        parentIds.add(entry.id);
+        visit(entry.children);
+      }
+    });
+  };
+  visit(tree);
+  return parentIds;
+}
+
 export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, onEditEntry, onDeleteEntry, onMigrateEntry, onAddChild, onAnswerEntry, onMoveToList }: DayViewProps) {
-  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
+  const tree = useMemo(() => buildTree(day.entries), [day.entries]);
+  const initialCollapsed = useMemo(() => getParentIds(tree), [tree]);
+  const [collapsedIds, setCollapsedIds] = useState<Set<number>>(initialCollapsed);
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
-  const tree = buildTree(day.entries);
   const dateObj = new Date(day.date + 'T00:00:00');
+
+  useEffect(() => {
+    setCollapsedIds(getParentIds(tree));
+  }, [tree]);
 
   const toggleCollapse = (id: number) => {
     setCollapsedIds(prev => {

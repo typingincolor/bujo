@@ -210,6 +210,10 @@ describe('DayView', () => {
 
       render(<DayView day={dayWithChildren} />)
 
+      // Expand parent first (parents default to collapsed)
+      const expandButton = screen.getByRole('button', { name: '' })
+      fireEvent.click(expandButton)
+
       const childEntry = screen.getByText('Child task').closest('[data-entry-id]')!
       fireEvent.contextMenu(childEntry)
 
@@ -256,11 +260,93 @@ describe('DayView', () => {
 
       render(<DayView day={dayWithChildren} onEntryChanged={onEntryChanged} />)
 
+      // Expand parent first (parents default to collapsed)
+      const expandButton = screen.getByRole('button', { name: '' })
+      fireEvent.click(expandButton)
+
       const childEntry = screen.getByText('Child task').closest('[data-entry-id]')!
       fireEvent.contextMenu(childEntry)
       fireEvent.click(screen.getByRole('menuitem', { name: 'Move to root' }))
 
       expect(mockMoveEntryToRoot).toHaveBeenCalledWith(2)
+    })
+  })
+
+  describe('collapse behavior', () => {
+    it('parent entries default to collapsed', () => {
+      const dayWithChildren = createTestDay({
+        entries: [
+          {
+            id: 1,
+            type: 'task',
+            content: 'Parent task',
+            priority: 'none',
+            parentId: null,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+          {
+            id: 2,
+            type: 'task',
+            content: 'Child task',
+            priority: 'none',
+            parentId: 1,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+        ],
+      })
+
+      render(<DayView day={dayWithChildren} />)
+
+      // Parent should be visible
+      expect(screen.getByText('Parent task')).toBeInTheDocument()
+
+      // Child should NOT be visible (parent is collapsed by default)
+      expect(screen.queryByText('Child task')).not.toBeInTheDocument()
+
+      // Should show "1 hidden" badge on parent
+      expect(screen.getByText('1 hidden')).toBeInTheDocument()
+    })
+
+    it('clicking collapse toggle expands parent to show children', () => {
+      const dayWithChildren = createTestDay({
+        entries: [
+          {
+            id: 1,
+            type: 'task',
+            content: 'Parent task',
+            priority: 'none',
+            parentId: null,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+          {
+            id: 2,
+            type: 'task',
+            content: 'Child task',
+            priority: 'none',
+            parentId: 1,
+            loggedDate: '2026-01-17',
+            children: [],
+          },
+        ],
+      })
+
+      render(<DayView day={dayWithChildren} />)
+
+      // Child should NOT be visible initially
+      expect(screen.queryByText('Child task')).not.toBeInTheDocument()
+
+      // Click expand button (ChevronRight)
+      const expandButton = screen.getByRole('button', { name: '' })
+      fireEvent.click(expandButton)
+
+      // Child should now be visible
+      expect(screen.getByText('Child task')).toBeInTheDocument()
+
+      // "hidden" badge should no longer be visible
+      expect(screen.queryByText('1 hidden')).not.toBeInTheDocument()
     })
   })
 })

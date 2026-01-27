@@ -490,8 +490,14 @@ describe('App - Migrate Entry with Children', () => {
     // Wait for render
     await waitFor(() => {
       expect(screen.getByText('Parent task')).toBeInTheDocument()
-      expect(screen.getByText('Child note')).toBeInTheDocument()
     })
+
+    // Expand parent first (parents default to collapsed)
+    const expandButton = screen.getByRole('button', { name: '' })
+    fireEvent.click(expandButton)
+
+    // Now child should be visible
+    expect(screen.getByText('Child note')).toBeInTheDocument()
 
     // Check that both parent and child are rendered as migrated
     const allEntries = screen.getAllByTestId('entry-item')
