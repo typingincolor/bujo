@@ -156,7 +156,7 @@ func (m Model) renderContextHelp() string {
 }
 
 func (m Model) renderJournalContent() string {
-	if m.agenda == nil {
+	if m.days == nil {
 		return "Loading..."
 	}
 

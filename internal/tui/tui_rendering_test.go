@@ -572,7 +572,7 @@ func TestJournalView_ShowsDailySummary(t *testing.T) {
 	}
 	model.summaryState.horizon = "daily"
 	model.summaryCollapsed = false // Expand summary to see content
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	output := model.View()
 
@@ -592,7 +592,7 @@ func TestJournalView_ShowsWeeklySummary(t *testing.T) {
 	}
 	model.summaryState.horizon = "weekly"
 	model.summaryCollapsed = false // Expand summary to see content
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	output := model.View()
 
@@ -608,7 +608,7 @@ func TestJournalView_DoesNotLoadSummaryWithoutService(t *testing.T) {
 	model.viewMode = ViewModeDay
 	initialHorizon := model.summaryState.horizon
 
-	msg := agendaLoadedMsg{agenda: &service.MultiDayAgenda{}}
+	msg := daysLoadedMsg{days: []service.DayEntries{}}
 	newModel, _ := model.Update(msg)
 	m := newModel.(Model)
 
@@ -698,13 +698,11 @@ func TestModel_WeeklyView_MarkDone_PreservesFocus(t *testing.T) {
 		Entries: []domain.Entry{entries[0].Entry, entries[1].Entry, entries[2].Entry, entries[3].Entry},
 	}
 
-	agendaMsg := agendaLoadedMsg{
-		agenda: &service.MultiDayAgenda{
-			Days: []service.DayEntries{dayEntries},
-		},
+	daysMsg := daysLoadedMsg{
+		days: []service.DayEntries{dayEntries},
 	}
 
-	newModel, _ := model.Update(agendaMsg)
+	newModel, _ := model.Update(daysMsg)
 	m := newModel.(Model)
 
 	// Focus should be preserved on the same entry EntityID
@@ -718,7 +716,7 @@ func TestModel_WeeklyView_MarkDone_PreservesFocus(t *testing.T) {
 	}
 
 	if newIdx == -1 {
-		t.Error("selected entry not found after agenda reload")
+		t.Error("selected entry not found after days reload")
 	}
 
 	if m.selectedIdx != newIdx {
@@ -727,7 +725,7 @@ func TestModel_WeeklyView_MarkDone_PreservesFocus(t *testing.T) {
 
 	// The selectedIdx should still be within valid bounds
 	if m.selectedIdx < 0 || m.selectedIdx >= len(m.entries) {
-		t.Errorf("selectedIdx is out of bounds after agendaLoadedMsg, got %d, len=%d", m.selectedIdx, len(m.entries))
+		t.Errorf("selectedIdx is out of bounds after daysLoadedMsg, got %d, len=%d", m.selectedIdx, len(m.entries))
 	}
 }
 
@@ -773,7 +771,7 @@ func TestRenderJournalContent_EmptyMessage_DayView(t *testing.T) {
 	model := New(nil)
 	model.viewMode = ViewModeDay
 	model.entries = []EntryItem{}
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 
@@ -791,7 +789,7 @@ func TestRenderJournalContent_EmptyMessage_WeekView(t *testing.T) {
 	model := New(nil)
 	model.viewMode = ViewModeWeek
 	model.entries = []EntryItem{}
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 
@@ -799,45 +797,6 @@ func TestRenderJournalContent_EmptyMessage_WeekView(t *testing.T) {
 
 	if !strings.Contains(view, "7 days") {
 		t.Error("week view should say 'No entries for the last 7 days' when there are no entries")
-	}
-}
-
-func TestFlattenAgenda_IncludesDayEntries(t *testing.T) {
-	model := New(nil)
-	model.viewMode = ViewModeDay
-	model.viewDate = time.Now()
-	model.collapsed = make(map[domain.EntityID]bool)
-
-	today := time.Now()
-
-	agenda := &service.MultiDayAgenda{
-		Days: []service.DayEntries{
-			{
-				Date: today,
-				Entries: []domain.Entry{
-					{
-						ID:            2,
-						EntityID:      "entity-2",
-						Content:       "Today task",
-						Type:          domain.EntryTypeTask,
-						ScheduledDate: &today,
-					},
-				},
-			},
-		},
-	}
-
-	items := model.flattenAgenda(agenda)
-
-	foundTodayTask := false
-	for _, item := range items {
-		if item.Entry.Content == "Today task" {
-			foundTodayTask = true
-		}
-	}
-
-	if !foundTodayTask {
-		t.Error("flattenAgenda should include entries from Days")
 	}
 }
 

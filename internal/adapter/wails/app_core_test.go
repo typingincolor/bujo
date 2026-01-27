@@ -39,7 +39,7 @@ func TestApp_Startup_StoresContext(t *testing.T) {
 	assert.NotNil(t, wailsApp.ctx)
 }
 
-func TestApp_GetAgenda_ReturnsMultiDayAgenda(t *testing.T) {
+func TestApp_GetDayEntries_ReturnsDaysInRange(t *testing.T) {
 	ctx := context.Background()
 
 	factory := app.NewServiceFactory()
@@ -51,11 +51,34 @@ func TestApp_GetAgenda_ReturnsMultiDayAgenda(t *testing.T) {
 	wailsApp.Startup(ctx)
 
 	today := time.Now().Truncate(24 * time.Hour)
-	agenda, err := wailsApp.GetAgenda(today, today.AddDate(0, 0, 7))
+	days, err := wailsApp.GetDayEntries(today, today.AddDate(0, 0, 7))
 
 	require.NoError(t, err)
-	assert.NotNil(t, agenda)
-	assert.NotNil(t, agenda.Days)
+	assert.NotNil(t, days)
+	assert.Len(t, days, 8) // today + 7 days
+}
+
+func TestApp_GetOverdue_ReturnsOverdueEntries(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	// Create an overdue task (yesterday)
+	yesterday := time.Now().AddDate(0, 0, -1).Truncate(24 * time.Hour)
+	_, err = services.Bujo.LogEntries(ctx, ". Overdue task", service.LogEntriesOptions{Date: yesterday})
+	require.NoError(t, err)
+
+	overdue, err := wailsApp.GetOverdue()
+
+	require.NoError(t, err)
+	assert.Len(t, overdue, 1)
+	assert.Equal(t, "Overdue task", overdue[0].Content)
 }
 
 func TestApp_GetHabits_ReturnsTrackerStatus(t *testing.T) {
@@ -130,11 +153,11 @@ func TestApp_MarkEntryDone_MarksTaskAsDone(t *testing.T) {
 	err = wailsApp.MarkEntryDone(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "✓", agenda.Days[0].Entries[0].Type.Symbol())
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "✓", days[0].Entries[0].Type.Symbol())
 }
 
 func TestApp_MarkEntryUndone_RevertsToTask(t *testing.T) {
@@ -159,11 +182,11 @@ func TestApp_MarkEntryUndone_RevertsToTask(t *testing.T) {
 	err = wailsApp.MarkEntryUndone(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "•", days[0].Entries[0].Type.Symbol())
 }
 
 func TestApp_AddEntry_CreatesNewEntry(t *testing.T) {
@@ -182,11 +205,11 @@ func TestApp_AddEntry_CreatesNewEntry(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, ids, 1)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "New task from desktop", agenda.Days[0].Entries[0].Content)
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "New task from desktop", days[0].Entries[0].Content)
 }
 
 func TestApp_LogHabit_LogsHabitByID(t *testing.T) {

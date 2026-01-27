@@ -3,14 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockAgendaWithOverdue = createMockAgenda({
-  Overdue: [
-    createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
-    createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
-  ],
-})
+const mockDays = createMockDays([])
+const mockOverdue = createMockOverdue([
+  createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
+  createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -19,10 +18,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-25T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-25T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -41,12 +38,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { GetAgenda } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 describe('App - Sidebar Collapse', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockAgendaWithOverdue)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   describe('Sidebar collapse with [ keyboard shortcut', () => {

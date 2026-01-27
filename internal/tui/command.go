@@ -73,7 +73,7 @@ func DefaultCommands() *CommandRegistry {
 		Keybinding:  "1",
 		Action: func(m Model) (Model, tea.Cmd) {
 			m.currentView = ViewTypeJournal
-			return m, m.loadAgendaCmd()
+			return m, m.loadDaysCmd()
 		},
 	})
 

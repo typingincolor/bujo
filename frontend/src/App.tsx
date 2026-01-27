@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetAgenda, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
@@ -114,20 +114,21 @@ function App() {
       const reviewStart = startOfWeek(reviewAnchorDate, { weekStartsOn: 1 })
       const reviewEnd = endOfWeek(reviewAnchorDate, { weekStartsOn: 1 })
 
-      const [agendaData, reviewData, habitsData, listsData, goalsData, questionsData] = await Promise.all([
-        GetAgenda(toWailsTime(currentDate), toWailsTime(weekLater)),
-        GetAgenda(toWailsTime(reviewStart), toWailsTime(reviewEnd)),
+      const [daysData, overdueData, reviewDaysData, habitsData, listsData, goalsData, questionsData] = await Promise.all([
+        GetDayEntries(toWailsTime(currentDate), toWailsTime(weekLater)),
+        GetOverdue(),
+        GetDayEntries(toWailsTime(reviewStart), toWailsTime(reviewEnd)),
         GetHabits(habitDays),
         GetLists(),
         GetGoals(toWailsTime(monthStart)),
         GetOutstandingQuestions(),
       ])
 
-      const transformedDays = (agendaData?.Days || []).map(transformDayEntries)
+      const transformedDays = (daysData || []).map(transformDayEntries)
       setDays(transformedDays)
-      const transformedReviewDays = (reviewData?.Days || []).map(transformDayEntries)
+      const transformedReviewDays = (reviewDaysData || []).map(transformDayEntries)
       setReviewDays(transformedReviewDays)
-      const transformedOverdue = (agendaData?.Overdue || []).map(transformEntry)
+      const transformedOverdue = (overdueData || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
       setOverdueCount(transformedOverdue.filter(e => e.type === 'task').length)
       setHabits((habitsData?.Habits || []).map(transformHabit))

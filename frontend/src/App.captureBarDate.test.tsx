@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries } from './test/mocks'
+import type { wails as wailsTypes } from './wailsjs/go/models'
 import { startOfDay, subDays, format } from 'date-fns'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -13,10 +14,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -41,7 +40,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, AddEntry, AddChildEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, AddEntry, AddChildEntry } from './wailsjs/go/wails/App'
 
 const mockStorage: Record<string, string> = {}
 const mockLocalStorage = {
@@ -59,30 +58,27 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
   const yesterday = subDays(today, 1)
   const yesterdayStr = format(yesterday, 'yyyy-MM-dd')
 
-  const mockTodayAgenda = createMockAgenda({
-    Days: [createMockDayEntries({
-      Date: today.toISOString(),
-      Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task', CreatedAt: today.toISOString() }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockTodayDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+    Date: today.toISOString(),
+    Entries: [
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task', CreatedAt: today.toISOString() }),
+    ],
+  })]
 
-  const mockYesterdayAgenda = createMockAgenda({
-    Days: [createMockDayEntries({
-      Date: yesterday.toISOString(),
-      Entries: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Yesterday task', CreatedAt: yesterday.toISOString() }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockYesterdayDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+    Date: yesterday.toISOString(),
+    Entries: [
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Yesterday task', CreatedAt: yesterday.toISOString() }),
+    ],
+  })]
+
+  const mockOverdue: wailsTypes.Entry[] = []
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockTodayAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockTodayDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('AddEntry receives currentDate when submitting after navigating to past day', async () => {
@@ -98,7 +94,7 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
     })
 
     // Navigate to previous day (h key) - this updates currentDate to yesterday
-    vi.mocked(GetAgenda).mockResolvedValue(mockYesterdayAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockYesterdayDays)
     await user.keyboard('h')
 
     await waitFor(() => {
@@ -134,7 +130,7 @@ describe('CaptureBar - Uses currentDate (not new Date())', () => {
     })
 
     // Navigate to previous day (h key) - this updates currentDate to yesterday
-    vi.mocked(GetAgenda).mockResolvedValue(mockYesterdayAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockYesterdayDays)
     await user.keyboard('h')
 
     await waitFor(() => {

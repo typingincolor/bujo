@@ -23,41 +23,16 @@ var (
 
 const separator = "---------------------------------------------------------"
 
-func RenderDailyAgenda(agenda *service.DailyAgenda) string {
+func RenderDaysWithOverdue(days []service.DayEntries, overdue []domain.Entry, today time.Time) string {
 	var sb strings.Builder
 
-	dateStr := agenda.Date.Format("Monday, Jan 2, 2006")
-	header := fmt.Sprintf("📅 %s", Cyan(Bold(dateStr)))
-
-	if agenda.Location != nil {
-		header += fmt.Sprintf(" | 📍 %s", Yellow(*agenda.Location))
-	}
-	if agenda.Weather != nil {
-		header += fmt.Sprintf(" | ☀️  %s", Cyan(*agenda.Weather))
-	}
-	if agenda.Mood != nil {
-		header += fmt.Sprintf(" | 😊 %s", Yellow(*agenda.Mood))
+	if len(overdue) > 0 {
+		sb.WriteString(fmt.Sprintf("⚠️  %s\n", Red(Bold("OVERDUE"))))
+		renderEntryTreeWithOverdue(&sb, overdue, 0, true, today)
+		sb.WriteString("\n")
 	}
 
-	sb.WriteString(header + "\n")
-	sb.WriteString(Dimmed(separator) + "\n")
-
-	if len(agenda.Today) > 0 {
-		sb.WriteString(fmt.Sprintf("%s\n", Bold("TODAY")))
-		renderEntryTreeWithOverdue(&sb, agenda.Today, 0, false, agenda.Date)
-	} else {
-		sb.WriteString(Dimmed("No entries for today\n"))
-	}
-
-	sb.WriteString(Dimmed(separator) + "\n")
-
-	return sb.String()
-}
-
-func RenderMultiDayAgenda(agenda *service.MultiDayAgenda, today time.Time) string {
-	var sb strings.Builder
-
-	for _, day := range agenda.Days {
+	for _, day := range days {
 		dateStr := day.Date.Format("Monday, Jan 2")
 		header := fmt.Sprintf("📅 %s", Cyan(Bold(dateStr)))
 

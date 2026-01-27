@@ -22,17 +22,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.help.Width = msg.Width
 		return m, nil
 
-	case agendaLoadedMsg:
+	case daysLoadedMsg:
 		// Preserve the currently selected entry EntityID before reloading.
-		// We use EntityID (logical entity) not ID (row ID) to track across agenda reloads,
-		// since flattenAgenda may change the row order or count when entries are modified.
 		var selectedEntityID domain.EntityID
 		if m.selectedIdx >= 0 && m.selectedIdx < len(m.entries) {
 			selectedEntityID = m.entries[m.selectedIdx].Entry.EntityID
 		}
 
-		m.agenda = msg.agenda
-		m.entries = m.flattenAgenda(msg.agenda)
+		m.days = msg.days
+		m.entries = m.flattenDays(msg.days)
 
 		// Try to restore selection to the same entry
 		if selectedEntityID != "" {
@@ -45,7 +43,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			if !found && m.selectedIdx >= len(m.entries) {
-				// Entry no longer exists, adjust to nearest valid position
 				if len(m.entries) > 0 {
 					m.selectedIdx = len(m.entries) - 1
 				} else {
@@ -53,7 +50,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		} else if m.selectedIdx >= len(m.entries) {
-			// No previously selected entry or out of bounds
 			m.selectedIdx = 0
 		}
 		m.scrollOffset = 0
@@ -84,12 +80,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case entryUpdatedMsg, entryDeletedMsg, entryMovedToListMsg, agendaReloadNeededMsg:
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case gotoDateMsg:
 		m.viewDate = msg.date
 		m.selectedIdx = 0
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case confirmDeleteMsg:
 		m.confirmMode = confirmState{
@@ -195,7 +191,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.loadGoalsCmd()
 
 	case entryMigratedToGoalMsg:
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case summaryTokenMsg:
 		m.summaryState.streaming = true
@@ -398,7 +394,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.ToggleOverdueContext):
 		m = m.toggleOverdueContext()
-		m.entries = m.flattenAgenda(m.agenda)
+		m.entries = m.flattenDays(m.days)
 		return m.ensuredVisible(), nil
 
 	case key.Matches(msg, m.keyMap.Up):
@@ -436,7 +432,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				} else {
 					m.collapsed[entityID] = false
 				}
-				m.entries = m.flattenAgenda(m.agenda)
+				m.entries = m.flattenDays(m.days)
 				return m.ensuredVisible(), nil
 			}
 		}
@@ -708,7 +704,7 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.viewDate = m.viewDate.AddDate(0, 0, -7)
 		}
 		m.selectedIdx = 0
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case key.Matches(msg, m.keyMap.DayRight):
 		if m.viewMode == ViewModeDay {
@@ -717,12 +713,12 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.viewDate = m.viewDate.AddDate(0, 0, 7)
 		}
 		m.selectedIdx = 0
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case key.Matches(msg, m.keyMap.GotoToday):
 		m.viewDate = time.Now()
 		m.selectedIdx = 0
-		return m, m.loadAgendaCmd()
+		return m, m.loadDaysCmd()
 
 	case key.Matches(msg, m.keyMap.Help):
 		m.help.ShowAll = !m.help.ShowAll
@@ -2106,7 +2102,7 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.viewDate = *entry.ScheduledDate
 			}
 			m.currentView = ViewTypeJournal
-			return m, m.loadAgendaCmd()
+			return m, m.loadDaysCmd()
 		}
 		return m, nil
 
@@ -2157,13 +2153,13 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.ViewJournal):
 		newView = ViewTypeJournal
 		m.viewMode = ViewModeDay
-		cmd = m.loadAgendaCmd()
+		cmd = m.loadDaysCmd()
 		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewReview):
 		newView = ViewTypeReview
 		m.viewMode = ViewModeWeek
-		cmd = m.loadAgendaCmd()
+		cmd = m.loadDaysCmd()
 		switched = true
 
 	case key.Matches(msg, m.keyMap.ViewPendingTasks):
@@ -2232,7 +2228,7 @@ func (m Model) handleBack() (Model, tea.Cmd) {
 		var cmd tea.Cmd
 		switch m.currentView {
 		case ViewTypeJournal:
-			cmd = m.loadAgendaCmd()
+			cmd = m.loadDaysCmd()
 		case ViewTypeHabits:
 			cmd = m.loadHabitsCmd()
 		case ViewTypeLists:

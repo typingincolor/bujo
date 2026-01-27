@@ -88,8 +88,12 @@ func (a *App) Greet(name string) string {
 	return "Hello " + name + ", from Bujo!"
 }
 
-func (a *App) GetAgenda(from, to time.Time) (*service.MultiDayAgenda, error) {
-	return a.services.Bujo.GetMultiDayAgenda(a.ctx, from, to)
+func (a *App) GetDayEntries(from, to time.Time) ([]service.DayEntries, error) {
+	return a.services.Bujo.GetDayEntries(a.ctx, from, to)
+}
+
+func (a *App) GetOverdue() ([]domain.Entry, error) {
+	return a.services.Bujo.GetOverdue(a.ctx)
 }
 
 func (a *App) GetHabits(days int) (*service.TrackerStatus, error) {

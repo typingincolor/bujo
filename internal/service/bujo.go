@@ -147,12 +147,22 @@ func (s *BujoService) GetDailyAgenda(ctx context.Context, date time.Time) (*Dail
 func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time) (*MultiDayAgenda, error) {
 	agenda := &MultiDayAgenda{}
 
-	overdue, err := s.entryRepo.GetOverdue(ctx, from)
+	overdue, err := s.entryRepo.GetOverdue(ctx)
 	if err != nil {
 		return nil, err
 	}
 	agenda.Overdue = overdue
 
+	days, err := s.GetDayEntries(ctx, from, to)
+	if err != nil {
+		return nil, err
+	}
+	agenda.Days = days
+
+	return agenda, nil
+}
+
+func (s *BujoService) GetDayEntries(ctx context.Context, from, to time.Time) ([]DayEntries, error) {
 	entries, err := s.entryRepo.GetByDateRange(ctx, from, to)
 	if err != nil {
 		return nil, err
@@ -176,6 +186,7 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 		}
 	}
 
+	var days []DayEntries
 	for d := from; !d.After(to); d = d.AddDate(0, 0, 1) {
 		dateKey := d.Format("2006-01-02")
 		day := DayEntries{
@@ -187,10 +198,14 @@ func (s *BujoService) GetMultiDayAgenda(ctx context.Context, from, to time.Time)
 			day.Mood = dayCtx.Mood
 			day.Weather = dayCtx.Weather
 		}
-		agenda.Days = append(agenda.Days, day)
+		days = append(days, day)
 	}
 
-	return agenda, nil
+	return days, nil
+}
+
+func (s *BujoService) GetOverdue(ctx context.Context) ([]domain.Entry, error) {
+	return s.entryRepo.GetOverdue(ctx)
 }
 
 func (s *BujoService) getEntry(ctx context.Context, id int64) (*domain.Entry, error) {

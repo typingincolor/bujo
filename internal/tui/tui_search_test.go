@@ -12,7 +12,7 @@ import (
 
 func TestModel_DayView_CtrlS_EntersSearchMode(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 		{Entry: domain.Entry{ID: 2, Content: "Second task"}},
@@ -32,7 +32,7 @@ func TestModel_DayView_CtrlS_EntersSearchMode(t *testing.T) {
 
 func TestModel_DayView_CtrlR_EntersReverseSearchMode(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 		{Entry: domain.Entry{ID: 2, Content: "Second task"}},
@@ -52,7 +52,7 @@ func TestModel_DayView_CtrlR_EntersReverseSearchMode(t *testing.T) {
 
 func TestModel_DayView_Search_TypingAddsToQuery(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 	}
@@ -69,7 +69,7 @@ func TestModel_DayView_Search_TypingAddsToQuery(t *testing.T) {
 
 func TestModel_DayView_Search_BackspaceRemovesFromQuery(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 	}
@@ -86,7 +86,7 @@ func TestModel_DayView_Search_BackspaceRemovesFromQuery(t *testing.T) {
 
 func TestModel_DayView_Search_SpaceAddsToQuery(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 	}
@@ -103,7 +103,7 @@ func TestModel_DayView_Search_SpaceAddsToQuery(t *testing.T) {
 
 func TestModel_DayView_Search_EscCancelsSearch(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 	}
@@ -123,7 +123,7 @@ func TestModel_DayView_Search_EscCancelsSearch(t *testing.T) {
 
 func TestModel_DayView_Search_EnterExitsSearchMode(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First task"}},
 		{Entry: domain.Entry{ID: 2, Content: "Second task"}},
@@ -144,7 +144,7 @@ func TestModel_DayView_Search_EnterExitsSearchMode(t *testing.T) {
 
 func TestModel_DayView_Search_IncrementalSearch_MovesToMatch(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Apple"}},
 		{Entry: domain.Entry{ID: 2, Content: "Banana"}},
@@ -165,7 +165,7 @@ func TestModel_DayView_Search_IncrementalSearch_MovesToMatch(t *testing.T) {
 
 func TestModel_DayView_Search_IncrementalSearch_StaysOnMatch(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Apple"}},
 		{Entry: domain.Entry{ID: 2, Content: "Banana"}},
@@ -187,7 +187,7 @@ func TestModel_DayView_Search_IncrementalSearch_StaysOnMatch(t *testing.T) {
 
 func TestModel_DayView_Search_ForwardSearch_FindsNextMatch(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Task one"}},
 		{Entry: domain.Entry{ID: 2, Content: "Task two"}},
@@ -209,7 +209,7 @@ func TestModel_DayView_Search_ForwardSearch_FindsNextMatch(t *testing.T) {
 
 func TestModel_DayView_Search_BackwardSearch_FindsPrevMatch(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Task one"}},
 		{Entry: domain.Entry{ID: 2, Content: "Task two"}},
@@ -231,7 +231,7 @@ func TestModel_DayView_Search_BackwardSearch_FindsPrevMatch(t *testing.T) {
 
 func TestModel_DayView_Search_DirectionSwitch_CtrlRThenCtrlS(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Task one"}},
 		{Entry: domain.Entry{ID: 2, Content: "Task two"}},
@@ -268,7 +268,7 @@ func TestModel_DayView_Search_DirectionSwitch_CtrlRThenCtrlS(t *testing.T) {
 
 func TestModel_DayView_Search_WrapsAround_Forward(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Apple here"}},
 		{Entry: domain.Entry{ID: 2, Content: "Banana there"}},
@@ -290,7 +290,7 @@ func TestModel_DayView_Search_WrapsAround_Forward(t *testing.T) {
 
 func TestModel_DayView_Search_WrapsAround_Backward(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Banana there"}},
 		{Entry: domain.Entry{ID: 2, Content: "Cherry time"}},
@@ -312,7 +312,7 @@ func TestModel_DayView_Search_WrapsAround_Backward(t *testing.T) {
 
 func TestModel_DayView_Search_CaseInsensitive(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First item"}},
 		{Entry: domain.Entry{ID: 2, Content: "SECOND ITEM"}},
@@ -331,7 +331,7 @@ func TestModel_DayView_Search_CaseInsensitive(t *testing.T) {
 
 func TestModel_DayView_Search_ScrollFollowsSelection(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 10 // Small height to force scrolling
 
@@ -364,7 +364,7 @@ func TestModel_DayView_Search_ScrollFollowsSelection(t *testing.T) {
 
 func TestModel_DayView_Search_NoMatch_StaysOnCurrent(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Apple"}},
 		{Entry: domain.Entry{ID: 2, Content: "Banana"}},
@@ -384,7 +384,7 @@ func TestModel_DayView_Search_NoMatch_StaysOnCurrent(t *testing.T) {
 
 func TestModel_DayView_Search_MultipleMatches_NextFindsDifferent(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Task A"}},
 		{Entry: domain.Entry{ID: 2, Content: "Note B"}},
@@ -429,7 +429,7 @@ func TestModel_DayView_Search_MultipleMatches_NextFindsDifferent(t *testing.T) {
 
 func TestModel_WeekView_Search_AcrossMultipleDays(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
@@ -467,7 +467,7 @@ func TestModel_WeekView_Search_AcrossMultipleDays(t *testing.T) {
 
 func TestModel_WeekView_Search_WithDayHeaders_ScrollsCorrectly(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 	model.width = 80
@@ -512,7 +512,7 @@ func TestModel_WeekView_Search_WithDayHeaders_ScrollsCorrectly(t *testing.T) {
 
 func TestModel_WeekView_Search_BackwardFromDifferentDay(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
@@ -538,7 +538,7 @@ func TestModel_WeekView_Search_BackwardFromDifferentDay(t *testing.T) {
 
 func TestModel_WeekView_Search_NestedEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
@@ -577,7 +577,7 @@ func TestModel_WeekView_Search_NestedEntries(t *testing.T) {
 
 func TestModel_WeekView_Search_WithOverdueEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.currentView = ViewTypeReview
 	model.viewMode = ViewModeWeek
 
@@ -605,7 +605,7 @@ func TestModel_WeekView_Search_WithOverdueEntries(t *testing.T) {
 
 func TestModel_Search_LargeData_ScrollsFromTopToBottom(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 20 // Can show ~14 entries
 
@@ -648,7 +648,7 @@ func TestModel_Search_LargeData_ScrollsFromTopToBottom(t *testing.T) {
 
 func TestModel_Search_LargeData_ScrollsFromBottomToTop(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 20
 
@@ -688,7 +688,7 @@ func TestModel_Search_LargeData_ScrollsFromBottomToTop(t *testing.T) {
 
 func TestModel_Search_LargeData_MultipleSearchesTraverseAll(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 15
 
@@ -738,7 +738,7 @@ func TestModel_Search_LargeData_MultipleSearchesTraverseAll(t *testing.T) {
 
 func TestModel_Search_LargeData_DirectionSwitchMidList(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 15
 
@@ -806,7 +806,7 @@ func TestModel_Search_LargeData_DirectionSwitchMidList(t *testing.T) {
 
 func TestModel_Navigation_TopKey_GoesToFirstEntry(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "First"}},
 		{Entry: domain.Entry{ID: 2, Content: "Second"}},
@@ -829,7 +829,7 @@ func TestModel_Navigation_TopKey_GoesToFirstEntry(t *testing.T) {
 
 func TestModel_Navigation_BottomKey_GoesToLastEntry(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 20
 	model.entries = []EntryItem{
@@ -851,7 +851,7 @@ func TestModel_Navigation_BottomKey_GoesToLastEntry(t *testing.T) {
 
 func TestModel_Navigation_BottomKey_WithLargeList_ScrollsCorrectly(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 15 // Can show ~9 entries
 
@@ -880,7 +880,7 @@ func TestModel_Navigation_BottomKey_WithLargeList_ScrollsCorrectly(t *testing.T)
 
 func TestModel_Done_MarksTaskComplete(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Type: domain.EntryTypeTask, Content: "Task to complete"}},
 	}
@@ -900,7 +900,7 @@ func TestModel_Done_MarksTaskComplete(t *testing.T) {
 
 func TestModel_Done_NoOpOnEmptyList(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{}
 
 	msg := tea.KeyMsg{Type: tea.KeySpace}
@@ -915,7 +915,7 @@ func TestModel_Done_NoOpOnEmptyList(t *testing.T) {
 
 func TestModel_Delete_TriggersConfirmMode(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Item to delete"}},
 	}
@@ -936,7 +936,7 @@ func TestModel_Delete_TriggersConfirmMode(t *testing.T) {
 
 func TestModel_Delete_NoOpOnEmptyList(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}}
@@ -951,7 +951,7 @@ func TestModel_Delete_NoOpOnEmptyList(t *testing.T) {
 
 func TestModel_GotoMode_EntersOnSlash(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Item"}},
 	}
@@ -967,7 +967,7 @@ func TestModel_GotoMode_EntersOnSlash(t *testing.T) {
 
 func TestModel_GotoMode_TypingAddsToInput(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.gotoMode = gotoState{active: true}
 	model.gotoMode.input = createTextInput()
 	model.gotoMode.input.Focus()
@@ -987,7 +987,7 @@ func TestModel_GotoMode_TypingAddsToInput(t *testing.T) {
 
 func TestModel_View_SearchMode_ShowsSearchBar(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1007,7 +1007,7 @@ func TestModel_View_SearchMode_ShowsSearchBar(t *testing.T) {
 
 func TestModel_View_SearchMode_ShowsReverseDirection(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1024,7 +1024,7 @@ func TestModel_View_SearchMode_ShowsReverseDirection(t *testing.T) {
 
 func TestModel_View_SelectedEntry_IsHighlighted(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1043,7 +1043,7 @@ func TestModel_View_SelectedEntry_IsHighlighted(t *testing.T) {
 
 func TestModel_View_DayHeader_IsRendered(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1059,7 +1059,7 @@ func TestModel_View_DayHeader_IsRendered(t *testing.T) {
 
 func TestModel_View_OverdueHeader_IsRendered(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1075,7 +1075,7 @@ func TestModel_View_OverdueHeader_IsRendered(t *testing.T) {
 
 func TestModel_View_EntrySymbols_AreRendered(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1104,7 +1104,7 @@ func TestModel_View_EntrySymbols_AreRendered(t *testing.T) {
 
 func TestModel_View_ScrollIndicators_ShowMoreAbove(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 10 // Small height
 
@@ -1125,7 +1125,7 @@ func TestModel_View_ScrollIndicators_ShowMoreAbove(t *testing.T) {
 
 func TestModel_View_ScrollIndicators_ShowMoreBelow(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 10 // Small height
 
@@ -1146,7 +1146,7 @@ func TestModel_View_ScrollIndicators_ShowMoreBelow(t *testing.T) {
 
 func TestModel_View_Toolbar_ShowsJournalView(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
@@ -1162,7 +1162,7 @@ func TestModel_View_Toolbar_ShowsJournalView(t *testing.T) {
 
 func TestModel_View_Toolbar_ShowsReviewView(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeReview
@@ -1180,7 +1180,7 @@ func TestModel_View_Toolbar_ShowsReviewView(t *testing.T) {
 
 func TestModel_ConfirmMode_YConfirmsDelete(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Item to delete"}},
 	}
@@ -1201,7 +1201,7 @@ func TestModel_ConfirmMode_YConfirmsDelete(t *testing.T) {
 
 func TestModel_ConfirmMode_NCancels(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Item to delete"}},
 	}
@@ -1394,7 +1394,7 @@ func TestModel_HighlightSearchTerm_PreservesNonMatchingCase(t *testing.T) {
 
 func TestModel_View_SearchHighlighting_AppliedToEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{
@@ -1424,7 +1424,7 @@ func TestModel_View_SearchHighlighting_AppliedToEntries(t *testing.T) {
 
 func TestModel_View_SearchHighlighting_InSelectedEntry(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.width = 80
 	model.height = 24
 	model.entries = []EntryItem{

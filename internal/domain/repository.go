@@ -12,7 +12,7 @@ type EntryRepository interface {
 	GetByDate(ctx context.Context, date time.Time) ([]Entry, error)
 	GetByDateRange(ctx context.Context, from, to time.Time) ([]Entry, error)
 	GetAll(ctx context.Context) ([]Entry, error)
-	GetOverdue(ctx context.Context, date time.Time) ([]Entry, error)
+	GetOverdue(ctx context.Context) ([]Entry, error)
 	GetWithChildren(ctx context.Context, id int64) ([]Entry, error)
 	GetChildren(ctx context.Context, parentID int64) ([]Entry, error)
 	Update(ctx context.Context, entry Entry) error

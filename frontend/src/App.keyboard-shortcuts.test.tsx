@@ -3,16 +3,14 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { SettingsProvider } from './contexts/SettingsContext';
 import App from './App';
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks';
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks';
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Test task', CreatedAt: '2026-01-17T10:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-});
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Test task', CreatedAt: '2026-01-17T10:00:00Z' }),
+  ],
+})]);
+const mockOverdue = createMockOverdue([]);
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -21,10 +19,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }));
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -57,12 +53,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetVersion: vi.fn().mockResolvedValue('1.0.0'),
 }));
 
-import { GetAgenda } from './wailsjs/go/wails/App';
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App';
 
 describe('App keyboard shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda);
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays);
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue);
   });
 
   describe('View navigation shortcuts', () => {

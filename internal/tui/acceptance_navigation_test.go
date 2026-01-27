@@ -233,7 +233,7 @@ func TestUAT_JournalView_LocationPicker_OpensWithAt(t *testing.T) {
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Press '@' to open location picker
 	msgAt := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'@'}}
@@ -259,7 +259,7 @@ func TestUAT_JournalView_LocationPicker_SelectsPreviousLocation(t *testing.T) {
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Simulate having previous locations loaded
 	model.setLocationMode = setLocationState{
@@ -291,7 +291,7 @@ func TestUAT_JournalView_LocationPicker_ClosesOnEsc(t *testing.T) {
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Open location picker
 	model.setLocationMode = setLocationState{
@@ -322,7 +322,7 @@ func TestUAT_JournalView_LocationPicker_EnterSelectsFromList(t *testing.T) {
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Open location picker with locations
 	ti := textinput.New()
@@ -376,7 +376,7 @@ func TestUAT_JournalView_AISummary_ToggleWithS(t *testing.T) {
 	model.width = 80
 	model.height = 24
 	model.currentView = ViewTypeJournal
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Initially collapsed
 	if !model.summaryCollapsed {

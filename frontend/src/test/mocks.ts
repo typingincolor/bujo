@@ -38,12 +38,10 @@ export function createMockDayEntries(overrides: Partial<{
   })
 }
 
-export function createMockAgenda(overrides: Partial<{
-  Overdue: domain.Entry[]
-  Days: service.DayEntries[]
-}> = {}): service.MultiDayAgenda {
-  return service.MultiDayAgenda.createFrom({
-    Overdue: overrides.Overdue ?? [],
-    Days: overrides.Days ?? [createMockDayEntries()],
-  })
+export function createMockDays(days: service.DayEntries[] = [createMockDayEntries()]): service.DayEntries[] {
+  return days
+}
+
+export function createMockOverdue(entries: domain.Entry[] = []): domain.Entry[] {
+  return entries
 }

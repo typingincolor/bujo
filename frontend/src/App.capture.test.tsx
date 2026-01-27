@@ -3,18 +3,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})])
+const mockOverdue = createMockOverdue([])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +21,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -50,13 +46,14 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, AddEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, AddEntry } from './wailsjs/go/wails/App'
 
 
 describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('pressing r focuses CaptureBar for root entry', async () => {
@@ -193,7 +190,8 @@ describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
 describe('App - Go to Today', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('shows Go to today button when viewing a different day', async () => {
@@ -256,7 +254,7 @@ describe('App - Go to Today', () => {
       expect(jumpToTodayBtn).not.toHaveClass('invisible')
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     // Click Go to today button
     const todayButton = screen.getByTestId('jump-to-today')
@@ -264,7 +262,7 @@ describe('App - Go to Today', () => {
 
     // Should trigger data refresh
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
 
     // Go to today button should become invisible after navigating back to today
@@ -295,14 +293,14 @@ describe('App - Go to Today', () => {
       expect(jumpToTodayBtn).not.toHaveClass('invisible')
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     // Press T to go to today
     await user.keyboard('T')
 
     // Should trigger data refresh
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
 
     // Go to today button should become invisible

@@ -541,9 +541,9 @@ func TestUAT_JournalView_CancelEntry(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 	model.selectedIdx = 0
 
 	// Press 'x' to cancel the entry
@@ -584,9 +584,9 @@ func TestUAT_JournalView_CancelledEntryShowsStrikethrough(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 
 	view := model.View()
 
@@ -622,9 +622,9 @@ func TestUAT_JournalView_UncancelEntry(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 	model.selectedIdx = 0
 
 	// Press 'X' (shift+x) to uncancel the entry
@@ -663,9 +663,9 @@ func TestUAT_JournalView_RetypeEntry_OpensTypePicker(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 	model.selectedIdx = 0
 
 	// Press 't' to open type picker
@@ -705,9 +705,9 @@ func TestUAT_JournalView_RetypeEntry_ChangesType(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 
 	// Entry should now show as note (–)
 	if len(model.entries) == 0 {
@@ -745,9 +745,9 @@ func TestUAT_JournalView_RetypeEntry_PreservesContent(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 
 	if len(model.entries) == 0 {
 		t.Fatal("expected entries")
@@ -817,9 +817,9 @@ func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
 	}
 
 	// Get the entity ID before deleting
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
 	var entityID domain.EntityID
-	for _, day := range agenda.Days {
+	for _, day := range days {
 		for _, e := range day.Entries {
 			if e.ID == ids[0] {
 				entityID = e.EntityID
@@ -833,12 +833,12 @@ func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
 		t.Fatalf("failed to delete entry: %v", err)
 	}
 
-	// Entry should not appear in agenda
-	agenda, _ = bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	for _, day := range agenda.Days {
+	// Entry should not appear in days
+	days, _ = bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	for _, day := range days {
 		for _, e := range day.Entries {
 			if e.Content == "Entry to restore" {
-				t.Error("deleted entry should not appear in agenda")
+				t.Error("deleted entry should not appear in days")
 			}
 		}
 	}
@@ -853,10 +853,10 @@ func TestUAT_DeletedEntries_CanBeRestored(t *testing.T) {
 		t.Error("restore should return new entry ID")
 	}
 
-	// Entry should reappear in agenda
-	agenda, _ = bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
+	// Entry should reappear in days
+	days, _ = bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
 	found := false
-	for _, day := range agenda.Days {
+	for _, day := range days {
 		for _, e := range day.Entries {
 			if e.Content == "Entry to restore" {
 				found = true
@@ -902,9 +902,9 @@ func TestUAT_DeletedEntries_NotShownInJournal(t *testing.T) {
 	model.width = 80
 	model.height = 24
 
-	agenda, _ := bujoSvc.GetMultiDayAgenda(ctx, todayDate, todayDate)
-	model.agenda = agenda
-	model.entries = model.flattenAgenda(agenda)
+	days, _ := bujoSvc.GetDayEntries(ctx, todayDate, todayDate)
+	model.days = days
+	model.entries = model.flattenDays(days)
 
 	view := model.View()
 
@@ -1254,13 +1254,13 @@ func TestUAT_Collapse_SelectedItemAndAncestorsStayExpanded(t *testing.T) {
 		}
 	}
 
-	// Manually expand all entries from agenda to see the full tree
-	for _, day := range model.agenda.Days {
+	// Manually expand all entries from days to see the full tree
+	for _, day := range model.days {
 		for _, entry := range day.Entries {
 			model.collapsed[entry.EntityID] = false
 		}
 	}
-	model.entries = model.flattenAgenda(model.agenda)
+	model.entries = model.flattenDays(model.days)
 
 	// Should now see all 3 entries
 	if len(model.entries) != 3 {
@@ -1337,8 +1337,8 @@ func TestUAT_Collapse_AncestorsStayExpandedAfterReload(t *testing.T) {
 	// Navigate to child
 	model.selectedIdx = 1
 
-	// Simulate agenda reload (this happens after editing an entry)
-	reloadCmd := model.loadAgendaCmd()
+	// Simulate days reload (this happens after editing an entry)
+	reloadCmd := model.loadDaysCmd()
 	reloadMsg := reloadCmd()
 	newModel, _ = model.Update(reloadMsg)
 	model = newModel.(Model)
@@ -1389,7 +1389,7 @@ func TestUAT_Collapse_CtrlC_CollapsesAllSiblings(t *testing.T) {
 			_ = i
 		}
 	}
-	model.entries = model.flattenAgenda(model.agenda)
+	model.entries = model.flattenDays(model.days)
 
 	// After manual expansion, should see all 4 entries
 	if len(model.entries) != 4 {

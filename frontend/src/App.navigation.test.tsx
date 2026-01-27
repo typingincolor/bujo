@@ -3,18 +3,17 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries } from './test/mocks'
+import type { wails as wailsTypes } from './wailsjs/go/models'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})]
+const mockOverdue: wailsTypes.Entry[] = []
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +22,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -50,13 +47,14 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, MarkEntryDone, EditEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, MarkEntryDone, EditEntry } from './wailsjs/go/wails/App'
 
 
 describe('App - Keyboard Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('pressing j moves selection down', async () => {
@@ -190,7 +188,8 @@ describe('App - Keyboard Navigation', () => {
 describe('App - Click Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('clicking an entry updates the selection to that entry', async () => {
@@ -247,7 +246,8 @@ describe('App - Click Selection', () => {
 describe('App - Edit Entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('pressing e opens edit modal for selected entry', async () => {
@@ -332,7 +332,8 @@ describe('App - Edit Entry', () => {
 describe('App - QuickStats', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('renders QuickStats component in today view', async () => {
@@ -352,18 +353,17 @@ describe('App - QuickStats', () => {
     expect(screen.getAllByText(/monthly goals/i).length).toBeGreaterThan(0)
   })
 
-  it('displays overdue count from agenda', async () => {
-    const agendaWithOverdue = createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task' })],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
-        createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
-        createMockEntry({ ID: 12, EntityID: 'e12', Type: 'Task', Content: 'Overdue task 3' }),
-      ],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(agendaWithOverdue)
+  it('displays overdue count from GetOverdue', async () => {
+    const daysWithTodayTask: wailsTypes.DayEntries[] = [createMockDayEntries({
+      Entries: [createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Today task' })],
+    })]
+    const overdueEntries: wailsTypes.Entry[] = [
+      createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
+      createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+      createMockEntry({ ID: 12, EntityID: 'e12', Type: 'Task', Content: 'Overdue task 3' }),
+    ]
+    vi.mocked(GetDayEntries).mockResolvedValue(daysWithTodayTask)
+    vi.mocked(GetOverdue).mockResolvedValue(overdueEntries)
 
     render(
       <SettingsProvider>

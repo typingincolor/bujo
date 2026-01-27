@@ -92,16 +92,17 @@ func TestBujoService_GetMultiDayAgenda_IncludesOverdueEntries(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()
 
-	pastDate := time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC)
-	fromDate := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
-	toDate := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+	tomorrow := today.AddDate(0, 0, 1)
 
-	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: pastDate})
+	_, err := service.LogEntries(ctx, ". Overdue task", LogEntriesOptions{Date: yesterday})
 	require.NoError(t, err)
-	_, err = service.LogEntries(ctx, ". Current task", LogEntriesOptions{Date: fromDate})
+	_, err = service.LogEntries(ctx, ". Current task", LogEntriesOptions{Date: today})
 	require.NoError(t, err)
 
-	agenda, err := service.GetMultiDayAgenda(ctx, fromDate, toDate)
+	agenda, err := service.GetMultiDayAgenda(ctx, today, tomorrow)
 
 	require.NoError(t, err)
 	require.Len(t, agenda.Days, 2)

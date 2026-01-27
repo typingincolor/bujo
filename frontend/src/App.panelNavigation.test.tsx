@@ -3,20 +3,18 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockAgendaWithOverdue = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'Main panel note', CreatedAt: '2026-01-17T11:00:00Z' }),
-    ],
-  })],
-  Overdue: [
-    createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
-    createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'Main panel note', CreatedAt: '2026-01-17T11:00:00Z' }),
   ],
-})
+})])
+const mockOverdue = createMockOverdue([
+  createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
+  createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -25,10 +23,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -54,12 +50,13 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { GetAgenda } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 describe('App - Panel Navigation with Tab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockAgendaWithOverdue)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   describe('Tab key switches focus between panels', () => {
@@ -173,7 +170,8 @@ describe('App - Panel Navigation with Tab', () => {
 describe('App - Mutual Exclusion of Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockAgendaWithOverdue)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('selecting in main panel clears sidebar selection', async () => {
@@ -360,19 +358,13 @@ describe('App - Mutual Exclusion of Selection', () => {
     })
 
     // Simulate data refresh by updating the mock and triggering re-render
-    vi.mocked(GetAgenda).mockResolvedValue(createMockAgenda({
-      Days: [createMockDayEntries({
-        Entries: [
-          createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
-          createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'Main panel note', CreatedAt: '2026-01-17T11:00:00Z' }),
-          createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'New task added', CreatedAt: '2026-01-17T12:00:00Z' }),
-        ],
-      })],
-      Overdue: [
-        createMockEntry({ ID: 10, EntityID: 'e10', Type: 'Task', Content: 'Overdue task 1' }),
-        createMockEntry({ ID: 11, EntityID: 'e11', Type: 'Task', Content: 'Overdue task 2' }),
+    vi.mocked(GetDayEntries).mockResolvedValue(createMockDays([createMockDayEntries({
+      Entries: [
+        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Main panel task', CreatedAt: '2026-01-17T10:00:00Z' }),
+        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'Main panel note', CreatedAt: '2026-01-17T11:00:00Z' }),
+        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'New task added', CreatedAt: '2026-01-17T12:00:00Z' }),
       ],
-    }))
+    })]))
 
     // Trigger a data refresh (e.g., by simulating an action that triggers loadData)
     // For now, we'll simulate the 'data:changed' event
@@ -411,7 +403,8 @@ describe('App - Mutual Exclusion of Selection', () => {
 describe('App - Keyboard Action Shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockAgendaWithOverdue)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('p key cycles priority on selected entry', async () => {

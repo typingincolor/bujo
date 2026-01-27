@@ -3,18 +3,17 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries } from './test/mocks'
+import type { wails as wailsTypes } from './wailsjs/go/models'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})]
+const mockOverdue: wailsTypes.Entry[] = []
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +22,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -50,7 +47,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, GetHabits, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
 
 
 describe('App - No flicker on data refresh', () => {
@@ -58,7 +55,8 @@ describe('App - No flicker on data refresh', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     // Suppress act() warnings in this test - the async flow is intentionally complex
     console.error = (...args: unknown[]) => {
       if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) return
@@ -144,14 +142,12 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current mood emoji in header when mood is set', async () => {
-    const mockWithMood = createMockAgenda({
-      Days: [createMockDayEntries({
-        Mood: 'happy',
-        Entries: [],
-      })],
-      Overdue: [],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithMood)
+    const mockWithMood: wailsTypes.DayEntries[] = [createMockDayEntries({
+      Mood: 'happy',
+      Entries: [],
+    })]
+    vi.mocked(GetDayEntries).mockResolvedValue(mockWithMood)
+    vi.mocked(GetOverdue).mockResolvedValue([])
 
     render(
       <SettingsProvider>
@@ -168,14 +164,12 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current weather emoji in header when weather is set', async () => {
-    const mockWithWeather = createMockAgenda({
-      Days: [createMockDayEntries({
-        Weather: 'sunny',
-        Entries: [],
-      })],
-      Overdue: [],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithWeather)
+    const mockWithWeather: wailsTypes.DayEntries[] = [createMockDayEntries({
+      Weather: 'sunny',
+      Entries: [],
+    })]
+    vi.mocked(GetDayEntries).mockResolvedValue(mockWithWeather)
+    vi.mocked(GetOverdue).mockResolvedValue([])
 
     render(
       <SettingsProvider>
@@ -192,14 +186,12 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
   })
 
   it('displays current location in header when location is set', async () => {
-    const mockWithLocation = createMockAgenda({
-      Days: [createMockDayEntries({
-        Location: 'Home Office',
-        Entries: [],
-      })],
-      Overdue: [],
-    })
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithLocation)
+    const mockWithLocation: wailsTypes.DayEntries[] = [createMockDayEntries({
+      Location: 'Home Office',
+      Entries: [],
+    })]
+    vi.mocked(GetDayEntries).mockResolvedValue(mockWithLocation)
+    vi.mocked(GetOverdue).mockResolvedValue([])
 
     render(
       <SettingsProvider>
@@ -218,7 +210,8 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
 
   it('calls SetMood and refreshes data when selecting mood', async () => {
     const user = userEvent.setup()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
     render(
       <SettingsProvider>
@@ -240,13 +233,14 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetMood).toHaveBeenCalled()
     })
 
-    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
-    expect(GetAgenda).toHaveBeenCalledTimes(4)
+    // Data should be refreshed (GetDayEntries called twice per loadData - once for today, once for review)
+    expect(GetDayEntries).toHaveBeenCalledTimes(4)
   })
 
   it('calls SetWeather and refreshes data when selecting weather', async () => {
     const user = userEvent.setup()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
     render(
       <SettingsProvider>
@@ -268,13 +262,14 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetWeather).toHaveBeenCalled()
     })
 
-    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
-    expect(GetAgenda).toHaveBeenCalledTimes(4)
+    // Data should be refreshed (GetDayEntries called twice per loadData - once for today, once for review)
+    expect(GetDayEntries).toHaveBeenCalledTimes(4)
   })
 
   it('calls SetLocation and refreshes data when setting location', async () => {
     const user = userEvent.setup()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
     render(
       <SettingsProvider>
@@ -297,8 +292,8 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(SetLocation).toHaveBeenCalled()
     })
 
-    // Data should be refreshed (GetAgenda is called twice per loadData - once for today, once for review)
-    expect(GetAgenda).toHaveBeenCalledTimes(4)
+    // Data should be refreshed (GetDayEntries called twice per loadData - once for today, once for review)
+    expect(GetDayEntries).toHaveBeenCalledTimes(4)
   })
 })
 

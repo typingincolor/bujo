@@ -70,8 +70,8 @@ export function EditListItem(arg1, arg2) {
   return window['go']['wails']['App']['EditListItem'](arg1, arg2);
 }
 
-export function GetAgenda(arg1, arg2) {
-  return window['go']['wails']['App']['GetAgenda'](arg1, arg2);
+export function GetDayEntries(arg1, arg2) {
+  return window['go']['wails']['App']['GetDayEntries'](arg1, arg2);
 }
 
 export function GetEntry(arg1) {
@@ -104,6 +104,10 @@ export function GetLocationHistory() {
 
 export function GetOutstandingQuestions() {
   return window['go']['wails']['App']['GetOutstandingQuestions']();
+}
+
+export function GetOverdue() {
+  return window['go']['wails']['App']['GetOverdue']();
 }
 
 export function GetSummary(arg1) {

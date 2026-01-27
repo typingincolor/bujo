@@ -3,18 +3,16 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})])
+const mockOverdue = createMockOverdue([])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +21,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -50,13 +46,14 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, GetHabits } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits } from './wailsjs/go/wails/App'
 
 
 describe('App - Day Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('renders prev/next day navigation buttons in today view', async () => {
@@ -101,7 +98,7 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const datePicker = screen.getByLabelText(/pick date/i)
     await act(async () => {
@@ -109,7 +106,7 @@ describe('App - Day Navigation', () => {
     })
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 
@@ -125,13 +122,13 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const nextButton = screen.getByRole('button', { name: /next day/i })
     await user.click(nextButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 
@@ -147,13 +144,13 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const prevButton = screen.getByRole('button', { name: /previous day/i })
     await user.click(prevButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 
@@ -169,12 +166,12 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     await user.keyboard('h')
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 
@@ -190,12 +187,12 @@ describe('App - Day Navigation', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     await user.keyboard('l')
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 })
@@ -203,7 +200,8 @@ describe('App - Day Navigation', () => {
 describe('App - Habit View Toggle', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('refetches habits with different day count when period changes', async () => {

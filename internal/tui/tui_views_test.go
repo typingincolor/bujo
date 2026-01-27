@@ -34,7 +34,7 @@ func TestModel_View_StatusBar_ShowsCurrentView(t *testing.T) {
 	model := New(nil)
 	model.width = 80
 	model.height = 24
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	// Test Journal view
 	model.currentView = ViewTypeJournal

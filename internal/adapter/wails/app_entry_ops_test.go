@@ -51,11 +51,11 @@ func TestApp_EditEntry_UpdatesEntryContent(t *testing.T) {
 	err = wailsApp.EditEntry(ids[0], "Updated content")
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "Updated content", agenda.Days[0].Entries[0].Content)
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "Updated content", days[0].Entries[0].Content)
 }
 
 func TestApp_DeleteEntry_RemovesEntry(t *testing.T) {
@@ -77,10 +77,10 @@ func TestApp_DeleteEntry_RemovesEntry(t *testing.T) {
 	err = wailsApp.DeleteEntry(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	assert.Empty(t, agenda.Days[0].Entries)
+	require.Len(t, days, 1)
+	assert.Empty(t, days[0].Entries)
 }
 
 func TestApp_HasChildren_ReturnsTrueForParent(t *testing.T) {
@@ -187,11 +187,11 @@ func TestApp_CancelEntry_CancelsTask(t *testing.T) {
 	err = wailsApp.CancelEntry(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "✗", agenda.Days[0].Entries[0].Type.Symbol())
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "✗", days[0].Entries[0].Type.Symbol())
 }
 
 func TestApp_UncancelEntry_RevertsToTask(t *testing.T) {
@@ -216,11 +216,11 @@ func TestApp_UncancelEntry_RevertsToTask(t *testing.T) {
 	err = wailsApp.UncancelEntry(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "•", agenda.Days[0].Entries[0].Type.Symbol())
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "•", days[0].Entries[0].Type.Symbol())
 }
 
 func TestApp_SetPriority_SetsPriorityOnEntry(t *testing.T) {
@@ -242,11 +242,11 @@ func TestApp_SetPriority_SetsPriorityOnEntry(t *testing.T) {
 	err = wailsApp.SetPriority(ids[0], "high")
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, domain.PriorityHigh, agenda.Days[0].Entries[0].Priority)
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, domain.PriorityHigh, days[0].Entries[0].Priority)
 }
 
 func TestApp_CyclePriority_CyclesThroughPriorities(t *testing.T) {
@@ -269,17 +269,17 @@ func TestApp_CyclePriority_CyclesThroughPriorities(t *testing.T) {
 	err = wailsApp.CyclePriority(ids[0])
 	require.NoError(t, err)
 
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	assert.Equal(t, domain.PriorityLow, agenda.Days[0].Entries[0].Priority)
+	assert.Equal(t, domain.PriorityLow, days[0].Entries[0].Priority)
 
 	// Cycle to medium
 	err = wailsApp.CyclePriority(ids[0])
 	require.NoError(t, err)
 
-	agenda, err = wailsApp.GetAgenda(today, today)
+	days, err = wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	assert.Equal(t, domain.PriorityMedium, agenda.Days[0].Entries[0].Priority)
+	assert.Equal(t, domain.PriorityMedium, days[0].Entries[0].Priority)
 }
 
 func TestApp_MigrateEntry_MovesTaskToFutureDate(t *testing.T) {
@@ -304,18 +304,18 @@ func TestApp_MigrateEntry_MovesTaskToFutureDate(t *testing.T) {
 	assert.Greater(t, newID, int64(0))
 
 	// Original entry should be marked as migrated
-	agenda, err := wailsApp.GetAgenda(today, today)
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "→", agenda.Days[0].Entries[0].Type.Symbol())
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "→", days[0].Entries[0].Type.Symbol())
 
 	// New entry should exist on tomorrow
-	agenda, err = wailsApp.GetAgenda(tomorrow, tomorrow)
+	days, err = wailsApp.GetDayEntries(tomorrow, tomorrow)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.Len(t, agenda.Days[0].Entries, 1)
-	assert.Equal(t, "Test task", agenda.Days[0].Entries[0].Content)
+	require.Len(t, days, 1)
+	require.Len(t, days[0].Entries, 1)
+	assert.Equal(t, "Test task", days[0].Entries[0].Content)
 }
 
 func TestApp_SetLocation_SetsLocationForDate(t *testing.T) {
@@ -333,12 +333,12 @@ func TestApp_SetLocation_SetsLocationForDate(t *testing.T) {
 	err = wailsApp.SetLocation(today, "Manchester Office")
 	require.NoError(t, err)
 
-	// Verify location is set by checking the agenda
-	agenda, err := wailsApp.GetAgenda(today, today)
+	// Verify location is set by checking the days
+	days, err := wailsApp.GetDayEntries(today, today)
 	require.NoError(t, err)
-	require.Len(t, agenda.Days, 1)
-	require.NotNil(t, agenda.Days[0].Location)
-	assert.Equal(t, "Manchester Office", *agenda.Days[0].Location)
+	require.Len(t, days, 1)
+	require.NotNil(t, days[0].Location)
+	assert.Equal(t, "Manchester Office", *days[0].Location)
 }
 
 func TestApp_GetLocationHistory_ReturnsUniqueLocations(t *testing.T) {

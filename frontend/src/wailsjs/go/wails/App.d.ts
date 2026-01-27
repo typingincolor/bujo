@@ -40,7 +40,7 @@ export function EditEntry(arg1:number,arg2:string):Promise<void>;
 
 export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
-export function GetAgenda(arg1:time.Time,arg2:time.Time):Promise<service.MultiDayAgenda>;
+export function GetDayEntries(arg1:time.Time,arg2:time.Time):Promise<Array<service.DayEntries>>;
 
 export function GetEntry(arg1:number):Promise<domain.Entry>;
 
@@ -57,6 +57,8 @@ export function GetLists():Promise<Array<wails.ListWithItems>>;
 export function GetLocationHistory():Promise<Array<string>>;
 
 export function GetOutstandingQuestions():Promise<Array<domain.Entry>>;
+
+export function GetOverdue():Promise<Array<domain.Entry>>;
 
 export function GetSummary(arg1:time.Time):Promise<string>;
 

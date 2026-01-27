@@ -17,33 +17,29 @@ func init() {
 	color.NoColor = false
 }
 
-func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
+func TestRenderDaysWithOverdue_OverdueTasksInDaySectionAreRed(t *testing.T) {
 	today := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
 	yesterday := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
 
 	parentID := int64(1)
 
-	// Task from yesterday shown in yesterday's day section (within week view)
-	// should be styled red because it's overdue relative to today
-	agenda := &service.MultiDayAgenda{
-		Days: []service.DayEntries{
-			{
-				Date: yesterday,
-				Entries: []domain.Entry{
-					{ID: 1, Type: domain.EntryTypeEvent, Content: "Meeting", ScheduledDate: &yesterday, Depth: 0},
-					{ID: 2, Type: domain.EntryTypeTask, Content: "Overdue task", ParentID: &parentID, ScheduledDate: &yesterday, Depth: 1},
-				},
+	days := []service.DayEntries{
+		{
+			Date: yesterday,
+			Entries: []domain.Entry{
+				{ID: 1, Type: domain.EntryTypeEvent, Content: "Meeting", ScheduledDate: &yesterday, Depth: 0},
+				{ID: 2, Type: domain.EntryTypeTask, Content: "Overdue task", ParentID: &parentID, ScheduledDate: &yesterday, Depth: 1},
 			},
-			{
-				Date: today,
-				Entries: []domain.Entry{
-					{ID: 3, Type: domain.EntryTypeTask, Content: "Today task", ScheduledDate: &today, Depth: 0},
-				},
+		},
+		{
+			Date: today,
+			Entries: []domain.Entry{
+				{ID: 3, Type: domain.EntryTypeTask, Content: "Today task", ScheduledDate: &today, Depth: 0},
 			},
 		},
 	}
 
-	result := RenderMultiDayAgenda(agenda, today)
+	result := RenderDaysWithOverdue(days, nil, today)
 
 	// The overdue task in yesterday's section should be red
 	// We check that Red() was applied to "Overdue task" by looking for ANSI codes
@@ -71,18 +67,20 @@ func TestRenderMultiDayAgenda_OverdueTasksInDaySectionAreRed(t *testing.T) {
 		"Today's task should NOT be red, got: %q", todayTaskLine)
 }
 
-func TestRenderDailyAgenda_CancelledEntriesHaveStrikethrough(t *testing.T) {
+func TestRenderDaysWithOverdue_CancelledEntriesHaveStrikethrough(t *testing.T) {
 	today := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
 
-	agenda := &service.DailyAgenda{
-		Date: today,
-		Today: []domain.Entry{
-			{ID: 1, Type: domain.EntryTypeCancelled, Content: "Cancelled task", ScheduledDate: &today, Depth: 0},
-			{ID: 2, Type: domain.EntryTypeTask, Content: "Normal task", ScheduledDate: &today, Depth: 0},
+	days := []service.DayEntries{
+		{
+			Date: today,
+			Entries: []domain.Entry{
+				{ID: 1, Type: domain.EntryTypeCancelled, Content: "Cancelled task", ScheduledDate: &today, Depth: 0},
+				{ID: 2, Type: domain.EntryTypeTask, Content: "Normal task", ScheduledDate: &today, Depth: 0},
+			},
 		},
 	}
 
-	result := RenderDailyAgenda(agenda)
+	result := RenderDaysWithOverdue(days, nil, today)
 
 	// Find lines
 	lines := strings.Split(result, "\n")
@@ -145,21 +143,23 @@ func TestRenderGoalsSection_ShowsCheckmarkForDoneGoals(t *testing.T) {
 	assert.Contains(t, stripped, "100%")
 }
 
-func TestRenderDailyAgenda_WithMoodAndWeather(t *testing.T) {
+func TestRenderDaysWithOverdue_SingleDayWithMoodAndWeather(t *testing.T) {
 	today := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
 	location := "Home Office"
 	mood := "Focused"
 	weather := "Sunny"
 
-	agenda := &service.DailyAgenda{
-		Date:     today,
-		Location: &location,
-		Mood:     &mood,
-		Weather:  &weather,
-		Today:    []domain.Entry{},
+	days := []service.DayEntries{
+		{
+			Date:     today,
+			Location: &location,
+			Mood:     &mood,
+			Weather:  &weather,
+			Entries:  []domain.Entry{},
+		},
 	}
 
-	result := RenderDailyAgenda(agenda)
+	result := RenderDaysWithOverdue(days, nil, today)
 	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "Home Office")
@@ -167,7 +167,45 @@ func TestRenderDailyAgenda_WithMoodAndWeather(t *testing.T) {
 	assert.Contains(t, stripped, "Sunny")
 }
 
-func TestRenderMultiDayAgenda_WithMoodAndWeather(t *testing.T) {
+func TestRenderDaysWithOverdue_ShowsOverdueSectionWhenProvided(t *testing.T) {
+	today := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+	yesterday := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
+
+	days := []service.DayEntries{
+		{
+			Date:    today,
+			Entries: []domain.Entry{},
+		},
+	}
+
+	overdue := []domain.Entry{
+		{ID: 1, Type: domain.EntryTypeTask, Content: "Overdue task from yesterday", ScheduledDate: &yesterday, Depth: 0},
+	}
+
+	result := RenderDaysWithOverdue(days, overdue, today)
+	stripped := testutil.StripAnsi(result)
+
+	assert.Contains(t, stripped, "OVERDUE")
+	assert.Contains(t, stripped, "Overdue task from yesterday")
+}
+
+func TestRenderDaysWithOverdue_NoOverdueSectionWhenEmpty(t *testing.T) {
+	today := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
+
+	days := []service.DayEntries{
+		{
+			Date:    today,
+			Entries: []domain.Entry{},
+		},
+	}
+
+	result := RenderDaysWithOverdue(days, nil, today)
+	stripped := testutil.StripAnsi(result)
+
+	assert.NotContains(t, stripped, "OVERDUE")
+}
+
+func TestRenderDaysWithOverdue_MultiDayWithMoodAndWeather(t *testing.T) {
 	day1 := time.Date(2026, 1, 13, 0, 0, 0, 0, time.UTC)
 	day2 := time.Date(2026, 1, 14, 0, 0, 0, 0, time.UTC)
 	today := day1
@@ -180,26 +218,24 @@ func TestRenderMultiDayAgenda_WithMoodAndWeather(t *testing.T) {
 	mood2 := "Calm"
 	weather2 := "Rainy"
 
-	agenda := &service.MultiDayAgenda{
-		Days: []service.DayEntries{
-			{
-				Date:     day1,
-				Location: &location1,
-				Mood:     &mood1,
-				Weather:  &weather1,
-				Entries:  []domain.Entry{},
-			},
-			{
-				Date:     day2,
-				Location: &location2,
-				Mood:     &mood2,
-				Weather:  &weather2,
-				Entries:  []domain.Entry{},
-			},
+	days := []service.DayEntries{
+		{
+			Date:     day1,
+			Location: &location1,
+			Mood:     &mood1,
+			Weather:  &weather1,
+			Entries:  []domain.Entry{},
+		},
+		{
+			Date:     day2,
+			Location: &location2,
+			Mood:     &mood2,
+			Weather:  &weather2,
+			Entries:  []domain.Entry{},
 		},
 	}
 
-	result := RenderMultiDayAgenda(agenda, today)
+	result := RenderDaysWithOverdue(days, nil, today)
 	stripped := testutil.StripAnsi(result)
 
 	assert.Contains(t, stripped, "Home")

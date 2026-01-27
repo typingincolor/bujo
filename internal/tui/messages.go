@@ -11,8 +11,8 @@ type errMsg struct {
 	err error
 }
 
-type agendaLoadedMsg struct {
-	agenda *service.MultiDayAgenda
+type daysLoadedMsg struct {
+	days []service.DayEntries
 }
 
 type entryUpdatedMsg struct {

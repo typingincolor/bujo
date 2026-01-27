@@ -50,7 +50,7 @@ type Model struct {
 	statsService             *service.StatsService
 	changeDetection          ChangeDetector
 	lastCheckedModified      time.Time
-	agenda                   *service.MultiDayAgenda
+	days                     []service.DayEntries
 	journalGoals             []domain.Goal
 	entries                  []EntryItem
 	collapsed                map[domain.EntityID]bool
@@ -421,7 +421,7 @@ func NewWithConfig(cfg Config) Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	cmds := []tea.Cmd{m.loadAgendaCmd()}
+	cmds := []tea.Cmd{m.loadDaysCmd()}
 
 	if m.changeDetection != nil {
 		cmds = append(cmds, m.checkChangesCmd())
@@ -538,7 +538,7 @@ func (m Model) scrollToBottom() Model {
 	return m
 }
 
-func (m Model) loadAgendaCmd() tea.Cmd {
+func (m Model) loadDaysCmd() tea.Cmd {
 	viewMode := m.viewMode
 	viewDate := m.viewDate
 	return func() tea.Msg {
@@ -554,11 +554,11 @@ func (m Model) loadAgendaCmd() tea.Cmd {
 			to = viewDate
 		}
 
-		agenda, err := m.bujoService.GetMultiDayAgenda(ctx, from, to)
+		days, err := m.bujoService.GetDayEntries(ctx, from, to)
 		if err != nil {
 			return errMsg{err}
 		}
-		return agendaLoadedMsg{agenda}
+		return daysLoadedMsg{days}
 	}
 }
 
@@ -1128,8 +1128,8 @@ func (m Model) loadParentChainCmd(entryID int64) tea.Cmd {
 	}
 }
 
-func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
-	if agenda == nil {
+func (m Model) flattenDays(days []service.DayEntries) []EntryItem {
+	if days == nil {
 		return nil
 	}
 
@@ -1138,7 +1138,7 @@ func (m Model) flattenAgenda(agenda *service.MultiDayAgenda) []EntryItem {
 
 	var items []EntryItem
 
-	for _, day := range agenda.Days {
+	for _, day := range days {
 		if len(day.Entries) == 0 {
 			continue
 		}
@@ -1227,14 +1227,14 @@ func (m Model) flattenEntries(entries []domain.Entry, header string, forceOverdu
 }
 
 func (m Model) expandAllSiblings() Model {
-	if len(m.entries) == 0 || m.agenda == nil {
+	if len(m.entries) == 0 || m.days == nil {
 		return m
 	}
 
 	selectedEntry := m.entries[m.selectedIdx].Entry
 	parentID := selectedEntry.ParentID
 
-	for _, day := range m.agenda.Days {
+	for _, day := range m.days {
 		for _, entry := range day.Entries {
 			if (parentID == nil && entry.ParentID == nil) ||
 				(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
@@ -1242,19 +1242,19 @@ func (m Model) expandAllSiblings() Model {
 			}
 		}
 	}
-	m.entries = m.flattenAgenda(m.agenda)
+	m.entries = m.flattenDays(m.days)
 	return m.ensuredVisible()
 }
 
 func (m Model) collapseAllSiblings() Model {
-	if len(m.entries) == 0 || m.agenda == nil {
+	if len(m.entries) == 0 || m.days == nil {
 		return m
 	}
 
 	selectedEntry := m.entries[m.selectedIdx].Entry
 	parentID := selectedEntry.ParentID
 
-	for _, day := range m.agenda.Days {
+	for _, day := range m.days {
 		for _, entry := range day.Entries {
 			if (parentID == nil && entry.ParentID == nil) ||
 				(parentID != nil && entry.ParentID != nil && *parentID == *entry.ParentID) {
@@ -1262,7 +1262,7 @@ func (m Model) collapseAllSiblings() Model {
 			}
 		}
 	}
-	m.entries = m.flattenAgenda(m.agenda)
+	m.entries = m.flattenDays(m.days)
 	return m.ensuredVisible()
 }
 
@@ -1354,14 +1354,14 @@ func (m Model) filterOverdueContext(entries []domain.Entry, expandedOverdueConte
 }
 
 func (m Model) ensureSelectedAndAncestorsExpanded() Model {
-	if len(m.entries) == 0 || m.agenda == nil {
+	if len(m.entries) == 0 || m.days == nil {
 		return m
 	}
 
 	selectedEntry := m.entries[m.selectedIdx].Entry
 
 	entryByID := make(map[int64]domain.Entry)
-	for _, day := range m.agenda.Days {
+	for _, day := range m.days {
 		for _, entry := range day.Entries {
 			entryByID[entry.ID] = entry
 		}
@@ -1376,7 +1376,7 @@ func (m Model) ensureSelectedAndAncestorsExpanded() Model {
 		current = parent
 	}
 
-	m.entries = m.flattenAgenda(m.agenda)
+	m.entries = m.flattenDays(m.days)
 	return m
 }
 

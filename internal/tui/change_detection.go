@@ -47,7 +47,7 @@ func (m Model) handleDataChanged() (tea.Model, tea.Cmd) {
 func (m Model) reloadCurrentViewCmd() tea.Cmd {
 	switch m.currentView {
 	case ViewTypeJournal, ViewTypeReview:
-		return m.loadAgendaCmd()
+		return m.loadDaysCmd()
 	case ViewTypeHabits:
 		return m.loadHabitsCmd()
 	case ViewTypeLists:

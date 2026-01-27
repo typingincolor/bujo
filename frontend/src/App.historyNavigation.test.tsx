@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn()
@@ -17,10 +17,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -44,32 +42,31 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 // Week data with items needing attention for testing navigation
-const weekAgendaWithAttentionItems = createMockAgenda({
-  Days: [
-    createMockDayEntries({
-      Date: '2026-01-19T00:00:00Z',
-      Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Task needing attention', Priority: 'High', CreatedAt: '2026-01-19T10:00:00Z' }),
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note entry', CreatedAt: '2026-01-19T11:00:00Z' }),
-      ],
-    }),
-    createMockDayEntries({
-      Date: '2026-01-20T00:00:00Z',
-      Entries: [
-        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Another task', CreatedAt: '2026-01-20T10:00:00Z' }),
-      ],
-    }),
-  ],
-  Overdue: [],
-})
+const mockDays = createMockDays([
+  createMockDayEntries({
+    Date: '2026-01-19T00:00:00Z',
+    Entries: [
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Task needing attention', Priority: 'High', CreatedAt: '2026-01-19T10:00:00Z' }),
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note entry', CreatedAt: '2026-01-19T11:00:00Z' }),
+    ],
+  }),
+  createMockDayEntries({
+    Date: '2026-01-20T00:00:00Z',
+    Entries: [
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Task', Content: 'Another task', CreatedAt: '2026-01-20T10:00:00Z' }),
+    ],
+  }),
+])
+const mockOverdue = createMockOverdue([])
 
 describe('App - Navigation History', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithAttentionItems)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   describe('initial state', () => {

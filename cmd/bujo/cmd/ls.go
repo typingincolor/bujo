@@ -52,12 +52,17 @@ Examples:
 			return err
 		}
 
-		agenda, err := bujoService.GetMultiDayAgenda(cmd.Context(), from, to)
+		days, err := bujoService.GetDayEntries(cmd.Context(), from, to)
 		if err != nil {
 			return fmt.Errorf("failed to get entries: %w", err)
 		}
 
-		fmt.Print(cli.RenderMultiDayAgenda(agenda, todayStart))
+		overdue, err := bujoService.GetOverdue(cmd.Context())
+		if err != nil {
+			return fmt.Errorf("failed to get overdue: %w", err)
+		}
+
+		fmt.Print(cli.RenderDaysWithOverdue(days, overdue, todayStart))
 
 		currentMonth := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, today.Location())
 		goals, err := goalService.GetGoalsForMonth(cmd.Context(), currentMonth)

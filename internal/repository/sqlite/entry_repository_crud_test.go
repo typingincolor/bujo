@@ -107,9 +107,11 @@ func TestEntryRepository_GetOverdue(t *testing.T) {
 	repo := NewEntryRepository(db)
 	ctx := context.Background()
 
-	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
-	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
-	twoDaysAgo := time.Date(2026, 1, 4, 0, 0, 0, 0, time.UTC)
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
+	twoDaysAgo := today.AddDate(0, 0, -2)
+	tomorrow := today.AddDate(0, 0, 1)
 
 	overdueEntry := domain.Entry{
 		Type:          domain.EntryTypeTask,
@@ -129,6 +131,12 @@ func TestEntryRepository_GetOverdue(t *testing.T) {
 		ScheduledDate: &today,
 		CreatedAt:     time.Now(),
 	}
+	futureEntry := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Future task",
+		ScheduledDate: &tomorrow,
+		CreatedAt:     time.Now(),
+	}
 
 	_, err := repo.Insert(ctx, overdueEntry)
 	require.NoError(t, err)
@@ -136,8 +144,10 @@ func TestEntryRepository_GetOverdue(t *testing.T) {
 	require.NoError(t, err)
 	_, err = repo.Insert(ctx, todayEntry)
 	require.NoError(t, err)
+	_, err = repo.Insert(ctx, futureEntry)
+	require.NoError(t, err)
 
-	results, err := repo.GetOverdue(ctx, today)
+	results, err := repo.GetOverdue(ctx)
 
 	require.NoError(t, err)
 	assert.Len(t, results, 2)
@@ -148,8 +158,9 @@ func TestEntryRepository_GetOverdue_ExcludesEventsAndNotesWithoutOverdueChildren
 	repo := NewEntryRepository(db)
 	ctx := context.Background()
 
-	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
-	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
 
 	overdueTask := domain.Entry{
 		Type:          domain.EntryTypeTask,
@@ -177,7 +188,7 @@ func TestEntryRepository_GetOverdue_ExcludesEventsAndNotesWithoutOverdueChildren
 	_, err = repo.Insert(ctx, pastNote)
 	require.NoError(t, err)
 
-	results, err := repo.GetOverdue(ctx, today)
+	results, err := repo.GetOverdue(ctx)
 
 	require.NoError(t, err)
 	assert.Len(t, results, 1, "GetOverdue should exclude events and notes without overdue children")
@@ -189,8 +200,9 @@ func TestEntryRepository_GetOverdue_IncludesParentChainForOverdueTasks(t *testin
 	repo := NewEntryRepository(db)
 	ctx := context.Background()
 
-	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
-	yesterday := time.Date(2026, 1, 5, 0, 0, 0, 0, time.UTC)
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	yesterday := today.AddDate(0, 0, -1)
 
 	parentEvent := domain.Entry{
 		Type:          domain.EntryTypeEvent,
@@ -224,7 +236,7 @@ func TestEntryRepository_GetOverdue_IncludesParentChainForOverdueTasks(t *testin
 	_, err = repo.Insert(ctx, grandchildTask)
 	require.NoError(t, err)
 
-	results, err := repo.GetOverdue(ctx, today)
+	results, err := repo.GetOverdue(ctx)
 
 	require.NoError(t, err)
 	assert.Len(t, results, 3, "GetOverdue should include parent chain for overdue tasks")

@@ -3,18 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})])
+const mockOverdue = createMockOverdue([])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +21,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -50,26 +46,24 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, DeleteEntry, HasChildren, CancelEntry, UncancelEntry, CyclePriority, MigrateEntry } from './wailsjs/go/wails/App'
 
 
 describe('App - Cancel/Uncancel Entry', () => {
-  const mockWithCancelledEntry = createMockAgenda({
-    Days: [createMockDayEntries({
-      Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Active task', CreatedAt: '2026-01-17T10:00:00Z' }),
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Cancelled', Content: 'Cancelled task', CreatedAt: '2026-01-17T11:00:00Z' }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockDaysWithCancelledEntry = createMockDays([createMockDayEntries({
+    Entries: [
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Active task', CreatedAt: '2026-01-17T10:00:00Z' }),
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Cancelled', Content: 'Cancelled task', CreatedAt: '2026-01-17T11:00:00Z' }),
+    ],
+  })])
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('clicking cancel button calls CancelEntry binding', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     render(
       <SettingsProvider>
         <App />
@@ -89,7 +83,8 @@ describe('App - Cancel/Uncancel Entry', () => {
   })
 
   it('clicking uncancel button calls UncancelEntry binding', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysWithCancelledEntry)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     render(
       <SettingsProvider>
         <App />
@@ -109,7 +104,8 @@ describe('App - Cancel/Uncancel Entry', () => {
   })
 
   it('refreshes data after cancelling entry', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     render(
       <SettingsProvider>
         <App />
@@ -120,18 +116,19 @@ describe('App - Cancel/Uncancel Entry', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const cancelButton = screen.getAllByTitle('Cancel entry')[0]
     fireEvent.click(cancelButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 
   it('refreshes data after uncancelling entry', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockWithCancelledEntry)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysWithCancelledEntry)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     render(
       <SettingsProvider>
         <App />
@@ -142,13 +139,13 @@ describe('App - Cancel/Uncancel Entry', () => {
       expect(screen.getByText('Cancelled task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const uncancelButton = screen.getByTitle('Uncancel entry')
     fireEvent.click(uncancelButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 })
@@ -156,7 +153,8 @@ describe('App - Cancel/Uncancel Entry', () => {
 describe('App - Priority Cycling', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('clicking priority button calls CyclePriority binding', async () => {
@@ -189,13 +187,13 @@ describe('App - Priority Cycling', () => {
       expect(screen.getByText('First task')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     const priorityButton = screen.getAllByTitle('Cycle priority')[0]
     fireEvent.click(priorityButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 })
@@ -203,7 +201,8 @@ describe('App - Priority Cycling', () => {
 describe('App - Delete Entry', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     vi.mocked(HasChildren).mockResolvedValue(false)
   })
 
@@ -307,7 +306,8 @@ describe('App - Delete Entry', () => {
 describe('App - Task Migration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('clicking migrate button opens migrate modal', async () => {
@@ -431,7 +431,7 @@ describe('App - Task Migration', () => {
       expect(screen.getByText('Migrate Entry')).toBeInTheDocument()
     })
 
-    vi.mocked(GetAgenda).mockClear()
+    vi.mocked(GetDayEntries).mockClear()
 
     // Find and click the submit button in the modal
     const modal = document.querySelector('.fixed.inset-0')
@@ -440,40 +440,37 @@ describe('App - Task Migration', () => {
     fireEvent.click(migrateSubmitButton)
 
     await waitFor(() => {
-      expect(GetAgenda).toHaveBeenCalled()
+      expect(GetDayEntries).toHaveBeenCalled()
     })
   })
 })
 
 describe('App - Migrate Entry with Children', () => {
-  const mockAfterMigration = createMockAgenda({
-    Days: [
-      createMockDayEntries({
-        Date: '2026-01-17T00:00:00Z',
-        Entries: [
-          createMockEntry({
-            ID: 1,
-            EntityID: 'e1',
-            Type: 'Migrated',
-            Content: 'Parent task',
-            ParentID: null,
-            Depth: 0,
-            CreatedAt: '2026-01-17T10:00:00Z'
-          }),
-          createMockEntry({
-            ID: 2,
-            EntityID: 'e2',
-            Type: 'Migrated',
-            Content: 'Child note',
-            ParentID: 1,
-            Depth: 1,
-            CreatedAt: '2026-01-17T10:01:00Z'
-          }),
-        ],
-      }),
-    ],
-    Overdue: [],
-  })
+  const mockDaysAfterMigration = createMockDays([
+    createMockDayEntries({
+      Date: '2026-01-17T00:00:00Z',
+      Entries: [
+        createMockEntry({
+          ID: 1,
+          EntityID: 'e1',
+          Type: 'Migrated',
+          Content: 'Parent task',
+          ParentID: null,
+          Depth: 0,
+          CreatedAt: '2026-01-17T10:00:00Z'
+        }),
+        createMockEntry({
+          ID: 2,
+          EntityID: 'e2',
+          Type: 'Migrated',
+          Content: 'Child note',
+          ParentID: 1,
+          Depth: 1,
+          CreatedAt: '2026-01-17T10:01:00Z'
+        }),
+      ],
+    }),
+  ])
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -481,7 +478,8 @@ describe('App - Migrate Entry with Children', () => {
 
   it('maintains correct indentation for migrated child notes', async () => {
     // Show the old location after migration
-    vi.mocked(GetAgenda).mockResolvedValue(mockAfterMigration)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDaysAfterMigration)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
     render(
       <SettingsProvider>

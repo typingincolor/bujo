@@ -111,8 +111,8 @@ func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time
 	return r.scanEntries(rows)
 }
 
-func (r *EntryRepository) GetOverdue(ctx context.Context, date time.Time) ([]domain.Entry, error) {
-	dateStr := date.Format("2006-01-02")
+func (r *EntryRepository) GetOverdue(ctx context.Context) ([]domain.Entry, error) {
+	dateStr := time.Now().Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE

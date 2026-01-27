@@ -57,7 +57,8 @@ Object.defineProperty(window, 'runtime', {
 
 // Mock Wails go bindings
 const wailsAppMock = {
-  GetAgenda: () => Promise.resolve({ Days: [], Overdue: [] }),
+  GetDayEntries: () => Promise.resolve([]),
+  GetOverdue: () => Promise.resolve([]),
   GetHabits: () => Promise.resolve({ Habits: [] }),
   GetLists: () => Promise.resolve([]),
   GetGoals: () => Promise.resolve([]),

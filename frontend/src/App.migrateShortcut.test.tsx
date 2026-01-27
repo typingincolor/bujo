@@ -3,7 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries } from './test/mocks'
+import type { wails as wailsTypes } from './wailsjs/go/models'
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -12,10 +13,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -40,44 +39,38 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 describe('App - Migrate Keyboard Shortcut', () => {
-  const mockTaskEntry = createMockAgenda({
-    Days: [createMockDayEntries({
-      Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Task to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockTaskDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+    Entries: [
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'Task to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
+    ],
+  })]
 
-  const mockQuestionEntry = createMockAgenda({
-    Days: [createMockDayEntries({
-      Entries: [
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Question', Content: 'Question to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockQuestionDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+    Entries: [
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Question', Content: 'Question to migrate', CreatedAt: '2026-01-17T10:00:00Z' }),
+    ],
+  })]
 
-  const mockNonMigratableEntries = createMockAgenda({
-    Days: [createMockDayEntries({
-      Entries: [
-        createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Done task', CreatedAt: '2026-01-17T10:00:00Z' }),
-        createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T11:00:00Z' }),
-        createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Event', Content: 'An event', CreatedAt: '2026-01-17T12:00:00Z' }),
-      ],
-    })],
-    Overdue: [],
-  })
+  const mockNonMigratableDays: wailsTypes.DayEntries[] = [createMockDayEntries({
+    Entries: [
+      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Done', Content: 'Done task', CreatedAt: '2026-01-17T10:00:00Z' }),
+      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T11:00:00Z' }),
+      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Event', Content: 'An event', CreatedAt: '2026-01-17T12:00:00Z' }),
+    ],
+  })]
+
+  const mockOverdue: wailsTypes.Entry[] = []
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('pressing m opens migrate modal when a task entry is selected', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockTaskEntry)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockTaskDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -97,7 +90,8 @@ describe('App - Migrate Keyboard Shortcut', () => {
   })
 
   it('pressing m opens migrate modal when a question entry is selected', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockQuestionEntry)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockQuestionDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -117,7 +111,8 @@ describe('App - Migrate Keyboard Shortcut', () => {
   })
 
   it('pressing m does NOT open migrate modal for done entries', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockNonMigratableDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -138,7 +133,8 @@ describe('App - Migrate Keyboard Shortcut', () => {
   })
 
   it('pressing m does NOT open migrate modal for note entries', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockNonMigratableDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -160,7 +156,8 @@ describe('App - Migrate Keyboard Shortcut', () => {
   })
 
   it('pressing m does NOT open migrate modal for event entries', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(mockNonMigratableEntries)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockNonMigratableDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
     const user = userEvent.setup()
     render(
       <SettingsProvider>
@@ -183,10 +180,8 @@ describe('App - Migrate Keyboard Shortcut', () => {
   })
 
   it('pressing m does nothing when no entries exist', async () => {
-    vi.mocked(GetAgenda).mockResolvedValue(createMockAgenda({
-      Days: [createMockDayEntries({ Entries: [] })],
-      Overdue: [],
-    }))
+    vi.mocked(GetDayEntries).mockResolvedValue([createMockDayEntries({ Entries: [] })])
+    vi.mocked(GetOverdue).mockResolvedValue([])
     const user = userEvent.setup()
     render(
       <SettingsProvider>

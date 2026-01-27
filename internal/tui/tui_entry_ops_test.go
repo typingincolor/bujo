@@ -12,7 +12,7 @@ import (
 
 func TestModel_Update_EditMode_InitializesWithContent(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Original content", Type: domain.EntryTypeTask}},
 	}
@@ -28,7 +28,7 @@ func TestModel_Update_EditMode_InitializesWithContent(t *testing.T) {
 
 func TestModel_Update_EditMode_NoOpOnEmptyEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'e'}}
@@ -42,7 +42,7 @@ func TestModel_Update_EditMode_NoOpOnEmptyEntries(t *testing.T) {
 
 func TestModel_Update_AddMode_EntersAsChildOnShiftA(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Parent"}},
 	}
@@ -64,7 +64,7 @@ func TestModel_Update_AddMode_EntersAsChildOnShiftA(t *testing.T) {
 
 func TestModel_Update_AddMode_StartsEmpty(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}}
 	newModel, _ := model.Update(msg)
@@ -77,7 +77,7 @@ func TestModel_Update_AddMode_StartsEmpty(t *testing.T) {
 
 func TestModel_Update_MigrateMode_NoOpOnEmptyEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}}
@@ -91,7 +91,7 @@ func TestModel_Update_MigrateMode_NoOpOnEmptyEntries(t *testing.T) {
 
 func TestModel_Update_MigrateMode_NoOpOnNonTask(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Note", Type: domain.EntryTypeNote}},
 	}
@@ -107,7 +107,7 @@ func TestModel_Update_MigrateMode_NoOpOnNonTask(t *testing.T) {
 
 func TestModel_Update_ErrorCanBeDismissed(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.err = fmt.Errorf("some error")
 
 	msg := tea.KeyMsg{Type: tea.KeyEsc}
@@ -121,7 +121,7 @@ func TestModel_Update_ErrorCanBeDismissed(t *testing.T) {
 
 func TestModel_Update_ErrorCanBeDismissedWithAnyKey(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.err = fmt.Errorf("some error")
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'x'}}
@@ -136,7 +136,7 @@ func TestModel_Update_ErrorCanBeDismissedWithAnyKey(t *testing.T) {
 func TestModel_Update_AddMode_InheritsParentFromSelected(t *testing.T) {
 	parentID := int64(10)
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 22, Content: "Child item", ParentID: &parentID}},
 	}
@@ -158,7 +158,7 @@ func TestModel_Update_AddMode_InheritsParentFromSelected(t *testing.T) {
 
 func TestModel_Update_AddMode_RootItemAddsAtRoot(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Root item", ParentID: nil}},
 	}
@@ -178,7 +178,7 @@ func TestModel_Update_AddMode_RootItemAddsAtRoot(t *testing.T) {
 func TestModel_Update_AddRootMode_AddsAtRootFromNestedItem(t *testing.T) {
 	parentID := int64(10)
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 22, Content: "Child item", ParentID: &parentID}},
 	}
@@ -213,7 +213,7 @@ func TestModel_DefaultViewDate_IsToday(t *testing.T) {
 
 func TestModel_Update_GoToDate(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'/'}}
 	newModel, _ := model.Update(msg)
@@ -226,7 +226,7 @@ func TestModel_Update_GoToDate(t *testing.T) {
 
 func TestModel_AddRoot_UsesViewDate(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	// Set viewDate to yesterday
 	yesterday := time.Now().AddDate(0, 0, -1)
 	model.viewDate = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, yesterday.Location())

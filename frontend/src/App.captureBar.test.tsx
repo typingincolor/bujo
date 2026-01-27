@@ -3,18 +3,16 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockAgenda } from './test/mocks'
+import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockEntriesAgenda = createMockAgenda({
-  Days: [createMockDayEntries({
-    Entries: [
-      createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-      createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T11:00:00Z' }),
-      createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Event', Content: 'An event', CreatedAt: '2026-01-17T12:00:00Z' }),
-    ],
-  })],
-  Overdue: [],
-})
+const mockDays = createMockDays([createMockDayEntries({
+  Entries: [
+    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
+    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T11:00:00Z' }),
+    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Event', Content: 'An event', CreatedAt: '2026-01-17T12:00:00Z' }),
+  ],
+})])
+const mockOverdue = createMockOverdue([])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
   EventsOn: vi.fn().mockReturnValue(() => {}),
@@ -23,10 +21,8 @@ vi.mock('./wailsjs/runtime/runtime', () => ({
 }))
 
 vi.mock('./wailsjs/go/wails/App', () => ({
-  GetAgenda: vi.fn().mockResolvedValue({
-    Overdue: [],
-    Days: [{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }],
-  }),
+  GetDayEntries: vi.fn().mockResolvedValue([{ Date: '2026-01-17T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' }]),
+  GetOverdue: vi.fn().mockResolvedValue([]),
   GetHabits: vi.fn().mockResolvedValue({ Habits: [] }),
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
@@ -51,7 +47,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ReadFile: vi.fn().mockResolvedValue(''),
 }))
 
-import { GetAgenda, AddEntry, AddChildEntry, OpenFileDialog } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, AddEntry, AddChildEntry, OpenFileDialog } from './wailsjs/go/wails/App'
 
 const mockStorage: Record<string, string> = {}
 const mockLocalStorage = {
@@ -67,7 +63,8 @@ describe('CaptureBar - Always Visible', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('shows capture bar at bottom of today view', async () => {
@@ -126,7 +123,8 @@ describe('CaptureBar - Prefix-Based Type Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('Tab blurs input (no type cycling)', async () => {
@@ -226,7 +224,8 @@ describe('CaptureBar - Entry Submission', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('Enter submits content exactly as typed (user types prefix)', async () => {
@@ -316,7 +315,8 @@ describe('CaptureBar - Parent Context (Child Entries)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('pressing A on selected entry shows parent context', async () => {
@@ -399,7 +399,8 @@ describe('CaptureBar - Draft Persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   afterEach(() => {
@@ -470,7 +471,8 @@ describe('Header - File Upload', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('shows upload button in header', async () => {
@@ -536,7 +538,8 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocalStorage.clear()
-    vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
   })
 
   it('i key focuses capture bar', async () => {
@@ -591,7 +594,8 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
 
   describe('CaptureBar positioning with dynamic sidebar', () => {
     it('does not use static right-[32rem] class', async () => {
-      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+      vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
       render(
         <SettingsProvider>
@@ -610,7 +614,8 @@ describe('CaptureBar - Keyboard Shortcuts', () => {
     })
 
     it('uses dynamic right positioning based on sidebar width', async () => {
-      vi.mocked(GetAgenda).mockResolvedValue(mockEntriesAgenda)
+      vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
+    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
 
       render(
         <SettingsProvider>

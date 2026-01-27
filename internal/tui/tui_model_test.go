@@ -49,6 +49,34 @@ func TestModel_Update_WindowSize(t *testing.T) {
 	}
 }
 
+func TestModel_Update_DaysLoadedMsg(t *testing.T) {
+	model := New(nil)
+	location := "Office"
+	days := []service.DayEntries{
+		{
+			Date:     time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
+			Location: &location,
+			Entries: []domain.Entry{
+				{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask},
+			},
+		},
+	}
+
+	msg := daysLoadedMsg{days: days}
+	newModel, _ := model.Update(msg)
+	m := newModel.(Model)
+
+	if m.days == nil {
+		t.Error("days should be set after daysLoadedMsg")
+	}
+	if len(m.days) != 1 {
+		t.Errorf("expected 1 day, got %d", len(m.days))
+	}
+	if len(m.entries) != 1 {
+		t.Errorf("expected 1 entry, got %d", len(m.entries))
+	}
+}
+
 func TestModel_Update_Navigation(t *testing.T) {
 	model := New(nil)
 	model.entries = []EntryItem{
@@ -56,7 +84,7 @@ func TestModel_Update_Navigation(t *testing.T) {
 		{Entry: domain.Entry{ID: 2, Content: "Second"}},
 		{Entry: domain.Entry{ID: 3, Content: "Third"}},
 	}
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	tests := []struct {
 		name        string
@@ -89,7 +117,7 @@ func TestModel_Update_Navigation(t *testing.T) {
 
 func TestModel_Update_HelpToggle(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	if model.help.ShowAll {
 		t.Error("help should not show all by default")
@@ -106,7 +134,7 @@ func TestModel_Update_HelpToggle(t *testing.T) {
 
 func TestModel_Update_QuitReturnsQuitCmd(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
 	newModel, cmd := model.Update(msg)
@@ -120,32 +148,30 @@ func TestModel_Update_QuitReturnsQuitCmd(t *testing.T) {
 	}
 }
 
-func TestModel_FlattenAgenda_Empty(t *testing.T) {
+func TestModel_FlattenDays_Empty(t *testing.T) {
 	model := New(nil)
-	result := model.flattenAgenda(nil)
+	result := model.flattenDays(nil)
 
 	if result != nil {
-		t.Error("flattenAgenda(nil) should return nil")
+		t.Error("flattenDays(nil) should return nil")
 	}
 }
 
-func TestModel_FlattenAgenda_WithDays(t *testing.T) {
+func TestModel_FlattenDays_WithDays(t *testing.T) {
 	model := New(nil)
 	location := "Home Office"
-	agenda := &service.MultiDayAgenda{
-		Days: []service.DayEntries{
-			{
-				Date:     time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
-				Location: &location,
-				Entries: []domain.Entry{
-					{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask},
-					{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask},
-				},
+	days := []service.DayEntries{
+		{
+			Date:     time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
+			Location: &location,
+			Entries: []domain.Entry{
+				{ID: 1, Content: "Task 1", Type: domain.EntryTypeTask},
+				{ID: 2, Content: "Task 2", Type: domain.EntryTypeTask},
 			},
 		},
 	}
 
-	result := model.flattenAgenda(agenda)
+	result := model.flattenDays(days)
 
 	if len(result) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(result))
@@ -158,18 +184,16 @@ func TestModel_FlattenAgenda_WithDays(t *testing.T) {
 	}
 }
 
-func TestModel_FlattenAgenda_WithHierarchy(t *testing.T) {
+func TestModel_FlattenDays_WithHierarchy(t *testing.T) {
 	model := New(nil)
 	parentID := int64(1)
 	parentEntityID := domain.EntityID("parent-entity-1")
-	agenda := &service.MultiDayAgenda{
-		Days: []service.DayEntries{
-			{
-				Date: time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
-				Entries: []domain.Entry{
-					{ID: 1, EntityID: parentEntityID, Content: "Parent", Type: domain.EntryTypeTask, ParentID: nil},
-					{ID: 2, Content: "Child", Type: domain.EntryTypeNote, ParentID: &parentID},
-				},
+	days := []service.DayEntries{
+		{
+			Date: time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC),
+			Entries: []domain.Entry{
+				{ID: 1, EntityID: parentEntityID, Content: "Parent", Type: domain.EntryTypeTask, ParentID: nil},
+				{ID: 2, Content: "Child", Type: domain.EntryTypeNote, ParentID: &parentID},
 			},
 		},
 	}
@@ -177,7 +201,7 @@ func TestModel_FlattenAgenda_WithHierarchy(t *testing.T) {
 	// Expand the parent so we can test hierarchy
 	model.collapsed[parentEntityID] = false
 
-	result := model.flattenAgenda(agenda)
+	result := model.flattenDays(days)
 
 	if len(result) != 2 {
 		t.Fatalf("expected 2 items, got %d", len(result))
@@ -212,7 +236,7 @@ func TestModel_View_Error(t *testing.T) {
 
 func TestModel_View_NoEntries(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{}
 
 	view := model.View()
@@ -224,7 +248,7 @@ func TestModel_View_NoEntries(t *testing.T) {
 
 func TestModel_ConfirmMode(t *testing.T) {
 	model := New(nil)
-	model.agenda = &service.MultiDayAgenda{}
+	model.days = []service.DayEntries{}
 	model.entries = []EntryItem{
 		{Entry: domain.Entry{ID: 1, Content: "Test"}},
 	}
