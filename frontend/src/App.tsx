@@ -257,6 +257,19 @@ function App() {
     handleHabitPeriodChange(nextPeriod)
   }, [habitPeriod, handleHabitPeriodChange])
 
+  const handleViewChange = useCallback((newView: ViewType) => {
+    if (newView === 'today') {
+      clearHistory()
+    } else {
+      pushHistory({
+        view: view,
+        scrollPosition: window.scrollY,
+      })
+    }
+    setView(newView)
+    setSelectedIndex(0)
+  }, [view, clearHistory, pushHistory])
+
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
@@ -503,7 +516,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod])
+  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod, handleViewChange])
 
   useEffect(() => {
     // Only reset main panel selection if main panel is focused
@@ -515,19 +528,6 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]) // Only run when days changes, focusedPanel is just a guard condition
-
-  const handleViewChange = (newView: ViewType) => {
-    if (newView === 'today') {
-      clearHistory()
-    } else {
-      pushHistory({
-        view: view,
-        scrollPosition: window.scrollY,
-      })
-    }
-    setView(newView)
-    setSelectedIndex(0)
-  }
 
   const handleEditEntry = useCallback(async (newContent: string) => {
     if (!editModalEntry) return

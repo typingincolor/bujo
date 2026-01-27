@@ -13,7 +13,7 @@ import (
 func TestEntryToListMover_MoveEntryToList_Atomic(t *testing.T) {
 	db, err := OpenAndMigrate(":memory:")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	entryRepo := NewEntryRepository(db)
 	listRepo := NewListRepository(db)

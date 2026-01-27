@@ -365,14 +365,14 @@ func TestApp_ReadFile_ReturnsFileContents(t *testing.T) {
 
 	tempFile, err := os.CreateTemp("", "bujo-test-*.txt")
 	require.NoError(t, err)
-	defer os.Remove(tempFile.Name())
+	defer func() { _ = os.Remove(tempFile.Name()) }()
 
 	testContent := `. Task one
 - Note two
 o Event three`
 	_, err = tempFile.WriteString(testContent)
 	require.NoError(t, err)
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	content, err := wailsApp.ReadFile(tempFile.Name())
 
@@ -409,7 +409,7 @@ func TestApp_ReadFile_ReturnsErrorForLargeFile(t *testing.T) {
 
 	tempFile, err := os.CreateTemp("", "bujo-large-*.txt")
 	require.NoError(t, err)
-	defer os.Remove(tempFile.Name())
+	defer func() { _ = os.Remove(tempFile.Name()) }()
 
 	largeContent := make([]byte, 2*1024*1024)
 	for i := range largeContent {
@@ -417,7 +417,7 @@ func TestApp_ReadFile_ReturnsErrorForLargeFile(t *testing.T) {
 	}
 	_, err = tempFile.Write(largeContent)
 	require.NoError(t, err)
-	tempFile.Close()
+	_ = tempFile.Close()
 
 	_, err = wailsApp.ReadFile(tempFile.Name())
 
