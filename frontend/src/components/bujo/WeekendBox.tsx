@@ -4,7 +4,9 @@ import { HabitItem, HabitDisplay } from './HabitItem';
 import { ActionCallbacks } from './EntryActions/types';
 
 interface WeekendBoxProps {
-  startDay: number;
+  startDay?: number;
+  saturdayDay?: number;
+  sundayDay?: number;
   saturdayEntries: Entry[];
   sundayEntries: Entry[];
   saturdayHabits?: HabitDisplay[];
@@ -16,6 +18,8 @@ interface WeekendBoxProps {
 
 export function WeekendBox({
   startDay,
+  saturdayDay,
+  sundayDay,
   saturdayEntries,
   sundayEntries,
   saturdayHabits = [],
@@ -26,10 +30,13 @@ export function WeekendBox({
 }: WeekendBoxProps) {
   const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0;
 
+  const satDay = saturdayDay ?? startDay ?? 0;
+  const sunDay = sundayDay ?? (startDay ? startDay + 1 : 0);
+
   return (
     <div className="border rounded-lg p-3 bg-card">
       <div className="mb-3 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold">{startDay}-{startDay + 1}</span>
+        <span className="text-2xl font-semibold">{satDay}-{sunDay}</span>
         <span className="text-sm text-muted-foreground">Weekend</span>
       </div>
       <div className="space-y-1">

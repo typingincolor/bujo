@@ -121,7 +121,8 @@ export function WeekView({
 
           {saturday && sunday && (
             <WeekendBox
-              startDay={parseISO(saturday.date).getDate()}
+              saturdayDay={parseISO(saturday.date).getDate()}
+              sundayDay={parseISO(sunday.date).getDate()}
               saturdayEntries={filteredSaturday}
               sundayEntries={filteredSunday}
               saturdayHabits={getHabitsForDate(saturday.date)}

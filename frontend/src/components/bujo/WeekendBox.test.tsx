@@ -117,4 +117,9 @@ describe('WeekendBox', () => {
     );
     expect(screen.queryByText('No events')).not.toBeInTheDocument();
   });
+
+  it('handles month boundary correctly (Jan 31 - Feb 1)', () => {
+    render(<WeekendBox saturdayDay={31} sundayDay={1} saturdayEntries={[]} sundayEntries={[]} />);
+    expect(screen.getByText('31-1')).toBeInTheDocument();
+  });
 });
