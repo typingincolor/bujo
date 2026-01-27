@@ -149,7 +149,15 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build Wails app
-        run: wails build -platform ${{ matrix.platform.build-platform }}
+        shell: bash
+        run: |
+          VERSION="v0.0.0-nightly.${{ needs.check-changes.outputs.build_number }}"
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          LDFLAGS="-X github.com/typingincolor/bujo/cmd/bujo/cmd.version=${VERSION}"
+          LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit=${COMMIT}"
+          LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.date=${DATE}"
+          wails build -platform ${{ matrix.platform.build-platform }} -ldflags "${LDFLAGS}"
 
       - name: Create release archive (macOS)
         if: matrix.platform.os == 'macos-latest'

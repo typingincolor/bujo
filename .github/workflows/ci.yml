@@ -240,7 +240,14 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Build Wails app
-        run: wails build -platform darwin/universal -tags wails
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+          COMMIT=$(git rev-parse --short HEAD)
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          LDFLAGS="-X github.com/typingincolor/bujo/cmd/bujo/cmd.version=${VERSION}"
+          LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit=${COMMIT}"
+          LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.date=${DATE}"
+          wails build -platform darwin/universal -tags wails -ldflags "${LDFLAGS}"
 
       - name: Verify app bundle
         run: |
