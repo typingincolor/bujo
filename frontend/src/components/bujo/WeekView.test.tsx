@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { WeekView } from './WeekView';
-import { DayEntries } from '@/types/bujo';
+import { DayEntries, Habit } from '@/types/bujo';
 
 describe('WeekView', () => {
   const mockWeekData: DayEntries[] = [
@@ -317,6 +317,87 @@ describe('WeekView', () => {
       const toggleButton = screen.getByLabelText('Toggle context panel');
       // ChevronRight points right, indicating collapse action
       expect(toggleButton.querySelector('svg')).toBeInTheDocument();
+    });
+  });
+
+  describe('Habit Display', () => {
+    it('displays habits logged on each day', () => {
+      const habitsForWeek = [
+        {
+          id: 1,
+          name: 'Exercise',
+          streak: 5,
+          completionRate: 80,
+          dayHistory: [
+            { date: '2026-01-19', completed: true, count: 1 },
+            { date: '2026-01-20', completed: true, count: 2 },
+          ],
+          todayLogged: false,
+          todayCount: 0,
+        },
+        {
+          id: 2,
+          name: 'Meditation',
+          streak: 3,
+          completionRate: 70,
+          dayHistory: [
+            { date: '2026-01-19', completed: true, count: 1 },
+          ],
+          todayLogged: false,
+          todayCount: 0,
+        },
+      ];
+
+      render(<WeekView days={mockWeekData} habits={habitsForWeek} />);
+
+      // Monday (Jan 19) should show both habits
+      expect(screen.getByText('Exercise')).toBeInTheDocument();
+      expect(screen.getByText('Meditation')).toBeInTheDocument();
+
+      // Tuesday (Jan 20) should show Exercise with count
+      expect(screen.getByText('Exercise (2)')).toBeInTheDocument();
+    });
+
+    it('does not display habits with zero count', () => {
+      const habitsForWeek = [
+        {
+          id: 1,
+          name: 'Exercise',
+          streak: 5,
+          completionRate: 80,
+          dayHistory: [
+            { date: '2026-01-19', completed: false, count: 0 },
+          ],
+          todayLogged: false,
+          todayCount: 0,
+        },
+      ];
+
+      render(<WeekView days={mockWeekData} habits={habitsForWeek} />);
+
+      expect(screen.queryByText('Exercise')).not.toBeInTheDocument();
+    });
+
+    it('displays habits in weekend box for Saturday and Sunday', () => {
+      const habitsForWeek = [
+        {
+          id: 1,
+          name: 'Reading',
+          streak: 10,
+          completionRate: 90,
+          dayHistory: [
+            { date: '2026-01-24', completed: true, count: 1 },
+            { date: '2026-01-25', completed: true, count: 3 },
+          ],
+          todayLogged: false,
+          todayCount: 0,
+        },
+      ];
+
+      render(<WeekView days={mockWeekData} habits={habitsForWeek} />);
+
+      expect(screen.getByText('Reading')).toBeInTheDocument();
+      expect(screen.getByText('Reading (3)')).toBeInTheDocument();
     });
   });
 });

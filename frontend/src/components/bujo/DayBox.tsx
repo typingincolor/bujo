@@ -1,17 +1,21 @@
 import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
+import { HabitItem, HabitDisplay } from './HabitItem';
 import { ActionCallbacks } from './EntryActions/types';
 
 interface DayBoxProps {
   dayNumber: number;
   dayName: string;
   entries: Entry[];
+  habits?: HabitDisplay[];
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
   createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
-export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
+export function DayBox({ dayNumber, dayName, entries, habits = [], selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
+  const hasContent = entries.length > 0 || habits.length > 0;
+
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex items-baseline gap-2">
@@ -20,18 +24,27 @@ export function DayBox({ dayNumber, dayName, entries, selectedEntry, onSelectEnt
       </div>
 
       <div className="space-y-1 max-h-64 overflow-y-auto">
-        {entries.length === 0 ? (
+        {!hasContent ? (
           <p className="text-sm text-muted-foreground">No events</p>
         ) : (
-          entries.map(entry => (
-            <WeekEntry
-              key={entry.id}
-              entry={entry}
-              isSelected={selectedEntry?.id === entry.id}
-              onSelect={onSelectEntry}
-              callbacks={createEntryCallbacks?.(entry)}
-            />
-          ))
+          <>
+            {entries.map(entry => (
+              <WeekEntry
+                key={entry.id}
+                entry={entry}
+                isSelected={selectedEntry?.id === entry.id}
+                onSelect={onSelectEntry}
+                callbacks={createEntryCallbacks?.(entry)}
+              />
+            ))}
+            {habits.map((habit, index) => (
+              <HabitItem
+                key={`habit-${habit.name}-${index}`}
+                name={habit.name}
+                count={habit.count}
+              />
+            ))}
+          </>
         )}
       </div>
     </div>

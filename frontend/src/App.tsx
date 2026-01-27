@@ -876,6 +876,7 @@ function App() {
               </div>
               <WeekView
                 days={reviewDays}
+                habits={habits}
                 callbacks={{
                   onMarkDone: async (entry) => {
                     try {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { DayEntries, Entry } from '@/types/bujo';
+import { DayEntries, Entry, Habit } from '@/types/bujo';
 import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
 import { filterWeekEntries, flattenEntries } from '@/lib/weekView';
@@ -21,6 +21,7 @@ export interface WeekViewCallbacks {
 
 interface WeekViewProps {
   days: DayEntries[];
+  habits?: Habit[];
   callbacks?: WeekViewCallbacks;
   contextTree?: Entry[];
   onSelectEntry?: (entry: Entry | undefined) => void;
@@ -30,6 +31,7 @@ interface WeekViewProps {
 
 export function WeekView({
   days,
+  habits = [],
   callbacks = {},
   contextTree: contextTreeProp,
   onSelectEntry,
@@ -72,6 +74,17 @@ export function WeekView({
   const filteredSaturday = saturday ? filterWeekEntries(saturday.entries) : [];
   const filteredSunday = sunday ? filterWeekEntries(sunday.entries) : [];
 
+  const getHabitsForDate = (date: string) => {
+    return habits
+      .map(habit => {
+        const dayStatus = habit.dayHistory.find(h => h.date === date);
+        return dayStatus && dayStatus.count > 0
+          ? { name: habit.name, count: dayStatus.count }
+          : null;
+      })
+      .filter((h): h is { name: string; count: number } => h !== null);
+  };
+
   const startDate = days[0] ? parseISO(days[0].date) : new Date();
   const endDate = days[6] ? parseISO(days[6].date) : new Date();
   const dateRange = `${format(startDate, 'MMM d')} – ${format(endDate, 'MMM d, yyyy')}`;
@@ -99,6 +112,7 @@ export function WeekView({
               dayNumber={day.dayNumber}
               dayName={day.dayName}
               entries={day.entries}
+              habits={getHabitsForDate(day.date)}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
               createEntryCallbacks={createEntryCallbacks}
@@ -110,6 +124,8 @@ export function WeekView({
               startDay={parseISO(saturday.date).getDate()}
               saturdayEntries={filteredSaturday}
               sundayEntries={filteredSunday}
+              saturdayHabits={getHabitsForDate(saturday.date)}
+              sundayHabits={getHabitsForDate(sunday.date)}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
               createEntryCallbacks={createEntryCallbacks}
