@@ -60,6 +60,50 @@ describe('WeekView Integration', () => {
     vi.clearAllMocks()
   })
 
+  it('pressing [ toggles context panel collapsed state in week view', async () => {
+    const user = userEvent.setup()
+    vi.mocked(GetAgenda).mockResolvedValue(weekAgendaWithEntries)
+
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Switch to week view
+    const reviewButton = screen.getByRole('button', { name: /weekly review/i })
+    await user.click(reviewButton)
+
+    await waitFor(() => {
+      const main = screen.getByRole('main')
+      expect(within(main).getByLabelText('Toggle context panel')).toBeInTheDocument()
+    })
+
+    // Context panel should be collapsed initially (no Context heading visible)
+    const main = screen.getByRole('main')
+    expect(within(main).queryByText('Context')).not.toBeInTheDocument()
+
+    // Press [ to expand
+    await user.keyboard('{[}')
+
+    // Context panel should be visible (Context heading appears)
+    await waitFor(() => {
+      expect(within(main).getByText('Context')).toBeInTheDocument()
+    })
+
+    // Press [ again to collapse
+    await user.keyboard('{[}')
+
+    // Context panel should be hidden again
+    await waitFor(() => {
+      expect(within(main).queryByText('Context')).not.toBeInTheDocument()
+    })
+  })
+
   it('renders WeekView when view is "week"', async () => {
     const user = userEvent.setup()
     vi.mocked(GetDayEntries).mockResolvedValue(weekDays)

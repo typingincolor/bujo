@@ -316,6 +316,15 @@ function App() {
         }
       }
 
+      // Week view shortcuts
+      if (view === 'week') {
+        if (e.key === '[') {
+          e.preventDefault()
+          setIsWeekContextCollapsed(prev => !prev)
+          return
+        }
+      }
+
       // Habit view shortcuts
       if (view === 'habits') {
         if (e.key === 'w') {
