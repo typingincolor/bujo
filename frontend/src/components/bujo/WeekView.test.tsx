@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { WeekView } from './WeekView';
-import { DayEntries, Habit } from '@/types/bujo';
+import { DayEntries } from '@/types/bujo';
 
 describe('WeekView', () => {
   const mockWeekData: DayEntries[] = [
@@ -200,8 +200,8 @@ describe('WeekView', () => {
 
   it('displays context tree from prop when entry selected', async () => {
     const contextEntries = [
-      { id: 10, content: 'Parent task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
-      { id: 11, content: 'Child task', type: 'task', priority: 'high', parentId: 10, loggedDate: '2026-01-19', children: [] },
+      { id: 10, content: 'Parent task', type: 'task' as const, priority: 'high' as const, parentId: null, loggedDate: '2026-01-19', children: [] },
+      { id: 11, content: 'Child task', type: 'task' as const, priority: 'high' as const, parentId: 10, loggedDate: '2026-01-19', children: [] },
     ];
 
     const user = userEvent.setup();
