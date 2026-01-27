@@ -31,4 +31,5 @@ jobs:
           ignoreLabels: |
             bot
             ignore-semantic-check
+            dependencies
           validateSingleCommit: false
