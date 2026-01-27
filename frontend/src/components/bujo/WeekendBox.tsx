@@ -44,16 +44,6 @@ export function WeekendBox({
           <p className="text-sm text-muted-foreground">No events</p>
         ) : (
           <>
-            {saturdayEntries.map(entry => (
-              <WeekEntry
-                key={entry.id}
-                entry={entry}
-                datePrefix="Sat:"
-                isSelected={selectedEntry?.id === entry.id}
-                onSelect={onSelectEntry}
-                callbacks={createEntryCallbacks?.(entry)}
-              />
-            ))}
             {saturdayHabits.map((habit, index) => (
               <HabitItem
                 key={`habit-sat-${habit.name}-${index}`}
@@ -62,11 +52,11 @@ export function WeekendBox({
                 datePrefix="Sat:"
               />
             ))}
-            {sundayEntries.map(entry => (
+            {saturdayEntries.map(entry => (
               <WeekEntry
                 key={entry.id}
                 entry={entry}
-                datePrefix="Sun:"
+                datePrefix="Sat:"
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
                 callbacks={createEntryCallbacks?.(entry)}
@@ -78,6 +68,16 @@ export function WeekendBox({
                 name={habit.name}
                 count={habit.count}
                 datePrefix="Sun:"
+              />
+            ))}
+            {sundayEntries.map(entry => (
+              <WeekEntry
+                key={entry.id}
+                entry={entry}
+                datePrefix="Sun:"
+                isSelected={selectedEntry?.id === entry.id}
+                onSelect={onSelectEntry}
+                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
           </>

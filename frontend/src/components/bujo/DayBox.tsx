@@ -28,6 +28,13 @@ export function DayBox({ dayNumber, dayName, entries, habits = [], selectedEntry
           <p className="text-sm text-muted-foreground">No events</p>
         ) : (
           <>
+            {habits.map((habit, index) => (
+              <HabitItem
+                key={`habit-${habit.name}-${index}`}
+                name={habit.name}
+                count={habit.count}
+              />
+            ))}
             {entries.map(entry => (
               <WeekEntry
                 key={entry.id}
@@ -35,13 +42,6 @@ export function DayBox({ dayNumber, dayName, entries, habits = [], selectedEntry
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
                 callbacks={createEntryCallbacks?.(entry)}
-              />
-            ))}
-            {habits.map((habit, index) => (
-              <HabitItem
-                key={`habit-${habit.name}-${index}`}
-                name={habit.name}
-                count={habit.count}
               />
             ))}
           </>
