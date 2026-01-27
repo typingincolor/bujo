@@ -10,10 +10,9 @@ describe('DayBox', () => {
     { id: 2, content: 'Task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-20', children: [] },
   ];
 
-  it('renders day number and name', () => {
+  it('renders day number and name in format "NN ddd"', () => {
     render(<DayBox dayNumber={20} dayName="Mon" entries={[]} />);
-    expect(screen.getByText('20')).toBeInTheDocument();
-    expect(screen.getByText('Mon')).toBeInTheDocument();
+    expect(screen.getByText('20 Mon')).toBeInTheDocument();
   });
 
   it('shows "No events" when empty', () => {
@@ -44,9 +43,9 @@ describe('DayBox', () => {
     expect(selectedItem).toBeInTheDocument();
   });
 
-  it('displays work location in header when provided', () => {
+  it('displays work location in format "NN ddd - location"', () => {
     render(<DayBox dayNumber={20} dayName="Mon" entries={[]} location="Office" />);
-    expect(screen.getByText('Office')).toBeInTheDocument();
+    expect(screen.getByText('20 Mon - Office')).toBeInTheDocument();
   });
 
   it('does not display location when not provided', () => {

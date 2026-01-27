@@ -16,13 +16,12 @@ interface DayBoxProps {
 
 export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
   const hasContent = entries.length > 0 || habits.length > 0;
+  const headerText = location ? `${dayNumber} ${dayName} - ${location}` : `${dayNumber} ${dayName}`;
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold">{dayNumber}</span>
-        <span className="text-sm text-muted-foreground">{dayName}</span>
-        {location && <span className="text-sm text-muted-foreground">{location}</span>}
+      <div className="mb-3">
+        <span className="text-lg font-semibold">{headerText}</span>
       </div>
 
       <div className="space-y-1 max-h-64 overflow-y-auto">
