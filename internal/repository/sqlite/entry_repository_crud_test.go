@@ -102,6 +102,42 @@ func TestEntryRepository_GetByDate(t *testing.T) {
 	assert.Len(t, results, 2)
 }
 
+func TestEntryRepository_GetByDate_ExcludesDeleted(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	entry1 := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Task to keep",
+		ScheduledDate: &today,
+		CreatedAt:     time.Now(),
+	}
+	entry2 := domain.Entry{
+		Type:          domain.EntryTypeTask,
+		Content:       "Task to delete",
+		ScheduledDate: &today,
+		CreatedAt:     time.Now(),
+	}
+
+	id1, err := repo.Insert(ctx, entry1)
+	require.NoError(t, err)
+	id2, err := repo.Insert(ctx, entry2)
+	require.NoError(t, err)
+
+	err = repo.Delete(ctx, id2)
+	require.NoError(t, err)
+
+	results, err := repo.GetByDate(ctx, today)
+
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, id1, results[0].ID)
+	assert.Equal(t, "Task to keep", results[0].Content)
+}
+
 func TestEntryRepository_GetOverdue(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)

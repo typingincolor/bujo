@@ -83,7 +83,7 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id
-		FROM entries WHERE scheduled_date = ? AND (valid_to IS NULL OR valid_to = '')
+		FROM entries WHERE scheduled_date = ? AND (valid_to IS NULL OR valid_to = '') AND op_type != 'DELETE'
 		ORDER BY created_at, entity_id
 	`, dateStr)
 	if err != nil {
