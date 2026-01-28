@@ -13,7 +13,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings';
+export type ViewType = 'today' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings' | 'editable';
 
 interface SidebarProps {
   currentView: ViewType;

@@ -785,6 +785,7 @@ function App() {
     search: 'Search',
     stats: 'Insights',
     settings: 'Settings',
+    editable: 'Edit Journal',
   }
 
   if (loading) {

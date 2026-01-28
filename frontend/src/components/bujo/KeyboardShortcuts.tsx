@@ -89,7 +89,36 @@ export function KeyboardShortcuts({ view = 'today' }: KeyboardShortcutsProps) {
         </div>
       )}
 
-      {!['today', 'habits', 'search', 'questions'].includes(view) && (
+      {view === 'editable' && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <KeyboardHint keys={[`${cmdKey}+S`]} action="Save" />
+            <KeyboardHint keys={['Tab']} action="Indent" />
+            <KeyboardHint keys={['⇧+Tab']} action="Outdent" />
+            <KeyboardHint keys={[`${cmdKey}+I`]} action="Import" />
+            <KeyboardHint keys={['Esc']} action="Blur editor" />
+          </div>
+          <div className="border-t border-border pt-3 mt-3">
+            <h4 className="font-medium text-xs mb-2">Syntax Reference</h4>
+            <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+              <span>. Task</span>
+              <span>- Note</span>
+              <span>o Event</span>
+              <span>x Done</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 text-xs text-muted-foreground mt-2">
+              <span>!!! Highest</span>
+              <span>!! High</span>
+              <span>! Low</span>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              <span>&gt;[date] Migrate to date</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {!['today', 'habits', 'search', 'questions', 'editable'].includes(view) && (
         <div className="text-xs text-muted-foreground">
           No shortcuts for this view
         </div>
