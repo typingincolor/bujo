@@ -4,9 +4,8 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
-import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
@@ -22,10 +21,9 @@ import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
-import { QuickStats } from '@/components/bujo/QuickStats'
-import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekView } from '@/components/bujo/WeekView'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
+import { EditableJournalView } from '@/components/bujo/EditableJournalView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -62,7 +60,6 @@ function App() {
   const [lists, setLists] = useState<BujoList[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [overdueEntries, setOverdueEntries] = useState<Entry[]>([])
-  const [overdueCount, setOverdueCount] = useState(0)
   const [outstandingQuestions, setOutstandingQuestions] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -88,12 +85,10 @@ function App() {
   const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [reviewSelectedEntry, setReviewSelectedEntry] = useState<Entry | null>(null)
   const [reviewContextTree, setReviewContextTree] = useState<Entry[]>([])
-  const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
   const initialLoadCompleteRef = useRef(false)
-  const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -128,7 +123,6 @@ function App() {
       setReviewDays(transformedReviewDays)
       const transformedOverdue = (overdueData || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
-      setOverdueCount(transformedOverdue.filter(e => e.type === 'task').length)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
@@ -337,43 +331,11 @@ function App() {
         }
       }
 
-      // Entry creation shortcuts (c, i, r, a, A) - work in today view
+      // Entry creation shortcut - opens capture modal
       if (view === 'today') {
         if (e.key === 'c') {
           e.preventDefault()
           setShowCaptureModal(true)
-          return
-        }
-        if (e.key === 'i') {
-          e.preventDefault()
-          captureBarRef.current?.focus()
-          return
-        }
-        if (e.key === 'r') {
-          e.preventDefault()
-          setCaptureParentEntry(null)
-          captureBarRef.current?.focus()
-          return
-        }
-        if (e.key === 'a') {
-          e.preventDefault()
-          // If selected entry is a question, open answer modal instead
-          const selectedEntry = flatEntries[selectedIndex]
-          if (selectedEntry?.type === 'question') {
-            setAnswerModalEntry(selectedEntry)
-          } else {
-            setCaptureParentEntry(null)
-            captureBarRef.current?.focus()
-          }
-          return
-        }
-        if (e.key === 'A') {
-          e.preventDefault()
-          const selectedEntry = flatEntries[selectedIndex]
-          if (selectedEntry) {
-            setCaptureParentEntry(selectedEntry)
-            captureBarRef.current?.focus()
-          }
           return
         }
       }
@@ -578,27 +540,6 @@ function App() {
     }
   }, [moveToListEntry, loadData])
 
-  const handleSelectEntry = useCallback((id: number) => {
-    const index = flatEntries.findIndex(e => e.id === id)
-    if (index !== -1) {
-      setSelectedIndex(index)
-      setSelectedEntry(flatEntries[index])
-      // Clear sidebar selection when main panel is selected
-      setSidebarSelectedEntry(null)
-      setSidebarSelectedIndex(-1)
-      setFocusedPanel('main')
-    }
-  }, [flatEntries])
-
-  const handleAddChild = useCallback((entry: Entry) => {
-    const index = flatEntries.findIndex(e => e.id === entry.id)
-    if (index !== -1) {
-      setSelectedIndex(index)
-      setCaptureParentEntry(entry)
-      captureBarRef.current?.focus()
-    }
-  }, [flatEntries])
-
   const handleSidebarSelectEntry = useCallback((entry: Entry) => {
     // Find the index of this entry in the filtered task entries
     const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
@@ -700,45 +641,6 @@ function App() {
   }), [handleSidebarMarkDone, handleSidebarUnmarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType, handleSidebarCancel, handleSidebarUncancel])
 
 
-  const handleCaptureBarSubmit = useCallback(async (content: string) => {
-    try {
-      await AddEntry(content, toWailsTime(currentDate))
-      loadData()
-    } catch (err) {
-      console.error('Failed to add entry:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add entry')
-    }
-  }, [loadData, currentDate])
-
-  const handleCaptureBarSubmitChild = useCallback(async (parentId: number, content: string) => {
-    try {
-      await AddChildEntry(parentId, content, toWailsTime(currentDate))
-      setCaptureParentEntry(null)
-      loadData()
-    } catch (err) {
-      console.error('Failed to add child entry:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add child entry')
-    }
-  }, [loadData, currentDate])
-
-  const handleCaptureBarClearParent = useCallback(() => {
-    setCaptureParentEntry(null)
-  }, [])
-
-  const handleCaptureBarFileImport = useCallback(async () => {
-    try {
-      const fileContent = await OpenFileDialog()
-      if (fileContent && captureBarRef.current) {
-        const currentValue = captureBarRef.current.value
-        captureBarRef.current.value = currentValue + fileContent
-        captureBarRef.current.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-    } catch (err) {
-      console.error('Failed to import file:', err)
-      setError(err instanceof Error ? err.message : 'Failed to import file')
-    }
-  }, [])
-
   const handleSearchMigrate = useCallback((result: SearchResult) => {
     setMigrateModalEntry({
       id: result.id,
@@ -817,7 +719,6 @@ function App() {
   }
 
   const today = days[0]
-  const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
 
   return (
     <div className="flex h-screen bg-background">
@@ -835,7 +736,6 @@ function App() {
           onLocationChanged={loadData}
           canGoBack={canGoBack}
           onBack={handleBack}
-          onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
         <main className="flex-1 overflow-y-auto p-6 pb-32">
@@ -848,30 +748,7 @@ function App() {
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
-              <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
-              {today && (
-                <DayView
-                  day={today}
-                  selectedEntryId={selectedEntryId}
-                  onEntryChanged={loadData}
-                  onSelectEntry={handleSelectEntry}
-                  onEditEntry={(entry) => setEditModalEntry(entry)}
-                  onDeleteEntry={handleDeleteEntryRequest}
-                  onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
-                  onAddChild={handleAddChild}
-                  onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
-                  onMoveToList={(entry) => setMoveToListEntry(entry)}
-                />
-              )}
-              <CaptureBar
-                ref={captureBarRef}
-                onSubmit={handleCaptureBarSubmit}
-                onSubmitChild={handleCaptureBarSubmitChild}
-                onClearParent={handleCaptureBarClearParent}
-                parentEntry={captureParentEntry}
-                sidebarWidth={journalSidebarWidth}
-                isSidebarCollapsed={isSidebarCollapsed}
-              />
+              <EditableJournalView date={currentDate} />
             </div>
           )}
 

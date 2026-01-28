@@ -57,15 +57,21 @@ func RunMigrations(db *sql.DB) error {
 }
 
 func OpenAndMigrate(dsn string) (*sql.DB, error) {
+	println("DEBUG DB: Opening database at:", dsn)
 	db, err := Open(dsn)
 	if err != nil {
+		println("DEBUG DB: Open failed:", err.Error())
 		return nil, err
 	}
+	println("DEBUG DB: Database opened successfully")
 
+	println("DEBUG DB: Running migrations")
 	if err := RunMigrations(db); err != nil {
+		println("DEBUG DB: Migrations failed:", err.Error())
 		_ = db.Close()
 		return nil, err
 	}
+	println("DEBUG DB: Migrations completed successfully")
 
 	return db, nil
 }

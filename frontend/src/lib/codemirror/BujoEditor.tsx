@@ -138,10 +138,12 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       value={value}
       onChange={onChange}
       extensions={extensions}
+      theme="none"
+      height="100%"
       basicSetup={{
-        lineNumbers: true,
-        foldGutter: true,
-        highlightActiveLine: true,
+        lineNumbers: false,
+        foldGutter: false,
+        highlightActiveLine: false,
         highlightSelectionMatches: true,
         bracketMatching: false,
         closeBrackets: false,

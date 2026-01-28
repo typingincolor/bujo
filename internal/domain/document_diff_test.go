@@ -65,48 +65,48 @@ func TestComputeDiff_Insert(t *testing.T) {
 
 func TestComputeDiff_Update(t *testing.T) {
 	tests := []struct {
-		name           string
-		originalType   EntryType
-		originalContent string
+		name             string
+		originalType     EntryType
+		originalContent  string
 		originalPriority Priority
-		parsedType     EntryType
-		parsedContent  string
-		parsedPriority Priority
-		expectUpdate   bool
+		parsedType       EntryType
+		parsedContent    string
+		parsedPriority   Priority
+		expectUpdate     bool
 	}{
 		{
-			name:           "content changed",
-			originalType:   EntryTypeTask,
-			originalContent: "Old content",
-			parsedType:     EntryTypeTask,
-			parsedContent:  "New content",
-			expectUpdate:   true,
-		},
-		{
-			name:           "type changed",
-			originalType:   EntryTypeTask,
-			originalContent: "Same content",
-			parsedType:     EntryTypeDone,
-			parsedContent:  "Same content",
-			expectUpdate:   true,
-		},
-		{
-			name:           "priority changed",
+			name:            "content changed",
 			originalType:    EntryTypeTask,
-			originalContent: "Same content",
-			originalPriority: PriorityNone,
+			originalContent: "Old content",
 			parsedType:      EntryTypeTask,
-			parsedContent:   "Same content",
-			parsedPriority:  PriorityHigh,
+			parsedContent:   "New content",
 			expectUpdate:    true,
 		},
 		{
-			name:           "no change",
-			originalType:   EntryTypeTask,
+			name:            "type changed",
+			originalType:    EntryTypeTask,
 			originalContent: "Same content",
-			parsedType:     EntryTypeTask,
-			parsedContent:  "Same content",
-			expectUpdate:   false,
+			parsedType:      EntryTypeDone,
+			parsedContent:   "Same content",
+			expectUpdate:    true,
+		},
+		{
+			name:             "priority changed",
+			originalType:     EntryTypeTask,
+			originalContent:  "Same content",
+			originalPriority: PriorityNone,
+			parsedType:       EntryTypeTask,
+			parsedContent:    "Same content",
+			parsedPriority:   PriorityHigh,
+			expectUpdate:     true,
+		},
+		{
+			name:            "no change",
+			originalType:    EntryTypeTask,
+			originalContent: "Same content",
+			parsedType:      EntryTypeTask,
+			parsedContent:   "Same content",
+			expectUpdate:    false,
 		},
 	}
 

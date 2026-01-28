@@ -4,6 +4,7 @@ import {
   ValidateEditableDocument,
   ApplyEditableDocument,
 } from '../wailsjs/go/wails/App'
+import { toWailsTime } from '@/lib/wailsTime'
 
 export interface ValidationError {
   lineNumber: number
@@ -95,7 +96,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
       setError(null)
 
       try {
-        const doc = await GetEditableDocument(date)
+        const doc = await GetEditableDocument(toWailsTime(date))
         if (!cancelled) {
           setDocumentState(doc)
           setOriginalDocument(doc)
@@ -179,7 +180,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
       }
 
       const deletedIds = deletedEntries.map((e) => e.entityId)
-      const result = await ApplyEditableDocument(document, date, deletedIds)
+      const result = await ApplyEditableDocument(document, toWailsTime(date), deletedIds)
 
       setOriginalDocument(document)
       setDeletedEntries([])

@@ -94,61 +94,75 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     setDocument(lines.join('\n'))
   }
 
-  const formatDate = (d: Date) => {
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
-    })
-  }
-
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-64 text-muted-foreground">
+        Loading...
+      </div>
+    )
   }
 
   if (error) {
-    return <div>{error}</div>
+    return (
+      <div className="flex items-center justify-center h-64 text-destructive">
+        {error}
+      </div>
+    )
   }
 
   return (
-    <div>
-      <header>
-        <h1>
-          {formatDate(date)}
-          {isDirty && <span data-testid="unsaved-indicator">●</span>}
-        </h1>
-      </header>
-
+    <div className="flex flex-col h-[calc(100vh-220px)]">
       {hasDraft && (
-        <div>
-          <p>Unsaved changes found</p>
-          <button onClick={restoreDraft}>Restore</button>
-          <button onClick={discardDraft}>Discard Draft</button>
+        <div className="flex items-center gap-2 p-3 mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
+          <span className="text-muted-foreground">Unsaved changes found</span>
+          <button
+            onClick={restoreDraft}
+            className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+          >
+            Restore
+          </button>
+          <button
+            onClick={discardDraft}
+            className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
+          >
+            Discard Draft
+          </button>
         </div>
       )}
 
-      <BujoEditor
-        value={document}
-        onChange={setDocument}
-        onSave={handleSave}
-        onImport={handleImport}
-        onEscape={handleEscape}
-      />
+      <div className="flex-1 min-h-0 overflow-hidden border border-border">
+        <BujoEditor
+          value={document}
+          onChange={setDocument}
+          onSave={handleSave}
+          onImport={handleImport}
+          onEscape={handleEscape}
+        />
+      </div>
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
-      <button onClick={() => fileInputRef.current?.click()}>Import</button>
 
       {validationErrors.length > 0 && (
-        <div>
-          <span>{validationErrors.length} errors</span>
+        <div className="mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
+          <span className="text-sm font-medium text-destructive">{validationErrors.length} errors</span>
           {validationErrors.map((err, i) => (
-            <div key={i}>
-              Line {err.lineNumber}: {err.message}
+            <div key={i} className="mt-2 text-sm">
+              <span className="text-muted-foreground">Line {err.lineNumber}:</span> {err.message}
               {err.quickFixes?.includes('delete') && (
-                <button onClick={() => handleDeleteLine(err.lineNumber)}>Delete line</button>
+                <button
+                  onClick={() => handleDeleteLine(err.lineNumber)}
+                  className="ml-2 text-xs text-destructive hover:underline"
+                >
+                  Delete line
+                </button>
               )}
               {err.quickFixes?.includes('change-to-task') && (
-                <button onClick={() => handleChangeToTask(err.lineNumber)}>Change to task</button>
+                <button
+                  onClick={() => handleChangeToTask(err.lineNumber)}
+                  className="ml-2 text-xs text-primary hover:underline"
+                >
+                  Change to task
+                </button>
               )}
             </div>
           ))}
@@ -156,7 +170,9 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
       )}
 
       {deletedEntries.length > 0 && (
-        <div>{deletedEntries.length} deletions pending</div>
+        <div className="mt-3 text-sm text-muted-foreground">
+          {deletedEntries.length} deletions pending
+        </div>
       )}
 
       <DeletionReviewDialog
@@ -167,17 +183,30 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         onRestore={handleRestoreDeletion}
       />
 
-      {saveError && <div>{saveError}</div>}
-
-      {lastSaved && (
-        <div>
-          ✓ Saved at {lastSaved.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+      {saveError && (
+        <div className="mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+          {saveError}
         </div>
       )}
 
-      {isDirty && (
-        <button onClick={discardChanges}>Discard</button>
-      )}
+      <div className="flex items-center justify-between mt-3">
+        <div className="text-sm text-muted-foreground">
+          {lastSaved && (
+            <span>✓ Saved at {lastSaved.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+          )}
+          {isDirty && <span data-testid="unsaved-indicator" className="ml-2 text-amber-500">● Unsaved changes</span>}
+        </div>
+        <div className="flex gap-2">
+          {isDirty && (
+            <button
+              onClick={discardChanges}
+              className="px-3 py-1.5 text-sm bg-secondary text-secondary-foreground rounded hover:bg-secondary/80"
+            >
+              Discard
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

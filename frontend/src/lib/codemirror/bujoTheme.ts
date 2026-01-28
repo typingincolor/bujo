@@ -2,31 +2,44 @@ import { EditorView } from '@codemirror/view'
 
 export const bujoTheme = EditorView.theme({
   '&': {
-    backgroundColor: 'var(--background)',
-    color: 'var(--foreground)',
+    backgroundColor: 'hsl(var(--background))',
+    color: 'hsl(var(--foreground))',
+    height: '100%',
   },
-  '.cm-content': {
+  '&.cm-focused': {
+    outline: 'none',
+  },
+  '& .cm-scroller': {
+    overflow: 'auto',
     fontFamily: 'var(--font-mono, monospace)',
     fontSize: '14px',
     lineHeight: '1.6',
+    backgroundColor: 'hsl(var(--background))',
   },
-  '.cm-gutters': {
-    backgroundColor: 'var(--muted)',
-    borderRight: '1px solid var(--border)',
+  '& .cm-content': {
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: '14px',
+    lineHeight: '1.6',
+    backgroundColor: 'hsl(var(--background))',
   },
-  '.cm-activeLineGutter': {
-    backgroundColor: 'var(--accent)',
+  '& .cm-gutters': {
+    backgroundColor: 'transparent',
+    color: 'hsl(var(--muted-foreground))',
+    border: 'none',
   },
-  '.cm-activeLine': {
-    backgroundColor: 'var(--accent)',
+  '& .cm-activeLineGutter': {
+    backgroundColor: 'transparent',
   },
-  '.cm-cursor': {
-    borderLeftColor: 'var(--foreground)',
+  '& .cm-activeLine': {
+    backgroundColor: 'transparent',
   },
-  '.cm-selectionBackground': {
-    backgroundColor: 'var(--selection, rgba(0, 0, 0, 0.1))',
+  '& .cm-cursor': {
+    borderLeftColor: 'hsl(var(--foreground))',
+  },
+  '& .cm-selectionBackground': {
+    backgroundColor: 'hsl(var(--primary) / 0.2)',
   },
   '&.cm-focused .cm-selectionBackground': {
-    backgroundColor: 'var(--selection, rgba(0, 0, 0, 0.2))',
+    backgroundColor: 'hsl(var(--primary) / 0.3)',
   },
 })
