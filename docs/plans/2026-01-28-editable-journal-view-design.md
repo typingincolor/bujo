@@ -579,6 +579,20 @@ Remove obsolete UI code replaced by the editable view.
 
 **Note:** Identify specific files during implementation. Some components may still be needed for other views (e.g., weekly review).
 
+### Phase 7: E2E Tests (Playwright)
+
+| Task | File | Description |
+|------|------|-------------|
+| 7.1 | `playwright.config.ts` | Configure Playwright for Wails app |
+| 7.2 | `fixtures/` | Test database seed data |
+| 7.3 | `editable-journal.spec.ts` | E1-E4: Basic editing tests (content, type, priority, create) |
+| 7.4 | `editable-journal.spec.ts` | E5-E7: Deletion flow tests (delete, migrate, restore) |
+| 7.5 | `editable-journal.spec.ts` | E8: Hierarchy tests (indent/outdent, visual guides) |
+| 7.6 | `editable-journal.spec.ts` | E9-E11: Validation tests (errors, quick-fix, warnings) |
+| 7.7 | `editable-journal.spec.ts` | E12-E13: Feedback tests (unsaved indicator, save confirmation) |
+| 7.8 | `editable-journal.spec.ts` | E14: Crash recovery test |
+| 7.9 | `editable-journal.spec.ts` | E15-E16: Event sourcing and help tests |
+
 ---
 
 ## Testing Strategy
@@ -615,6 +629,44 @@ Remove obsolete UI code replaced by the editable view.
 - Full round-trip: load → edit → save → reload
 - Migration creates entry on target date
 - Deletion uses event sourcing (can restore)
+
+### E2E Tests (Playwright)
+
+Automated acceptance tests covering all success criteria. Run against full Wails app.
+
+**Setup:**
+- Playwright configured to launch Wails app
+- Test database seeded with known entries
+- Each test uses fresh database state
+
+**Test Scenarios:**
+
+| ID | Success Criterion | Test Description |
+|----|-------------------|------------------|
+| E1 | Edit content | Load day with entries → modify text → save → reload → verify content changed |
+| E2 | Change entry type | Change `.` to `x` → save → verify entry marked done |
+| E3 | Change priority | Add `!!!` to entry → save → verify priority label shows "1" |
+| E4 | Create new entry | Type new line with `. New task` → save → verify entry persisted |
+| E5 | Delete entry | Delete line → save → confirm in dialog → verify entry gone |
+| E6 | Migrate entry | Change to `>[tomorrow]` → save → verify entry on tomorrow's date |
+| E7 | Restore deleted | Delete → save dialog → uncheck → save → verify entry restored at original position |
+| E8 | Indent/outdent | Tab to indent → verify visual guide → save → verify hierarchy persisted |
+| E9 | Invalid syntax | Type `^ Invalid` → verify red highlight → verify save blocked |
+| E10 | Quick-fix | Invalid line → click quick-fix → verify line corrected |
+| E11 | Warnings | Migrate to past date → verify warning shown → verify save allowed |
+| E12 | Unsaved indicator | Edit text → verify dot in title → save → verify dot gone |
+| E13 | Save feedback | Save → verify status bar shows "✓ Saved" with timestamp |
+| E14 | Crash recovery | Edit → force close app → reopen → verify restore prompt → restore → verify content |
+| E15 | Event sourcing | Delete entry → save → use CLI to restore → verify entry back |
+| E16 | Help/syntax ref | Open keyboard shortcuts → verify syntax reference present |
+
+**Crash recovery test (E14) approach:**
+1. Edit document (don't save)
+2. Inject localStorage state directly (simulating crash)
+3. Reload page
+4. Verify restore prompt appears
+5. Click restore
+6. Verify document matches pre-crash state
 
 ---
 
@@ -676,19 +728,25 @@ Remove obsolete UI code replaced by the editable view.
 
 ## Success Criteria
 
-1. User can edit entry content by directly modifying text
-2. User can change entry type by changing prefix symbol
-3. User can change priority by adding/removing `!` markers (displayed as styled 1/2/3 labels)
-4. User can create new entries by typing on new lines
-5. User can delete entries (removed immediately, reviewed in save dialog)
-6. User can migrate entries using `>[date]` syntax
-7. User can restore deleted entries via checkbox in save dialog (returns to original position)
-8. User can indent/outdent with Tab/Shift+Tab; visual indent guides show hierarchy
-9. Invalid syntax highlighted in red with quick-fix suggestions
-10. Errors block save; warnings allow save with notice
-11. Unsaved changes indicated by dot in title; successful save shown in status bar
-12. Changes persisted atomically on save
-13. Event sourcing preserves full history
-14. Syntax reference available in keyboard shortcut popup
-15. Unsaved changes recovered after crash/reboot via localStorage
-16. Obsolete UI components removed (action buttons, edit modals)
+Each criterion verified by corresponding Playwright E2E test (E1-E16).
+
+| # | Criterion | E2E Test |
+|---|-----------|----------|
+| 1 | User can edit entry content by directly modifying text | E1 |
+| 2 | User can change entry type by changing prefix symbol | E2 |
+| 3 | User can change priority by adding/removing `!` markers (displayed as styled 1/2/3 labels) | E3 |
+| 4 | User can create new entries by typing on new lines | E4 |
+| 5 | User can delete entries (removed immediately, reviewed in save dialog) | E5 |
+| 6 | User can migrate entries using `>[date]` syntax | E6 |
+| 7 | User can restore deleted entries via checkbox in save dialog (returns to original position) | E7 |
+| 8 | User can indent/outdent with Tab/Shift+Tab; visual indent guides show hierarchy | E8 |
+| 9 | Invalid syntax highlighted in red with quick-fix suggestions | E9, E10 |
+| 10 | Errors block save; warnings allow save with notice | E9, E11 |
+| 11 | Unsaved changes indicated by dot in title; successful save shown in status bar | E12, E13 |
+| 12 | Changes persisted atomically on save | E1-E7 |
+| 13 | Event sourcing preserves full history | E15 |
+| 14 | Syntax reference available in keyboard shortcut popup | E16 |
+| 15 | Unsaved changes recovered after crash/reboot via localStorage | E14 |
+| 16 | Obsolete UI components removed (action buttons, edit modals) | Manual verification |
+
+**Definition of Done:** All E2E tests pass in CI.
