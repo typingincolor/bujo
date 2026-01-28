@@ -611,11 +611,22 @@ Remove obsolete UI code replaced by the editable view.
 
 | Task | File | Description |
 |------|------|-------------|
-| 8.1 | `README.md` | Update with editable journal view feature overview |
-| 8.2 | `docs/user-guide.md` | Document editable view usage, syntax, shortcuts |
-| 8.3 | `docs/user-guide.md` | Document migration syntax with examples |
-| 8.4 | `docs/user-guide.md` | Document file import workflow |
-| 8.5 | `CHANGELOG.md` | Add feature entry for release notes |
+| 8.1 | `docs/images/` | Capture screenshots (see list below) |
+| 8.2 | `README.md` | Update with editable journal view feature overview + hero screenshot |
+| 8.3 | `docs/user-guide.md` | Document editable view usage, syntax, shortcuts with screenshots |
+| 8.4 | `docs/user-guide.md` | Document migration syntax with examples |
+| 8.5 | `docs/user-guide.md` | Document file import workflow |
+| 8.6 | `CHANGELOG.md` | Add feature entry for release notes |
+
+**Screenshots to capture (8.1):**
+- Editable journal view (main editor with entries)
+- Syntax examples: symbols, priority labels (1/2/3), hierarchy with indent guides
+- Deletion review dialog (with checkboxes)
+- Error highlighting with quick-fix suggestion
+- Unsaved indicator (dot in title)
+- Save confirmation (status bar with timestamp)
+- Keyboard shortcut popup with syntax reference
+- File import dialog
 
 ---
 
