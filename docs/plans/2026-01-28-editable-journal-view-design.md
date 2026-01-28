@@ -1,7 +1,7 @@
 # Editable Journal View Design
 
 **Date:** 2026-01-28
-**Status:** Draft
+**Status:** Ready for Implementation
 **Feature:** Transform journal view into an editable document where entries can be modified inline
 
 ## Overview
@@ -24,13 +24,18 @@ Entries rendered as ASCII text with symbols:
 | `?` | Question | `? How does auth work` |
 | `>` | Migrated | (display only, see migration syntax) |
 
-**Priority:** Prefix with `!`, `!!`, or `!!!` before symbol:
+**Priority:** Suffix with `!`, `!!`, or `!!!` after symbol:
 ```
-!!! . Urgent task
-!! . High priority
-! . Low priority
+. !!! Urgent task
+. !! High priority
+. ! Low priority
 . Normal task
 ```
+
+**Priority display (Frontend):** Priority markers render as styled numeric labels:
+- `!!!` → label showing "1" (highest)
+- `!!` → label showing "2"
+- `!` → label showing "3" (lowest)
 
 **Hierarchy:** 2-space indentation per level:
 ```
@@ -39,6 +44,10 @@ Entries rendered as ASCII text with symbols:
     . Grandchild
   - Sibling note
 ```
+
+**Hierarchy controls (Frontend):**
+- Tab/Shift+Tab to indent/outdent entries
+- Visual indent guides (faint vertical lines) show hierarchy levels
 
 **Migration syntax:** Change symbol to `>` with target date:
 ```
@@ -55,14 +64,11 @@ Entries rendered as ASCII text with symbols:
   . Milk
   . Eggs
 - Meeting went well
-!! . Urgent: fix prod bug
+. !! Urgent: fix prod bug
 x Deployed hotfix
 ? How does the auth flow work
   - See docs/auth.md
 >[tomorrow] . Schedule follow-up
-
-── Pending Deletion ────────────────
-~ Old task I removed
 ```
 
 ### Sync Behavior
@@ -79,20 +85,102 @@ x Deployed hotfix
 - **New entries:** Lines without mapping get new EntityID on save
 - **Moves:** Line position changes tracked to update hierarchy
 
-### Deletion Behavior
+### Deletion Behavior (Frontend)
 
-1. User deletes a line
-2. Line moves to "Pending Deletion" section at bottom
-3. User can restore by moving line back into day section
-4. On save: pending deletions become soft deletes (event sourcing)
-5. Post-save: can still `restore <id>` via CLI
+1. User deletes a line → line removed immediately (clean editing view)
+2. Standard Ctrl+Z undo stack for immediate recovery
+3. On Cmd+S: if deletions exist, show deletion review dialog
+4. Dialog shows checkboxes for each deleted item; unchecking restores the entry
+5. Restored entries return to their original position in the document
+6. "Discard All Changes" button reverts entire document to last saved state
+7. On save: confirmed deletions become soft deletes (event sourcing)
+8. Post-save: can still `restore <id>` via CLI
+
+**Deletion review dialog:**
+```
+┌─────────────────────────────────────────────────────┐
+│  Save changes to Monday, Jan 27?                    │
+│                                                     │
+│  The following entries will be deleted:             │
+│                                                     │
+│  ☑️  Call dentist                                   │
+│  ☑️  Old task                                       │
+│                                                     │
+│  Uncheck to restore before saving.                  │
+│                                                     │
+│  [Discard All Changes]          [Cancel]   [Save]   │
+└─────────────────────────────────────────────────────┘
+```
+
+If no deletions exist, save proceeds without dialog.
 
 ### Error Handling
 
+**Errors vs Warnings:**
+- **Errors** (block save): Unknown symbol, orphan child, circular reference, missing content
+- **Warnings** (allow save): Past migration date, same-day migration, odd indentation
+
+**Display:**
 - Invalid lines highlighted in red
-- Error message shown inline or in status bar
-- Save blocked until all errors resolved
-- Undo: Editor-level undo (standard text editing)
+- Error/warning message shown inline or in status bar
+- Quick-fix suggestions where possible (e.g., `Unknown symbol "^" → [Delete line] [Change to "." (task)]`)
+
+**Escape hatches:**
+- Standard Ctrl+Z undo for immediate recovery
+- "Discard All Changes" in save dialog reverts to last saved state
+
+### Save Feedback (Frontend)
+
+- **Unsaved indicator:** Dot in title/header when unsaved changes exist (e.g., `● Journal - Jan 27`)
+- **Success confirmation:** Status bar at bottom shows "✓ Saved" with timestamp after successful save
+- No popups or fading animations
+
+### Discoverability
+
+- Syntax reference (symbols, priority, migration) added to existing keyboard shortcut popup
+- Users access via help icon or keyboard shortcut
+
+### Parsing Architecture
+
+Parsing happens in **both** frontend and backend with distinct roles:
+
+**Frontend (TypeScript):** Lightweight parsing for real-time UX
+- Syntax highlighting in editor
+- Red highlighting on invalid lines as user types
+- Quick-fix suggestion display
+- Does not need to handle all edge cases
+
+**Backend (Go):** Authoritative parsing on save
+- Full validation with all edge cases
+- Diff computation against existing entries
+- Source of truth for what gets persisted
+- Shared with TUI implementation
+
+**Frontend parser scope:**
+
+| Feature | Frontend handles | Backend handles |
+|---------|-----------------|-----------------|
+| Symbol recognition | ✓ | ✓ |
+| Priority parsing | ✓ | ✓ |
+| Indentation depth | ✓ | ✓ |
+| Migration syntax | ✓ (pattern detection) | ✓ (date resolution) |
+| Orphan detection | ✗ | ✓ |
+| Circular references | ✗ | ✓ |
+| Entity ID mapping | ✗ | ✓ |
+| Diff computation | ✗ | ✓ |
+
+**Migration date resolution:**
+
+Frontend calls backend to resolve natural language dates, ensuring consistency:
+
+1. User types `>[tomorrow]`
+2. Frontend detects `>[...]` pattern, extracts date string
+3. Frontend calls `ResolveDate("tomorrow")` API
+4. Backend returns `{ iso: "2026-01-29", display: "Wed, Jan 29" }`
+5. Frontend shows resolved date as inline hint
+6. On save, backend uses same `dateutil.ParseFuture()` - guaranteed match
+
+This avoids duplicating date parsing logic and ensures what user sees matches what gets saved.
 
 ### Concurrent Edits
 
@@ -245,10 +333,11 @@ func (p *EditableDocumentParser) ParseLine(line string, lineNum int) ParsedLine
 **Parsing rules:**
 1. Lines starting with `──` are headers (skip)
 2. Count leading spaces / 2 = depth
-3. First non-space char is priority (`!`) or symbol
+3. First non-space char is symbol (`.`, `-`, `o`, `x`, `~`, `?`, `>`)
 4. Symbol determines entry type
 5. If symbol is `>`, parse `[date]` portion
-6. Remainder is content
+6. After symbol, check for priority markers (`!`, `!!`, `!!!`)
+7. Remainder is content
 
 ### File: `internal/domain/document_diff.go`
 
@@ -371,6 +460,23 @@ func (a *App) ApplyEditableDocument(document string, dateStr string, pendingDele
     }
     return a.editableViewService.ApplyChanges(a.ctx, document, date, pendingDeletes)
 }
+
+// ResolveDate parses a natural language date and returns ISO + display format
+func (a *App) ResolveDate(input string) (*DateResolution, error) {
+    resolved, err := dateutil.ParseFuture(input)
+    if err != nil {
+        return nil, err
+    }
+    return &DateResolution{
+        ISO:     resolved.Format("2006-01-02"),
+        Display: resolved.Format("Mon, Jan 2"),
+    }, nil
+}
+
+type DateResolution struct {
+    ISO     string `json:"iso"`     // e.g., "2026-01-29"
+    Display string `json:"display"` // e.g., "Wed, Jan 29"
+}
 ```
 
 ---
@@ -412,30 +518,37 @@ func (a *App) ApplyEditableDocument(document string, dateStr string, pendingDele
 | 3.2 | `app.go` | Implement GetEditableDocument API |
 | 3.3 | `app.go` | Implement ValidateEditableDocument API |
 | 3.4 | `app.go` | Implement ApplyEditableDocument API |
-| 3.5 | TypeScript | Generate TypeScript types |
+| 3.5 | `app.go` | Implement ResolveDate API for migration date preview |
+| 3.6 | TypeScript | Generate TypeScript types |
 
 ### Phase 4: Frontend Implementation
 
 | Task | File | Description |
 |------|------|-------------|
-| 4.1 | `useEditableDocument.ts` | State management hook |
-| 4.2 | `EditableJournalView.tsx` | Main component with text editor |
-| 4.3 | Editor integration | CodeMirror/Monaco with syntax highlighting |
-| 4.4 | Validation display | Red highlighting for error lines |
-| 4.5 | Pending deletion UI | Section at bottom with restore buttons |
-| 4.6 | Keyboard shortcuts | Cmd+S save, Escape exit |
-| 4.7 | Edit mode toggle | Button to enter/exit edit mode |
+| 4.1 | `editableParser.ts` | Lightweight parser for real-time validation and highlighting |
+| 4.2 | `useEditableDocument.ts` | State management hook (tracks deletions, dirty state) |
+| 4.3 | `EditableJournalView.tsx` | Main component with text editor |
+| 4.4 | Editor integration | CodeMirror/Monaco with syntax highlighting |
+| 4.5 | Visual features | Priority labels (1,2,3), indent guides, error highlighting |
+| 4.6 | Migration date preview | Call ResolveDate API, show resolved date inline |
+| 4.7 | `DeletionReviewDialog.tsx` | Save dialog with deletion checkboxes |
+| 4.8 | Save feedback | Unsaved dot indicator, status bar with timestamp |
+| 4.9 | Quick-fix suggestions | Inline error actions (delete line, change symbol) |
+| 4.10 | Keyboard shortcuts | Cmd+S save, Tab/Shift+Tab indent, Escape exit |
+| 4.11 | Help integration | Add syntax reference to keyboard shortcut popup |
 
 ### Phase 5: TUI Implementation
+
+TUI follows Frontend patterns where possible. TUI-specific adaptations (e.g., deletion review without dialogs, date preview without inline hints) determined during implementation.
 
 | Task | File | Description |
 |------|------|-------------|
 | 5.1 | `editable_mode.go` | Define editableViewState struct |
 | 5.2 | `editable_mode.go` | Render editable text buffer |
 | 5.3 | `editable_mode.go` | Text editing (insert, delete, cursor) |
-| 5.4 | `editable_mode.go` | Pending deletion section |
+| 5.4 | `editable_mode.go` | Deletion handling (TUI-specific flow TBD) |
 | 5.5 | Key bindings | `e` toggle, Ctrl+S save, Escape exit |
-| 5.6 | Validation display | Red highlighting for errors |
+| 5.6 | Validation display | Red/error highlighting for invalid lines |
 | 5.7 | Integration | Hook into main TUI view switching |
 
 ---
@@ -446,7 +559,7 @@ func (a *App) ApplyEditableDocument(document string, dateStr string, pendingDele
 
 **editable_parser_test.go:**
 - Parse each symbol type (., -, o, x, ~, ?)
-- Parse priority levels (!, !!, !!!)
+- Parse priority levels after symbol (`. !`, `. !!`, `. !!!`)
 - Parse indentation depths (0, 1, 2, 3+)
 - Parse migration syntax variations
 - Handle malformed lines gracefully
@@ -513,9 +626,11 @@ func (a *App) ApplyEditableDocument(document string, dateStr string, pendingDele
 
 | Case | Behavior |
 |------|----------|
-| Delete parent with children | Children move to pending deletion too |
-| Restore parent only | Children remain in pending |
+| Delete parent with children | Children also marked as deleted |
+| Restore parent in dialog | Children remain deleted (user must uncheck each) |
+| Restore entry | Returns to original line position |
 | Delete all entries | Valid (empty day) |
+| No deletions on save | Dialog skipped, save proceeds immediately |
 
 ---
 
@@ -535,12 +650,15 @@ func (a *App) ApplyEditableDocument(document string, dateStr string, pendingDele
 
 1. User can edit entry content by directly modifying text
 2. User can change entry type by changing prefix symbol
-3. User can change priority by adding/removing `!` markers
+3. User can change priority by adding/removing `!` markers (displayed as styled 1/2/3 labels)
 4. User can create new entries by typing on new lines
-5. User can delete entries (move to pending section)
+5. User can delete entries (removed immediately, reviewed in save dialog)
 6. User can migrate entries using `>[date]` syntax
-7. User can restore deleted entries before save
-8. Invalid syntax highlighted in red with error message
-9. Save blocked until all errors resolved
-10. Changes persisted atomically on save
-11. Event sourcing preserves full history
+7. User can restore deleted entries via checkbox in save dialog (returns to original position)
+8. User can indent/outdent with Tab/Shift+Tab; visual indent guides show hierarchy
+9. Invalid syntax highlighted in red with quick-fix suggestions
+10. Errors block save; warnings allow save with notice
+11. Unsaved changes indicated by dot in title; successful save shown in status bar
+12. Changes persisted atomically on save
+13. Event sourcing preserves full history
+14. Syntax reference available in keyboard shortcut popup
