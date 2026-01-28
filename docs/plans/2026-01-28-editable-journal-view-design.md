@@ -692,15 +692,36 @@ Automated acceptance tests covering all success criteria. Run against full Wails
 | Deep nesting (10+ levels) | Allow (no limit) |
 | Reparent to self | Error: "Cannot parent to self" |
 | Circular reference | Error: "Circular reference detected" |
+| Migrate parent with children | Entire subtree migrates together |
+| Outdent entry with children | Children follow parent (maintain relative depth) |
+| Delete grandparent | Entire subtree deleted, all shown in deletion dialog |
 
 ### Migration
 
 | Case | Behavior |
 |------|----------|
 | Past date | Warning: "Migrating to past date" |
-| Invalid date | Error: "Cannot parse date" |
+| Invalid date (e.g., `>[never]`) | Error: "Cannot parse date" - blocks save |
 | Same date | Warning: "Migrating to same day" |
 | Migrate cancelled entry | Error: "Cannot migrate cancelled entry" |
+| Target day has existing entries | Append migrated entry to end of target day |
+| Migrate parent with children | Entire subtree migrates together (see Hierarchy) |
+
+### Paste Operations
+
+| Case | Behavior |
+|------|----------|
+| Mixed tabs/spaces | Normalize to 2-space indentation (best-effort depth detection) |
+| Large paste (50+ lines) | Debounced validation (500ms delay before highlighting) |
+| Paste content from another day | Treated as new entries (creates copies, no EntityIDs) |
+
+### Large Data
+
+| Case | Behavior |
+|------|----------|
+| Day with 200+ entries | Load all; editor virtualization handles performance |
+| Entry with 5000+ chars | Allow without limit; UI handles with wrapping |
+| localStorage draft very large | Store full document; handle quota errors gracefully |
 
 ### Deletion
 
