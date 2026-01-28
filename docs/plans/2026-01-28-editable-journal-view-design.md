@@ -151,6 +151,19 @@ If no deletions exist, save proceeds without dialog.
 - Syntax reference (symbols, priority, migration) added to existing keyboard shortcut popup
 - Users access via help icon or keyboard shortcut
 
+### File Import (Frontend)
+
+Import button in editable view inserts file content at cursor position:
+
+1. User clicks import button (or Cmd+I)
+2. Native file dialog opens (same filters: `.txt`, `.md`, 1MB limit)
+3. File content inserted at cursor (or appended to end if no selection)
+4. Content treated same as paste - each line parsed as potential entry
+5. Debounced validation (500ms) for large files
+6. Not saved until Cmd+S
+
+**Note:** CaptureModal remains for quick capture to today. Editable view import is for inserting content into the currently edited day.
+
 ### Parsing Architecture
 
 Parsing happens in **both** frontend and backend with distinct roles:
@@ -548,6 +561,7 @@ type DateResolution struct {
 | 4.10 | Keyboard shortcuts | Cmd+S save, Tab/Shift+Tab indent, Escape exit |
 | 4.11 | Help integration | Add syntax reference to keyboard shortcut popup |
 | 4.12 | Crash recovery | localStorage auto-save + restore prompt on load |
+| 4.13 | File import | Import button + Cmd+I to insert file content at cursor |
 
 ### Phase 5: TUI Implementation
 
@@ -591,7 +605,7 @@ Remove obsolete UI code replaced by the editable view.
 | 7.6 | `editable-journal.spec.ts` | E9-E11: Validation tests (errors, quick-fix, warnings) |
 | 7.7 | `editable-journal.spec.ts` | E12-E13: Feedback tests (unsaved indicator, save confirmation) |
 | 7.8 | `editable-journal.spec.ts` | E14: Crash recovery test |
-| 7.9 | `editable-journal.spec.ts` | E15-E16: Event sourcing and help tests |
+| 7.9 | `editable-journal.spec.ts` | E15-E17: Event sourcing, help, and file import tests |
 
 ---
 
@@ -659,6 +673,7 @@ Automated acceptance tests covering all success criteria. Run against full Wails
 | E14 | Crash recovery | Edit → force close app → reopen → verify restore prompt → restore → verify content |
 | E15 | Event sourcing | Delete entry → save → use CLI to restore → verify entry back |
 | E16 | Help/syntax ref | Open keyboard shortcuts → verify syntax reference present |
+| E17 | File import | Click import → select file → verify content inserted at cursor → save → verify persisted |
 
 **Crash recovery test (E14) approach:**
 1. Edit document (don't save)
@@ -749,7 +764,7 @@ Automated acceptance tests covering all success criteria. Run against full Wails
 
 ## Success Criteria
 
-Each criterion verified by corresponding Playwright E2E test (E1-E16).
+Each criterion verified by corresponding Playwright E2E test (E1-E17).
 
 | # | Criterion | E2E Test |
 |---|-----------|----------|
@@ -769,5 +784,6 @@ Each criterion verified by corresponding Playwright E2E test (E1-E16).
 | 14 | Syntax reference available in keyboard shortcut popup | E16 |
 | 15 | Unsaved changes recovered after crash/reboot via localStorage | E14 |
 | 16 | Obsolete UI components removed (action buttons, edit modals) | Manual verification |
+| 17 | File import inserts content at cursor position | E17 |
 
 **Definition of Done:** All E2E tests pass in CI.
