@@ -18,6 +18,10 @@ export function AnswerQuestion(arg1, arg2) {
   return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
 }
 
+export function ApplyEditableDocument(arg1, arg2, arg3) {
+  return window['go']['wails']['App']['ApplyEditableDocument'](arg1, arg2, arg3);
+}
+
 export function CancelEntry(arg1) {
   return window['go']['wails']['App']['CancelEntry'](arg1);
 }
@@ -72,6 +76,10 @@ export function EditListItem(arg1, arg2) {
 
 export function GetDayEntries(arg1, arg2) {
   return window['go']['wails']['App']['GetDayEntries'](arg1, arg2);
+}
+
+export function GetEditableDocument(arg1) {
+  return window['go']['wails']['App']['GetEditableDocument'](arg1);
 }
 
 export function GetEntry(arg1) {
@@ -194,6 +202,10 @@ export function RenameList(arg1, arg2) {
   return window['go']['wails']['App']['RenameList'](arg1, arg2);
 }
 
+export function ResolveDate(arg1) {
+  return window['go']['wails']['App']['ResolveDate'](arg1);
+}
+
 export function RetypeEntry(arg1, arg2) {
   return window['go']['wails']['App']['RetypeEntry'](arg1, arg2);
 }
@@ -248,4 +260,8 @@ export function UndoHabitLogForDate(arg1, arg2) {
 
 export function UpdateGoal(arg1, arg2) {
   return window['go']['wails']['App']['UpdateGoal'](arg1, arg2);
+}
+
+export function ValidateEditableDocument(arg1) {
+  return window['go']['wails']['App']['ValidateEditableDocument'](arg1);
 }

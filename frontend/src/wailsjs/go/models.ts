@@ -319,6 +319,24 @@ export namespace time {
 
 export namespace wails {
 	
+	export class ApplyResult {
+	    inserted: number;
+	    updated: number;
+	    deleted: number;
+	    migrated: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ApplyResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.inserted = source["inserted"];
+	        this.updated = source["updated"];
+	        this.deleted = source["deleted"];
+	        this.migrated = source["migrated"];
+	    }
+	}
 	export class ListWithItems {
 	    ID: number;
 	    Name: string;
@@ -333,6 +351,66 @@ export namespace wails {
 	        this.ID = source["ID"];
 	        this.Name = source["Name"];
 	        this.Items = this.convertValues(source["Items"], domain.ListItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ResolvedDate {
+	    iso: string;
+	    display: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ResolvedDate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.iso = source["iso"];
+	        this.display = source["display"];
+	    }
+	}
+	export class ValidationError {
+	    lineNumber: number;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ValidationError(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.lineNumber = source["lineNumber"];
+	        this.message = source["message"];
+	    }
+	}
+	export class ValidationResult {
+	    isValid: boolean;
+	    errors: ValidationError[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ValidationResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.isValid = source["isValid"];
+	        this.errors = this.convertValues(source["errors"], ValidationError);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
