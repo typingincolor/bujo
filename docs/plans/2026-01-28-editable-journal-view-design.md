@@ -78,6 +78,17 @@ x Deployed hotfix
 - **Validation:** Full document parsed before sync; errors block save
 - **Scope:** One day at a time (not multi-day editing)
 
+### Crash Recovery (Frontend)
+
+Auto-save draft to localStorage on every change:
+
+1. On edit: debounce (500ms) save to `localStorage.bujo.draft.{date}`
+2. Store: `{ document: string, deletedIds: string[], timestamp: number }`
+3. On load: check for draft newer than last save timestamp
+4. If draft exists: prompt "Restore unsaved changes from {time}?" with [Restore] [Discard]
+5. On successful save: clear localStorage draft
+6. Stale drafts (>7 days) cleaned up on app start
+
 ### ID Handling
 
 - **Hidden:** Entry IDs not shown in editable view
@@ -536,6 +547,7 @@ type DateResolution struct {
 | 4.9 | Quick-fix suggestions | Inline error actions (delete line, change symbol) |
 | 4.10 | Keyboard shortcuts | Cmd+S save, Tab/Shift+Tab indent, Escape exit |
 | 4.11 | Help integration | Add syntax reference to keyboard shortcut popup |
+| 4.12 | Crash recovery | localStorage auto-save + restore prompt on load |
 
 ### Phase 5: TUI Implementation
 
@@ -550,6 +562,22 @@ TUI follows Frontend patterns where possible. TUI-specific adaptations (e.g., de
 | 5.5 | Key bindings | `e` toggle, Ctrl+S save, Escape exit |
 | 5.6 | Validation display | Red/error highlighting for invalid lines |
 | 5.7 | Integration | Hook into main TUI view switching |
+
+### Phase 6: Cleanup (Dead Code Removal)
+
+Remove obsolete UI code replaced by the editable view.
+
+| Task | File | Description |
+|------|------|-------------|
+| 6.1 | Frontend | Remove action buttons (edit, delete, migrate) from journal view |
+| 6.2 | Frontend | Remove entry edit modal/dialog components |
+| 6.3 | Frontend | Remove inline edit handlers from JournalEntryItem |
+| 6.4 | TUI | Remove separate edit mode commands |
+| 6.5 | Wails | Remove deprecated API endpoints (if any) |
+| 6.6 | Tests | Remove/update tests for removed components |
+| 6.7 | Verify | Ensure no orphaned imports, unused types |
+
+**Note:** Identify specific files during implementation. Some components may still be needed for other views (e.g., weekly review).
 
 ---
 
@@ -662,3 +690,5 @@ TUI follows Frontend patterns where possible. TUI-specific adaptations (e.g., de
 12. Changes persisted atomically on save
 13. Event sourcing preserves full history
 14. Syntax reference available in keyboard shortcut popup
+15. Unsaved changes recovered after crash/reboot via localStorage
+16. Obsolete UI components removed (action buttons, edit modals)
