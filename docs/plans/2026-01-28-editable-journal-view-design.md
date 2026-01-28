@@ -558,8 +558,8 @@ type DateResolution struct {
 | 4.7 | `DeletionReviewDialog.tsx` | Save dialog with deletion checkboxes |
 | 4.8 | Save feedback | Unsaved dot indicator, status bar with timestamp |
 | 4.9 | Quick-fix suggestions | Inline error actions (delete line, change symbol) |
-| 4.10 | Keyboard shortcuts | Cmd+S save, Tab/Shift+Tab indent, Escape exit |
-| 4.11 | Help integration | Add syntax reference to keyboard shortcut popup |
+| 4.10 | Keyboard shortcuts | Cmd+S save, Tab/Shift+Tab indent, Cmd+I import, Escape exit |
+| 4.11 | Keyboard shortcut popup | Update popup with all editable view shortcuts + syntax reference |
 | 4.12 | Crash recovery | localStorage auto-save + restore prompt on load |
 | 4.13 | File import | Import button + Cmd+I to insert file content at cursor |
 
@@ -606,6 +606,16 @@ Remove obsolete UI code replaced by the editable view.
 | 7.7 | `editable-journal.spec.ts` | E12-E13: Feedback tests (unsaved indicator, save confirmation) |
 | 7.8 | `editable-journal.spec.ts` | E14: Crash recovery test |
 | 7.9 | `editable-journal.spec.ts` | E15-E17: Event sourcing, help, and file import tests |
+
+### Phase 8: Documentation
+
+| Task | File | Description |
+|------|------|-------------|
+| 8.1 | `README.md` | Update with editable journal view feature overview |
+| 8.2 | `docs/user-guide.md` | Document editable view usage, syntax, shortcuts |
+| 8.3 | `docs/user-guide.md` | Document migration syntax with examples |
+| 8.4 | `docs/user-guide.md` | Document file import workflow |
+| 8.5 | `CHANGELOG.md` | Add feature entry for release notes |
 
 ---
 
