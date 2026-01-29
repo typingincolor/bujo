@@ -438,8 +438,45 @@ type ResolvedDate struct {
 	Display string `json:"display"`
 }
 
+type EditableEntryInfo struct {
+	EntityID string `json:"entityId"`
+	Content  string `json:"content"`
+}
+
+type EditableDocumentWithEntries struct {
+	Document string              `json:"document"`
+	Entries  []EditableEntryInfo `json:"entries"`
+}
+
 func (a *App) GetEditableDocument(date time.Time) (string, error) {
 	return a.services.EditableView.GetEditableDocument(a.ctx, date)
+}
+
+func (a *App) GetEditableDocumentWithEntries(date time.Time) (*EditableDocumentWithEntries, error) {
+	doc, err := a.services.EditableView.GetEditableDocument(a.ctx, date)
+	if err != nil {
+		return nil, err
+	}
+
+	days, err := a.services.Bujo.GetDayEntries(a.ctx, date, date)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]EditableEntryInfo, 0)
+	if len(days) > 0 {
+		for _, entry := range days[0].Entries {
+			entries = append(entries, EditableEntryInfo{
+				EntityID: string(entry.EntityID),
+				Content:  entry.Content,
+			})
+		}
+	}
+
+	return &EditableDocumentWithEntries{
+		Document: doc,
+		Entries:  entries,
+	}, nil
 }
 
 func (a *App) ValidateEditableDocument(doc string) ValidationResult {

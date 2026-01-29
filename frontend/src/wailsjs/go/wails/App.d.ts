@@ -46,6 +46,8 @@ export function GetDayEntries(arg1:time.Time,arg2:time.Time):Promise<Array<servi
 
 export function GetEditableDocument(arg1:time.Time):Promise<string>;
 
+export function GetEditableDocumentWithEntries(arg1:time.Time):Promise<wails.EditableDocumentWithEntries>;
+
 export function GetEntry(arg1:number):Promise<domain.Entry>;
 
 export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;

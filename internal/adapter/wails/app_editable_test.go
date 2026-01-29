@@ -234,3 +234,30 @@ func TestApp_ResolveDate_InvalidDate(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func TestApp_GetEditableDocumentWithEntries_ReturnsDocumentAndEntries(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	_, err = services.Bujo.LogEntries(ctx, ". Task one\n- Note two", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	result, err := wailsApp.GetEditableDocumentWithEntries(today)
+
+	require.NoError(t, err)
+	assert.Contains(t, result.Document, ". Task one")
+	assert.Contains(t, result.Document, "- Note two")
+	assert.Len(t, result.Entries, 2)
+	assert.Equal(t, "Task one", result.Entries[0].Content)
+	assert.NotEmpty(t, result.Entries[0].EntityID)
+	assert.Equal(t, "Note two", result.Entries[1].Content)
+	assert.NotEmpty(t, result.Entries[1].EntityID)
+}

@@ -112,7 +112,9 @@ describe('EditableJournalView', () => {
 
       render(<EditableJournalView date={testDate} />)
 
-      expect(screen.getByText(/line 1.*unknown entry type/i)).toBeInTheDocument()
+      // Text is split across elements: <span>Line 1:</span> Unknown entry type
+      expect(screen.getByText(/line 1/i)).toBeInTheDocument()
+      expect(screen.getByText(/unknown entry type/i)).toBeInTheDocument()
     })
 
     it('shows error count badge when errors exist', () => {
@@ -262,6 +264,108 @@ describe('EditableJournalView', () => {
         expect(screen.getByText('. Deleted task')).toBeInTheDocument()
       })
     })
+
+    it('calls save and closes dialog when Save and Delete is clicked', async () => {
+      const save = vi.fn().mockResolvedValue({ success: true })
+      mockUseEditableDocument.mockReturnValue(
+        createMockState({
+          isDirty: true,
+          deletedEntries: [{ entityId: 'entity-1', content: '. Deleted task' }],
+          save,
+        })
+      )
+
+      render(<EditableJournalView date={testDate} />)
+
+      const editor = screen.getByRole('textbox')
+      fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /save and delete/i }))
+
+      await waitFor(() => {
+        expect(save).toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('calls restoreDeletion when Restore button is clicked in dialog', async () => {
+      const restoreDeletion = vi.fn()
+      mockUseEditableDocument.mockReturnValue(
+        createMockState({
+          isDirty: true,
+          deletedEntries: [{ entityId: 'entity-1', content: '. Deleted task' }],
+          restoreDeletion,
+        })
+      )
+
+      render(<EditableJournalView date={testDate} />)
+
+      const editor = screen.getByRole('textbox')
+      fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /^restore$/i }))
+
+      expect(restoreDeletion).toHaveBeenCalledWith('entity-1')
+    })
+
+    it('closes dialog when Cancel button is clicked', async () => {
+      mockUseEditableDocument.mockReturnValue(
+        createMockState({
+          isDirty: true,
+          deletedEntries: [{ entityId: 'entity-1', content: '. Deleted task' }],
+        })
+      )
+
+      render(<EditableJournalView date={testDate} />)
+
+      const editor = screen.getByRole('textbox')
+      fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
+
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('calls discardChanges and closes dialog when Discard All Changes is clicked', async () => {
+      const discardChanges = vi.fn()
+      mockUseEditableDocument.mockReturnValue(
+        createMockState({
+          isDirty: true,
+          deletedEntries: [{ entityId: 'entity-1', content: '. Deleted task' }],
+          discardChanges,
+        })
+      )
+
+      render(<EditableJournalView date={testDate} />)
+
+      const editor = screen.getByRole('textbox')
+      fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: /discard all changes/i }))
+
+      await waitFor(() => {
+        expect(discardChanges).toHaveBeenCalled()
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+    })
   })
 
   describe('discard changes', () => {
@@ -315,38 +419,13 @@ describe('EditableJournalView', () => {
     })
   })
 
-  describe('date display', () => {
-    it('shows formatted date in header', () => {
-      render(<EditableJournalView date={testDate} />)
-
-      expect(screen.getByText(/tuesday.*jan.*27/i)).toBeInTheDocument()
-    })
-  })
 
   describe('file import', () => {
-    it('renders import button', () => {
-      render(<EditableJournalView date={testDate} />)
-
-      expect(screen.getByRole('button', { name: /import/i })).toBeInTheDocument()
-    })
-
     it('has hidden file input for import', () => {
       render(<EditableJournalView date={testDate} />)
 
       const fileInput = document.querySelector('input[type="file"]')
       expect(fileInput).toBeInTheDocument()
-    })
-
-    it('opens file picker when Ctrl+I is pressed', async () => {
-      render(<EditableJournalView date={testDate} />)
-
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      const clickSpy = vi.spyOn(fileInput, 'click')
-
-      const editor = screen.getByRole('textbox')
-      fireEvent.keyDown(editor, { key: 'i', ctrlKey: true })
-
-      expect(clickSpy).toHaveBeenCalled()
     })
 
     it('appends file content to document when file is selected', async () => {

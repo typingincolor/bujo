@@ -268,15 +268,17 @@ function App() {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+      // CodeMirror uses contenteditable, not INPUT/TEXTAREA
+      const isCodeMirrorFocused = target.closest?.('.cm-editor') !== null
 
       // ? toggles keyboard shortcuts panel (works even when not in input)
-      if (e.key === '?' && !isInputFocused) {
+      if (e.key === '?' && !isInputFocused && !isCodeMirrorFocused) {
         e.preventDefault()
         setShowKeyboardShortcuts(prev => !prev)
         return
       }
 
-      if (isInputFocused) return
+      if (isInputFocused || isCodeMirrorFocused) return
 
       // View navigation shortcuts (CMD+1 through CMD+9) - always available
       if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {

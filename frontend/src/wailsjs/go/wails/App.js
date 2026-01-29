@@ -82,6 +82,10 @@ export function GetEditableDocument(arg1) {
   return window['go']['wails']['App']['GetEditableDocument'](arg1);
 }
 
+export function GetEditableDocumentWithEntries(arg1) {
+  return window['go']['wails']['App']['GetEditableDocumentWithEntries'](arg1);
+}
+
 export function GetEntry(arg1) {
   return window['go']['wails']['App']['GetEntry'](arg1);
 }

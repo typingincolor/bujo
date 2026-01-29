@@ -79,6 +79,11 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     restoreDeletion(entityId)
   }
 
+  const handleDiscardAll = () => {
+    setShowDeletionDialog(false)
+    discardChanges()
+  }
+
   const handleDeleteLine = (lineNumber: number) => {
     const lines = document.split('\n')
     const newLines = lines.filter((_, index) => index !== lineNumber - 1)
@@ -181,6 +186,7 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         onConfirm={handleConfirmDeletions}
         onCancel={handleCancelDeletions}
         onRestore={handleRestoreDeletion}
+        onDiscardAll={handleDiscardAll}
       />
 
       {saveError && (

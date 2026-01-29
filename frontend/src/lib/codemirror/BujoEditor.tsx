@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef, useCallback } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { keymap } from '@codemirror/view'
-import { indentWithTab } from '@codemirror/commands'
+import { indentWithTab, deleteLine } from '@codemirror/commands'
 import { bujoTheme } from './bujoTheme'
 import { priorityBadgeExtension } from './priorityBadges'
 import { indentGuidesExtension } from './indentGuides'
@@ -56,6 +56,10 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
           onEscape?.()
           return true
         },
+      },
+      {
+        key: 'Mod-Shift-k',
+        run: deleteLine,
       },
       indentWithTab,
     ])

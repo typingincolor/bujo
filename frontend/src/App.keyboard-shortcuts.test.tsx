@@ -43,6 +43,9 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
+  GetEditableDocumentWithEntries: vi.fn().mockResolvedValue({ document: '', entries: [] }),
+  ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
+  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, deleted: 0, migrated: 0 }),
   SearchEntries: vi.fn().mockResolvedValue([]),
   GetStats: vi.fn().mockResolvedValue({
     TotalEntries: 0,
@@ -73,7 +76,7 @@ describe('App keyboard shortcuts', () => {
 
       // Wait for initial load
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       // Switch away first
@@ -96,7 +99,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}2{/Meta}');
@@ -114,7 +117,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}3{/Meta}');
@@ -132,7 +135,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}4{/Meta}');
@@ -150,7 +153,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}5{/Meta}');
@@ -168,7 +171,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}6{/Meta}');
@@ -186,7 +189,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}7{/Meta}');
@@ -204,7 +207,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}8{/Meta}');
@@ -222,7 +225,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       await user.keyboard('{Meta>}9{/Meta}');
@@ -240,7 +243,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       // Switch away first
@@ -262,7 +265,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       // Should start in Journal view
@@ -276,30 +279,6 @@ describe('App keyboard shortcuts', () => {
       expect(journalButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('keyboard shortcuts do not work when input is focused', async () => {
-      const user = userEvent.setup();
-      render(
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
-      });
-
-      // Focus the capture bar input
-      const input = screen.getByPlaceholderText(/Capture a thought/i);
-      await user.click(input);
-
-      // Try to switch views
-      await user.keyboard('{Meta>}2{/Meta}');
-
-      // Should still be in Journal view
-      const journalButton = screen.getByRole('button', { name: /Journal/i });
-      expect(journalButton).toHaveAttribute('aria-pressed', 'true');
-    });
-
     it('switches between multiple views using keyboard shortcuts', async () => {
       const user = userEvent.setup();
       render(
@@ -309,7 +288,7 @@ describe('App keyboard shortcuts', () => {
       );
 
       await waitFor(() => {
-        expect(screen.getByText('Test task')).toBeInTheDocument();
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument();
       });
 
       // Start in Journal

@@ -9,7 +9,7 @@ describe('Sidebar', () => {
     render(<Sidebar currentView="today" onViewChange={mockOnViewChange} />);
 
     // Improved labels (Option B)
-    expect(screen.getByText('Journal')).toBeInTheDocument();
+    expect(screen.getByText('Edit Journal')).toBeInTheDocument();
     expect(screen.getByText('Weekly Review')).toBeInTheDocument();
     expect(screen.getByText('Open Questions')).toBeInTheDocument();
     expect(screen.getByText('Habit Tracker')).toBeInTheDocument();

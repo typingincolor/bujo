@@ -3,15 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from './App'
 import { SettingsProvider } from './contexts/SettingsContext'
-import { createMockEntry, createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
+import { createMockDayEntries, createMockDays, createMockOverdue } from './test/mocks'
 
-const mockDays = createMockDays([createMockDayEntries({
-  Entries: [
-    createMockEntry({ ID: 1, EntityID: 'e1', Type: 'Task', Content: 'First task', CreatedAt: '2026-01-17T10:00:00Z' }),
-    createMockEntry({ ID: 2, EntityID: 'e2', Type: 'Task', Content: 'Second task', CreatedAt: '2026-01-17T11:00:00Z' }),
-    createMockEntry({ ID: 3, EntityID: 'e3', Type: 'Note', Content: 'A note', CreatedAt: '2026-01-17T12:00:00Z' }),
-  ],
-})])
+const mockDays = createMockDays([createMockDayEntries({})])
 const mockOverdue = createMockOverdue([])
 
 vi.mock('./wailsjs/runtime/runtime', () => ({
@@ -44,148 +38,20 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
+  GetEditableDocumentWithEntries: vi.fn().mockResolvedValue({ document: '', entries: [] }),
+  ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
+  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, deleted: 0, migrated: 0 }),
+  SearchEntries: vi.fn().mockResolvedValue([]),
+  GetStats: vi.fn().mockResolvedValue({
+    TotalEntries: 0,
+    TasksCompleted: 0,
+    ActiveHabits: 0,
+    CurrentStreak: 0,
+  }),
+  GetVersion: vi.fn().mockResolvedValue('1.0.0'),
 }))
 
-import { GetDayEntries, GetOverdue, AddEntry } from './wailsjs/go/wails/App'
-
-
-describe('App - CaptureBar Entry Creation (i/r/A shortcuts)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(GetDayEntries).mockResolvedValue(mockDays)
-    vi.mocked(GetOverdue).mockResolvedValue(mockOverdue)
-  })
-
-  it('pressing r focuses CaptureBar for root entry', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    await user.keyboard('r')
-
-    await waitFor(() => {
-      const captureBarInput = screen.getByTestId('capture-bar-input')
-      expect(document.activeElement).toBe(captureBarInput)
-    })
-  })
-
-  it('pressing i focuses CaptureBar', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    await user.keyboard('i')
-
-    await waitFor(() => {
-      const captureBarInput = screen.getByTestId('capture-bar-input')
-      expect(document.activeElement).toBe(captureBarInput)
-    })
-  })
-
-  it('pressing A focuses CaptureBar with selected entry as parent', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    await user.keyboard('A')
-
-    await waitFor(() => {
-      // Should show parent context in CaptureBar
-      const captureBar = screen.getByTestId('capture-bar')
-      expect(captureBar).toHaveTextContent('Adding to:')
-      expect(captureBar).toHaveTextContent('First task')
-      const captureBarInput = screen.getByTestId('capture-bar-input')
-      expect(document.activeElement).toBe(captureBarInput)
-    })
-  })
-
-  it('submitting CaptureBar calls AddEntry and refreshes data', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    await user.keyboard('r')
-
-    await waitFor(() => {
-      const captureBarInput = screen.getByTestId('capture-bar-input')
-      expect(document.activeElement).toBe(captureBarInput)
-    })
-
-    const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, '. New root task{Enter}')
-
-    await waitFor(() => {
-      expect(AddEntry).toHaveBeenCalledWith('. New root task', expect.any(String))
-    })
-  })
-
-  it('pressing Escape clears CaptureBar content', async () => {
-    const user = userEvent.setup()
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    await user.keyboard('r')
-    const input = screen.getByTestId('capture-bar-input')
-    await user.type(input, 'Some text')
-
-    expect(input).toHaveValue('Some text')
-
-    await user.keyboard('{Escape}')
-
-    await waitFor(() => {
-      expect(input).toHaveValue('')
-    })
-  })
-
-  it('CaptureBar is visible in today view', async () => {
-    render(
-      <SettingsProvider>
-        <App />
-      </SettingsProvider>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
-    })
-
-    expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
-  })
-})
+import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
 
 describe('App - Go to Today', () => {
   beforeEach(() => {
@@ -203,7 +69,7 @@ describe('App - Go to Today', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
     // Navigate to previous day
@@ -225,7 +91,7 @@ describe('App - Go to Today', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
     // Go to today button should have invisible class when viewing today
@@ -242,7 +108,7 @@ describe('App - Go to Today', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
     // Navigate to previous day
@@ -281,7 +147,7 @@ describe('App - Go to Today', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('First task')).toBeInTheDocument()
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
     // Navigate to previous day
