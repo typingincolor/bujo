@@ -34,10 +34,10 @@ export const bujoTheme = EditorView.theme({
   '& .cm-cursor': {
     borderLeftColor: 'hsl(var(--foreground))',
   },
-  '& .cm-selectionBackground': {
+  '&.cm-editor .cm-selectionBackground': {
     backgroundColor: 'hsl(var(--primary) / 0.2)',
   },
-  '&.cm-focused .cm-selectionBackground': {
+  '&.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
     backgroundColor: 'hsl(var(--primary) / 0.3)',
   },
   '& .priority-badge': {
