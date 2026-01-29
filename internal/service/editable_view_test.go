@@ -45,7 +45,7 @@ func TestGetEditableDocument_SingleEntry(t *testing.T) {
 	doc, err := svc.GetEditableDocument(context.Background(), date)
 
 	require.NoError(t, err)
-	require.Equal(t, ". Buy groceries", doc)
+	require.Contains(t, doc, ". Buy groceries")
 }
 
 func TestGetEditableDocument_MultipleEntries(t *testing.T) {
@@ -74,7 +74,7 @@ func TestGetEditableDocument_WithHierarchy(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Contains(t, doc, ". Parent task")
-	require.Contains(t, doc, "  - Child note")
+	require.Contains(t, doc, "- Child note")
 }
 
 func TestGetEditableDocument_WithPriority(t *testing.T) {
@@ -279,6 +279,116 @@ func TestApplyChanges_MultipleOperations(t *testing.T) {
 	require.Equal(t, 1, result.Inserted)
 	require.Equal(t, 1, result.Updated)
 	require.Equal(t, 1, result.Deleted)
+}
+
+func TestApplyChanges_InsertChildEntriesWithParentID(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	newDoc := ". Parent task\n  - Child note\n    - Grandchild note"
+	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
+
+	require.NoError(t, err)
+	require.Equal(t, 3, result.Inserted)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	parent := entries[0]
+	child := entries[1]
+	grandchild := entries[2]
+
+	require.Equal(t, "Parent task", parent.Content)
+	require.Equal(t, "Child note", child.Content)
+	require.Equal(t, "Grandchild note", grandchild.Content)
+
+	require.Nil(t, parent.ParentID, "parent should have no parent_id")
+	require.NotNil(t, child.ParentID, "child should have parent_id set")
+	require.Equal(t, parent.ID, *child.ParentID, "child parent_id should point to parent row")
+	require.NotNil(t, grandchild.ParentID, "grandchild should have parent_id set")
+	require.Equal(t, child.ID, *grandchild.ParentID, "grandchild parent_id should point to child row")
+}
+
+func TestApplyChanges_InsertChildUnderExistingParent(t *testing.T) {
+	svc, bujoSvc, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := bujoSvc.LogEntries(ctx, ". Existing parent", LogEntriesOptions{Date: date})
+	require.NoError(t, err)
+
+	newDoc := ". Existing parent\n  - New child"
+	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Inserted)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+
+	parent := entries[0]
+	child := entries[1]
+
+	require.Equal(t, "Existing parent", parent.Content)
+	require.Equal(t, "New child", child.Content)
+	require.NotNil(t, child.ParentID, "child should have parent_id set")
+	require.Equal(t, parent.ID, *child.ParentID, "child parent_id should point to existing parent row")
+}
+
+func TestApplyChanges_InsertMultipleSiblingsUnderNewParent(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	newDoc := ". Parent task\n  - Sibling one\n  - Sibling two"
+	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
+
+	require.NoError(t, err)
+	require.Equal(t, 3, result.Inserted)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	parent := entries[0]
+	sibling1 := entries[1]
+	sibling2 := entries[2]
+
+	require.NotNil(t, sibling1.ParentID, "sibling one should have parent_id")
+	require.NotNil(t, sibling2.ParentID, "sibling two should have parent_id")
+	require.Equal(t, parent.ID, *sibling1.ParentID, "sibling one parent_id should point to parent")
+	require.Equal(t, parent.ID, *sibling2.ParentID, "sibling two parent_id should point to same parent")
+}
+
+func TestApplyChanges_ReparentSetsCorrectParentID(t *testing.T) {
+	svc, bujoSvc, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := bujoSvc.LogEntries(ctx, ". Parent A\n. Standalone entry", LogEntriesOptions{Date: date})
+	require.NoError(t, err)
+
+	entriesBefore, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entriesBefore, 2)
+	require.Nil(t, entriesBefore[1].ParentID, "standalone should have no parent initially")
+
+	newDoc := ". Parent A\n  . Standalone entry"
+	_, err = svc.ApplyChanges(ctx, newDoc, date, nil)
+	require.NoError(t, err)
+
+	entriesAfter, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entriesAfter, 2)
+
+	parentA := entriesAfter[0]
+	reparented := entriesAfter[1]
+
+	require.NotNil(t, reparented.ParentID, "reparented entry should have parent_id set")
+	require.Equal(t, parentA.ID, *reparented.ParentID, "reparented entry should point to Parent A")
 }
 
 func TestApplyChanges_ValidationErrors(t *testing.T) {

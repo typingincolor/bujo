@@ -63,6 +63,22 @@ describe('DeletionReviewDialog', () => {
       expect(screen.getByText('- Note to delete')).toBeInTheDocument()
     })
 
+    it('strips entity ID prefixes from displayed content', () => {
+      const entriesWithIds: DeletedEntry[] = [
+        { entityId: 'entity-1', content: '[entity-1] . Task with ID' },
+        { entityId: 'entity-2', content: '  [entity-2] - Indented note with ID' },
+      ]
+
+      render(
+        <DeletionReviewDialog {...defaultProps} deletedEntries={entriesWithIds} />
+      )
+
+      expect(screen.queryByText(/\[entity-1\]/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/\[entity-2\]/)).not.toBeInTheDocument()
+      expect(screen.getByText('. Task with ID')).toBeInTheDocument()
+      expect(screen.getByText('- Indented note with ID')).toBeInTheDocument()
+    })
+
     it('shows deletion count', () => {
       render(<DeletionReviewDialog {...defaultProps} />)
 

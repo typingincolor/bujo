@@ -381,6 +381,64 @@ describe('useEditableDocument', () => {
       expect(result.current.deletedEntries.map(e => e.entityId)).toContain('entity-meeting')
     })
 
+    it('un-tracks deletion when entity ID reappears after paste', async () => {
+      mockGetEditableDocumentWithEntries.mockResolvedValue({
+        document: '[entity-event] o Event 2x\n[entity-note] - Note 5',
+        entries: [
+          { entityId: 'entity-event', content: 'Event 2x' },
+          { entityId: 'entity-note', content: 'Note 5' },
+        ],
+      })
+
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Step 1: Cut — removes event line, triggers deletion detection
+      act(() => {
+        result.current.setDocument('[entity-note] - Note 5')
+      })
+
+      // After cut, entity-event is detected as deleted
+      expect(result.current.deletedEntries).toHaveLength(1)
+      expect(result.current.deletedEntries[0].entityId).toBe('entity-event')
+
+      // Step 2: Paste — entity ID reappears beneath note (with indentation)
+      act(() => {
+        result.current.setDocument('[entity-note] - Note 5\n  [entity-event] o Event 2x')
+      })
+
+      // Entity ID is back in the document — should be un-tracked
+      expect(result.current.deletedEntries).toHaveLength(0)
+    })
+
+    it('still detects deletion when entity ID is truly removed from document', async () => {
+      mockGetEditableDocumentWithEntries.mockResolvedValue({
+        document: '[entity-event] o Event 2x\n[entity-note] - Note 5',
+        entries: [
+          { entityId: 'entity-event', content: 'Event 2x' },
+          { entityId: 'entity-note', content: 'Note 5' },
+        ],
+      })
+
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // User deletes the event line entirely (no paste back)
+      act(() => {
+        result.current.setDocument('[entity-note] - Note 5')
+      })
+
+      // Entity ID is gone — should be detected as deleted
+      expect(result.current.deletedEntries).toHaveLength(1)
+      expect(result.current.deletedEntries[0].entityId).toBe('entity-event')
+    })
+
     it('sends detected deletions to backend when document cleared in one step', async () => {
       // When the document is cleared in one step, the frontend detects the deletions
       // The backend also auto-detects missing entries as a safety net

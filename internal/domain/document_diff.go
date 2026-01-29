@@ -59,7 +59,9 @@ func ComputeDiff(original []Entry, parsed *EditableDocument) *Changeset {
 		}
 
 		if line.EntityID == nil {
+			newEntityID := NewEntityID()
 			newEntry := Entry{
+				EntityID: newEntityID,
 				Type:     line.Symbol,
 				Content:  line.Content,
 				Priority: line.Priority,
@@ -75,7 +77,7 @@ func ComputeDiff(original []Entry, parsed *EditableDocument) *Changeset {
 				LineNumber: line.LineNumber,
 			})
 
-			parentStack = appendOrUpdateStack(parentStack, line.Depth, NewEntityID())
+			parentStack = appendOrUpdateStack(parentStack, line.Depth, newEntityID)
 			continue
 		}
 

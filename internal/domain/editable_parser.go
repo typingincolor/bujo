@@ -30,6 +30,13 @@ func (p *EditableDocumentParser) Parse(input string, existing []Entry) (*Editabl
 		OriginalMapping: make(map[EntityID]int),
 	}
 
+	existingEntityIDs := make(map[EntityID]bool)
+	for _, entry := range existing {
+		existingEntityIDs[entry.EntityID] = true
+	}
+
+	seenEntityIDs := make(map[EntityID]bool)
+
 	contentToEntityID := make(map[string]EntityID)
 	for _, entry := range existing {
 		contentToEntityID[entry.Content] = entry.EntityID
@@ -59,7 +66,15 @@ func (p *EditableDocumentParser) Parse(input string, existing []Entry) (*Editabl
 				parsedLine.Priority = innerLine.Priority
 			}
 
-			if entityID, ok := contentToEntityID[parsedLine.Content]; ok {
+			if parsedLine.EntityID != nil {
+				eid := *parsedLine.EntityID
+				if seenEntityIDs[eid] {
+					parsedLine.EntityID = nil
+				} else {
+					seenEntityIDs[eid] = true
+					doc.OriginalMapping[eid] = lineNum
+				}
+			} else if entityID, ok := contentToEntityID[parsedLine.Content]; ok {
 				parsedLine.EntityID = &entityID
 				doc.OriginalMapping[entityID] = lineNum
 			}
@@ -86,32 +101,87 @@ func Serialize(entries []Entry) string {
 		return ""
 	}
 
+	hasParentIDs := false
+	for _, e := range entries {
+		if e.ParentID != nil || e.ID != 0 {
+			hasParentIDs = true
+			break
+		}
+	}
+
+	if !hasParentIDs {
+		return serializeFlat(entries)
+	}
+
+	childrenOf := make(map[int64][]int)
+	for i, e := range entries {
+		if e.ParentID != nil {
+			childrenOf[*e.ParentID] = append(childrenOf[*e.ParentID], i)
+		}
+	}
+
+	var result strings.Builder
+	written := 0
+
+	var writeEntry func(idx, depth int)
+	writeEntry = func(idx, depth int) {
+		entry := entries[idx]
+		if written > 0 {
+			result.WriteString("\n")
+		}
+		serializeEntryLine(&result, entry, depth)
+		written++
+
+		for _, childIdx := range childrenOf[entry.ID] {
+			writeEntry(childIdx, depth+1)
+		}
+	}
+
+	for i, entry := range entries {
+		if entry.ParentID == nil {
+			writeEntry(i, 0)
+		}
+	}
+
+	return result.String()
+}
+
+func serializeFlat(entries []Entry) string {
 	var result strings.Builder
 	for i, entry := range entries {
 		if i > 0 {
 			result.WriteString("\n")
 		}
-
-		for j := 0; j < entry.Depth; j++ {
-			result.WriteString("  ")
-		}
-
-		symbol, ok := typeToEditableSymbol[entry.Type]
-		if !ok {
-			symbol = '.'
-		}
-		result.WriteRune(symbol)
-		result.WriteString(" ")
-
-		if entry.Priority != PriorityNone && entry.Priority != "" {
-			result.WriteString(entry.Priority.Symbol())
-			result.WriteString(" ")
-		}
-
-		result.WriteString(entry.Content)
+		serializeEntryLine(&result, entry, entry.Depth)
 	}
 
 	return result.String()
+}
+
+func serializeEntryLine(result *strings.Builder, entry Entry, depth int) {
+	for j := 0; j < depth; j++ {
+		result.WriteString("  ")
+	}
+
+	if !entry.EntityID.IsEmpty() {
+		result.WriteString("[")
+		result.WriteString(entry.EntityID.String())
+		result.WriteString("] ")
+	}
+
+	symbol, ok := typeToEditableSymbol[entry.Type]
+	if !ok {
+		symbol = '.'
+	}
+	result.WriteRune(symbol)
+	result.WriteString(" ")
+
+	if entry.Priority != PriorityNone && entry.Priority != "" {
+		result.WriteString(entry.Priority.Symbol())
+		result.WriteString(" ")
+	}
+
+	result.WriteString(entry.Content)
 }
 
 func (p *EditableDocumentParser) ParseLine(line string, lineNum int) ParsedLine {
@@ -128,6 +198,16 @@ func (p *EditableDocumentParser) ParseLine(line string, lineNum int) ParsedLine 
 
 	depth, rest := ParseIndentation(line)
 	result.Depth = depth
+
+	if strings.HasPrefix(rest, "[") {
+		closeBracket := strings.Index(rest, "] ")
+		if closeBracket > 0 {
+			idStr := rest[1:closeBracket]
+			entityID := EntityID(idStr)
+			result.EntityID = &entityID
+			rest = rest[closeBracket+2:]
+		}
+	}
 
 	if len(rest) == 0 {
 		result.IsValid = false

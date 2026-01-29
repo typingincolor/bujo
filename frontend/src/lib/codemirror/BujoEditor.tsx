@@ -6,6 +6,7 @@ import { bujoTheme } from './bujoTheme'
 import { priorityBadgeExtension } from './priorityBadges'
 import { indentGuidesExtension } from './indentGuides'
 import { errorHighlightExtension, setErrors } from './errorMarkers'
+import { entityIdHiderExtension, entityIdAtomicRanges } from './entityIdHider'
 import {
   migrationDatePreviewExtension,
   setResolvedDates,
@@ -80,6 +81,8 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
     return [
       bujoTheme,
       keybindings,
+      entityIdHiderExtension(),
+      entityIdAtomicRanges(),
       priorityBadgeExtension(),
       indentGuidesExtension(),
       errorHighlightExtension(),

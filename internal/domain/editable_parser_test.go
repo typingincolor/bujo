@@ -540,6 +540,174 @@ x Deployed hotfix`
 	}
 }
 
+func TestSerialize_BuildsHierarchyFromParentID(t *testing.T) {
+	parentID := int64(1)
+	childID := int64(2)
+
+	entries := []Entry{
+		{ID: 1, Type: EntryTypeNote, Content: "note 5", Depth: 0},
+		{ID: 2, Type: EntryTypeEvent, Content: "event 1", Depth: 0},
+		{ID: 3, Type: EntryTypeNote, Content: "note 1x", Depth: 1, ParentID: &childID},
+		{ID: 4, Type: EntryTypeNote, Content: "note 6x", Depth: 1, ParentID: &parentID},
+	}
+
+	got := Serialize(entries)
+	want := `- note 5
+  - note 6x
+o event 1
+  - note 1x`
+
+	if got != want {
+		t.Errorf("got:\n%s\n\nwant:\n%s", got, want)
+	}
+}
+
+func TestSerialize_NestedHierarchyFromParentID(t *testing.T) {
+	parentID := int64(10)
+	childID := int64(20)
+
+	entries := []Entry{
+		{ID: 10, Type: EntryTypeTask, Content: "parent", Depth: 0},
+		{ID: 20, Type: EntryTypeNote, Content: "child", Depth: 1, ParentID: &parentID},
+		{ID: 30, Type: EntryTypeNote, Content: "grandchild", Depth: 2, ParentID: &childID},
+	}
+
+	got := Serialize(entries)
+	want := `. parent
+  - child
+    - grandchild`
+
+	if got != want {
+		t.Errorf("got:\n%s\n\nwant:\n%s", got, want)
+	}
+}
+
+func TestSerialize_EmitsEntityIDPrefix(t *testing.T) {
+	entries := []Entry{
+		{EntityID: "abc-123", Type: EntryTypeTask, Content: "Buy groceries", Depth: 0},
+		{EntityID: "def-456", Type: EntryTypeNote, Content: "Meeting notes", Depth: 0},
+	}
+
+	got := Serialize(entries)
+	want := `[abc-123] . Buy groceries
+[def-456] - Meeting notes`
+
+	if got != want {
+		t.Errorf("got:\n%s\n\nwant:\n%s", got, want)
+	}
+}
+
+func TestSerialize_OmitsEntityIDPrefixWhenEmpty(t *testing.T) {
+	entries := []Entry{
+		{Type: EntryTypeTask, Content: "No entity ID", Depth: 0},
+	}
+
+	got := Serialize(entries)
+	want := `. No entity ID`
+
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestParseLine_ExtractsEntityIDPrefix(t *testing.T) {
+	parser := NewEditableDocumentParser(nil)
+	line := "[abc-123] . Buy groceries"
+	parsed := parser.ParseLine(line, 1)
+
+	if !parsed.IsValid {
+		t.Fatal("expected valid line")
+	}
+	if parsed.EntityID == nil {
+		t.Fatal("expected entity ID to be parsed")
+	}
+	if *parsed.EntityID != "abc-123" {
+		t.Errorf("got entity ID %q, want %q", *parsed.EntityID, "abc-123")
+	}
+	if parsed.Symbol != EntryTypeTask {
+		t.Errorf("got symbol %q, want %q", parsed.Symbol, EntryTypeTask)
+	}
+	if parsed.Content != "Buy groceries" {
+		t.Errorf("got content %q, want %q", parsed.Content, "Buy groceries")
+	}
+}
+
+func TestParse_TypeChangePreservesEntityID(t *testing.T) {
+	entityID := EntityID("019c0b17-3424-7789-9147-252d483295ef")
+
+	existing := []Entry{
+		{EntityID: entityID, Type: EntryTypeNote, Content: "note 2x", Depth: 0},
+	}
+
+	doc := "[019c0b17-3424-7789-9147-252d483295ef] o event 2x"
+
+	parser := NewEditableDocumentParser(nil)
+	parsed, err := parser.Parse(doc, existing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	validLines := 0
+	for _, line := range parsed.Lines {
+		if line.IsValid && !line.IsHeader {
+			validLines++
+			if line.EntityID == nil {
+				t.Fatal("expected entity ID to be preserved after type change")
+			}
+			if *line.EntityID != entityID {
+				t.Errorf("got entity ID %q, want %q", *line.EntityID, entityID)
+			}
+			if line.Symbol != EntryTypeEvent {
+				t.Errorf("got symbol %q, want %q", line.Symbol, EntryTypeEvent)
+			}
+			if line.Content != "event 2x" {
+				t.Errorf("got content %q, want %q", line.Content, "event 2x")
+			}
+		}
+	}
+	if validLines != 1 {
+		t.Errorf("expected 1 valid line, got %d", validLines)
+	}
+}
+
+func TestParse_DuplicateEntityIDTreatsSecondAsNew(t *testing.T) {
+	entityID := EntityID("019c0b17-3424-7789-9147-252d483295ef")
+
+	existing := []Entry{
+		{EntityID: entityID, Type: EntryTypeNote, Content: "note 2x", Depth: 0},
+	}
+
+	doc := "[019c0b17-3424-7789-9147-252d483295ef] - note 2x\n[019c0b17-3424-7789-9147-252d483295ef] - note 2x copy"
+
+	parser := NewEditableDocumentParser(nil)
+	parsed, err := parser.Parse(doc, existing)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	validLines := make([]ParsedLine, 0)
+	for _, line := range parsed.Lines {
+		if line.IsValid && !line.IsHeader {
+			validLines = append(validLines, line)
+		}
+	}
+
+	if len(validLines) != 2 {
+		t.Fatalf("expected 2 valid lines, got %d", len(validLines))
+	}
+
+	if validLines[0].EntityID == nil {
+		t.Fatal("first occurrence should keep entity ID")
+	}
+	if *validLines[0].EntityID != entityID {
+		t.Errorf("first occurrence entity ID: got %q, want %q", *validLines[0].EntityID, entityID)
+	}
+
+	if validLines[1].EntityID != nil {
+		t.Errorf("second occurrence should have nil entity ID (new insert), got %q", *validLines[1].EntityID)
+	}
+}
+
 func TestSerialize_EmptyEntries(t *testing.T) {
 	got := Serialize(nil)
 	if got != "" {

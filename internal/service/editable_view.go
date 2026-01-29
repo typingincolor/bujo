@@ -136,14 +136,32 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 
 	result := &ApplyChangesResult{}
 
+	entityIDToRowID := make(map[domain.EntityID]int64)
+
 	for _, op := range changeset.Operations {
 		switch op.Type {
 		case domain.DiffOpInsert:
 			op.Entry.ScheduledDate = &date
 			op.Entry.CreatedAt = time.Now()
-			_, err := s.entryRepo.Insert(ctx, op.Entry)
+			if op.Entry.ParentEntityID != nil {
+				if rowID, ok := entityIDToRowID[*op.Entry.ParentEntityID]; ok {
+					op.Entry.ParentID = &rowID
+				} else {
+					parent, err := s.entryRepo.GetByEntityID(ctx, *op.Entry.ParentEntityID)
+					if err != nil {
+						return nil, err
+					}
+					if parent != nil {
+						op.Entry.ParentID = &parent.ID
+					}
+				}
+			}
+			rowID, err := s.entryRepo.Insert(ctx, op.Entry)
 			if err != nil {
 				return nil, err
+			}
+			if !op.Entry.EntityID.IsEmpty() {
+				entityIDToRowID[op.Entry.EntityID] = rowID
 			}
 			result.Inserted++
 

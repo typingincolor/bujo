@@ -223,6 +223,15 @@ export function useEditableDocument(date: Date): EditableDocumentState {
           })
         }
 
+        // Un-track deletions when entity IDs reappear (e.g., after cut+paste)
+        setDeletedEntries((prev) => {
+          if (prev.length === 0) return prev
+          const filtered = prev.filter(
+            (entry) => !newDoc.includes(`[${entry.entityId}]`)
+          )
+          return filtered.length === prev.length ? prev : filtered
+        })
+
         return newDoc
       })
 

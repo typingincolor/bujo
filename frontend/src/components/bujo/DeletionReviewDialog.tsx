@@ -1,5 +1,9 @@
 import type { DeletedEntry } from '@/hooks/useEditableDocument'
 
+function stripEntityIdPrefix(content: string): string {
+  return content.replace(/^\s*\[[^\]\n]+\] /, '')
+}
+
 interface DeletionReviewDialogProps {
   isOpen: boolean
   deletedEntries: DeletedEntry[]
@@ -52,7 +56,7 @@ export function DeletionReviewDialog({
                   key={entry.entityId}
                   className="flex items-center justify-between gap-3 p-2 bg-secondary/50 rounded text-sm"
                 >
-                  <span className="font-mono truncate">{entry.content}</span>
+                  <span className="font-mono truncate">{stripEntityIdPrefix(entry.content)}</span>
                   <button
                     onClick={() => onRestore(entry.entityId)}
                     className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary transition-colors shrink-0"
