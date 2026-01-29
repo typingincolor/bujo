@@ -178,6 +178,42 @@ func TestApp_ApplyEditableDocument_ValidationError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestApp_ApplyEditableDocument_DeletesMissingEntries(t *testing.T) {
+	ctx := context.Background()
+
+	factory := app.NewServiceFactory()
+	services, cleanup, err := factory.Create(ctx, ":memory:")
+	require.NoError(t, err)
+	defer cleanup()
+
+	wailsApp := NewApp(services)
+	wailsApp.Startup(ctx)
+
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	_, err = services.Bujo.LogEntries(ctx, ". Task one\n. Task two", service.LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	// Verify both entries exist
+	doc, err := wailsApp.GetEditableDocument(today)
+	require.NoError(t, err)
+	assert.Contains(t, doc, ". Task one")
+	assert.Contains(t, doc, ". Task two")
+
+	// Apply empty document WITHOUT explicit pendingDeletes
+	// The backend should auto-detect that both entries are missing
+	result, err := wailsApp.ApplyEditableDocument("", today, nil)
+
+	require.NoError(t, err)
+	assert.Equal(t, 0, result.Inserted)
+	assert.Equal(t, 0, result.Updated)
+	assert.Equal(t, 2, result.Deleted, "Expected 2 entries to be auto-deleted")
+
+	// Verify entries are gone
+	doc, err = wailsApp.GetEditableDocument(today)
+	require.NoError(t, err)
+	assert.Empty(t, doc)
+}
+
 func TestApp_ResolveDate_Tomorrow(t *testing.T) {
 	ctx := context.Background()
 
