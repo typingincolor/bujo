@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { keymap } from '@codemirror/view'
 import { indentWithTab, deleteLine } from '@codemirror/commands'
@@ -39,16 +39,19 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   const onSaveRef = useRef(onSave)
   const onImportRef = useRef(onImport)
   const onEscapeRef = useRef(onEscape)
-  onChangeRef.current = onChange
-  onSaveRef.current = onSave
-  onImportRef.current = onImport
-  onEscapeRef.current = onEscape
+  useEffect(() => {
+    onChangeRef.current = onChange
+    onSaveRef.current = onSave
+    onImportRef.current = onImport
+    onEscapeRef.current = onEscape
+  })
 
   const stableOnChange = useCallback((val: string) => {
     onChangeRef.current(val)
   }, [])
 
-  const extensions = useMemo(() => {
+  // eslint-disable-next-line react-hooks/refs -- refs are only read inside keymap run() callbacks (event handlers), not during render
+  const [extensions] = useState(() => {
     const keybindings = keymap.of([
       {
         key: 'Mod-s',
@@ -88,7 +91,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       errorHighlightExtension(),
       migrationDatePreviewExtension(),
     ]
-  }, [])
+  })
 
   useEffect(() => {
     const view = editorRef.current?.view

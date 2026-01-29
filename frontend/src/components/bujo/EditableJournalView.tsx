@@ -147,6 +147,14 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
 
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+        <span><kbd>⌘S</kbd> Save</span>
+        <span><kbd>⌘I</kbd> Import</span>
+        <span><kbd>⌘⇧K</kbd> Delete line</span>
+        <span><kbd>Tab</kbd> Indent</span>
+        <span><kbd>Esc</kbd> Unfocus</span>
+      </div>
+
       {validationErrors.length > 0 && (
         <div className="mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg">
           <span className="text-sm font-medium text-destructive">{validationErrors.length} errors</span>

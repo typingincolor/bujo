@@ -462,6 +462,21 @@ describe('EditableJournalView', () => {
       // Verify editor renders - blur behavior is integration tested in E2E
       expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
+
+    it('shows keyboard shortcut legend below the editor', () => {
+      render(<EditableJournalView date={testDate} />)
+
+      expect(screen.getByText(/⌘S/)).toBeInTheDocument()
+      expect(screen.getByText(/Save/)).toBeInTheDocument()
+      expect(screen.getByText(/⌘I/)).toBeInTheDocument()
+      expect(screen.getByText(/Import/)).toBeInTheDocument()
+      expect(screen.getByText(/⌘⇧K/)).toBeInTheDocument()
+      expect(screen.getByText(/Delete line/)).toBeInTheDocument()
+      expect(screen.getByText(/Tab/)).toBeInTheDocument()
+      expect(screen.getByText(/Indent/)).toBeInTheDocument()
+      expect(screen.getByText(/Esc/)).toBeInTheDocument()
+      expect(screen.getByText(/Unfocus/)).toBeInTheDocument()
+    })
   })
 
 })
