@@ -34,26 +34,33 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   const lastResolvedValueRef = useRef<string | null>(null)
   const resolvedCacheRef = useRef<Map<string, ResolvedDateInfo>>(new Map())
 
+  const onSaveRef = useRef(onSave)
+  const onImportRef = useRef(onImport)
+  const onEscapeRef = useRef(onEscape)
+  onSaveRef.current = onSave
+  onImportRef.current = onImport
+  onEscapeRef.current = onEscape
+
   const extensions = useMemo(() => {
     const keybindings = keymap.of([
       {
         key: 'Mod-s',
         run: () => {
-          onSave?.()
+          onSaveRef.current?.()
           return true
         },
       },
       {
         key: 'Mod-i',
         run: () => {
-          onImport?.()
+          onImportRef.current?.()
           return true
         },
       },
       {
         key: 'Escape',
         run: () => {
-          onEscape?.()
+          onEscapeRef.current?.()
           return true
         },
       },
@@ -72,7 +79,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       errorHighlightExtension(),
       migrationDatePreviewExtension(),
     ]
-  }, [onSave, onImport, onEscape])
+  }, [])
 
   useEffect(() => {
     const view = editorRef.current?.view

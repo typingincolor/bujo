@@ -42,4 +42,33 @@ export const bujoTheme = EditorView.theme({
   '&.cm-focused .cm-selectionBackground': {
     backgroundColor: 'hsl(var(--primary) / 0.3)',
   },
+  '& .priority-badge': {
+    pointerEvents: 'none',
+    userSelect: 'none',
+    display: 'inline-block',
+    borderRadius: '3px',
+    padding: '0 4px',
+    fontSize: '11px',
+    fontWeight: '700',
+    lineHeight: '1.4',
+    color: 'white',
+    verticalAlign: 'baseline',
+  },
+  '& .priority-badge-1': {
+    backgroundColor: 'hsl(var(--priority-high))',
+  },
+  '& .priority-badge-2': {
+    backgroundColor: 'hsl(var(--priority-medium))',
+  },
+  '& .priority-badge-3': {
+    backgroundColor: 'hsl(var(--priority-low))',
+  },
+  '& .indent-guide': {
+    pointerEvents: 'none',
+    userSelect: 'none',
+  },
+  '& .migration-date-preview': {
+    pointerEvents: 'none',
+    userSelect: 'none',
+  },
 })

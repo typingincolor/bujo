@@ -1,4 +1,4 @@
-import { ViewPlugin, Decoration, DecorationSet, EditorView, WidgetType } from '@codemirror/view'
+import { ViewPlugin, Decoration, DecorationSet, EditorView } from '@codemirror/view'
 
 export interface PriorityMarker {
   start: number
@@ -26,43 +26,30 @@ export function findPriorityMarkers(line: string): PriorityMarker[] {
   return []
 }
 
-class PriorityBadgeWidget extends WidgetType {
-  constructor(readonly priority: 1 | 2 | 3) {
-    super()
-  }
-
-  toDOM(): HTMLElement {
-    const span = document.createElement('span')
-    span.className = `priority-badge priority-badge-${this.priority}`
-    span.textContent = String(this.priority)
-    return span
-  }
-
-  eq(other: PriorityBadgeWidget): boolean {
-    return this.priority === other.priority
-  }
-}
+const priorityMarkDecorations = {
+  1: Decoration.mark({ class: 'priority-badge priority-badge-1' }),
+  2: Decoration.mark({ class: 'priority-badge priority-badge-2' }),
+  3: Decoration.mark({ class: 'priority-badge priority-badge-3' }),
+} as const
 
 function buildDecorations(view: EditorView): DecorationSet {
-  const decorations: { from: number; to: number; widget: PriorityBadgeWidget }[] = []
+  const ranges: { from: number; to: number; priority: 1 | 2 | 3 }[] = []
 
   for (let i = 1; i <= view.state.doc.lines; i++) {
     const line = view.state.doc.line(i)
     const markers = findPriorityMarkers(line.text)
 
     for (const marker of markers) {
-      decorations.push({
+      ranges.push({
         from: line.from + marker.start,
         to: line.from + marker.end,
-        widget: new PriorityBadgeWidget(marker.priority),
+        priority: marker.priority,
       })
     }
   }
 
   return Decoration.set(
-    decorations.map((d) =>
-      Decoration.replace({ widget: d.widget }).range(d.from, d.to)
-    )
+    ranges.map((r) => priorityMarkDecorations[r.priority].range(r.from, r.to))
   )
 }
 

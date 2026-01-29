@@ -90,32 +90,32 @@ describe('priorityBadgeExtension', () => {
     view.destroy()
   })
 
-  it('shows "1" for !!! priority', () => {
+  it('marks !!! with priority-badge-1 class', () => {
     const view = createEditorView('. !!! Urgent task')
 
     const badge = view.dom.querySelector('.priority-badge-1')
     expect(badge).not.toBeNull()
-    expect(badge?.textContent).toBe('1')
+    expect(badge?.textContent).toBe('!!!')
 
     view.destroy()
   })
 
-  it('shows "2" for !! priority', () => {
+  it('marks !! with priority-badge-2 class', () => {
     const view = createEditorView('. !! High priority')
 
     const badge = view.dom.querySelector('.priority-badge-2')
     expect(badge).not.toBeNull()
-    expect(badge?.textContent).toBe('2')
+    expect(badge?.textContent).toBe('!!')
 
     view.destroy()
   })
 
-  it('shows "3" for ! priority', () => {
+  it('marks ! with priority-badge-3 class', () => {
     const view = createEditorView('. ! Low priority')
 
     const badge = view.dom.querySelector('.priority-badge-3')
     expect(badge).not.toBeNull()
-    expect(badge?.textContent).toBe('3')
+    expect(badge?.textContent).toBe('!')
 
     view.destroy()
   })
