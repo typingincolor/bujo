@@ -347,6 +347,72 @@ describe('useEditableDocument', () => {
 
       expect(result.current.deletedEntries).toHaveLength(0)
     })
+
+    it('detects all entries as deleted when document is cleared to empty in one step', async () => {
+      mockGetEditableDocumentWithEntries.mockResolvedValue({
+        document: '. Buy groceries\n- Meeting notes',
+        entries: [
+          { entityId: 'entity-grocery', content: 'Buy groceries' },
+          { entityId: 'entity-meeting', content: 'Meeting notes' },
+        ],
+      })
+
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Verify initial state has entries
+      expect(result.current.document).toBe('. Buy groceries\n- Meeting notes')
+      expect(result.current.deletedEntries).toHaveLength(0)
+
+      // Simulate clearing document in one step (e.g., Cmd+A, Delete)
+      act(() => {
+        result.current.setDocument('')
+      })
+
+      // Verify document is now empty
+      expect(result.current.document).toBe('')
+
+      // Both entries should be marked for deletion
+      expect(result.current.deletedEntries).toHaveLength(2)
+      expect(result.current.deletedEntries.map(e => e.entityId)).toContain('entity-grocery')
+      expect(result.current.deletedEntries.map(e => e.entityId)).toContain('entity-meeting')
+    })
+
+    it('sends detected deletions to backend when document cleared in one step', async () => {
+      // When the document is cleared in one step, the frontend detects the deletions
+      // The backend also auto-detects missing entries as a safety net
+      mockGetEditableDocumentWithEntries.mockResolvedValue({
+        document: '. Task\n- Note',
+        entries: [
+          { entityId: 'entity-task', content: 'Task' },
+          { entityId: 'entity-note', content: 'Note' },
+        ],
+      })
+
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Clear document in one step - frontend detects both entries as deleted
+      act(() => result.current.setDocument(''))
+
+      // Save the empty document with detected deletions
+      await act(async () => {
+        await result.current.save()
+      })
+
+      // Frontend detected the deletions and sends them to backend
+      expect(mockApplyEditableDocument).toHaveBeenCalledWith(
+        '',
+        expect.any(String),
+        expect.arrayContaining(['entity-task', 'entity-note'])
+      )
+    })
   })
 
   describe('saving', () => {

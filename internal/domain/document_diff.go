@@ -140,6 +140,16 @@ func ComputeDiff(original []Entry, parsed *EditableDocument) *Changeset {
 		}
 	}
 
+	for entityID := range originalByEntityID {
+		if !seenEntityIDs[entityID] && !pendingDeleteSet[entityID] {
+			id := entityID
+			changeset.Operations = append(changeset.Operations, DiffOperation{
+				Type:     DiffOpDelete,
+				EntityID: &id,
+			})
+		}
+	}
+
 	return changeset
 }
 

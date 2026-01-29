@@ -173,6 +173,44 @@ func TestComputeDiff_Delete(t *testing.T) {
 	}
 }
 
+func TestComputeDiff_DeleteMissingEntries(t *testing.T) {
+	entityID1 := NewEntityID()
+	entityID2 := NewEntityID()
+
+	original := []Entry{
+		{EntityID: entityID1, Type: EntryTypeTask, Content: "Task one", Depth: 0},
+		{EntityID: entityID2, Type: EntryTypeNote, Content: "Task two", Depth: 0},
+	}
+
+	parsed := &EditableDocument{
+		Lines:          []ParsedLine{},
+		PendingDeletes: []EntityID{},
+	}
+
+	changeset := ComputeDiff(original, parsed)
+
+	if len(changeset.Operations) != 2 {
+		t.Fatalf("expected 2 delete operations, got %d", len(changeset.Operations))
+	}
+
+	deletedIDs := make(map[EntityID]bool)
+	for _, op := range changeset.Operations {
+		if op.Type != DiffOpDelete {
+			t.Errorf("expected DiffOpDelete, got %v", op.Type)
+		}
+		if op.EntityID != nil {
+			deletedIDs[*op.EntityID] = true
+		}
+	}
+
+	if !deletedIDs[entityID1] {
+		t.Errorf("expected entityID1 %s to be deleted", entityID1)
+	}
+	if !deletedIDs[entityID2] {
+		t.Errorf("expected entityID2 %s to be deleted", entityID2)
+	}
+}
+
 func TestComputeDiff_Migrate(t *testing.T) {
 	entityID := NewEntityID()
 	migrateDate := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
