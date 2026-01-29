@@ -14,13 +14,11 @@ export const bujoTheme = EditorView.theme({
     fontFamily: 'var(--font-mono, monospace)',
     fontSize: '14px',
     lineHeight: '1.6',
-    backgroundColor: 'hsl(var(--background))',
   },
   '& .cm-content': {
     fontFamily: 'var(--font-mono, monospace)',
     fontSize: '14px',
     lineHeight: '1.6',
-    backgroundColor: 'hsl(var(--background))',
   },
   '& .cm-gutters': {
     backgroundColor: 'transparent',

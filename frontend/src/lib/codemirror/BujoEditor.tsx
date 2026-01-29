@@ -34,12 +34,18 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   const lastResolvedValueRef = useRef<string | null>(null)
   const resolvedCacheRef = useRef<Map<string, ResolvedDateInfo>>(new Map())
 
+  const onChangeRef = useRef(onChange)
   const onSaveRef = useRef(onSave)
   const onImportRef = useRef(onImport)
   const onEscapeRef = useRef(onEscape)
+  onChangeRef.current = onChange
   onSaveRef.current = onSave
   onImportRef.current = onImport
   onEscapeRef.current = onEscape
+
+  const stableOnChange = useCallback((val: string) => {
+    onChangeRef.current(val)
+  }, [])
 
   const extensions = useMemo(() => {
     const keybindings = keymap.of([
@@ -143,23 +149,25 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
     return () => clearTimeout(timeoutId)
   }, [resolveMigrationDates])
 
+  const basicSetupConfig = useMemo(() => ({
+    lineNumbers: false,
+    foldGutter: false,
+    highlightActiveLine: false,
+    highlightSelectionMatches: true,
+    bracketMatching: false,
+    closeBrackets: false,
+    autocompletion: false,
+  }), [])
+
   return (
     <CodeMirror
       ref={editorRef}
       value={value}
-      onChange={onChange}
+      onChange={stableOnChange}
       extensions={extensions}
       theme="none"
       height="100%"
-      basicSetup={{
-        lineNumbers: false,
-        foldGutter: false,
-        highlightActiveLine: false,
-        highlightSelectionMatches: true,
-        bracketMatching: false,
-        closeBrackets: false,
-        autocompletion: false,
-      }}
+      basicSetup={basicSetupConfig}
     />
   )
 }
