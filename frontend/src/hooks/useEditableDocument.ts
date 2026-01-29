@@ -55,6 +55,27 @@ export interface EditableDocumentState {
 }
 
 const DEBOUNCE_MS = 500
+const MIN_ENTRY_CONTENT_LENGTH = 5
+
+const ENTRY_SYMBOLS = ['.', '-', 'o', 'x', '>']
+
+function allEntriesHaveMinContent(doc: string): boolean {
+  const lines = doc.split('\n')
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.length === 0) continue
+
+    const firstChar = trimmed[0]
+    if (ENTRY_SYMBOLS.includes(firstChar)) {
+      const content = trimmed.slice(1).trim()
+      if (content.length < MIN_ENTRY_CONTENT_LENGTH) {
+        return false
+      }
+    }
+    // Lines with invalid symbols validate immediately (they're definitely wrong)
+  }
+  return true
+}
 
 function formatDateKey(date: Date): string {
   const year = date.getFullYear()
@@ -210,7 +231,9 @@ export function useEditableDocument(date: Date): EditableDocumentState {
       }
 
       debounceTimerRef.current = setTimeout(() => {
-        validateDocument(newDoc)
+        if (allEntriesHaveMinContent(newDoc)) {
+          validateDocument(newDoc)
+        }
         const deletedIds = deletedEntries.map((e) => e.entityId)
         saveDraft(newDoc, deletedIds)
       }, DEBOUNCE_MS)

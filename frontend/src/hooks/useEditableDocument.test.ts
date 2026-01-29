@@ -130,6 +130,76 @@ describe('useEditableDocument', () => {
   })
 
   describe('validation', () => {
+    it('does not validate when any entry has fewer than 5 characters of content', async () => {
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      vi.useFakeTimers()
+
+      // Entry content "Hi" is only 2 characters (symbol doesn't count)
+      act(() => {
+        result.current.setDocument('. Hi')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+
+      expect(mockValidateEditableDocument).not.toHaveBeenCalled()
+
+      vi.useRealTimers()
+    })
+
+    it('validates when all entries have 5 or more characters of content', async () => {
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      vi.useFakeTimers()
+
+      // Entry content "Hello" is 5 characters
+      act(() => {
+        result.current.setDocument('. Hello')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+
+      expect(mockValidateEditableDocument).toHaveBeenCalledWith('. Hello')
+
+      vi.useRealTimers()
+    })
+
+    it('does not validate when one entry is complete but another is short', async () => {
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      vi.useFakeTimers()
+
+      // First entry is complete, second entry "Hi" is only 2 characters
+      act(() => {
+        result.current.setDocument('. Complete task\n. Hi')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+
+      expect(mockValidateEditableDocument).not.toHaveBeenCalled()
+
+      vi.useRealTimers()
+    })
+
+
     it('validates document after change with debounce', async () => {
       const { result } = renderHook(() => useEditableDocument(testDate))
 
