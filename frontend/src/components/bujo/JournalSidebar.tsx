@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { buildTree } from '@/lib/buildTree';
 import { ContextTree } from './ContextTree';
 
-interface EntryCallbacks {
+export interface EntryCallbacks {
   onMarkDone?: () => void;
   onUnmarkDone?: () => void;
   onMigrate?: () => void;
@@ -20,7 +20,7 @@ interface EntryCallbacks {
   onUncancel?: () => void;
 }
 
-interface OverdueEntryItemProps {
+export interface OverdueEntryItemProps {
   entry: Entry;
   now: Date;
   isSelected: boolean;
@@ -28,7 +28,7 @@ interface OverdueEntryItemProps {
   callbacks: EntryCallbacks;
 }
 
-function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: OverdueEntryItemProps) {
+export function OverdueEntryItem({ entry, now, isSelected, onSelect, callbacks }: OverdueEntryItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const attentionResult = calculateAttentionScore(entry, now);
   const symbol = ENTRY_SYMBOLS[entry.type];

@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import {
   CalendarDays,
+  Clock,
   Flame,
   List,
   Target,
@@ -12,7 +13,7 @@ import {
   FileEdit
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings' | 'editable';
+export type ViewType = 'today' | 'pending' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings' | 'editable';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -20,7 +21,8 @@ interface SidebarProps {
 }
 
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
-  { view: 'today', icon: FileEdit, label: 'Edit Journal' },
+  { view: 'today', icon: FileEdit, label: 'Journal' },
+  { view: 'pending', icon: Clock, label: 'Pending Tasks' },
   { view: 'week', icon: CalendarDays, label: 'Weekly Review' },
   { view: 'questions', icon: HelpCircle, label: 'Open Questions' },
   { view: 'habits', icon: Flame, label: 'Habit Tracker' },

@@ -23,6 +23,9 @@ import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { WeekView } from '@/components/bujo/WeekView'
 import { JournalSidebar } from '@/components/bujo/JournalSidebar'
+import { PendingTasksView } from '@/components/bujo/PendingTasksView'
+import { ContextTree } from '@/components/bujo/ContextTree'
+import { buildTree } from '@/lib/buildTree'
 import { EditableJournalView } from '@/components/bujo/EditableJournalView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -46,7 +49,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -88,6 +91,9 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
   const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
+  const [pendingContextWidth, setPendingContextWidth] = useState(384)
+  const [pendingSelectedEntry, setPendingSelectedEntry] = useState<Entry | null>(null)
+  const [pendingContextTree, setPendingContextTree] = useState<Entry[]>([])
   const initialLoadCompleteRef = useRef(false)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
@@ -182,6 +188,23 @@ function App() {
         setReviewContextTree([])
       })
   }, [reviewSelectedEntry])
+
+  // Fetch full context tree for pending-selected entry from backend
+  useEffect(() => {
+    if (!pendingSelectedEntry) {
+      setPendingContextTree([])
+      return
+    }
+
+    GetEntryContext(pendingSelectedEntry.id)
+      .then((entries) => {
+        setPendingContextTree(entries.map(transformEntry))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch entry context:', err)
+        setPendingContextTree([])
+      })
+  }, [pendingSelectedEntry])
 
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
     try {
@@ -283,7 +306,7 @@ function App() {
       // View navigation shortcuts (CMD+1 through CMD+9) - always available
       if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
         e.preventDefault()
-        const viewMap: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+        const viewMap: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
         const viewIndex = parseInt(e.key) - 1
         if (viewIndex < viewMap.length) {
           handleViewChange(viewMap[viewIndex])
@@ -681,6 +704,7 @@ function App() {
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
+    pending: 'Pending Tasks',
     week: 'Weekly Review',
     questions: 'Open Questions',
     habits: 'Habit Tracker',
@@ -752,6 +776,17 @@ function App() {
               </div>
               <EditableJournalView date={currentDate} />
             </div>
+          )}
+
+          {view === 'pending' && (
+            <PendingTasksView
+              overdueEntries={overdueEntries}
+              now={new Date()}
+              callbacks={sidebarCallbacks}
+              selectedEntry={pendingSelectedEntry ?? undefined}
+              onSelectEntry={(entry) => setPendingSelectedEntry(entry)}
+              onRefresh={loadData}
+            />
           )}
 
           {view === 'week' && (
@@ -930,6 +965,52 @@ function App() {
               onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
               onRefresh={loadData}
             />
+          </div>
+        </aside>
+      )}
+
+      {/* Pending Tasks Context Sidebar */}
+      {view === 'pending' && (
+        <aside
+          className="flex flex-col self-stretch bg-background relative"
+          style={{ width: `${pendingContextWidth}px` }}
+        >
+          <div
+            data-testid="pending-context-resize-handle"
+            className="absolute left-0 top-0 h-full w-4 cursor-col-resize group z-10"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const newWidth = window.innerWidth - moveEvent.clientX;
+                const clampedWidth = Math.max(256, Math.min(960, newWidth));
+                setPendingContextWidth(clampedWidth);
+              };
+              const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+              };
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+          >
+            <div className="w-px h-full bg-border transition-colors group-hover:bg-primary/50" />
+          </div>
+
+          <div className="h-[73px] flex-shrink-0" />
+
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="text-sm font-medium mb-3">Context</h3>
+            {!pendingSelectedEntry ? (
+              <p className="text-sm text-muted-foreground">No entry selected</p>
+            ) : pendingContextTree.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No context</p>
+            ) : (
+              <ContextTree nodes={buildTree(pendingContextTree)} selectedEntryId={pendingSelectedEntry.id} />
+            )}
           </div>
         </aside>
       )}

@@ -90,7 +90,7 @@ describe('App keyboard shortcuts', () => {
       expect(journalButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+2 switches to Weekly Review view', async () => {
+    it('CMD+2 switches to Pending Tasks view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -104,11 +104,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}2{/Meta}');
 
-      const weekButton = screen.getByRole('button', { name: /Weekly Review/i });
-      expect(weekButton).toHaveAttribute('aria-pressed', 'true');
+      const pendingButton = screen.getByRole('button', { name: /^Pending Tasks$/i });
+      expect(pendingButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+3 switches to Open Questions view', async () => {
+    it('CMD+3 switches to Weekly Review view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -122,11 +122,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}3{/Meta}');
 
-      const questionsButton = screen.getByRole('button', { name: /Open Questions/i });
-      expect(questionsButton).toHaveAttribute('aria-pressed', 'true');
+      const weekButton = screen.getByRole('button', { name: /Weekly Review/i });
+      expect(weekButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+4 switches to Habit Tracker view', async () => {
+    it('CMD+4 switches to Open Questions view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -140,11 +140,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}4{/Meta}');
 
-      const habitsButton = screen.getByRole('button', { name: /Habit Tracker/i });
-      expect(habitsButton).toHaveAttribute('aria-pressed', 'true');
+      const questionsButton = screen.getByRole('button', { name: /Open Questions/i });
+      expect(questionsButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+5 switches to Lists view', async () => {
+    it('CMD+5 switches to Habit Tracker view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -158,11 +158,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}5{/Meta}');
 
-      const listsButton = screen.getByRole('button', { name: /Lists/i });
-      expect(listsButton).toHaveAttribute('aria-pressed', 'true');
+      const habitsButton = screen.getByRole('button', { name: /Habit Tracker/i });
+      expect(habitsButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+6 switches to Monthly Goals view', async () => {
+    it('CMD+6 switches to Lists view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -176,11 +176,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}6{/Meta}');
 
-      const goalsButton = screen.getByRole('button', { name: /Monthly Goals/i });
-      expect(goalsButton).toHaveAttribute('aria-pressed', 'true');
+      const listsButton = screen.getByRole('button', { name: /Lists/i });
+      expect(listsButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+7 switches to Search view', async () => {
+    it('CMD+7 switches to Monthly Goals view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -194,11 +194,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}7{/Meta}');
 
-      const searchButton = screen.getByRole('button', { name: /Search/i });
-      expect(searchButton).toHaveAttribute('aria-pressed', 'true');
+      const goalsButton = screen.getByRole('button', { name: /Monthly Goals/i });
+      expect(goalsButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+8 switches to Insights view', async () => {
+    it('CMD+8 switches to Search view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -212,11 +212,11 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}8{/Meta}');
 
-      const insightsButton = screen.getByRole('button', { name: /Insights/i });
-      expect(insightsButton).toHaveAttribute('aria-pressed', 'true');
+      const searchButton = screen.getByRole('button', { name: /Search/i });
+      expect(searchButton).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('CMD+9 switches to Settings view', async () => {
+    it('CMD+9 switches to Insights view', async () => {
       const user = userEvent.setup();
       render(
         <SettingsProvider>
@@ -230,8 +230,8 @@ describe('App keyboard shortcuts', () => {
 
       await user.keyboard('{Meta>}9{/Meta}');
 
-      const settingsButton = screen.getByRole('button', { name: /Settings/i });
-      expect(settingsButton).toHaveAttribute('aria-pressed', 'true');
+      const insightsButton = screen.getByRole('button', { name: /Insights/i });
+      expect(insightsButton).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('Ctrl+1 switches to Journal view on Windows/Linux', async () => {
@@ -295,15 +295,15 @@ describe('App keyboard shortcuts', () => {
       const journalButton = screen.getByRole('button', { name: /Journal/i });
       expect(journalButton).toHaveAttribute('aria-pressed', 'true');
 
-      // Switch to Weekly Review
+      // Switch to Pending Tasks
       await user.keyboard('{Meta>}2{/Meta}');
-      const weekButton = screen.getByRole('button', { name: /Weekly Review/i });
-      expect(weekButton).toHaveAttribute('aria-pressed', 'true');
+      const pendingButton = screen.getByRole('button', { name: /^Pending Tasks$/i });
+      expect(pendingButton).toHaveAttribute('aria-pressed', 'true');
 
-      // Switch to Habits
+      // Switch to Open Questions
       await user.keyboard('{Meta>}4{/Meta}');
-      const habitsButton = screen.getByRole('button', { name: /Habit Tracker/i });
-      expect(habitsButton).toHaveAttribute('aria-pressed', 'true');
+      const questionsButton = screen.getByRole('button', { name: /Open Questions/i });
+      expect(questionsButton).toHaveAttribute('aria-pressed', 'true');
 
       // Switch back to Journal
       await user.keyboard('{Meta>}1{/Meta}');
