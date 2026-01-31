@@ -23,10 +23,12 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     hasDraft,
     restoreDraft,
     discardDraft,
+    debugLog,
   } = useEditableDocument(date)
 
   const [saveError, setSaveError] = useState<string | null>(null)
   const [showDeletionDialog, setShowDeletionDialog] = useState(false)
+  const [showDebug, setShowDebug] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = useCallback(async () => {
@@ -116,7 +118,7 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-220px)]">
+    <div className="flex flex-col flex-1 min-h-0">
       {hasDraft && (
         <div className="flex items-center gap-2 p-3 mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm">
           <span className="text-muted-foreground">Unsaved changes found</span>
@@ -220,6 +222,26 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="mt-2">
+        <button
+          onClick={() => setShowDebug((v) => !v)}
+          className="text-xs text-muted-foreground/50 hover:text-muted-foreground"
+        >
+          {showDebug ? 'Hide' : 'Debug'}
+        </button>
+        {showDebug && debugLog.length > 0 && (
+          <div className="mt-1 p-2 bg-black/80 text-green-400 rounded text-xs font-mono max-h-40 overflow-y-auto">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-green-600">Draft Debug Log</span>
+              <span className="text-green-600">hasDraft={String(hasDraft)} isDirty={String(isDirty)}</span>
+            </div>
+            {debugLog.map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

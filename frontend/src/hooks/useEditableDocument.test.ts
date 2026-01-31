@@ -678,6 +678,72 @@ describe('useEditableDocument', () => {
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('bujo.draft.2026-01-27')
     })
 
+    it('does not save draft when document matches original', async () => {
+      const { result } = renderHook(() => useEditableDocument(testDate))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      vi.useFakeTimers()
+
+      // "Edit" the document to the exact same content (e.g., CodeMirror re-fires onChange)
+      act(() => {
+        result.current.setDocument('. Buy groceries\n- Meeting notes')
+      })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+
+      vi.useRealTimers()
+
+      // No draft should be saved since document is unchanged
+      expect(mockLocalStorage['bujo.draft.2026-01-27']).toBeUndefined()
+    })
+
+    it('resets hasDraft to false when navigating to a day with no draft', async () => {
+      const friday = new Date(2026, 0, 30)
+      const thursday = new Date(2026, 0, 29)
+
+      // Friday has a draft in localStorage
+      mockLocalStorage['bujo.draft.2026-01-30'] = JSON.stringify({
+        document: '. Unsaved friday edit',
+        deletedIds: [],
+        timestamp: Date.now(),
+      })
+
+      // Thursday has no draft
+      // (no entry in mockLocalStorage for bujo.draft.2026-01-29)
+
+      mockGetEditableDocumentWithEntries.mockResolvedValue({
+        document: '. Some content',
+        entries: [],
+      })
+
+      const { result, rerender } = renderHook(
+        ({ date }) => useEditableDocument(date),
+        { initialProps: { date: friday } }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Friday should show draft banner since draft differs from loaded doc
+      expect(result.current.hasDraft).toBe(true)
+
+      // Navigate to Thursday
+      rerender({ date: thursday })
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // Thursday has no draft — banner should NOT appear
+      expect(result.current.hasDraft).toBe(false)
+    })
+
     it('clears draft after successful save', async () => {
       const { result } = renderHook(() => useEditableDocument(testDate))
 

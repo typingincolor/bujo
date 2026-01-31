@@ -764,18 +764,17 @@ function App() {
           onBack={handleBack}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 pb-32">
+        <main className={`flex-1 p-6 ${view === 'today' ? 'flex flex-col overflow-hidden pb-2' : 'overflow-y-auto pb-32'}`}>
           {view === 'today' && (
-            <div className="space-y-6">
-              {/* Day Navigation */}
-              <div className="flex items-center justify-center">
+            <>
+              <div className="flex items-center justify-center mb-6">
                 <DateNavigator
                   date={currentDate}
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
               <EditableJournalView date={currentDate} />
-            </div>
+            </>
           )}
 
           {view === 'pending' && (

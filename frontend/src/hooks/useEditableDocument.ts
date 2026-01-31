@@ -52,6 +52,7 @@ export interface EditableDocumentState {
   hasDraft: boolean
   restoreDraft: () => void
   discardDraft: () => void
+  debugLog: string[]
 }
 
 const DEBOUNCE_MS = 500
@@ -104,6 +105,12 @@ export function useEditableDocument(date: Date): EditableDocumentState {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [hasDraft, setHasDraft] = useState(false)
   const [entryMappings, setEntryMappings] = useState<EntryMapping[]>([])
+  const [debugLog, setDebugLog] = useState<string[]>([])
+
+  const addDebug = useCallback((msg: string) => {
+    const ts = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    setDebugLog((prev) => [...prev.slice(-29), `[${ts}] ${msg}`])
+  }, [])
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -111,22 +118,34 @@ export function useEditableDocument(date: Date): EditableDocumentState {
 
   const checkForDraft = useCallback((loadedDocument: string) => {
     const stored = localStorage.getItem(draftKey)
+    addDebug(`checkForDraft key=${draftKey} found=${!!stored}`)
     if (stored) {
       try {
         const draft: Draft = JSON.parse(stored)
-        // Only show draft banner if the draft content differs from loaded document
+        const docMatch = draft.document === loadedDocument
+        addDebug(`draft.deletedIds=${JSON.stringify(draft.deletedIds)} docMatch=${docMatch}`)
+        if (!docMatch) {
+          addDebug(`MISMATCH: draft.doc.len=${draft.document.length} loaded.len=${loadedDocument.length}`)
+          addDebug(`draft first 80: ${JSON.stringify(draft.document.slice(0, 80))}`)
+          addDebug(`loaded first 80: ${JSON.stringify(loadedDocument.slice(0, 80))}`)
+        }
         if (draft.document !== loadedDocument || draft.deletedIds.length > 0) {
+          addDebug('=> setHasDraft(true)')
           setHasDraft(true)
         } else {
-          // Draft matches loaded document, clear it
+          addDebug('=> draft matches, removing from localStorage')
           localStorage.removeItem(draftKey)
+          setHasDraft(false)
         }
       } catch {
-        // Invalid draft JSON, remove it
         localStorage.removeItem(draftKey)
+        setHasDraft(false)
       }
+    } else {
+      addDebug('=> no draft in localStorage')
+      setHasDraft(false)
     }
-  }, [draftKey])
+  }, [draftKey, addDebug])
 
   useEffect(() => {
     let cancelled = false
@@ -134,9 +153,12 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     async function loadDocument() {
       setIsLoading(true)
       setError(null)
+      setDeletedEntries([])
+      setValidationErrors([])
 
       try {
         const result = await GetEditableDocumentWithEntries(toWailsTime(date))
+        addDebug(`loadDocument for ${formatDateKey(date)}, doc.len=${result.document.length}`)
         if (!cancelled) {
           setDocumentState(result.document)
           setOriginalDocument(result.document)
@@ -165,11 +187,16 @@ export function useEditableDocument(date: Date): EditableDocumentState {
 
     return () => {
       cancelled = true
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
     }
   }, [date, checkForDraft])
 
   const saveDraft = useCallback(
     (doc: string, deletedIds: string[]) => {
+      addDebug(`saveDraft key=${draftKey} doc.len=${doc.length} deletedIds=${JSON.stringify(deletedIds)}`)
       const draft: Draft = {
         document: doc,
         deletedIds,
@@ -177,7 +204,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
       }
       localStorage.setItem(draftKey, JSON.stringify(draft))
     },
-    [draftKey]
+    [draftKey, addDebug]
   )
 
   const clearDraft = useCallback(() => {
@@ -194,16 +221,18 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     }
   }, [])
 
+  const originalDocumentRef = useRef(originalDocument)
+  useEffect(() => {
+    originalDocumentRef.current = originalDocument
+  }, [originalDocument])
+
   const setDocument = useCallback(
     (newDoc: string) => {
+      addDebug(`setDocument called, newDoc.len=${newDoc.length}`)
       setDocumentState((prevDoc) => {
-        // Count non-empty lines to detect actual line deletions
-        // This handles the case where the only line is deleted (empty string)
         const prevNonEmptyCount = prevDoc.split('\n').filter((l) => l.trim()).length
         const newNonEmptyCount = newDoc.split('\n').filter((l) => l.trim()).length
 
-        // Only detect deletions when non-empty line count decreases (e.g., Cmd+Shift+k delete)
-        // This avoids false positives when editing existing lines
         if (newNonEmptyCount < prevNonEmptyCount) {
           const prevLines = new Set(prevDoc.split('\n'))
           const newLines = new Set(newDoc.split('\n'))
@@ -223,7 +252,6 @@ export function useEditableDocument(date: Date): EditableDocumentState {
           })
         }
 
-        // Un-track deletions when entity IDs reappear (e.g., after cut+paste)
         setDeletedEntries((prev) => {
           if (prev.length === 0) return prev
           const filtered = prev.filter(
@@ -243,11 +271,15 @@ export function useEditableDocument(date: Date): EditableDocumentState {
         if (allEntriesHaveMinContent(newDoc)) {
           validateDocument(newDoc)
         }
-        const deletedIds = deletedEntries.map((e) => e.entityId)
-        saveDraft(newDoc, deletedIds)
+        const matchesOriginal = newDoc === originalDocumentRef.current
+        addDebug(`debounce: matchesOriginal=${matchesOriginal} newDoc.len=${newDoc.length} orig.len=${originalDocumentRef.current.length}`)
+        if (!matchesOriginal) {
+          const deletedIds = deletedEntries.map((e) => e.entityId)
+          saveDraft(newDoc, deletedIds)
+        }
       }, DEBOUNCE_MS)
     },
-    [validateDocument, saveDraft, deletedEntries, entryMappings]
+    [validateDocument, saveDraft, deletedEntries, entryMappings, addDebug]
   )
 
   const isDirty = document !== originalDocument || deletedEntries.length > 0
@@ -326,5 +358,6 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     hasDraft,
     restoreDraft,
     discardDraft,
+    debugLog,
   }
 }
