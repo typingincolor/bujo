@@ -137,14 +137,16 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-hidden border border-border">
-        <BujoEditor
-          value={document}
-          onChange={setDocument}
-          onSave={handleSave}
-          onImport={handleImport}
-          onEscape={handleEscape}
-        />
+      <div className="relative flex-1 min-h-0 border border-border">
+        <div className="absolute inset-0 overflow-hidden">
+          <BujoEditor
+            value={document}
+            onChange={setDocument}
+            onSave={handleSave}
+            onImport={handleImport}
+            onEscape={handleEscape}
+          />
+        </div>
       </div>
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />

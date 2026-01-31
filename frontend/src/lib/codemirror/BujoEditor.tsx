@@ -173,6 +173,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       extensions={extensions}
       theme="none"
       height="100%"
+      style={{ height: '100%' }}
       basicSetup={basicSetupConfig}
     />
   )
