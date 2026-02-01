@@ -1,7 +1,15 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { keymap } from '@codemirror/view'
-import { indentWithTab, deleteLine } from '@codemirror/commands'
+import {
+  indentWithTab,
+  deleteLine,
+  moveLineUp,
+  moveLineDown,
+  copyLineDown,
+  insertBlankLine,
+} from '@codemirror/commands'
+import { EditorSelection } from '@codemirror/state'
 import { bujoTheme } from './bujoTheme'
 import { priorityBadgeExtension } from './priorityBadges'
 import { indentGuidesExtension } from './indentGuides'
@@ -39,6 +47,18 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
 
   // eslint-disable-next-line react-hooks/refs -- refs are only read inside keymap run() callbacks (event handlers), not during render
   const [extensions] = useState(() => {
+    const insertBlankLineAbove: typeof insertBlankLine = ({ state, dispatch }) => {
+      const changes = state.changeByRange(range => {
+        const line = state.doc.lineAt(range.head)
+        return {
+          range: EditorSelection.cursor(line.from),
+          changes: { from: line.from, insert: '\n' },
+        }
+      })
+      dispatch(state.update(changes, { scrollIntoView: true, userEvent: 'input' }))
+      return true
+    }
+
     const keybindings = keymap.of([
       {
         key: 'Mod-s',
@@ -64,6 +84,26 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       {
         key: 'Mod-Shift-k',
         run: deleteLine,
+      },
+      {
+        key: 'Mod-Enter',
+        run: insertBlankLine,
+      },
+      {
+        key: 'Mod-Shift-Enter',
+        run: insertBlankLineAbove,
+      },
+      {
+        key: 'Mod-Shift-d',
+        run: copyLineDown,
+      },
+      {
+        key: 'Alt-ArrowUp',
+        run: moveLineUp,
+      },
+      {
+        key: 'Alt-ArrowDown',
+        run: moveLineDown,
       },
       indentWithTab,
     ])
