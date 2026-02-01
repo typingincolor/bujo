@@ -17,6 +17,7 @@ const typeStyles: Record<EntryType, string> = {
   question: 'text-bujo-question',
   answered: 'text-bujo-answered',
   answer: 'text-bujo-answer',
+  movedToList: 'text-bujo-migrated',
 };
 
 const priorityStyles: Record<Priority, string> = {

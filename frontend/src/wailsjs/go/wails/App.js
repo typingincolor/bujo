@@ -22,6 +22,10 @@ export function ApplyEditableDocument(arg1, arg2) {
   return window['go']['wails']['App']['ApplyEditableDocument'](arg1, arg2);
 }
 
+export function ApplyEditableDocumentWithActions(arg1, arg2, arg3, arg4) {
+  return window['go']['wails']['App']['ApplyEditableDocumentWithActions'](arg1, arg2, arg3, arg4);
+}
+
 export function CancelEntry(arg1) {
   return window['go']['wails']['App']['CancelEntry'](arg1);
 }

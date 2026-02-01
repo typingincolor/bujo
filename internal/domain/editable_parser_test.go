@@ -55,6 +55,12 @@ func TestParseLine_SymbolTypes(t *testing.T) {
 			wantType: EntryTypeAnswered,
 			wantText: "How does auth work",
 		},
+		{
+			name:     "moved to list with caret",
+			input:    "^ Buy groceries",
+			wantType: EntryTypeMovedToList,
+			wantText: "Buy groceries",
+		},
 	}
 
 	for _, tt := range tests {
@@ -180,7 +186,7 @@ func TestParseLine_InvalidLines(t *testing.T) {
 	}{
 		{
 			name:         "unknown symbol",
-			input:        "^ Invalid entry",
+			input:        "& Invalid entry",
 			wantValid:    false,
 			wantErrorMsg: "Unknown entry type",
 		},
@@ -378,6 +384,13 @@ func TestSerialize_BasicEntries(t *testing.T) {
 				{Type: EntryTypeAnswer, Content: "It uses JWT tokens", Depth: 0},
 			},
 			want: "- It uses JWT tokens",
+		},
+		{
+			name: "moved to list entry",
+			entries: []Entry{
+				{Type: EntryTypeMovedToList, Content: "Buy groceries", Depth: 0},
+			},
+			want: "^ Buy groceries",
 		},
 	}
 

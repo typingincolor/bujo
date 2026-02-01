@@ -121,5 +121,9 @@ export const bujoTheme = EditorView.theme({
     color: 'hsl(var(--muted-foreground))',
     opacity: '0.6',
   },
+  '& .cm-entry-movedToList': {
+    color: 'hsl(var(--muted-foreground))',
+    opacity: '0.6',
+  },
   '& .cm-entry-note': {},
 })

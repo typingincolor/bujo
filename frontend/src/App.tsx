@@ -880,7 +880,7 @@ function App() {
       {/* Move to List Modal */}
       <ListPickerModal
         isOpen={moveToListEntry !== null}
-        entryContent={moveToListEntry?.content || ''}
+        entries={moveToListEntry ? [moveToListEntry.content] : []}
         onSelect={handleMoveToList}
         onCancel={() => setMoveToListEntry(null)}
       />

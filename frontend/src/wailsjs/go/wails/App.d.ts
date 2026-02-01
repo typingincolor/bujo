@@ -16,6 +16,8 @@ export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;
 
 export function ApplyEditableDocument(arg1:string,arg2:time.Time):Promise<wails.ApplyResult>;
 
+export function ApplyEditableDocumentWithActions(arg1:string,arg2:time.Time,arg3:time.Time,arg4:any):Promise<wails.ApplyResult>;
+
 export function CancelEntry(arg1:number):Promise<void>;
 
 export function CancelGoal(arg1:number):Promise<void>;

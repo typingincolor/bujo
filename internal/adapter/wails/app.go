@@ -467,6 +467,22 @@ func (a *App) ApplyEditableDocument(doc string, date time.Time) (*ApplyResult, e
 	}, nil
 }
 
+func (a *App) ApplyEditableDocumentWithActions(doc string, date time.Time, migrateDate *time.Time, listID *int64) (*ApplyResult, error) {
+	actions := service.ApplyActions{
+		MigrateDate: migrateDate,
+		ListID:      listID,
+	}
+	result, err := a.services.EditableView.ApplyChangesWithActions(a.ctx, doc, date, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ApplyResult{
+		Inserted: result.Inserted,
+		Deleted:  result.Deleted,
+	}, nil
+}
+
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
 	parsed, err := dateutil.ParseFuture(input)
 	if err != nil {

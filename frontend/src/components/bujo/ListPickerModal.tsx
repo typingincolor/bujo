@@ -6,12 +6,12 @@ import { List } from 'lucide-react';
 
 interface ListPickerModalProps {
   isOpen: boolean;
-  entryContent: string;
+  entries: string[];
   onSelect: (listId: number) => void;
   onCancel: () => void;
 }
 
-export function ListPickerModal({ isOpen, entryContent, onSelect, onCancel }: ListPickerModalProps) {
+export function ListPickerModal({ isOpen, entries, onSelect, onCancel }: ListPickerModalProps) {
   const [lists, setLists] = useState<wails.ListWithItems[]>([]);
   const [hasFetched, setHasFetched] = useState(false);
   const [selectedListId, setSelectedListId] = useState<number | null>(null);
@@ -57,9 +57,16 @@ export function ListPickerModal({ isOpen, entryContent, onSelect, onCancel }: Li
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-background rounded-lg shadow-lg p-6 w-full max-w-md animate-fade-in">
         <h2 className="text-lg font-semibold mb-4">Move to List</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          Move &ldquo;{entryContent}&rdquo; to a list:
+        <p className="text-sm text-muted-foreground mb-2">
+          {entries.length === 1 ? 'Move this entry' : `Move ${entries.length} entries`} to a list:
         </p>
+        <ul className="mb-4 space-y-1">
+          {entries.map((entry, i) => (
+            <li key={i} className="text-sm text-foreground truncate pl-3 border-l-2 border-primary/50">
+              {entry}
+            </li>
+          ))}
+        </ul>
         {loading ? (
           <p className="text-sm text-muted-foreground py-4 text-center">Loading lists...</p>
         ) : lists.length === 0 ? (

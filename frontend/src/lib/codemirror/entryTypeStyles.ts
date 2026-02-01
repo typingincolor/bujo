@@ -1,6 +1,6 @@
 import { ViewPlugin, Decoration, DecorationSet, EditorView } from '@codemirror/view'
 
-type EntryStyleType = 'task' | 'note' | 'event' | 'done' | 'migrated' | 'cancelled' | 'question' | 'answered'
+type EntryStyleType = 'task' | 'note' | 'event' | 'done' | 'migrated' | 'cancelled' | 'question' | 'answered' | 'movedToList'
 
 const symbolToType: Record<string, EntryStyleType> = {
   '.': 'task',
@@ -11,6 +11,7 @@ const symbolToType: Record<string, EntryStyleType> = {
   '~': 'cancelled',
   '?': 'question',
   '*': 'answered',
+  '^': 'movedToList',
 }
 
 const lineDecorations: Record<EntryStyleType, Decoration> = {
@@ -22,10 +23,11 @@ const lineDecorations: Record<EntryStyleType, Decoration> = {
   cancelled: Decoration.line({ class: 'cm-entry-cancelled' }),
   question: Decoration.line({ class: 'cm-entry-question' }),
   answered: Decoration.line({ class: 'cm-entry-answered' }),
+  movedToList: Decoration.line({ class: 'cm-entry-movedToList' }),
 }
 
 function getEntryType(lineText: string): EntryStyleType | null {
-  const match = lineText.match(/^\s*([.\-ox>~?*])\s/)
+  const match = lineText.match(/^\s*([.\-ox>~?*^])\s/)
   if (!match) return null
   return symbolToType[match[1]] ?? null
 }

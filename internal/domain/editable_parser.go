@@ -13,6 +13,7 @@ var editableSymbolToType = map[rune]EntryType{
 	'?': EntryTypeQuestion,
 	'>': EntryTypeMigrated,
 	'*': EntryTypeAnswered,
+	'^': EntryTypeMovedToList,
 }
 
 type EditableDocumentParser struct{}
@@ -55,7 +56,8 @@ var typeToEditableSymbol = map[EntryType]rune{
 	EntryTypeQuestion:  '?',
 	EntryTypeMigrated:  '>',
 	EntryTypeAnswered:  '*',
-	EntryTypeAnswer:    '-',
+	EntryTypeAnswer:      '-',
+	EntryTypeMovedToList: '^',
 }
 
 func Serialize(entries []Entry) string {

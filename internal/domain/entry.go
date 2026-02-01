@@ -16,7 +16,8 @@ const (
 	EntryTypeCancelled EntryType = "cancelled"
 	EntryTypeQuestion  EntryType = "question"
 	EntryTypeAnswered  EntryType = "answered"
-	EntryTypeAnswer    EntryType = "answer"
+	EntryTypeAnswer      EntryType = "answer"
+	EntryTypeMovedToList EntryType = "movedToList"
 )
 
 type Priority string
@@ -77,7 +78,8 @@ var validEntryTypes = map[EntryType]string{
 	EntryTypeCancelled: "✗",
 	EntryTypeQuestion:  "?",
 	EntryTypeAnswered:  "★",
-	EntryTypeAnswer:    "↳",
+	EntryTypeAnswer:      "↳",
+	EntryTypeMovedToList: "^",
 }
 
 func (et EntryType) IsValid() bool {

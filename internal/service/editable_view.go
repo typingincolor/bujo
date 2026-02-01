@@ -10,12 +10,22 @@ import (
 )
 
 type EditableViewService struct {
-	entryRepo domain.EntryRepository
+	entryRepo        domain.EntryRepository
+	entryToListMover domain.EntryToListMover
+	listRepo         domain.ListRepository
 }
 
 func NewEditableViewService(entryRepo domain.EntryRepository) *EditableViewService {
 	return &EditableViewService{
 		entryRepo: entryRepo,
+	}
+}
+
+func NewEditableViewServiceWithActions(entryRepo domain.EntryRepository, entryToListMover domain.EntryToListMover, listRepo domain.ListRepository) *EditableViewService {
+	return &EditableViewService{
+		entryRepo:        entryRepo,
+		entryToListMover: entryToListMover,
+		listRepo:         listRepo,
 	}
 }
 
@@ -199,6 +209,56 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 						return nil, err
 					}
 					break
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+type ApplyActions struct {
+	MigrateDate *time.Time
+	ListID      *int64
+}
+
+func (s *EditableViewService) ApplyChangesWithActions(ctx context.Context, doc string, date time.Time, actions ApplyActions) (*ApplyChangesResult, error) {
+	result, err := s.ApplyChanges(ctx, doc, date)
+	if err != nil {
+		return nil, err
+	}
+
+	entries, err := s.entryRepo.GetByDate(ctx, date)
+	if err != nil {
+		return nil, err
+	}
+
+	if actions.MigrateDate != nil {
+		for _, entry := range entries {
+			if entry.Type == domain.EntryTypeMigrated {
+				newEntry := domain.Entry{
+					Type:          domain.EntryTypeTask,
+					Content:       entry.Content,
+					Priority:      entry.Priority,
+					ScheduledDate: actions.MigrateDate,
+					CreatedAt:     time.Now(),
+				}
+				if _, err := s.entryRepo.Insert(ctx, newEntry); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if actions.ListID != nil && s.listRepo != nil && s.entryToListMover != nil {
+		list, err := s.listRepo.GetByID(ctx, *actions.ListID)
+		if err != nil {
+			return nil, fmt.Errorf("list not found: %w", err)
+		}
+		for _, entry := range entries {
+			if entry.Type == domain.EntryTypeMovedToList {
+				if err := s.entryToListMover.MoveEntryToList(ctx, entry, list.EntityID); err != nil {
+					return nil, err
 				}
 			}
 		}

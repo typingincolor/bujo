@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
 import { useEditableDocument } from '@/hooks/useEditableDocument'
 import { BujoEditor } from '@/lib/codemirror/BujoEditor'
+import { scanForSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDialogs'
+import { MigrateBatchModal } from '@/components/bujo/MigrateBatchModal'
+import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 
 interface EditableJournalViewProps {
   date: Date
@@ -15,6 +18,7 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     isDirty,
     validationErrors,
     save,
+    saveWithActions,
     discardChanges,
     lastSaved,
     hasDraft,
@@ -25,12 +29,56 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [pendingSpecial, setPendingSpecial] = useState<SpecialEntries | null>(null)
+  const [migrateDate, setMigrateDate] = useState<Date | null>(null)
+
+  const doSaveWithActions = async (migDate: Date | null, listId: number | null) => {
+    setPendingSpecial(null)
+    setMigrateDate(null)
+
+    const actions = {
+      migrateDate: migDate ?? undefined,
+      listId: listId ?? undefined,
+    }
+
+    const result = await saveWithActions(actions)
+    if (!result.success && result.error) {
+      setSaveError(result.error)
+    }
+  }
+
   const handleSave = useCallback(async () => {
+    const special = scanForSpecialEntries(document)
+    if (special.hasSpecialEntries) {
+      setPendingSpecial(special)
+      setMigrateDate(null)
+      return
+    }
     const result = await save()
     if (!result.success && result.error) {
       setSaveError(result.error)
     }
-  }, [save])
+  }, [save, document])
+
+  const handleMigrateConfirm = (dateStr: string) => {
+    const parsed = new Date(dateStr + 'T00:00:00')
+
+    if (pendingSpecial && pendingSpecial.movedToListEntries.length > 0) {
+      setMigrateDate(parsed)
+      return
+    }
+
+    doSaveWithActions(parsed, null)
+  }
+
+  const handleListSelect = (listId: number) => {
+    doSaveWithActions(migrateDate, listId)
+  }
+
+  const handleDialogCancel = () => {
+    setPendingSpecial(null)
+    setMigrateDate(null)
+  }
 
   const handleImport = useCallback(() => {
     fileInputRef.current?.click()
@@ -119,6 +167,24 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
       </div>
 
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
+
+      <MigrateBatchModal
+        isOpen={pendingSpecial !== null && pendingSpecial.migratedEntries.length > 0 && migrateDate === null}
+        entries={pendingSpecial?.migratedEntries ?? []}
+        onMigrate={handleMigrateConfirm}
+        onCancel={handleDialogCancel}
+      />
+
+      <ListPickerModal
+        isOpen={
+          pendingSpecial !== null &&
+          pendingSpecial.movedToListEntries.length > 0 &&
+          (pendingSpecial.migratedEntries.length === 0 || migrateDate !== null)
+        }
+        entries={pendingSpecial?.movedToListEntries ?? []}
+        onSelect={handleListSelect}
+        onCancel={handleDialogCancel}
+      />
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
         <span><kbd>⌘S</kbd> Save</span>

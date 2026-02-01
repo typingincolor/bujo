@@ -44,6 +44,7 @@ const contentStyles: Record<EntryType, string> = {
   question: 'text-bujo-question font-medium',
   answered: 'text-bujo-answered',
   answer: 'text-muted-foreground pl-4',
+  movedToList: 'text-muted-foreground',
 };
 
 export function EntryItem({

@@ -73,6 +73,6 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 		Goal:            service.NewGoalService(goalRepo),
 		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
 		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
-		EditableView:    service.NewEditableViewService(entryRepo),
+		EditableView:    service.NewEditableViewServiceWithActions(entryRepo, entryToListMover, listRepo),
 	}
 }

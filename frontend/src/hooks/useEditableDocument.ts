@@ -3,6 +3,7 @@ import {
   GetEditableDocument,
   ValidateEditableDocument,
   ApplyEditableDocument,
+  ApplyEditableDocumentWithActions,
 } from '../wailsjs/go/wails/App'
 import { toWailsTime } from '@/lib/wailsTime'
 
@@ -23,6 +24,11 @@ export interface SaveResult {
   result?: ApplyResult
 }
 
+export interface SaveActions {
+  migrateDate?: Date
+  listId?: number
+}
+
 export interface EditableDocumentState {
   document: string
   setDocument: (doc: string) => void
@@ -31,6 +37,7 @@ export interface EditableDocumentState {
   isDirty: boolean
   validationErrors: ValidationError[]
   save: () => Promise<SaveResult>
+  saveWithActions: (actions: SaveActions) => Promise<SaveResult>
   discardChanges: () => void
   lastSaved: Date | null
   hasDraft: boolean
@@ -187,6 +194,37 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     }
   }, [document, date, clearDraft])
 
+  const saveWithActions = useCallback(async (actions: SaveActions): Promise<SaveResult> => {
+    try {
+      const validation = await ValidateEditableDocument(document)
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors || [])
+        return { success: false, error: 'Validation failed' }
+      }
+
+      const migrateDate = actions.migrateDate ? toWailsTime(actions.migrateDate) : null
+      const listId = actions.listId ?? null
+
+      const result = await ApplyEditableDocumentWithActions(
+        document,
+        toWailsTime(date),
+        migrateDate as any,
+        listId as any
+      )
+
+      const reloaded = await GetEditableDocument(toWailsTime(date))
+      setDocumentState(reloaded)
+      setOriginalDocument(reloaded)
+      setLastSaved(new Date())
+      clearDraft()
+
+      return { success: true, result }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      return { success: false, error: errorMessage }
+    }
+  }, [document, date, clearDraft])
+
   const discardChanges = useCallback(() => {
     setDocumentState(originalDocument)
     setValidationErrors([])
@@ -221,6 +259,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     isDirty,
     validationErrors,
     save,
+    saveWithActions,
     discardChanges,
     lastSaved,
     hasDraft,

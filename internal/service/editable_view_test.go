@@ -26,6 +26,21 @@ func setupEditableViewService(t *testing.T) (*EditableViewService, *BujoService,
 	return editableViewService, bujoService, entryRepo
 }
 
+func setupEditableViewServiceWithLists(t *testing.T) (*EditableViewService, *sqlite.EntryRepository, *sqlite.ListRepository, *sqlite.ListItemRepository) {
+	t.Helper()
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	entryRepo := sqlite.NewEntryRepository(db)
+	listRepo := sqlite.NewListRepository(db)
+	listItemRepo := sqlite.NewListItemRepository(db)
+	entryToListMover := sqlite.NewEntryToListMover(db)
+
+	editableViewService := NewEditableViewServiceWithActions(entryRepo, entryToListMover, listRepo)
+	return editableViewService, entryRepo, listRepo, listItemRepo
+}
+
 func TestGetEditableDocument_EmptyDay(t *testing.T) {
 	svc, _, _ := setupEditableViewService(t)
 	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
@@ -409,6 +424,269 @@ func TestApplyChanges_AnsweredQuestionRoundTrips(t *testing.T) {
 	doc2, err := svc.GetEditableDocument(ctx, date)
 	require.NoError(t, err)
 	require.Equal(t, doc, doc2)
+}
+
+func TestApplyChangesWithActions_Migration(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.ApplyChangesWithActions(ctx, ". Keep this\n> Migrate this", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.Inserted)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 2)
+	require.Equal(t, "Keep this", todayEntries[0].Content)
+	require.Equal(t, domain.EntryTypeTask, todayEntries[0].Type)
+	require.Equal(t, "Migrate this", todayEntries[1].Content)
+	require.Equal(t, domain.EntryTypeMigrated, todayEntries[1].Type)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 1)
+	require.Equal(t, "Migrate this", tomorrowEntries[0].Content)
+	require.Equal(t, domain.EntryTypeTask, tomorrowEntries[0].Type)
+}
+
+func TestApplyChangesWithActions_MoveToList(t *testing.T) {
+	svc, entryRepo, listRepo, listItemRepo := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	result, err := svc.ApplyChangesWithActions(ctx, ". Keep this\n^ Move this to list", today, ApplyActions{
+		ListID: &list.ID,
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.Inserted)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 1)
+	require.Equal(t, "Keep this", todayEntries[0].Content)
+
+	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
+	require.NoError(t, err)
+	require.Len(t, listItems, 1)
+	require.Equal(t, "Move this to list", listItems[0].Content)
+}
+
+func TestApplyChangesWithActions_BothMigrationAndMoveToList(t *testing.T) {
+	svc, entryRepo, listRepo, listItemRepo := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChangesWithActions(ctx, "> Migrate this\n^ Move this", today, ApplyActions{
+		MigrateDate: &tomorrow,
+		ListID:      &list.ID,
+	})
+	require.NoError(t, err)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 1)
+	require.Equal(t, "Migrate this", todayEntries[0].Content)
+	require.Equal(t, domain.EntryTypeMigrated, todayEntries[0].Type)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 1)
+	require.Equal(t, "Migrate this", tomorrowEntries[0].Content)
+	require.Equal(t, domain.EntryTypeTask, tomorrowEntries[0].Type)
+
+	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
+	require.NoError(t, err)
+	require.Len(t, listItems, 1)
+	require.Equal(t, "Move this", listItems[0].Content)
+}
+
+func TestApplyChangesWithActions_NoActions(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.ApplyChangesWithActions(ctx, ". Task one\n- Note two", today, ApplyActions{})
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.Inserted)
+
+	entries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+}
+
+func TestApplyChangesWithActions_MigrationPreservesPriority(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChangesWithActions(ctx, "> !!! Important migrate", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+	require.NoError(t, err)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 1)
+	require.Equal(t, "Important migrate", tomorrowEntries[0].Content)
+	require.Equal(t, domain.PriorityHigh, tomorrowEntries[0].Priority)
+}
+
+func TestApplyChangesWithActions_MigrationWithChildren(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChangesWithActions(ctx, "> Migrate parent\n  . Child task\n  - Child note", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+	require.NoError(t, err)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 3)
+	require.Equal(t, domain.EntryTypeMigrated, todayEntries[0].Type)
+	require.Equal(t, domain.EntryTypeTask, todayEntries[1].Type)
+	require.Equal(t, domain.EntryTypeNote, todayEntries[2].Type)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 1)
+	require.Equal(t, "Migrate parent", tomorrowEntries[0].Content)
+}
+
+func TestApplyChangesWithActions_MultipleMigratedEntries(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChangesWithActions(ctx, "> First migrate\n. Stay here\n> Second migrate", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+	require.NoError(t, err)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 3)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 2)
+	require.Equal(t, "First migrate", tomorrowEntries[0].Content)
+	require.Equal(t, "Second migrate", tomorrowEntries[1].Content)
+}
+
+func TestApplyChangesWithActions_MultipleMovedToListEntries(t *testing.T) {
+	svc, entryRepo, listRepo, listItemRepo := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChangesWithActions(ctx, "^ First item\n. Stay here\n^ Second item", today, ApplyActions{
+		ListID: &list.ID,
+	})
+	require.NoError(t, err)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 1)
+	require.Equal(t, "Stay here", todayEntries[0].Content)
+
+	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
+	require.NoError(t, err)
+	require.Len(t, listItems, 2)
+	require.Equal(t, "First item", listItems[0].Content)
+	require.Equal(t, "Second item", listItems[1].Content)
+}
+
+func TestApplyChangesWithActions_MoveToListWithChildren_FailsOnFKConstraint(t *testing.T) {
+	svc, _, listRepo, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Tasks")
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChangesWithActions(ctx, "^ Move parent\n  . Child task", today, ApplyActions{
+		ListID: &list.ID,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "FOREIGN KEY")
+}
+
+func TestApplyChangesWithActions_MoveToListPreservesPriority(t *testing.T) {
+	svc, _, listRepo, listItemRepo := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Important")
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChangesWithActions(ctx, "^ !! Medium priority item", today, ApplyActions{
+		ListID: &list.ID,
+	})
+	require.NoError(t, err)
+
+	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
+	require.NoError(t, err)
+	require.Len(t, listItems, 1)
+	require.Equal(t, "Medium priority item", listItems[0].Content)
+}
+
+func TestApplyChangesWithActions_MigrationWithNoMigratedEntries(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChangesWithActions(ctx, ". Task one\n- Note two", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+	require.NoError(t, err)
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Empty(t, tomorrowEntries)
+}
+
+func TestApplyChangesWithActions_MoveToListWithNoMovedEntries(t *testing.T) {
+	svc, entryRepo, listRepo, listItemRepo := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	list, err := listRepo.Create(ctx, "Shopping")
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChangesWithActions(ctx, ". Task one\n- Note two", today, ApplyActions{
+		ListID: &list.ID,
+	})
+	require.NoError(t, err)
+
+	entries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+
+	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
+	require.NoError(t, err)
+	require.Empty(t, listItems)
 }
 
 func splitNonEmpty(s string) []string {
