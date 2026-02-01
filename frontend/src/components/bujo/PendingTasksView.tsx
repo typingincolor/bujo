@@ -1,15 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
-import { JournalSidebarCallbacks } from './JournalSidebar';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
 import { calculateAttentionScore } from '@/lib/attentionScore';
 import { RefreshCw } from 'lucide-react';
 
+export interface EntryCallbacks {
+  onMarkDone?: (entry: Entry) => void;
+  onUnmarkDone?: (entry: Entry) => void;
+  onMigrate?: (entry: Entry) => void;
+  onEdit?: (entry: Entry) => void;
+  onDelete?: (entry: Entry) => void;
+  onCyclePriority?: (entry: Entry) => void;
+  onCycleType?: (entry: Entry) => void;
+  onMoveToList?: (entry: Entry) => void;
+  onCancel?: (entry: Entry) => void;
+  onUncancel?: (entry: Entry) => void;
+}
+
 interface PendingTasksViewProps {
   overdueEntries: Entry[];
   now: Date;
-  callbacks: JournalSidebarCallbacks;
+  callbacks: EntryCallbacks;
   selectedEntry?: Entry;
   onSelectEntry: (entry: Entry) => void;
   onRefresh: () => void;

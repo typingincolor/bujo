@@ -21,7 +21,6 @@ import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
 import { WeekView } from '@/components/bujo/WeekView'
-import { JournalSidebar } from '@/components/bujo/JournalSidebar'
 import { PendingTasksView } from '@/components/bujo/PendingTasksView'
 import { ContextTree } from '@/components/bujo/ContextTree'
 import { buildTree } from '@/lib/buildTree'
@@ -80,14 +79,8 @@ function App() {
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
-  const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
-  const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
-  const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
-  const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [reviewSelectedEntry, setReviewSelectedEntry] = useState<Entry | null>(null)
   const [reviewContextTree, setReviewContextTree] = useState<Entry[]>([])
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
-  const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
   const [pendingContextWidth, setPendingContextWidth] = useState(384)
   const [pendingSelectedEntry, setPendingSelectedEntry] = useState<Entry | null>(null)
@@ -152,23 +145,6 @@ function App() {
 
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
-
-  // Fetch full context tree for sidebar-selected entry from backend
-  useEffect(() => {
-    if (!sidebarSelectedEntry) {
-      setSidebarContextTree([])
-      return
-    }
-
-    GetEntryContext(sidebarSelectedEntry.id)
-      .then((entries) => {
-        setSidebarContextTree(entries.map(transformEntry))
-      })
-      .catch((err) => {
-        console.error('Failed to fetch entry context:', err)
-        setSidebarContextTree([])
-      })
-  }, [sidebarSelectedEntry])
 
   // Fetch full context tree for review-selected entry from backend
   useEffect(() => {
@@ -329,11 +305,6 @@ function App() {
           handleGoToToday()
           return
         }
-        if (e.key === '[') {
-          e.preventDefault()
-          setIsSidebarCollapsed(prev => !prev)
-          return
-        }
       }
 
       // Week view shortcuts
@@ -355,59 +326,6 @@ function App() {
       }
 
       if (view !== 'today') return
-
-      // Get sidebar task entries (filtered the same way as JournalSidebar)
-      const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
-
-      // Tab key switches focus between main panel and sidebar
-      if (e.key === 'Tab') {
-        e.preventDefault()
-        if (focusedPanel === 'main') {
-          // Switch to sidebar
-          setFocusedPanel('sidebar')
-          setSelectedIndex(-1) // Clear main panel selection
-          setSelectedEntry(null)
-          if (sidebarTaskEntries.length > 0) {
-            setSidebarSelectedIndex(0)
-            setSidebarSelectedEntry(sidebarTaskEntries[0])
-          }
-        } else {
-          // Switch to main panel
-          setFocusedPanel('main')
-          setSidebarSelectedIndex(-1)
-          setSidebarSelectedEntry(null)
-          if (flatEntries.length > 0) {
-            setSelectedIndex(0)
-            setSelectedEntry(flatEntries[0])
-          }
-        }
-        return
-      }
-
-      // Navigation keys depend on which panel is focused
-      if (focusedPanel === 'sidebar') {
-        switch (e.key) {
-          case 'j':
-          case 'ArrowDown': {
-            e.preventDefault()
-            if (sidebarTaskEntries.length === 0) return
-            const nextIndex = Math.min(sidebarSelectedIndex + 1, sidebarTaskEntries.length - 1)
-            setSidebarSelectedIndex(nextIndex)
-            setSidebarSelectedEntry(sidebarTaskEntries[nextIndex])
-            break
-          }
-          case 'k':
-          case 'ArrowUp': {
-            e.preventDefault()
-            if (sidebarTaskEntries.length === 0) return
-            const prevIndex = Math.max(sidebarSelectedIndex - 1, 0)
-            setSidebarSelectedIndex(prevIndex)
-            setSidebarSelectedEntry(sidebarTaskEntries[prevIndex])
-            break
-          }
-        }
-        return
-      }
 
       // Main panel navigation
       if (flatEntries.length === 0) return
@@ -492,18 +410,13 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod, handleViewChange])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod, handleViewChange])
 
   useEffect(() => {
-    // Only reset main panel selection if main panel is focused
-    // This prevents dual highlighting when sidebar has selection and data refreshes
-    if (focusedPanel === 'main') {
-      setSelectedIndex(0)
-      const entries = flattenEntries(days[0]?.entries || [])
-      setSelectedEntry(entries[0] ?? null)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days]) // Only run when days changes, focusedPanel is just a guard condition
+    setSelectedIndex(0)
+    const entries = flattenEntries(days[0]?.entries || [])
+    setSelectedEntry(entries[0] ?? null)
+  }, [days])
 
   const handleEditEntry = useCallback(async (newContent: string) => {
     if (!editModalEntry) return
@@ -553,18 +466,6 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to move entry to list')
     }
   }, [moveToListEntry, loadData])
-
-  const handleSidebarSelectEntry = useCallback((entry: Entry) => {
-    // Find the index of this entry in the filtered task entries
-    const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
-    const index = sidebarTaskEntries.findIndex(e => e.id === entry.id)
-    setSidebarSelectedEntry(entry)
-    setSidebarSelectedIndex(index)
-    // Clear main panel selection when sidebar is selected
-    setSelectedIndex(-1)
-    setSelectedEntry(null)
-    setFocusedPanel('sidebar')
-  }, [overdueEntries])
 
   // const handleMoveToRoot = useCallback(async (entry: Entry) => {
   //   try {
@@ -900,62 +801,6 @@ function App() {
           </div>
         )}
       </div>
-
-      {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
-      {view === 'today' && (
-        <aside
-          className="flex flex-col self-stretch bg-background relative"
-          style={{
-            width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
-          }}
-        >
-          {/* Resize Handle - spans full height of aside, outer div is hit area, inner div is visual border */}
-          {!isSidebarCollapsed && (
-            <div
-              data-testid="sidebar-resize-handle"
-              className="absolute left-0 top-0 h-full w-4 cursor-col-resize group z-10"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const handleMouseMove = (moveEvent: MouseEvent) => {
-                  const newWidth = window.innerWidth - moveEvent.clientX;
-                  const clampedWidth = Math.max(384, Math.min(960, newWidth));
-                  setJournalSidebarWidth(clampedWidth);
-                };
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                  document.body.style.cursor = '';
-                  document.body.style.userSelect = '';
-                };
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-                document.body.style.cursor = 'col-resize';
-                document.body.style.userSelect = 'none';
-              }}
-            >
-              <div className="w-px h-full bg-border transition-colors group-hover:bg-primary/50" />
-            </div>
-          )}
-
-          {/* Spacer to align with main content area (below header) */}
-          <div className="h-[73px] flex-shrink-0" />
-
-          {/* Scrollable sidebar content */}
-          <div className="flex-1 overflow-y-auto p-2">
-            <JournalSidebar
-              overdueEntries={overdueEntries}
-              now={new Date()}
-              selectedEntry={sidebarSelectedEntry ?? undefined}
-              contextTree={sidebarContextTree}
-              onSelectEntry={handleSidebarSelectEntry}
-              callbacks={sidebarCallbacks}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-              onRefresh={loadData}
-            />
-          </div>
-        </aside>
-      )}
 
       {/* Pending Tasks Context Sidebar */}
       {view === 'pending' && (
