@@ -10,12 +10,14 @@ vi.mock('@/hooks/useEditableDocument', () => ({
 
 const createMockState = (overrides = {}) => ({
   document: '. Buy groceries\n- Meeting notes',
+  originalDocument: '. Buy groceries\n- Meeting notes',
   setDocument: vi.fn(),
   isLoading: false,
   error: null,
   isDirty: false,
   validationErrors: [],
   save: vi.fn().mockResolvedValue({ success: true }),
+  saveWithActions: vi.fn().mockResolvedValue({ success: true }),
   discardChanges: vi.fn(),
   lastSaved: null,
   hasDraft: false,
