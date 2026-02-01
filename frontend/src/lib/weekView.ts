@@ -14,9 +14,5 @@ export function flattenEntries(entries: Entry[]): Entry[] {
 }
 
 export function filterWeekEntries(entries: Entry[]): Entry[] {
-  const flattened = flattenEntries(entries);
-
-  return flattened.filter(entry =>
-    entry.type === 'event' || entry.priority !== 'none'
-  );
+  return entries.filter(entry => entry.parentId === null);
 }

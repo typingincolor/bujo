@@ -58,23 +58,23 @@ describe('WeekView', () => {
     expect(screen.getByText(/Jan 19.*Jan 25, 2026/)).toBeInTheDocument();
   });
 
-  it('filters to events and priority entries only', () => {
-    const withNonPriority: DayEntries[] = [
+  it('shows all parent entries and excludes children', () => {
+    const withChildren: DayEntries[] = [
       {
         date: '2026-01-19',
         entries: [
           { id: 1, content: 'Meeting', type: 'event', priority: 'none', parentId: null, loggedDate: '2026-01-19', children: [] },
           { id: 2, content: 'Task no priority', type: 'task', priority: 'none', parentId: null, loggedDate: '2026-01-19', children: [] },
-          { id: 3, content: 'Task with priority', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19', children: [] },
+          { id: 3, content: 'Child task', type: 'task', priority: 'high', parentId: 1, loggedDate: '2026-01-19', children: [] },
         ],
       },
       ...mockWeekData.slice(1),
     ];
 
-    render(<WeekView days={withNonPriority} />);
+    render(<WeekView days={withChildren} />);
     expect(screen.getByText('Meeting')).toBeInTheDocument();
-    expect(screen.getByText('Task with priority')).toBeInTheDocument();
-    expect(screen.queryByText('Task no priority')).not.toBeInTheDocument();
+    expect(screen.getByText('Task no priority')).toBeInTheDocument();
+    expect(screen.queryByText('Child task')).not.toBeInTheDocument();
   });
 
   it('shows context panel when entry selected', async () => {
