@@ -7,6 +7,7 @@ import { priorityBadgeExtension } from './priorityBadges'
 import { indentGuidesExtension } from './indentGuides'
 import { errorHighlightExtension, setErrors } from './errorMarkers'
 import { bujoFoldExtension } from './bujoFolding'
+import { entryTypeStyleExtension } from './entryTypeStyles'
 import type { DocumentError } from './errorMarkers'
 
 interface BujoEditorProps {
@@ -74,6 +75,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       indentGuidesExtension(),
       errorHighlightExtension(),
       bujoFoldExtension(),
+      entryTypeStyleExtension(),
     ]
   })
 

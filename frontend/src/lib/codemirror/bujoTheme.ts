@@ -92,4 +92,30 @@ export const bujoTheme = EditorView.theme({
     fontSize: '11px',
     cursor: 'pointer',
   },
+  '& .cm-entry-task': {
+    color: 'hsl(var(--primary))',
+    fontWeight: '600',
+  },
+  '& .cm-entry-event': {
+    color: 'hsl(var(--bujo-event))',
+    fontWeight: '500',
+  },
+  '& .cm-entry-question': {
+    color: 'hsl(var(--bujo-question))',
+    fontWeight: '500',
+  },
+  '& .cm-entry-done': {
+    color: 'hsl(var(--bujo-done))',
+    opacity: '0.7',
+  },
+  '& .cm-entry-cancelled': {
+    color: 'hsl(var(--muted-foreground))',
+    textDecoration: 'line-through',
+    opacity: '0.5',
+  },
+  '& .cm-entry-migrated': {
+    color: 'hsl(var(--muted-foreground))',
+    opacity: '0.6',
+  },
+  '& .cm-entry-note': {},
 })
