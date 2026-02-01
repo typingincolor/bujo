@@ -49,6 +49,12 @@ func TestParseLine_SymbolTypes(t *testing.T) {
 			wantType: EntryTypeQuestion,
 			wantText: "How does auth work",
 		},
+		{
+			name:     "answered with star",
+			input:    "* How does auth work",
+			wantType: EntryTypeAnswered,
+			wantText: "How does auth work",
+		},
 	}
 
 	for _, tt := range tests {
@@ -358,6 +364,20 @@ func TestSerialize_BasicEntries(t *testing.T) {
 				{Type: EntryTypeMigrated, Content: "Moved to next week", Depth: 0},
 			},
 			want: "> Moved to next week",
+		},
+		{
+			name: "answered entry serializes as star",
+			entries: []Entry{
+				{Type: EntryTypeAnswered, Content: "How does auth work", Depth: 0},
+			},
+			want: "* How does auth work",
+		},
+		{
+			name: "answer entry serializes as note",
+			entries: []Entry{
+				{Type: EntryTypeAnswer, Content: "It uses JWT tokens", Depth: 0},
+			},
+			want: "- It uses JWT tokens",
 		},
 	}
 

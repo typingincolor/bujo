@@ -104,6 +104,10 @@ export const bujoTheme = EditorView.theme({
     color: 'hsl(var(--bujo-question))',
     fontWeight: '500',
   },
+  '& .cm-entry-answered': {
+    color: 'hsl(var(--bujo-done))',
+    opacity: '0.7',
+  },
   '& .cm-entry-done': {
     color: 'hsl(var(--bujo-done))',
     opacity: '0.7',

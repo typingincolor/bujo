@@ -118,7 +118,15 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 
 	result := &ApplyChangesResult{Deleted: deletedCount}
 
+	type insertedEntry struct {
+		id       int64
+		symbol   domain.EntryType
+		depth    int
+		parentID *int64
+	}
+
 	var depthStack []int64
+	var inserted []insertedEntry
 	for _, line := range validation.ParsedLines {
 		if !line.IsValid || line.IsHeader {
 			continue
@@ -143,6 +151,13 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 			return nil, err
 		}
 
+		inserted = append(inserted, insertedEntry{
+			id:       rowID,
+			symbol:   line.Symbol,
+			depth:    line.Depth,
+			parentID: entry.ParentID,
+		})
+
 		if line.Depth >= len(depthStack) {
 			depthStack = append(depthStack, rowID)
 		} else {
@@ -151,6 +166,42 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 		}
 
 		result.Inserted++
+	}
+
+	questionsWithChildren := make(map[int64]bool)
+	for _, ie := range inserted {
+		if ie.parentID != nil {
+			questionsWithChildren[*ie.parentID] = true
+		}
+	}
+
+	for _, ie := range inserted {
+		if ie.symbol == domain.EntryTypeQuestion && questionsWithChildren[ie.id] {
+			entry, err := s.entryRepo.GetByID(ctx, ie.id)
+			if err != nil {
+				return nil, err
+			}
+			entry.Type = domain.EntryTypeAnswered
+			if err := s.entryRepo.Update(ctx, *entry); err != nil {
+				return nil, err
+			}
+		}
+
+		if ie.parentID != nil {
+			for _, parent := range inserted {
+				if parent.id == *ie.parentID && parent.symbol == domain.EntryTypeQuestion {
+					entry, err := s.entryRepo.GetByID(ctx, ie.id)
+					if err != nil {
+						return nil, err
+					}
+					entry.Type = domain.EntryTypeAnswer
+					if err := s.entryRepo.Update(ctx, *entry); err != nil {
+						return nil, err
+					}
+					break
+				}
+			}
+		}
 	}
 
 	return result, nil

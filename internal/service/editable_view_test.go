@@ -331,6 +331,86 @@ func TestApplyChanges_RoundTrip(t *testing.T) {
 	require.Equal(t, doc, doc2)
 }
 
+func TestApplyChanges_QuestionWithChildBecomesAnswered(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, "? How does auth work\n  - It uses JWT tokens", date)
+	require.NoError(t, err)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.Equal(t, domain.EntryTypeAnswered, entries[0].Type)
+	require.Equal(t, domain.EntryTypeAnswer, entries[1].Type)
+}
+
+func TestApplyChanges_QuestionWithoutChildStaysQuestion(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, "? How does auth work", date)
+	require.NoError(t, err)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, domain.EntryTypeQuestion, entries[0].Type)
+}
+
+func TestApplyChanges_QuestionWithMultipleChildrenAllBecomeAnswers(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, "? What tools do we use\n  - Go for backend\n  - React for frontend", date)
+	require.NoError(t, err)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	require.Equal(t, domain.EntryTypeAnswered, entries[0].Type)
+	require.Equal(t, domain.EntryTypeAnswer, entries[1].Type)
+	require.Equal(t, domain.EntryTypeAnswer, entries[2].Type)
+}
+
+func TestApplyChanges_TaskWithChildrenTypesUnchanged(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, ". Parent task\n  - Child note", date)
+	require.NoError(t, err)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.Equal(t, domain.EntryTypeTask, entries[0].Type)
+	require.Equal(t, domain.EntryTypeNote, entries[1].Type)
+}
+
+func TestApplyChanges_AnsweredQuestionRoundTrips(t *testing.T) {
+	svc, _, _ := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, "? How does auth work\n  - It uses JWT tokens", date)
+	require.NoError(t, err)
+
+	doc, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+	require.Equal(t, "* How does auth work\n  - It uses JWT tokens", doc)
+
+	_, err = svc.ApplyChanges(ctx, doc, date)
+	require.NoError(t, err)
+
+	doc2, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+	require.Equal(t, doc, doc2)
+}
+
 func splitNonEmpty(s string) []string {
 	var result []string
 	for _, line := range strings.Split(s, "\n") {
