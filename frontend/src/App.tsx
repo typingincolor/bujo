@@ -14,7 +14,6 @@ import { SearchView, SearchResult } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
-import { CaptureModal } from '@/components/bujo/CaptureModal'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
@@ -80,7 +79,6 @@ function App() {
   const [reviewAnchorDate, setReviewAnchorDate] = useState(() => startOfDay(new Date()))
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
-  const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
   const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
   const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
@@ -352,15 +350,6 @@ function App() {
         if (e.key === 'w') {
           e.preventDefault()
           cycleHabitPeriod()
-          return
-        }
-      }
-
-      // Entry creation shortcut - opens capture modal
-      if (view === 'today') {
-        if (e.key === 'c') {
-          e.preventDefault()
-          setShowCaptureModal(true)
           return
         }
       }
@@ -1065,15 +1054,6 @@ function App() {
         />
       )}
 
-      {/* Capture Modal */}
-      <CaptureModal
-        isOpen={showCaptureModal}
-        onClose={() => setShowCaptureModal(false)}
-        onEntriesCreated={() => {
-          setShowCaptureModal(false)
-          loadData()
-        }}
-      />
     </div>
   )
 }
