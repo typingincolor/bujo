@@ -8,14 +8,14 @@ import (
 type EntryType string
 
 const (
-	EntryTypeTask      EntryType = "task"
-	EntryTypeNote      EntryType = "note"
-	EntryTypeEvent     EntryType = "event"
-	EntryTypeDone      EntryType = "done"
-	EntryTypeMigrated  EntryType = "migrated"
-	EntryTypeCancelled EntryType = "cancelled"
-	EntryTypeQuestion  EntryType = "question"
-	EntryTypeAnswered  EntryType = "answered"
+	EntryTypeTask        EntryType = "task"
+	EntryTypeNote        EntryType = "note"
+	EntryTypeEvent       EntryType = "event"
+	EntryTypeDone        EntryType = "done"
+	EntryTypeMigrated    EntryType = "migrated"
+	EntryTypeCancelled   EntryType = "cancelled"
+	EntryTypeQuestion    EntryType = "question"
+	EntryTypeAnswered    EntryType = "answered"
 	EntryTypeAnswer      EntryType = "answer"
 	EntryTypeMovedToList EntryType = "movedToList"
 )
@@ -70,14 +70,14 @@ func ParsePriority(s string) (Priority, error) {
 }
 
 var validEntryTypes = map[EntryType]string{
-	EntryTypeTask:      "•",
-	EntryTypeNote:      "–",
-	EntryTypeEvent:     "○",
-	EntryTypeDone:      "✓",
-	EntryTypeMigrated:  "→",
-	EntryTypeCancelled: "✗",
-	EntryTypeQuestion:  "?",
-	EntryTypeAnswered:  "★",
+	EntryTypeTask:        "•",
+	EntryTypeNote:        "–",
+	EntryTypeEvent:       "○",
+	EntryTypeDone:        "✓",
+	EntryTypeMigrated:    "→",
+	EntryTypeCancelled:   "✗",
+	EntryTypeQuestion:    "?",
+	EntryTypeAnswered:    "★",
 	EntryTypeAnswer:      "↳",
 	EntryTypeMovedToList: "^",
 }

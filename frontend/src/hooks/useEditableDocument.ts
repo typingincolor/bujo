@@ -209,8 +209,8 @@ export function useEditableDocument(date: Date): EditableDocumentState {
       const result = await ApplyEditableDocumentWithActions(
         document,
         toWailsTime(date),
-        migrateDate as any,
-        listId as any
+        migrateDate as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Wails codegen types arg3 as time.Time
+        listId as any // eslint-disable-line @typescript-eslint/no-explicit-any -- Wails codegen types arg4 as any
       )
 
       const reloaded = await GetEditableDocument(toWailsTime(date))

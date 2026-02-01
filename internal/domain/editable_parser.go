@@ -48,14 +48,14 @@ func (p *EditableDocumentParser) Parse(input string) (*EditableDocument, error) 
 }
 
 var typeToEditableSymbol = map[EntryType]rune{
-	EntryTypeTask:      '.',
-	EntryTypeNote:      '-',
-	EntryTypeEvent:     'o',
-	EntryTypeDone:      'x',
-	EntryTypeCancelled: '~',
-	EntryTypeQuestion:  '?',
-	EntryTypeMigrated:  '>',
-	EntryTypeAnswered:  '*',
+	EntryTypeTask:        '.',
+	EntryTypeNote:        '-',
+	EntryTypeEvent:       'o',
+	EntryTypeDone:        'x',
+	EntryTypeCancelled:   '~',
+	EntryTypeQuestion:    '?',
+	EntryTypeMigrated:    '>',
+	EntryTypeAnswered:    '*',
 	EntryTypeAnswer:      '-',
 	EntryTypeMovedToList: '^',
 }
