@@ -31,6 +31,7 @@ export interface SaveActions {
 
 export interface EditableDocumentState {
   document: string
+  originalDocument: string
   setDocument: (doc: string) => void
   isLoading: boolean
   error: string | null
@@ -253,6 +254,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
 
   return {
     document,
+    originalDocument,
     setDocument,
     isLoading,
     error,

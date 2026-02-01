@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scanForSpecialEntries } from './useSaveWithDialogs'
+import { scanForSpecialEntries, scanForNewSpecialEntries } from './useSaveWithDialogs'
 
 describe('scanForSpecialEntries', () => {
   it('detects migrated entries', () => {
@@ -95,5 +95,60 @@ describe('scanForSpecialEntries', () => {
   it('handles whitespace-only document', () => {
     const result = scanForSpecialEntries('   \n  \n')
     expect(result.hasSpecialEntries).toBe(false)
+  })
+})
+
+describe('scanForNewSpecialEntries', () => {
+  it('returns no special entries when document unchanged', () => {
+    const doc = '> Already migrated\n. Task'
+    const result = scanForNewSpecialEntries(doc, doc)
+    expect(result.hasSpecialEntries).toBe(false)
+    expect(result.migratedEntries).toEqual([])
+  })
+
+  it('detects new migrated entry added to document with existing ones', () => {
+    const original = '> Already migrated\n. Task'
+    const current = '> Already migrated\n. Task\n> New migrate'
+    const result = scanForNewSpecialEntries(current, original)
+    expect(result.migratedEntries).toEqual(['New migrate'])
+    expect(result.hasSpecialEntries).toBe(true)
+  })
+
+  it('detects new moved-to-list entry', () => {
+    const original = '. Task'
+    const current = '. Task\n^ Move this'
+    const result = scanForNewSpecialEntries(current, original)
+    expect(result.movedToListEntries).toEqual(['Move this'])
+    expect(result.hasSpecialEntries).toBe(true)
+  })
+
+  it('ignores existing migrated entries after save-reload', () => {
+    const original = '> Call dentist\n> Book flight\n. Buy milk'
+    const current = '> Call dentist\n> Book flight\n. Buy milk\n- New note'
+    const result = scanForNewSpecialEntries(current, original)
+    expect(result.hasSpecialEntries).toBe(false)
+  })
+
+  it('detects new entries when original already has some', () => {
+    const original = '> Existing migrate\n^ Existing move'
+    const current = '> Existing migrate\n^ Existing move\n> New migrate\n^ New move'
+    const result = scanForNewSpecialEntries(current, original)
+    expect(result.migratedEntries).toEqual(['New migrate'])
+    expect(result.movedToListEntries).toEqual(['New move'])
+  })
+
+  it('handles duplicate content correctly', () => {
+    const original = '> Same task'
+    const current = '> Same task\n> Same task'
+    const result = scanForNewSpecialEntries(current, original)
+    expect(result.migratedEntries).toEqual(['Same task'])
+    expect(result.hasSpecialEntries).toBe(true)
+  })
+
+  it('treats empty original as all entries being new', () => {
+    const current = '> Migrate this\n^ Move this'
+    const result = scanForNewSpecialEntries(current, '')
+    expect(result.migratedEntries).toEqual(['Migrate this'])
+    expect(result.movedToListEntries).toEqual(['Move this'])
   })
 })

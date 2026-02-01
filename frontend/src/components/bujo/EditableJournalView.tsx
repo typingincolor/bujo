@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useEditableDocument } from '@/hooks/useEditableDocument'
 import { BujoEditor } from '@/lib/codemirror/BujoEditor'
-import { scanForSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDialogs'
+import { scanForNewSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDialogs'
 import { MigrateBatchModal } from '@/components/bujo/MigrateBatchModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 
@@ -12,6 +12,7 @@ interface EditableJournalViewProps {
 export function EditableJournalView({ date }: EditableJournalViewProps) {
   const {
     document,
+    originalDocument,
     setDocument,
     isLoading,
     error,
@@ -48,7 +49,7 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
   }
 
   const handleSave = useCallback(async () => {
-    const special = scanForSpecialEntries(document)
+    const special = scanForNewSpecialEntries(document, originalDocument)
     if (special.hasSpecialEntries) {
       setPendingSpecial(special)
       setMigrateDate(null)
@@ -58,7 +59,7 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     if (!result.success && result.error) {
       setSaveError(result.error)
     }
-  }, [save, document])
+  }, [save, document, originalDocument])
 
   const handleMigrateConfirm = (dateStr: string) => {
     const parsed = new Date(dateStr + 'T00:00:00')
