@@ -15,13 +15,7 @@ type EditableViewService struct {
 	listRepo         domain.ListRepository
 }
 
-func NewEditableViewService(entryRepo domain.EntryRepository) *EditableViewService {
-	return &EditableViewService{
-		entryRepo: entryRepo,
-	}
-}
-
-func NewEditableViewServiceWithActions(entryRepo domain.EntryRepository, entryToListMover domain.EntryToListMover, listRepo domain.ListRepository) *EditableViewService {
+func NewEditableViewService(entryRepo domain.EntryRepository, entryToListMover domain.EntryToListMover, listRepo domain.ListRepository) *EditableViewService {
 	return &EditableViewService{
 		entryRepo:        entryRepo,
 		entryToListMover: entryToListMover,

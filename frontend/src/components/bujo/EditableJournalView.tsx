@@ -89,6 +89,19 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     const file = event.target.files?.[0]
     if (!file) return
 
+    const MAX_FILE_SIZE = 1_000_000
+    if (file.size > MAX_FILE_SIZE) {
+      setSaveError('File too large (max 1MB)')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
+    if (file.type && !file.type.startsWith('text/')) {
+      setSaveError('Only text files are supported')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      return
+    }
+
     const content = await file.text()
     const separator = document.endsWith('\n') ? '' : '\n'
     setDocument(document + separator + content)

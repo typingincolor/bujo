@@ -22,7 +22,7 @@ func setupEditableViewService(t *testing.T) (*EditableViewService, *BujoService,
 	parser := domain.NewTreeParser()
 
 	bujoService := NewBujoService(entryRepo, dayCtxRepo, parser)
-	editableViewService := NewEditableViewService(entryRepo)
+	editableViewService := NewEditableViewService(entryRepo, nil, nil)
 	return editableViewService, bujoService, entryRepo
 }
 
@@ -37,7 +37,7 @@ func setupEditableViewServiceWithLists(t *testing.T) (*EditableViewService, *sql
 	listItemRepo := sqlite.NewListItemRepository(db)
 	entryToListMover := sqlite.NewEntryToListMover(db)
 
-	editableViewService := NewEditableViewServiceWithActions(entryRepo, entryToListMover, listRepo)
+	editableViewService := NewEditableViewService(entryRepo, entryToListMover, listRepo)
 	return editableViewService, entryRepo, listRepo, listItemRepo
 }
 

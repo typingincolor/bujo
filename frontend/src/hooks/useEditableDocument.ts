@@ -81,6 +81,11 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     if (stored) {
       try {
         const draft = JSON.parse(stored)
+        if (typeof draft.document !== 'string') {
+          localStorage.removeItem(draftKey)
+          setHasDraft(false)
+          return
+        }
         if (draft.document !== loadedDocument) {
           setHasDraft(true)
         } else {
@@ -234,8 +239,14 @@ export function useEditableDocument(date: Date): EditableDocumentState {
   const restoreDraft = useCallback(() => {
     const stored = localStorage.getItem(draftKey)
     if (stored) {
-      const draft = JSON.parse(stored)
-      setDocumentState(draft.document)
+      try {
+        const draft = JSON.parse(stored)
+        if (typeof draft.document === 'string') {
+          setDocumentState(draft.document)
+        }
+      } catch {
+        localStorage.removeItem(draftKey)
+      }
       setHasDraft(false)
     }
   }, [draftKey])

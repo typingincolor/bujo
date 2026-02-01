@@ -26,13 +26,13 @@ const lineDecorations: Record<EntryStyleType, Decoration> = {
   movedToList: Decoration.line({ class: 'cm-entry-movedToList' }),
 }
 
-function getEntryType(lineText: string): EntryStyleType | null {
+export function getEntryType(lineText: string): EntryStyleType | null {
   const match = lineText.match(/^\s*([.\-ox>~?*^])\s/)
   if (!match) return null
   return symbolToType[match[1]] ?? null
 }
 
-function buildDecorations(view: EditorView): DecorationSet {
+export function buildDecorations(view: EditorView): DecorationSet {
   const decorations: { from: number; deco: Decoration }[] = []
 
   for (let i = 1; i <= view.state.doc.lines; i++) {
