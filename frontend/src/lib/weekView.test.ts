@@ -3,49 +3,11 @@ import { filterWeekEntries, flattenEntries } from './weekView';
 import { Entry } from '@/types/bujo';
 
 describe('filterWeekEntries', () => {
-  it('includes events', () => {
+  it('includes parent entries (parentId is null)', () => {
     const entries: Entry[] = [
       {
         id: 1,
-        content: 'Team meeting',
-        type: 'event',
-        priority: 'none',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-    ];
-
-    const filtered = filterWeekEntries(entries);
-
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].content).toBe('Team meeting');
-  });
-
-  it('includes priority entries', () => {
-    const entries: Entry[] = [
-      {
-        id: 2,
-        content: 'Fix critical bug',
-        type: 'task',
-        priority: 'high',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-    ];
-
-    const filtered = filterWeekEntries(entries);
-
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].content).toBe('Fix critical bug');
-  });
-
-  it('excludes non-priority tasks', () => {
-    const entries: Entry[] = [
-      {
-        id: 3,
-        content: 'Regular task',
+        content: 'Top-level task',
         type: 'task',
         priority: 'none',
         parentId: null,
@@ -56,10 +18,11 @@ describe('filterWeekEntries', () => {
 
     const filtered = filterWeekEntries(entries);
 
-    expect(filtered).toHaveLength(0);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].content).toBe('Top-level task');
   });
 
-  it('flattens nested entries', () => {
+  it('excludes child entries (parentId is set)', () => {
     const entries: Entry[] = [
       {
         id: 1,
@@ -68,24 +31,72 @@ describe('filterWeekEntries', () => {
         priority: 'none',
         parentId: null,
         loggedDate: '2026-01-20',
-        children: [
-          {
-            id: 2,
-            content: 'Child event',
-            type: 'event',
-            priority: 'none',
-            parentId: 1,
-            loggedDate: '2026-01-20',
-            children: [],
-          },
-        ],
+        children: [],
+      },
+      {
+        id: 2,
+        content: 'Child',
+        type: 'task',
+        priority: 'high',
+        parentId: 1,
+        loggedDate: '2026-01-20',
+        children: [],
       },
     ];
 
     const filtered = filterWeekEntries(entries);
 
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].content).toBe('Child event');
+    expect(filtered[0].content).toBe('Parent');
+  });
+
+  it('includes all entry types when they are parents', () => {
+    const entries: Entry[] = [
+      {
+        id: 1,
+        content: 'A task',
+        type: 'task',
+        priority: 'none',
+        parentId: null,
+        loggedDate: '2026-01-20',
+        children: [],
+      },
+      {
+        id: 2,
+        content: 'A note',
+        type: 'note',
+        priority: 'none',
+        parentId: null,
+        loggedDate: '2026-01-20',
+        children: [],
+      },
+      {
+        id: 3,
+        content: 'An event',
+        type: 'event',
+        priority: 'none',
+        parentId: null,
+        loggedDate: '2026-01-20',
+        children: [],
+      },
+      {
+        id: 4,
+        content: 'A question',
+        type: 'question',
+        priority: 'none',
+        parentId: null,
+        loggedDate: '2026-01-20',
+        children: [],
+      },
+    ];
+
+    const filtered = filterWeekEntries(entries);
+
+    expect(filtered).toHaveLength(4);
+  });
+
+  it('handles empty array', () => {
+    expect(filterWeekEntries([])).toEqual([]);
   });
 });
 
@@ -133,74 +144,5 @@ describe('flattenEntries', () => {
     expect(flattened[0].content).toBe('Level 1');
     expect(flattened[1].content).toBe('Level 2');
     expect(flattened[2].content).toBe('Level 3');
-  });
-});
-
-describe('filterWeekEntries - edge cases', () => {
-  it('handles empty array', () => {
-    expect(filterWeekEntries([])).toEqual([]);
-  });
-
-  it('includes all priority levels', () => {
-    const entries: Entry[] = [
-      {
-        id: 1,
-        content: 'Low priority',
-        type: 'task',
-        priority: 'low',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-      {
-        id: 2,
-        content: 'Medium priority',
-        type: 'task',
-        priority: 'medium',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-      {
-        id: 3,
-        content: 'High priority',
-        type: 'task',
-        priority: 'high',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-    ];
-
-    const filtered = filterWeekEntries(entries);
-
-    expect(filtered).toHaveLength(3);
-  });
-
-  it('handles multiple qualifying entries', () => {
-    const entries: Entry[] = [
-      {
-        id: 1,
-        content: 'Event',
-        type: 'event',
-        priority: 'none',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-      {
-        id: 2,
-        content: 'Priority task',
-        type: 'task',
-        priority: 'high',
-        parentId: null,
-        loggedDate: '2026-01-20',
-        children: [],
-      },
-    ];
-
-    const filtered = filterWeekEntries(entries);
-
-    expect(filtered).toHaveLength(2);
   });
 });

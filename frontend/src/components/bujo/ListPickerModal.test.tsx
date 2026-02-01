@@ -25,7 +25,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={false}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -38,7 +38,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -55,7 +55,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Buy groceries"
+          entries={["Buy groceries"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -70,7 +70,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -87,7 +87,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -106,7 +106,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -122,7 +122,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -145,7 +145,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={onSelect}
           onCancel={vi.fn()}
         />
@@ -165,7 +165,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={onSelect}
           onCancel={vi.fn()}
         />
@@ -186,7 +186,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={onCancel}
         />
@@ -209,7 +209,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -226,7 +226,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />
@@ -248,7 +248,7 @@ describe('ListPickerModal', () => {
       render(
         <ListPickerModal
           isOpen={true}
-          entryContent="Test entry"
+          entries={["Test entry"]}
           onSelect={vi.fn()}
           onCancel={vi.fn()}
         />

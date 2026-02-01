@@ -8,6 +8,7 @@ import (
 
 	"github.com/typingincolor/bujo/cmd/bujo/cmd"
 	"github.com/typingincolor/bujo/internal/app"
+	"github.com/typingincolor/bujo/internal/dateutil"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -413,4 +414,83 @@ func (a *App) OpenFileDialog() (string, error) {
 		return "", nil
 	}
 	return a.ReadFile(path)
+}
+
+type ValidationError struct {
+	LineNumber int    `json:"lineNumber"`
+	Message    string `json:"message"`
+}
+
+type ValidationResult struct {
+	IsValid bool              `json:"isValid"`
+	Errors  []ValidationError `json:"errors"`
+}
+
+type ApplyResult struct {
+	Inserted int `json:"inserted"`
+	Deleted  int `json:"deleted"`
+}
+
+type ResolvedDate struct {
+	ISO     string `json:"iso"`
+	Display string `json:"display"`
+}
+
+func (a *App) GetEditableDocument(date time.Time) (string, error) {
+	return a.services.EditableView.GetEditableDocument(a.ctx, date)
+}
+
+func (a *App) ValidateEditableDocument(doc string) ValidationResult {
+	result := a.services.EditableView.ValidateDocument(doc)
+	errors := make([]ValidationError, len(result.Errors))
+	for i, err := range result.Errors {
+		errors[i] = ValidationError{
+			LineNumber: err.LineNumber,
+			Message:    err.Message,
+		}
+	}
+	return ValidationResult{
+		IsValid: result.IsValid,
+		Errors:  errors,
+	}
+}
+
+func (a *App) ApplyEditableDocument(doc string, date time.Time) (*ApplyResult, error) {
+	result, err := a.services.EditableView.ApplyChanges(a.ctx, doc, date)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ApplyResult{
+		Inserted: result.Inserted,
+		Deleted:  result.Deleted,
+	}, nil
+}
+
+func (a *App) ApplyEditableDocumentWithActions(doc string, date time.Time, migrateDate *time.Time, listID *int64) (*ApplyResult, error) {
+	actions := service.ApplyActions{
+		MigrateDate: migrateDate,
+		ListID:      listID,
+	}
+	result, err := a.services.EditableView.ApplyChangesWithActions(a.ctx, doc, date, actions)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ApplyResult{
+		Inserted: result.Inserted,
+		Deleted:  result.Deleted,
+	}, nil
+}
+
+func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
+	parsed, err := dateutil.ParseFuture(input)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ResolvedDate{
+		ISO:     parsed.Format("2006-01-02"),
+		Display: parsed.Format("Mon, Jan 2, 2006"),
+	}, nil
 }

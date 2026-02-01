@@ -75,7 +75,6 @@ func NewExportService(
 
 type ImportEntryRepository interface {
 	Insert(ctx context.Context, entry domain.Entry) (int64, error)
-	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Entry, error)
 	DeleteAll(ctx context.Context) error
 }
 
@@ -158,19 +157,8 @@ func (s *ImportService) Import(ctx context.Context, data *domain.ExportData, opt
 	}
 
 	for _, entry := range data.Entries {
-		shouldInsert := true
-		if opts.Mode == domain.ImportModeMerge {
-			existing, err := s.entryRepo.GetByEntityID(ctx, entry.EntityID)
-			if err != nil {
-				return err
-			}
-			shouldInsert = existing == nil
-		}
-
-		if shouldInsert {
-			if _, err := s.entryRepo.Insert(ctx, entry); err != nil {
-				return err
-			}
+		if _, err := s.entryRepo.Insert(ctx, entry); err != nil {
+			return err
 		}
 	}
 

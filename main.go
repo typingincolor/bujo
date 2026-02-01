@@ -17,7 +17,12 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-func getDefaultDBPath() string {
+func getDBPath() string {
+	envPath := os.Getenv("BUJO_DB_PATH")
+	if envPath != "" {
+		return envPath
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "bujo.db"
@@ -33,7 +38,7 @@ func getDefaultDBPath() string {
 
 func main() {
 	factory := app.NewServiceFactory()
-	services, cleanup, err := factory.Create(context.Background(), getDefaultDBPath())
+	services, cleanup, err := factory.Create(context.Background(), getDBPath())
 	if err != nil {
 		println("Error creating services:", err.Error())
 		os.Exit(1)

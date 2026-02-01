@@ -8,15 +8,16 @@ import (
 type EntryType string
 
 const (
-	EntryTypeTask      EntryType = "task"
-	EntryTypeNote      EntryType = "note"
-	EntryTypeEvent     EntryType = "event"
-	EntryTypeDone      EntryType = "done"
-	EntryTypeMigrated  EntryType = "migrated"
-	EntryTypeCancelled EntryType = "cancelled"
-	EntryTypeQuestion  EntryType = "question"
-	EntryTypeAnswered  EntryType = "answered"
-	EntryTypeAnswer    EntryType = "answer"
+	EntryTypeTask        EntryType = "task"
+	EntryTypeNote        EntryType = "note"
+	EntryTypeEvent       EntryType = "event"
+	EntryTypeDone        EntryType = "done"
+	EntryTypeMigrated    EntryType = "migrated"
+	EntryTypeCancelled   EntryType = "cancelled"
+	EntryTypeQuestion    EntryType = "question"
+	EntryTypeAnswered    EntryType = "answered"
+	EntryTypeAnswer      EntryType = "answer"
+	EntryTypeMovedToList EntryType = "movedToList"
 )
 
 type Priority string
@@ -69,15 +70,16 @@ func ParsePriority(s string) (Priority, error) {
 }
 
 var validEntryTypes = map[EntryType]string{
-	EntryTypeTask:      "•",
-	EntryTypeNote:      "–",
-	EntryTypeEvent:     "○",
-	EntryTypeDone:      "✓",
-	EntryTypeMigrated:  "→",
-	EntryTypeCancelled: "✗",
-	EntryTypeQuestion:  "?",
-	EntryTypeAnswered:  "★",
-	EntryTypeAnswer:    "↳",
+	EntryTypeTask:        "•",
+	EntryTypeNote:        "–",
+	EntryTypeEvent:       "○",
+	EntryTypeDone:        "✓",
+	EntryTypeMigrated:    "→",
+	EntryTypeCancelled:   "✗",
+	EntryTypeQuestion:    "?",
+	EntryTypeAnswered:    "★",
+	EntryTypeAnswer:      "↳",
+	EntryTypeMovedToList: "^",
 }
 
 func (et EntryType) IsValid() bool {
@@ -101,6 +103,7 @@ type Entry struct {
 	Location       *string
 	ScheduledDate  *time.Time
 	CreatedAt      time.Time
+	SortOrder      int
 }
 
 func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Entry {

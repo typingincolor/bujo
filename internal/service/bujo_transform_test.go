@@ -126,7 +126,7 @@ func TestBujoService_UncancelEntry_CancelledTaskBecomesTask(t *testing.T) {
 	assert.Equal(t, domain.EntryTypeTask, entry.Type)
 }
 
-func TestBujoService_UncancelEntry_CancelledNoteBecomesNote(t *testing.T) {
+func TestBujoService_UncancelEntry_CancelledNoteBecomesTask(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
 
@@ -142,10 +142,10 @@ func TestBujoService_UncancelEntry_CancelledNoteBecomesNote(t *testing.T) {
 
 	entry, err := entryRepo.GetByID(ctx, ids[0])
 	require.NoError(t, err)
-	assert.Equal(t, domain.EntryTypeNote, entry.Type)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
 }
 
-func TestBujoService_UncancelEntry_CancelledEventBecomesEvent(t *testing.T) {
+func TestBujoService_UncancelEntry_CancelledEventBecomesTask(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
 
@@ -161,7 +161,7 @@ func TestBujoService_UncancelEntry_CancelledEventBecomesEvent(t *testing.T) {
 
 	entry, err := entryRepo.GetByID(ctx, ids[0])
 	require.NoError(t, err)
-	assert.Equal(t, domain.EntryTypeEvent, entry.Type)
+	assert.Equal(t, domain.EntryTypeTask, entry.Type)
 }
 
 func TestBujoService_UncancelEntry_NotCancelledNoOp(t *testing.T) {

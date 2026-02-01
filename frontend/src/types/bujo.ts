@@ -1,4 +1,4 @@
-export type EntryType = 'task' | 'note' | 'event' | 'done' | 'migrated' | 'cancelled' | 'question' | 'answered' | 'answer';
+export type EntryType = 'task' | 'note' | 'event' | 'done' | 'migrated' | 'cancelled' | 'question' | 'answered' | 'answer' | 'movedToList';
 
 export type Priority = 'none' | 'low' | 'medium' | 'high';
 
@@ -77,6 +77,7 @@ export const ENTRY_SYMBOLS: Record<EntryType, string> = {
   question: '?',
   answered: '★',
   answer: '↳',
+  movedToList: '^',
 };
 
 export const PRIORITY_SYMBOLS: Record<Priority, string> = {

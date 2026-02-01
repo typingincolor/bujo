@@ -8,7 +8,6 @@ import (
 type EntryRepository interface {
 	Insert(ctx context.Context, entry Entry) (int64, error)
 	GetByID(ctx context.Context, id int64) (*Entry, error)
-	GetByEntityID(ctx context.Context, entityID EntityID) (*Entry, error)
 	GetByDate(ctx context.Context, date time.Time) ([]Entry, error)
 	GetByDateRange(ctx context.Context, from, to time.Time) ([]Entry, error)
 	GetAll(ctx context.Context) ([]Entry, error)
@@ -17,13 +16,10 @@ type EntryRepository interface {
 	GetChildren(ctx context.Context, parentID int64) ([]Entry, error)
 	Update(ctx context.Context, entry Entry) error
 	Delete(ctx context.Context, id int64) error
+	DeleteByDate(ctx context.Context, date time.Time) error
 	DeleteAll(ctx context.Context) error
 	DeleteWithChildren(ctx context.Context, id int64) error
-	GetHistory(ctx context.Context, entityID EntityID) ([]Entry, error)
-	GetAsOf(ctx context.Context, entityID EntityID, asOf time.Time) (*Entry, error)
 	Search(ctx context.Context, opts SearchOptions) ([]Entry, error)
-	GetDeleted(ctx context.Context) ([]Entry, error)
-	Restore(ctx context.Context, entityID EntityID) (int64, error)
 }
 
 type HabitRepository interface {

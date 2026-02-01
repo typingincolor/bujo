@@ -389,20 +389,7 @@ func (s *BujoService) UncancelEntry(ctx context.Context, id int64) error {
 		return nil
 	}
 
-	history, err := s.entryRepo.GetHistory(ctx, entry.EntityID)
-	if err != nil {
-		return err
-	}
-
-	previousType := domain.EntryTypeTask
-	for i := len(history) - 1; i >= 0; i-- {
-		if history[i].Type != domain.EntryTypeCancelled {
-			previousType = history[i].Type
-			break
-		}
-	}
-
-	entry.Type = previousType
+	entry.Type = domain.EntryTypeTask
 	return s.entryRepo.Update(ctx, *entry)
 }
 
@@ -609,7 +596,6 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 	}
 
 	oldDepth := entry.Depth
-	entityID := entry.EntityID
 
 	moveToRoot := opts.MoveToRoot != nil && *opts.MoveToRoot
 	if moveToRoot {
@@ -637,21 +623,15 @@ func (s *BujoService) MoveEntry(ctx context.Context, id int64, opts MoveOptions)
 		return err
 	}
 
-	updatedEntry, err := s.entryRepo.GetByEntityID(ctx, entityID)
-	if err != nil {
-		return err
-	}
-	newID := updatedEntry.ID
-
 	depthDelta := entry.Depth - oldDepth
 	if depthDelta != 0 {
-		if err := s.updateChildrenDepths(ctx, newID, depthDelta); err != nil {
+		if err := s.updateChildrenDepths(ctx, entry.ID, depthDelta); err != nil {
 			return err
 		}
 	}
 
 	if opts.NewLoggedDate != nil {
-		if err := s.updateChildrenDates(ctx, newID, *opts.NewLoggedDate); err != nil {
+		if err := s.updateChildrenDates(ctx, entry.ID, *opts.NewLoggedDate); err != nil {
 			return err
 		}
 	}
@@ -666,16 +646,11 @@ func (s *BujoService) updateChildrenDepths(ctx context.Context, parentID int64, 
 	}
 
 	for _, child := range children {
-		entityID := child.EntityID
 		child.Depth += depthDelta
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
-		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
-		if err != nil {
-			return err
-		}
-		if err := s.updateChildrenDepths(ctx, updatedChild.ID, depthDelta); err != nil {
+		if err := s.updateChildrenDepths(ctx, child.ID, depthDelta); err != nil {
 			return err
 		}
 	}
@@ -690,16 +665,11 @@ func (s *BujoService) updateChildrenDates(ctx context.Context, parentID int64, n
 	}
 
 	for _, child := range children {
-		entityID := child.EntityID
 		child.ScheduledDate = &newDate
 		if err := s.entryRepo.Update(ctx, child); err != nil {
 			return err
 		}
-		updatedChild, err := s.entryRepo.GetByEntityID(ctx, entityID)
-		if err != nil {
-			return err
-		}
-		if err := s.updateChildrenDates(ctx, updatedChild.ID, newDate); err != nil {
+		if err := s.updateChildrenDates(ctx, child.ID, newDate); err != nil {
 			return err
 		}
 	}
@@ -751,14 +721,6 @@ func (s *BujoService) GetEntryContext(ctx context.Context, id int64, ancestorLev
 	}
 
 	return s.entryRepo.GetWithChildren(ctx, rootID)
-}
-
-func (s *BujoService) GetDeletedEntries(ctx context.Context) ([]domain.Entry, error) {
-	return s.entryRepo.GetDeleted(ctx)
-}
-
-func (s *BujoService) RestoreEntry(ctx context.Context, entityID domain.EntityID) (int64, error) {
-	return s.entryRepo.Restore(ctx, entityID)
 }
 
 func (s *BujoService) ParseEntries(content string) ([]domain.Entry, error) {

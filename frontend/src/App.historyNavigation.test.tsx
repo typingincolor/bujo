@@ -23,6 +23,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLists: vi.fn().mockResolvedValue([]),
   GetGoals: vi.fn().mockResolvedValue([]),
   GetOutstandingQuestions: vi.fn().mockResolvedValue([]),
+  GetWeekSummary: vi.fn().mockResolvedValue({ Days: [] }),
   AddEntry: vi.fn().mockResolvedValue([1]),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),
@@ -40,6 +41,17 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
+  GetEditableDocument: vi.fn().mockResolvedValue(''),
+  ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
+  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, deleted: 0 }),
+  SearchEntries: vi.fn().mockResolvedValue([]),
+  GetStats: vi.fn().mockResolvedValue({
+    TotalEntries: 0,
+    TasksCompleted: 0,
+    ActiveHabits: 0,
+    CurrentStreak: 0,
+  }),
+  GetVersion: vi.fn().mockResolvedValue('1.0.0'),
 }))
 
 import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'
@@ -120,8 +132,9 @@ describe('App - Navigation History', () => {
       const todayButton = screen.getByRole('button', { name: /journal/i })
       await user.click(todayButton)
 
+      // EditableJournalView is now shown - verify by checking for the editor textbox
       await waitFor(() => {
-        expect(screen.getByTestId('capture-bar')).toBeInTheDocument()
+        expect(screen.getByRole('textbox')).toBeInTheDocument()
       })
 
       // Back button should be gone (history cleared by navigating to today)

@@ -4,9 +4,8 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, AddEntry, AddChildEntry, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, OpenFileDialog, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
-import { DayView } from '@/components/bujo/DayView'
 import { HabitTracker } from '@/components/bujo/HabitTracker'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
@@ -15,17 +14,17 @@ import { SearchView, SearchResult } from '@/components/bujo/SearchView'
 import { StatsView } from '@/components/bujo/StatsView'
 import { SettingsView } from '@/components/bujo/SettingsView'
 import { Header } from '@/components/bujo/Header'
-import { CaptureModal } from '@/components/bujo/CaptureModal'
 import { KeyboardShortcuts } from '@/components/bujo/KeyboardShortcuts'
 import { EditEntryModal } from '@/components/bujo/EditEntryModal'
 import { ConfirmDialog } from '@/components/bujo/ConfirmDialog'
 import { MigrateModal } from '@/components/bujo/MigrateModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 import { AnswerQuestionModal } from '@/components/bujo/AnswerQuestionModal'
-import { QuickStats } from '@/components/bujo/QuickStats'
-import { CaptureBar } from '@/components/bujo/CaptureBar'
 import { WeekView } from '@/components/bujo/WeekView'
-import { JournalSidebar } from '@/components/bujo/JournalSidebar'
+import { PendingTasksView } from '@/components/bujo/PendingTasksView'
+import { ContextTree } from '@/components/bujo/ContextTree'
+import { buildTree } from '@/lib/buildTree'
+import { EditableJournalView } from '@/components/bujo/EditableJournalView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -48,7 +47,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -62,7 +61,6 @@ function App() {
   const [lists, setLists] = useState<BujoList[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [overdueEntries, setOverdueEntries] = useState<Entry[]>([])
-  const [overdueCount, setOverdueCount] = useState(0)
   const [outstandingQuestions, setOutstandingQuestions] = useState<Entry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -80,20 +78,14 @@ function App() {
   const [reviewAnchorDate, setReviewAnchorDate] = useState(() => startOfDay(new Date()))
   const [reviewDays, setReviewDays] = useState<DayEntries[]>([])
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false)
-  const [showCaptureModal, setShowCaptureModal] = useState(false)
   const [, setSelectedEntry] = useState<Entry | null>(null)
-  const [sidebarSelectedEntry, setSidebarSelectedEntry] = useState<Entry | null>(null)
-  const [sidebarSelectedIndex, setSidebarSelectedIndex] = useState(0)
-  const [focusedPanel, setFocusedPanel] = useState<'main' | 'sidebar'>('main')
-  const [sidebarContextTree, setSidebarContextTree] = useState<Entry[]>([])
   const [reviewSelectedEntry, setReviewSelectedEntry] = useState<Entry | null>(null)
   const [reviewContextTree, setReviewContextTree] = useState<Entry[]>([])
-  const [captureParentEntry, setCaptureParentEntry] = useState<Entry | null>(null)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
-  const [journalSidebarWidth, setJournalSidebarWidth] = useState(512)
   const [isWeekContextCollapsed, setIsWeekContextCollapsed] = useState(true)
+  const [pendingContextWidth, setPendingContextWidth] = useState(384)
+  const [pendingSelectedEntry, setPendingSelectedEntry] = useState<Entry | null>(null)
+  const [pendingContextTree, setPendingContextTree] = useState<Entry[]>([])
   const initialLoadCompleteRef = useRef(false)
-  const captureBarRef = useRef<HTMLTextAreaElement>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -128,7 +120,6 @@ function App() {
       setReviewDays(transformedReviewDays)
       const transformedOverdue = (overdueData || []).map(transformEntry)
       setOverdueEntries(transformedOverdue)
-      setOverdueCount(transformedOverdue.filter(e => e.type === 'task').length)
       setHabits((habitsData?.Habits || []).map(transformHabit))
       setLists((listsData || []).map(transformList))
       setGoals((goalsData || []).map(transformGoal))
@@ -155,23 +146,6 @@ function App() {
   const todayEntries = days[0]?.entries || []
   const flatEntries = flattenEntries(todayEntries)
 
-  // Fetch full context tree for sidebar-selected entry from backend
-  useEffect(() => {
-    if (!sidebarSelectedEntry) {
-      setSidebarContextTree([])
-      return
-    }
-
-    GetEntryContext(sidebarSelectedEntry.id)
-      .then((entries) => {
-        setSidebarContextTree(entries.map(transformEntry))
-      })
-      .catch((err) => {
-        console.error('Failed to fetch entry context:', err)
-        setSidebarContextTree([])
-      })
-  }, [sidebarSelectedEntry])
-
   // Fetch full context tree for review-selected entry from backend
   useEffect(() => {
     if (!reviewSelectedEntry) {
@@ -188,6 +162,23 @@ function App() {
         setReviewContextTree([])
       })
   }, [reviewSelectedEntry])
+
+  // Fetch full context tree for pending-selected entry from backend
+  useEffect(() => {
+    if (!pendingSelectedEntry) {
+      setPendingContextTree([])
+      return
+    }
+
+    GetEntryContext(pendingSelectedEntry.id)
+      .then((entries) => {
+        setPendingContextTree(entries.map(transformEntry))
+      })
+      .catch((err) => {
+        console.error('Failed to fetch entry context:', err)
+        setPendingContextTree([])
+      })
+  }, [pendingSelectedEntry])
 
   const handleDeleteEntryRequest = useCallback(async (entry: Entry) => {
     try {
@@ -274,20 +265,22 @@ function App() {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       const isInputFocused = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+      // CodeMirror uses contenteditable, not INPUT/TEXTAREA
+      const isCodeMirrorFocused = target.closest?.('.cm-editor') !== null
 
       // ? toggles keyboard shortcuts panel (works even when not in input)
-      if (e.key === '?' && !isInputFocused) {
+      if (e.key === '?' && !isInputFocused && !isCodeMirrorFocused) {
         e.preventDefault()
         setShowKeyboardShortcuts(prev => !prev)
         return
       }
 
-      if (isInputFocused) return
+      if (isInputFocused || isCodeMirrorFocused) return
 
       // View navigation shortcuts (CMD+1 through CMD+9) - always available
       if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
         e.preventDefault()
-        const viewMap: ViewType[] = ['today', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+        const viewMap: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
         const viewIndex = parseInt(e.key) - 1
         if (viewIndex < viewMap.length) {
           handleViewChange(viewMap[viewIndex])
@@ -312,11 +305,6 @@ function App() {
           handleGoToToday()
           return
         }
-        if (e.key === '[') {
-          e.preventDefault()
-          setIsSidebarCollapsed(prev => !prev)
-          return
-        }
       }
 
       // Week view shortcuts
@@ -337,101 +325,7 @@ function App() {
         }
       }
 
-      // Entry creation shortcuts (c, i, r, a, A) - work in today view
-      if (view === 'today') {
-        if (e.key === 'c') {
-          e.preventDefault()
-          setShowCaptureModal(true)
-          return
-        }
-        if (e.key === 'i') {
-          e.preventDefault()
-          captureBarRef.current?.focus()
-          return
-        }
-        if (e.key === 'r') {
-          e.preventDefault()
-          setCaptureParentEntry(null)
-          captureBarRef.current?.focus()
-          return
-        }
-        if (e.key === 'a') {
-          e.preventDefault()
-          // If selected entry is a question, open answer modal instead
-          const selectedEntry = flatEntries[selectedIndex]
-          if (selectedEntry?.type === 'question') {
-            setAnswerModalEntry(selectedEntry)
-          } else {
-            setCaptureParentEntry(null)
-            captureBarRef.current?.focus()
-          }
-          return
-        }
-        if (e.key === 'A') {
-          e.preventDefault()
-          const selectedEntry = flatEntries[selectedIndex]
-          if (selectedEntry) {
-            setCaptureParentEntry(selectedEntry)
-            captureBarRef.current?.focus()
-          }
-          return
-        }
-      }
-
       if (view !== 'today') return
-
-      // Get sidebar task entries (filtered the same way as JournalSidebar)
-      const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
-
-      // Tab key switches focus between main panel and sidebar
-      if (e.key === 'Tab') {
-        e.preventDefault()
-        if (focusedPanel === 'main') {
-          // Switch to sidebar
-          setFocusedPanel('sidebar')
-          setSelectedIndex(-1) // Clear main panel selection
-          setSelectedEntry(null)
-          if (sidebarTaskEntries.length > 0) {
-            setSidebarSelectedIndex(0)
-            setSidebarSelectedEntry(sidebarTaskEntries[0])
-          }
-        } else {
-          // Switch to main panel
-          setFocusedPanel('main')
-          setSidebarSelectedIndex(-1)
-          setSidebarSelectedEntry(null)
-          if (flatEntries.length > 0) {
-            setSelectedIndex(0)
-            setSelectedEntry(flatEntries[0])
-          }
-        }
-        return
-      }
-
-      // Navigation keys depend on which panel is focused
-      if (focusedPanel === 'sidebar') {
-        switch (e.key) {
-          case 'j':
-          case 'ArrowDown': {
-            e.preventDefault()
-            if (sidebarTaskEntries.length === 0) return
-            const nextIndex = Math.min(sidebarSelectedIndex + 1, sidebarTaskEntries.length - 1)
-            setSidebarSelectedIndex(nextIndex)
-            setSidebarSelectedEntry(sidebarTaskEntries[nextIndex])
-            break
-          }
-          case 'k':
-          case 'ArrowUp': {
-            e.preventDefault()
-            if (sidebarTaskEntries.length === 0) return
-            const prevIndex = Math.max(sidebarSelectedIndex - 1, 0)
-            setSidebarSelectedIndex(prevIndex)
-            setSidebarSelectedEntry(sidebarTaskEntries[prevIndex])
-            break
-          }
-        }
-        return
-      }
 
       // Main panel navigation
       if (flatEntries.length === 0) return
@@ -516,18 +410,13 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, flatEntries, selectedIndex, overdueEntries, focusedPanel, sidebarSelectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod, handleViewChange])
+  }, [view, flatEntries, selectedIndex, loadData, handleDeleteEntryRequest, handlePrevDay, handleNextDay, handleGoToToday, cycleHabitPeriod, handleViewChange])
 
   useEffect(() => {
-    // Only reset main panel selection if main panel is focused
-    // This prevents dual highlighting when sidebar has selection and data refreshes
-    if (focusedPanel === 'main') {
-      setSelectedIndex(0)
-      const entries = flattenEntries(days[0]?.entries || [])
-      setSelectedEntry(entries[0] ?? null)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [days]) // Only run when days changes, focusedPanel is just a guard condition
+    setSelectedIndex(0)
+    const entries = flattenEntries(days[0]?.entries || [])
+    setSelectedEntry(entries[0] ?? null)
+  }, [days])
 
   const handleEditEntry = useCallback(async (newContent: string) => {
     if (!editModalEntry) return
@@ -577,39 +466,6 @@ function App() {
       setError(err instanceof Error ? err.message : 'Failed to move entry to list')
     }
   }, [moveToListEntry, loadData])
-
-  const handleSelectEntry = useCallback((id: number) => {
-    const index = flatEntries.findIndex(e => e.id === id)
-    if (index !== -1) {
-      setSelectedIndex(index)
-      setSelectedEntry(flatEntries[index])
-      // Clear sidebar selection when main panel is selected
-      setSidebarSelectedEntry(null)
-      setSidebarSelectedIndex(-1)
-      setFocusedPanel('main')
-    }
-  }, [flatEntries])
-
-  const handleAddChild = useCallback((entry: Entry) => {
-    const index = flatEntries.findIndex(e => e.id === entry.id)
-    if (index !== -1) {
-      setSelectedIndex(index)
-      setCaptureParentEntry(entry)
-      captureBarRef.current?.focus()
-    }
-  }, [flatEntries])
-
-  const handleSidebarSelectEntry = useCallback((entry: Entry) => {
-    // Find the index of this entry in the filtered task entries
-    const sidebarTaskEntries = overdueEntries.filter(e => e.type === 'task')
-    const index = sidebarTaskEntries.findIndex(e => e.id === entry.id)
-    setSidebarSelectedEntry(entry)
-    setSidebarSelectedIndex(index)
-    // Clear main panel selection when sidebar is selected
-    setSelectedIndex(-1)
-    setSelectedEntry(null)
-    setFocusedPanel('sidebar')
-  }, [overdueEntries])
 
   // const handleMoveToRoot = useCallback(async (entry: Entry) => {
   //   try {
@@ -700,45 +556,6 @@ function App() {
   }), [handleSidebarMarkDone, handleSidebarUnmarkDone, handleDeleteEntryRequest, handleSidebarCyclePriority, handleSidebarCycleType, handleSidebarCancel, handleSidebarUncancel])
 
 
-  const handleCaptureBarSubmit = useCallback(async (content: string) => {
-    try {
-      await AddEntry(content, toWailsTime(currentDate))
-      loadData()
-    } catch (err) {
-      console.error('Failed to add entry:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add entry')
-    }
-  }, [loadData, currentDate])
-
-  const handleCaptureBarSubmitChild = useCallback(async (parentId: number, content: string) => {
-    try {
-      await AddChildEntry(parentId, content, toWailsTime(currentDate))
-      setCaptureParentEntry(null)
-      loadData()
-    } catch (err) {
-      console.error('Failed to add child entry:', err)
-      setError(err instanceof Error ? err.message : 'Failed to add child entry')
-    }
-  }, [loadData, currentDate])
-
-  const handleCaptureBarClearParent = useCallback(() => {
-    setCaptureParentEntry(null)
-  }, [])
-
-  const handleCaptureBarFileImport = useCallback(async () => {
-    try {
-      const fileContent = await OpenFileDialog()
-      if (fileContent && captureBarRef.current) {
-        const currentValue = captureBarRef.current.value
-        captureBarRef.current.value = currentValue + fileContent
-        captureBarRef.current.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-    } catch (err) {
-      console.error('Failed to import file:', err)
-      setError(err instanceof Error ? err.message : 'Failed to import file')
-    }
-  }, [])
-
   const handleSearchMigrate = useCallback((result: SearchResult) => {
     setMigrateModalEntry({
       id: result.id,
@@ -777,6 +594,7 @@ function App() {
 
   const viewTitles: Record<ViewType, string> = {
     today: 'Journal',
+    pending: 'Pending Tasks',
     week: 'Weekly Review',
     questions: 'Open Questions',
     habits: 'Habit Tracker',
@@ -785,6 +603,7 @@ function App() {
     search: 'Search',
     stats: 'Insights',
     settings: 'Settings',
+    editable: 'Edit Journal',
   }
 
   if (loading) {
@@ -816,7 +635,6 @@ function App() {
   }
 
   const today = days[0]
-  const selectedEntryId = flatEntries[selectedIndex]?.id ?? null
 
   return (
     <div className="flex h-screen bg-background">
@@ -834,44 +652,30 @@ function App() {
           onLocationChanged={loadData}
           canGoBack={canGoBack}
           onBack={handleBack}
-          onUpload={view === 'today' ? handleCaptureBarFileImport : undefined}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 pb-32">
+        <main className={`flex-1 p-6 ${view === 'today' ? 'flex flex-col overflow-hidden pb-2' : 'overflow-y-auto pb-32'}`}>
           {view === 'today' && (
-            <div className="space-y-6">
-              {/* Day Navigation */}
-              <div className="flex items-center justify-center">
+            <>
+              <div className="flex items-center justify-center mb-6">
                 <DateNavigator
                   date={currentDate}
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
-              <QuickStats days={days} habits={habits} goals={goals} overdueCount={overdueCount} />
-              {today && (
-                <DayView
-                  day={today}
-                  selectedEntryId={selectedEntryId}
-                  onEntryChanged={loadData}
-                  onSelectEntry={handleSelectEntry}
-                  onEditEntry={(entry) => setEditModalEntry(entry)}
-                  onDeleteEntry={handleDeleteEntryRequest}
-                  onMigrateEntry={(entry) => setMigrateModalEntry(entry)}
-                  onAddChild={handleAddChild}
-                  onAnswerEntry={(entry) => setAnswerModalEntry(entry)}
-                  onMoveToList={(entry) => setMoveToListEntry(entry)}
-                />
-              )}
-              <CaptureBar
-                ref={captureBarRef}
-                onSubmit={handleCaptureBarSubmit}
-                onSubmitChild={handleCaptureBarSubmitChild}
-                onClearParent={handleCaptureBarClearParent}
-                parentEntry={captureParentEntry}
-                sidebarWidth={journalSidebarWidth}
-                isSidebarCollapsed={isSidebarCollapsed}
-              />
-            </div>
+              <EditableJournalView date={currentDate} />
+            </>
+          )}
+
+          {view === 'pending' && (
+            <PendingTasksView
+              overdueEntries={overdueEntries}
+              now={new Date()}
+              callbacks={sidebarCallbacks}
+              selectedEntry={pendingSelectedEntry ?? undefined}
+              onSelectEntry={(entry) => setPendingSelectedEntry(entry)}
+              onRefresh={loadData}
+            />
           )}
 
           {view === 'week' && (
@@ -998,58 +802,48 @@ function App() {
         )}
       </div>
 
-      {/* Journal Sidebar - Overdue + Context - always visible in journal view */}
-      {view === 'today' && (
+      {/* Pending Tasks Context Sidebar */}
+      {view === 'pending' && (
         <aside
           className="flex flex-col self-stretch bg-background relative"
-          style={{
-            width: isSidebarCollapsed ? '2.5rem' : `${journalSidebarWidth}px`
-          }}
+          style={{ width: `${pendingContextWidth}px` }}
         >
-          {/* Resize Handle - spans full height of aside, outer div is hit area, inner div is visual border */}
-          {!isSidebarCollapsed && (
-            <div
-              data-testid="sidebar-resize-handle"
-              className="absolute left-0 top-0 h-full w-4 cursor-col-resize group z-10"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const handleMouseMove = (moveEvent: MouseEvent) => {
-                  const newWidth = window.innerWidth - moveEvent.clientX;
-                  const clampedWidth = Math.max(384, Math.min(960, newWidth));
-                  setJournalSidebarWidth(clampedWidth);
-                };
-                const handleMouseUp = () => {
-                  document.removeEventListener('mousemove', handleMouseMove);
-                  document.removeEventListener('mouseup', handleMouseUp);
-                  document.body.style.cursor = '';
-                  document.body.style.userSelect = '';
-                };
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-                document.body.style.cursor = 'col-resize';
-                document.body.style.userSelect = 'none';
-              }}
-            >
-              <div className="w-px h-full bg-border transition-colors group-hover:bg-primary/50" />
-            </div>
-          )}
+          <div
+            data-testid="pending-context-resize-handle"
+            className="absolute left-0 top-0 h-full w-4 cursor-col-resize group z-10"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const handleMouseMove = (moveEvent: MouseEvent) => {
+                const newWidth = window.innerWidth - moveEvent.clientX;
+                const clampedWidth = Math.max(256, Math.min(960, newWidth));
+                setPendingContextWidth(clampedWidth);
+              };
+              const handleMouseUp = () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+              };
+              document.addEventListener('mousemove', handleMouseMove);
+              document.addEventListener('mouseup', handleMouseUp);
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+          >
+            <div className="w-px h-full bg-border transition-colors group-hover:bg-primary/50" />
+          </div>
 
-          {/* Spacer to align with main content area (below header) */}
           <div className="h-[73px] flex-shrink-0" />
 
-          {/* Scrollable sidebar content */}
-          <div className="flex-1 overflow-y-auto p-2">
-            <JournalSidebar
-              overdueEntries={overdueEntries}
-              now={new Date()}
-              selectedEntry={sidebarSelectedEntry ?? undefined}
-              contextTree={sidebarContextTree}
-              onSelectEntry={handleSidebarSelectEntry}
-              callbacks={sidebarCallbacks}
-              isCollapsed={isSidebarCollapsed}
-              onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
-              onRefresh={loadData}
-            />
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="text-sm font-medium mb-3">Context</h3>
+            {!pendingSelectedEntry ? (
+              <p className="text-sm text-muted-foreground">No entry selected</p>
+            ) : pendingContextTree.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No context</p>
+            ) : (
+              <ContextTree nodes={buildTree(pendingContextTree)} selectedEntryId={pendingSelectedEntry.id} />
+            )}
           </div>
         </aside>
       )}
@@ -1086,7 +880,7 @@ function App() {
       {/* Move to List Modal */}
       <ListPickerModal
         isOpen={moveToListEntry !== null}
-        entryContent={moveToListEntry?.content || ''}
+        entries={moveToListEntry ? [moveToListEntry.content] : []}
         onSelect={handleMoveToList}
         onCancel={() => setMoveToListEntry(null)}
       />
@@ -1105,15 +899,6 @@ function App() {
         />
       )}
 
-      {/* Capture Modal */}
-      <CaptureModal
-        isOpen={showCaptureModal}
-        onClose={() => setShowCaptureModal(false)}
-        onEntriesCreated={() => {
-          setShowCaptureModal(false)
-          loadData()
-        }}
-      />
     </div>
   )
 }

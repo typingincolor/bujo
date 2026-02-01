@@ -13,6 +13,11 @@ dist-ssr
 coverage
 *.local
 
+# Test databases
+e2e/test.db
+e2e/test.db-wal
+e2e/test.db-shm
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

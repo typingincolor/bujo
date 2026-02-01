@@ -19,6 +19,7 @@ type Services struct {
 	Stats           *service.StatsService
 	Summary         *service.SummaryService
 	ChangeDetection *service.ChangeDetectionService
+	EditableView    *service.EditableViewService
 }
 
 type ServiceFactory struct{}
@@ -62,13 +63,16 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 		goalRepo,
 	}
 
+	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover)
+
 	return &Services{
 		DB:              db,
-		Bujo:            service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover),
+		Bujo:            bujoService,
 		Habit:           service.NewHabitService(habitRepo, habitLogRepo),
 		List:            service.NewListService(listRepo, listItemRepo),
 		Goal:            service.NewGoalService(goalRepo),
 		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
 		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
+		EditableView:    service.NewEditableViewService(entryRepo, entryToListMover, listRepo),
 	}
 }

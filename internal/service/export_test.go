@@ -241,13 +241,6 @@ func (m *mockImportEntryRepo) Insert(ctx context.Context, entry domain.Entry) (i
 	return int64(len(m.inserted)), nil
 }
 
-func (m *mockImportEntryRepo) GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.Entry, error) {
-	if m.existing[entityID] {
-		return &domain.Entry{EntityID: entityID}, nil
-	}
-	return nil, nil
-}
-
 func (m *mockImportEntryRepo) DeleteAll(ctx context.Context) error {
 	m.cleared = true
 	m.existing = make(map[domain.EntityID]bool)
@@ -423,12 +416,8 @@ func TestImportService_Import_MergeMode(t *testing.T) {
 		t.Fatalf("Import failed: %v", err)
 	}
 
-	if len(entryRepo.inserted) != 1 {
-		t.Errorf("Expected 1 inserted entry (skip existing), got %d", len(entryRepo.inserted))
-	}
-
-	if len(entryRepo.inserted) > 0 && entryRepo.inserted[0].Content != "New entry" {
-		t.Errorf("Expected 'New entry', got '%s'", entryRepo.inserted[0].Content)
+	if len(entryRepo.inserted) != 2 {
+		t.Errorf("Expected 2 inserted entries (entries always insert without dedup), got %d", len(entryRepo.inserted))
 	}
 }
 

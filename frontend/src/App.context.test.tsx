@@ -45,6 +45,9 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
+  GetEditableDocument: vi.fn().mockResolvedValue(''),
+  ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
+  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, deleted: 0 }),
 }))
 
 import { GetDayEntries, GetOverdue, GetHabits, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'
