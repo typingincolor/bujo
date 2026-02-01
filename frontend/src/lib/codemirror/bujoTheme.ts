@@ -69,4 +69,27 @@ export const bujoTheme = EditorView.theme({
     pointerEvents: 'none',
     userSelect: 'none',
   },
+  '& .cm-foldGutter': {
+    width: '16px',
+  },
+  '& .cm-foldGutter .cm-gutterElement': {
+    cursor: 'pointer',
+    color: 'hsl(var(--muted-foreground))',
+    fontSize: '12px',
+    lineHeight: '1.6',
+    padding: '0 2px',
+    transition: 'color 0.15s',
+  },
+  '& .cm-foldGutter .cm-gutterElement:hover': {
+    color: 'hsl(var(--foreground))',
+  },
+  '& .cm-foldPlaceholder': {
+    backgroundColor: 'hsl(var(--muted) / 0.5)',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: '3px',
+    color: 'hsl(var(--muted-foreground))',
+    padding: '0 4px',
+    fontSize: '11px',
+    cursor: 'pointer',
+  },
 })

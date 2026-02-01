@@ -18,8 +18,8 @@ export function AnswerQuestion(arg1, arg2) {
   return window['go']['wails']['App']['AnswerQuestion'](arg1, arg2);
 }
 
-export function ApplyEditableDocument(arg1, arg2, arg3) {
-  return window['go']['wails']['App']['ApplyEditableDocument'](arg1, arg2, arg3);
+export function ApplyEditableDocument(arg1, arg2) {
+  return window['go']['wails']['App']['ApplyEditableDocument'](arg1, arg2);
 }
 
 export function CancelEntry(arg1) {
@@ -80,10 +80,6 @@ export function GetDayEntries(arg1, arg2) {
 
 export function GetEditableDocument(arg1) {
   return window['go']['wails']['App']['GetEditableDocument'](arg1);
-}
-
-export function GetEditableDocumentWithEntries(arg1) {
-  return window['go']['wails']['App']['GetEditableDocumentWithEntries'](arg1);
 }
 
 export function GetEntry(arg1) {

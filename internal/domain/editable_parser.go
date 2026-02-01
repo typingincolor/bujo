@@ -2,7 +2,6 @@ package domain
 
 import (
 	"strings"
-	"time"
 )
 
 var editableSymbolToType = map[rune]EntryType{
@@ -15,31 +14,16 @@ var editableSymbolToType = map[rune]EntryType{
 	'>': EntryTypeMigrated,
 }
 
-type EditableDocumentParser struct {
-	dateParser func(string) (time.Time, error)
+type EditableDocumentParser struct{}
+
+func NewEditableDocumentParser() *EditableDocumentParser {
+	return &EditableDocumentParser{}
 }
 
-func NewEditableDocumentParser(dateParser func(string) (time.Time, error)) *EditableDocumentParser {
-	return &EditableDocumentParser{dateParser: dateParser}
-}
-
-func (p *EditableDocumentParser) Parse(input string, existing []Entry) (*EditableDocument, error) {
+func (p *EditableDocumentParser) Parse(input string) (*EditableDocument, error) {
 	lines := strings.Split(input, "\n")
 	doc := &EditableDocument{
-		Lines:           make([]ParsedLine, 0, len(lines)),
-		OriginalMapping: make(map[EntityID]int),
-	}
-
-	existingEntityIDs := make(map[EntityID]bool)
-	for _, entry := range existing {
-		existingEntityIDs[entry.EntityID] = true
-	}
-
-	seenEntityIDs := make(map[EntityID]bool)
-
-	contentToEntityID := make(map[string]EntityID)
-	for _, entry := range existing {
-		contentToEntityID[entry.Content] = entry.EntityID
+		Lines: make([]ParsedLine, 0, len(lines)),
 	}
 
 	for i, line := range lines {
@@ -55,31 +39,6 @@ func (p *EditableDocumentParser) Parse(input string, existing []Entry) (*Editabl
 		}
 
 		parsedLine := p.ParseLine(line, lineNum)
-
-		if parsedLine.IsValid && !parsedLine.IsHeader {
-			content, migrateDate, err := ParseMigrationSyntax(line, p.dateParser)
-			if err == nil && migrateDate != nil {
-				parsedLine.MigrateTarget = migrateDate
-				innerLine := p.ParseLine(content, lineNum)
-				parsedLine.Symbol = innerLine.Symbol
-				parsedLine.Content = innerLine.Content
-				parsedLine.Priority = innerLine.Priority
-			}
-
-			if parsedLine.EntityID != nil {
-				eid := *parsedLine.EntityID
-				if seenEntityIDs[eid] {
-					parsedLine.EntityID = nil
-				} else {
-					seenEntityIDs[eid] = true
-					doc.OriginalMapping[eid] = lineNum
-				}
-			} else if entityID, ok := contentToEntityID[parsedLine.Content]; ok {
-				parsedLine.EntityID = &entityID
-				doc.OriginalMapping[entityID] = lineNum
-			}
-		}
-
 		doc.Lines = append(doc.Lines, parsedLine)
 	}
 
@@ -163,12 +122,6 @@ func serializeEntryLine(result *strings.Builder, entry Entry, depth int) {
 		result.WriteString("  ")
 	}
 
-	if !entry.EntityID.IsEmpty() {
-		result.WriteString("[")
-		result.WriteString(entry.EntityID.String())
-		result.WriteString("] ")
-	}
-
 	symbol, ok := typeToEditableSymbol[entry.Type]
 	if !ok {
 		symbol = '.'
@@ -198,16 +151,6 @@ func (p *EditableDocumentParser) ParseLine(line string, lineNum int) ParsedLine 
 
 	depth, rest := ParseIndentation(line)
 	result.Depth = depth
-
-	if strings.HasPrefix(rest, "[") {
-		closeBracket := strings.Index(rest, "] ")
-		if closeBracket > 0 {
-			idStr := rest[1:closeBracket]
-			entityID := EntityID(idStr)
-			result.EntityID = &entityID
-			rest = rest[closeBracket+2:]
-		}
-	}
 
 	if len(rest) == 0 {
 		result.IsValid = false

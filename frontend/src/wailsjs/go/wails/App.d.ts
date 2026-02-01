@@ -14,7 +14,7 @@ export function AddListItem(arg1:number,arg2:string):Promise<number>;
 
 export function AnswerQuestion(arg1:number,arg2:string):Promise<void>;
 
-export function ApplyEditableDocument(arg1:string,arg2:time.Time,arg3:Array<string>):Promise<wails.ApplyResult>;
+export function ApplyEditableDocument(arg1:string,arg2:time.Time):Promise<wails.ApplyResult>;
 
 export function CancelEntry(arg1:number):Promise<void>;
 
@@ -45,8 +45,6 @@ export function EditListItem(arg1:number,arg2:string):Promise<void>;
 export function GetDayEntries(arg1:time.Time,arg2:time.Time):Promise<Array<service.DayEntries>>;
 
 export function GetEditableDocument(arg1:time.Time):Promise<string>;
-
-export function GetEditableDocumentWithEntries(arg1:time.Time):Promise<wails.EditableDocumentWithEntries>;
 
 export function GetEntry(arg1:number):Promise<domain.Entry>;
 

@@ -78,9 +78,9 @@ const wailsAppMock = {
   CancelEntry: () => Promise.resolve(),
   UncancelEntry: () => Promise.resolve(),
   RetypeEntry: () => Promise.resolve(),
-  GetEditableDocumentWithEntries: () => Promise.resolve({ document: '', entries: [] }),
+  GetEditableDocument: () => Promise.resolve(''),
   ValidateEditableDocument: () => Promise.resolve({ isValid: true, errors: [] }),
-  ApplyEditableDocument: () => Promise.resolve({ inserted: 0, updated: 0, deleted: 0, migrated: 0 }),
+  ApplyEditableDocument: () => Promise.resolve({ inserted: 0, deleted: 0 }),
 }
 
 Object.defineProperty(window, 'go', {

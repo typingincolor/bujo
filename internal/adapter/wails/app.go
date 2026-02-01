@@ -428,9 +428,7 @@ type ValidationResult struct {
 
 type ApplyResult struct {
 	Inserted int `json:"inserted"`
-	Updated  int `json:"updated"`
 	Deleted  int `json:"deleted"`
-	Migrated int `json:"migrated"`
 }
 
 type ResolvedDate struct {
@@ -438,45 +436,8 @@ type ResolvedDate struct {
 	Display string `json:"display"`
 }
 
-type EditableEntryInfo struct {
-	EntityID string `json:"entityId"`
-	Content  string `json:"content"`
-}
-
-type EditableDocumentWithEntries struct {
-	Document string              `json:"document"`
-	Entries  []EditableEntryInfo `json:"entries"`
-}
-
 func (a *App) GetEditableDocument(date time.Time) (string, error) {
 	return a.services.EditableView.GetEditableDocument(a.ctx, date)
-}
-
-func (a *App) GetEditableDocumentWithEntries(date time.Time) (*EditableDocumentWithEntries, error) {
-	doc, err := a.services.EditableView.GetEditableDocument(a.ctx, date)
-	if err != nil {
-		return nil, err
-	}
-
-	days, err := a.services.Bujo.GetDayEntries(a.ctx, date, date)
-	if err != nil {
-		return nil, err
-	}
-
-	entries := make([]EditableEntryInfo, 0)
-	if len(days) > 0 {
-		for _, entry := range days[0].Entries {
-			entries = append(entries, EditableEntryInfo{
-				EntityID: string(entry.EntityID),
-				Content:  entry.Content,
-			})
-		}
-	}
-
-	return &EditableDocumentWithEntries{
-		Document: doc,
-		Entries:  entries,
-	}, nil
 }
 
 func (a *App) ValidateEditableDocument(doc string) ValidationResult {
@@ -494,27 +455,15 @@ func (a *App) ValidateEditableDocument(doc string) ValidationResult {
 	}
 }
 
-func (a *App) ApplyEditableDocument(doc string, date time.Time, pendingDeletes []string) (*ApplyResult, error) {
-	validation := a.services.EditableView.ValidateDocument(doc)
-	if !validation.IsValid {
-		return nil, fmt.Errorf("validation failed: %s", validation.Errors[0].Message)
-	}
-
-	entityIDs := make([]domain.EntityID, len(pendingDeletes))
-	for i, id := range pendingDeletes {
-		entityIDs[i] = domain.EntityID(id)
-	}
-
-	result, err := a.services.EditableView.ApplyChanges(a.ctx, doc, date, entityIDs)
+func (a *App) ApplyEditableDocument(doc string, date time.Time) (*ApplyResult, error) {
+	result, err := a.services.EditableView.ApplyChanges(a.ctx, doc, date)
 	if err != nil {
 		return nil, err
 	}
 
 	return &ApplyResult{
 		Inserted: result.Inserted,
-		Updated:  result.Updated,
 		Deleted:  result.Deleted,
-		Migrated: result.Migrated,
 	}, nil
 }
 

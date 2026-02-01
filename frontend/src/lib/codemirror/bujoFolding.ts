@@ -1,3 +1,8 @@
+import { EditorState, Extension } from '@codemirror/state'
+import { foldService, foldedRanges } from '@codemirror/language'
+import { codeFolding, foldGutter, foldKeymap } from '@codemirror/language'
+import { keymap } from '@codemirror/view'
+
 export interface FoldRange {
   from: number
   to: number
@@ -31,4 +36,53 @@ export function getFoldRange(lines: string[], lineIndex: number): FoldRange | nu
   if (lastChildIndex === lineIndex) return null
 
   return { from: lineIndex, to: lastChildIndex }
+}
+
+function bujoFoldServiceFn(state: EditorState, lineStart: number, _lineEnd: number): { from: number; to: number } | null {
+  const doc = state.doc
+  const lines: string[] = []
+  for (let i = 1; i <= doc.lines; i++) {
+    lines.push(doc.line(i).text)
+  }
+
+  const lineObj = doc.lineAt(lineStart)
+  const lineIndex = lineObj.number - 1
+
+  const range = getFoldRange(lines, lineIndex)
+  if (!range) return null
+
+  return {
+    from: lineObj.to,
+    to: doc.line(range.to + 1).to,
+  }
+}
+
+export function expandRangeForFolds(state: EditorState, from: number, to: number): { from: number; to: number } {
+  const folded = foldedRanges(state)
+  if (folded.size === 0) return { from, to }
+
+  let expandedFrom = from
+  let expandedTo = to
+
+  const cursor = folded.iter()
+  while (cursor.value) {
+    if (cursor.from >= expandedFrom && cursor.from <= expandedTo) {
+      expandedTo = Math.max(expandedTo, cursor.to)
+    }
+    if (cursor.to >= expandedFrom && cursor.to <= expandedTo) {
+      expandedFrom = Math.min(expandedFrom, cursor.from)
+    }
+    cursor.next()
+  }
+
+  return { from: expandedFrom, to: expandedTo }
+}
+
+export function bujoFoldExtension(): Extension {
+  return [
+    foldService.of(bujoFoldServiceFn),
+    codeFolding(),
+    foldGutter(),
+    keymap.of(foldKeymap),
+  ]
 }

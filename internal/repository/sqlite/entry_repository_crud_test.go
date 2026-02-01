@@ -285,3 +285,108 @@ func TestEntryRepository_GetOverdue_IncludesParentChainForOverdueTasks(t *testin
 	assert.Contains(t, contents, "Discussion notes", "Should include parent note")
 	assert.Contains(t, contents, "Follow up action", "Should include overdue task")
 }
+
+func TestEntryRepository_GetByDate_OrdersByCreatedAtThenID(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	entry1 := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Created last",
+		Depth:     0,
+		CreatedAt: time.Date(2026, 1, 28, 10, 0, 0, 0, time.UTC),
+	}
+	entry2 := domain.Entry{
+		Type:      domain.EntryTypeNote,
+		Content:   "Created first",
+		Depth:     0,
+		CreatedAt: time.Date(2026, 1, 28, 8, 0, 0, 0, time.UTC),
+	}
+	entry3 := domain.Entry{
+		Type:      domain.EntryTypeEvent,
+		Content:   "Created middle",
+		Depth:     0,
+		CreatedAt: time.Date(2026, 1, 28, 9, 0, 0, 0, time.UTC),
+	}
+
+	_, err := repo.Insert(ctx, entry1)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, entry2)
+	require.NoError(t, err)
+	_, err = repo.Insert(ctx, entry3)
+	require.NoError(t, err)
+
+	entries, err := repo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+
+	assert.Equal(t, "Created first", entries[0].Content)
+	assert.Equal(t, "Created middle", entries[1].Content)
+	assert.Equal(t, "Created last", entries[2].Content)
+}
+
+func TestEntryRepository_DeleteByDate(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	targetDate := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	otherDate := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := repo.Insert(ctx, domain.Entry{
+		Type: domain.EntryTypeTask, Content: "Task on target date", Depth: 0, CreatedAt: targetDate,
+	})
+	require.NoError(t, err)
+
+	_, err = repo.Insert(ctx, domain.Entry{
+		Type: domain.EntryTypeNote, Content: "Note on target date", Depth: 0, CreatedAt: targetDate,
+	})
+	require.NoError(t, err)
+
+	otherID, err := repo.Insert(ctx, domain.Entry{
+		Type: domain.EntryTypeTask, Content: "Task on other date", Depth: 0, CreatedAt: otherDate,
+	})
+	require.NoError(t, err)
+
+	err = repo.DeleteByDate(ctx, targetDate)
+	require.NoError(t, err)
+
+	targetEntries, err := repo.GetByDate(ctx, targetDate)
+	require.NoError(t, err)
+	assert.Empty(t, targetEntries)
+
+	otherEntry, err := repo.GetByID(ctx, otherID)
+	require.NoError(t, err)
+	require.NotNil(t, otherEntry)
+	assert.Equal(t, "Task on other date", otherEntry.Content)
+}
+
+func TestEntryRepository_DeleteByDate_IncludesAllVersions(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	targetDate := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	id, err := repo.Insert(ctx, domain.Entry{
+		Type: domain.EntryTypeTask, Content: "Original", Depth: 0, CreatedAt: targetDate,
+	})
+	require.NoError(t, err)
+
+	entry, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	entry.Content = "Updated"
+	err = repo.Update(ctx, *entry)
+	require.NoError(t, err)
+
+	err = repo.DeleteByDate(ctx, targetDate)
+	require.NoError(t, err)
+
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM entries WHERE scheduled_date = ?", targetDate.Format("2006-01-02")).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
+}

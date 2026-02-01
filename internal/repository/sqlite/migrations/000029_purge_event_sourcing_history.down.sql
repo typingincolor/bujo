@@ -1,0 +1,1 @@
+-- Cannot restore purged history rows

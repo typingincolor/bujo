@@ -10,14 +10,12 @@ import (
 )
 
 type EditableViewService struct {
-	entryRepo   domain.EntryRepository
-	bujoService *BujoService
+	entryRepo domain.EntryRepository
 }
 
-func NewEditableViewService(entryRepo domain.EntryRepository, bujoService *BujoService) *EditableViewService {
+func NewEditableViewService(entryRepo domain.EntryRepository) *EditableViewService {
 	return &EditableViewService{
-		entryRepo:   entryRepo,
-		bujoService: bujoService,
+		entryRepo: entryRepo,
 	}
 }
 
@@ -37,11 +35,8 @@ type ValidationResult struct {
 }
 
 func (s *EditableViewService) ValidateDocument(doc string) ValidationResult {
-	dateParser := func(dateStr string) (time.Time, error) {
-		return time.Parse("2006-01-02", dateStr)
-	}
-	parser := domain.NewEditableDocumentParser(dateParser)
-	parsed, err := parser.Parse(doc, nil)
+	parser := domain.NewEditableDocumentParser()
+	parsed, err := parser.Parse(doc)
 	if err != nil {
 		return ValidationResult{
 			IsValid: false,
@@ -101,193 +96,62 @@ func (s *EditableViewService) ValidateDocument(doc string) ValidationResult {
 
 type ApplyChangesResult struct {
 	Inserted int
-	Updated  int
 	Deleted  int
-	Migrated int
 }
 
-func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date time.Time, pendingDeletes []domain.EntityID) (*ApplyChangesResult, error) {
-	original, err := s.entryRepo.GetByDate(ctx, date)
-	if err != nil {
-		return nil, err
-	}
-
-	dateParser := func(dateStr string) (time.Time, error) {
-		return time.Parse("2006-01-02", dateStr)
-	}
-	parser := domain.NewEditableDocumentParser(dateParser)
-	parsed, err := parser.Parse(doc, original)
-	if err != nil {
-		return nil, err
-	}
-
-	parsed.PendingDeletes = pendingDeletes
-
-	validation := s.validateParsed(parsed)
+func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date time.Time) (*ApplyChangesResult, error) {
+	validation := s.ValidateDocument(doc)
 	if !validation.IsValid {
 		return nil, fmt.Errorf("validation failed: %s", validation.Errors[0].Message)
 	}
 
-	changeset := domain.ComputeDiff(original, parsed)
+	existing, err := s.entryRepo.GetByDate(ctx, date)
+	if err != nil {
+		return nil, err
+	}
+	deletedCount := len(existing)
 
-	if len(changeset.Errors) > 0 {
-		return nil, fmt.Errorf("diff error: %s", changeset.Errors[0].Message)
+	err = s.entryRepo.DeleteByDate(ctx, date)
+	if err != nil {
+		return nil, err
 	}
 
-	result := &ApplyChangesResult{}
+	result := &ApplyChangesResult{Deleted: deletedCount}
 
-	entityIDToRowID := make(map[domain.EntityID]int64)
-
-	for _, op := range changeset.Operations {
-		switch op.Type {
-		case domain.DiffOpInsert:
-			op.Entry.ScheduledDate = &date
-			op.Entry.CreatedAt = time.Now()
-			if op.Entry.ParentEntityID != nil {
-				if rowID, ok := entityIDToRowID[*op.Entry.ParentEntityID]; ok {
-					op.Entry.ParentID = &rowID
-				} else {
-					parent, err := s.entryRepo.GetByEntityID(ctx, *op.Entry.ParentEntityID)
-					if err != nil {
-						return nil, err
-					}
-					if parent != nil {
-						op.Entry.ParentID = &parent.ID
-					}
-				}
-			}
-			rowID, err := s.entryRepo.Insert(ctx, op.Entry)
-			if err != nil {
-				return nil, err
-			}
-			if !op.Entry.EntityID.IsEmpty() {
-				entityIDToRowID[op.Entry.EntityID] = rowID
-			}
-			result.Inserted++
-
-		case domain.DiffOpUpdate:
-			existing, err := s.entryRepo.GetByEntityID(ctx, *op.EntityID)
-			if err != nil {
-				return nil, err
-			}
-			if existing == nil {
-				continue
-			}
-			existing.Content = op.Entry.Content
-			existing.Type = op.Entry.Type
-			existing.Priority = op.Entry.Priority
-			err = s.entryRepo.Update(ctx, *existing)
-			if err != nil {
-				return nil, err
-			}
-			result.Updated++
-
-		case domain.DiffOpDelete:
-			existing, err := s.entryRepo.GetByEntityID(ctx, *op.EntityID)
-			if err != nil {
-				return nil, err
-			}
-			if existing == nil {
-				continue
-			}
-			err = s.entryRepo.Delete(ctx, existing.ID)
-			if err != nil {
-				return nil, err
-			}
-			result.Deleted++
-
-		case domain.DiffOpMigrate:
-			existing, err := s.entryRepo.GetByEntityID(ctx, *op.EntityID)
-			if err != nil {
-				return nil, err
-			}
-			if existing == nil {
-				continue
-			}
-			_, err = s.bujoService.MigrateEntry(ctx, existing.ID, *op.MigrateDate)
-			if err != nil {
-				return nil, err
-			}
-			result.Migrated++
-
-		case domain.DiffOpReparent:
-			existing, err := s.entryRepo.GetByEntityID(ctx, *op.EntityID)
-			if err != nil {
-				return nil, err
-			}
-			if existing == nil {
-				continue
-			}
-			if op.NewParentID != nil {
-				parent, err := s.entryRepo.GetByEntityID(ctx, *op.NewParentID)
-				if err != nil {
-					return nil, err
-				}
-				if parent != nil {
-					existing.ParentID = &parent.ID
-					existing.Depth = parent.Depth + 1
-				}
-			} else {
-				existing.ParentID = nil
-				existing.Depth = 0
-			}
-			err = s.entryRepo.Update(ctx, *existing)
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return result, nil
-}
-
-func (s *EditableViewService) validateParsed(parsed *domain.EditableDocument) ValidationResult {
-	errors := make([]domain.ParseError, 0)
-
-	var parentStack []int
-	for _, line := range parsed.Lines {
-		if strings.TrimSpace(line.Raw) == "" {
+	var depthStack []int64
+	for _, line := range validation.ParsedLines {
+		if !line.IsValid || line.IsHeader {
 			continue
 		}
 
-		if !line.IsValid && !line.IsHeader {
-			errors = append(errors, domain.ParseError{
-				LineNumber: line.LineNumber,
-				Message:    line.ErrorMessage,
-			})
+		entry := domain.Entry{
+			Type:          line.Symbol,
+			Content:       line.Content,
+			Priority:      line.Priority,
+			Depth:         line.Depth,
+			ScheduledDate: &date,
+			CreatedAt:     time.Now(),
 		}
 
-		if line.IsValid && !line.IsHeader {
-			if line.Depth > 0 && len(parentStack) == 0 {
-				errors = append(errors, domain.ParseError{
-					LineNumber: line.LineNumber,
-					Message:    "Orphan child: no parent at depth 0",
-				})
-			}
-
-			for len(parentStack) > line.Depth {
-				parentStack = parentStack[:len(parentStack)-1]
-			}
-
-			if line.Depth >= len(parentStack) {
-				parentStack = append(parentStack, line.LineNumber)
-			} else {
-				parentStack[line.Depth] = line.LineNumber
-				parentStack = parentStack[:line.Depth+1]
-			}
+		if line.Depth > 0 && len(depthStack) > line.Depth-1 {
+			parentID := depthStack[line.Depth-1]
+			entry.ParentID = &parentID
 		}
-	}
 
-	validLines := make([]domain.ParsedLine, 0)
-	for _, line := range parsed.Lines {
-		if strings.TrimSpace(line.Raw) != "" {
-			validLines = append(validLines, line)
+		rowID, err := s.entryRepo.Insert(ctx, entry)
+		if err != nil {
+			return nil, err
 		}
+
+		if line.Depth >= len(depthStack) {
+			depthStack = append(depthStack, rowID)
+		} else {
+			depthStack[line.Depth] = rowID
+			depthStack = depthStack[:line.Depth+1]
+		}
+
+		result.Inserted++
 	}
 
-	return ValidationResult{
-		IsValid:     len(errors) == 0,
-		Errors:      errors,
-		ParsedLines: validLines,
-	}
+	return result, nil
 }

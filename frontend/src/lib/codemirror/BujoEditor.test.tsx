@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BujoEditor } from './BujoEditor'
-import type { DocumentError } from '../editableParser'
+import type { DocumentError } from './errorMarkers'
 
 describe('BujoEditor', () => {
   it('renders with initial value', () => {
@@ -163,93 +163,4 @@ describe('BujoEditor', () => {
     })
   })
 
-  describe('migration date preview', () => {
-    it('calls resolveDate when document contains migration syntax', async () => {
-      const resolveDate = vi.fn().mockResolvedValue({
-        iso: '2026-01-29',
-        display: 'Wed, Jan 29',
-      })
-
-      render(
-        <BujoEditor
-          value=">[tomorrow] Call dentist"
-          onChange={() => {}}
-          resolveDate={resolveDate}
-        />
-      )
-
-      await waitFor(() => {
-        expect(resolveDate).toHaveBeenCalledWith('tomorrow')
-      })
-    })
-
-    it('calls resolveDate for each unique date string', async () => {
-      const resolveDate = vi.fn().mockImplementation((dateStr: string) => {
-        if (dateStr === 'tomorrow') {
-          return Promise.resolve({ iso: '2026-01-29', display: 'Wed, Jan 29' })
-        }
-        return Promise.resolve({ iso: '2026-02-04', display: 'Wed, Feb 4' })
-      })
-
-      render(
-        <BujoEditor
-          value=">[tomorrow] Task 1\n>[next week] Task 2"
-          onChange={() => {}}
-          resolveDate={resolveDate}
-        />
-      )
-
-      await waitFor(() => {
-        expect(resolveDate).toHaveBeenCalledWith('tomorrow')
-        expect(resolveDate).toHaveBeenCalledWith('next week')
-      })
-    })
-
-    it('handles resolveDate errors gracefully', async () => {
-      const resolveDate = vi.fn().mockRejectedValue(new Error('Invalid date'))
-
-      render(
-        <BujoEditor
-          value=">[invalid-date] Task"
-          onChange={() => {}}
-          resolveDate={resolveDate}
-        />
-      )
-
-      await waitFor(() => {
-        expect(resolveDate).toHaveBeenCalledWith('invalid-date')
-      })
-    })
-
-    it('does not call resolveDate when prop is not provided', () => {
-      render(
-        <BujoEditor
-          value=">[tomorrow] Call dentist"
-          onChange={() => {}}
-        />
-      )
-
-      expect(screen.getByRole('textbox')).toBeInTheDocument()
-    })
-
-    it('only calls resolveDate once per unique date string', async () => {
-      const resolveDate = vi.fn().mockResolvedValue({
-        iso: '2026-01-29',
-        display: 'Wed, Jan 29',
-      })
-
-      render(
-        <BujoEditor
-          value=">[tomorrow] Task 1\n>[tomorrow] Task 2"
-          onChange={() => {}}
-          resolveDate={resolveDate}
-        />
-      )
-
-      await waitFor(() => {
-        expect(resolveDate).toHaveBeenCalledTimes(1)
-        expect(resolveDate).toHaveBeenCalledWith('tomorrow')
-      })
-    })
-  })
 })

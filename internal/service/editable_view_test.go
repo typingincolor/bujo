@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func setupEditableViewService(t *testing.T) (*EditableViewService, *BujoService,
 	parser := domain.NewTreeParser()
 
 	bujoService := NewBujoService(entryRepo, dayCtxRepo, parser)
-	editableViewService := NewEditableViewService(entryRepo, bujoService)
+	editableViewService := NewEditableViewService(entryRepo)
 	return editableViewService, bujoService, entryRepo
 }
 
@@ -146,148 +147,50 @@ func TestValidateDocument_EmptyDocument(t *testing.T) {
 	require.Empty(t, result.ParsedLines)
 }
 
-func TestApplyChanges_InsertNewEntry(t *testing.T) {
-	svc, bujoSvc, _ := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	_, err := bujoSvc.LogEntries(ctx, ". Existing task", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	newDoc := ". Existing task\n. New task"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
-
-	require.NoError(t, err)
-	require.Equal(t, 1, result.Inserted)
-	require.Equal(t, 0, result.Updated)
-	require.Equal(t, 0, result.Deleted)
-
-	doc, err := svc.GetEditableDocument(ctx, date)
-	require.NoError(t, err)
-	require.Contains(t, doc, ". Existing task")
-	require.Contains(t, doc, ". New task")
-}
-
-func TestApplyChanges_UpdateEntry(t *testing.T) {
-	svc, bujoSvc, _ := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	// Log entry - content-based matching requires content to stay the same
-	_, err := bujoSvc.LogEntries(ctx, ". My task", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	// Update priority (keeps content same for matching, changes priority)
-	newDoc := ". !!! My task"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
-
-	require.NoError(t, err)
-	require.Equal(t, 0, result.Inserted)
-	require.Equal(t, 1, result.Updated)
-	require.Equal(t, 0, result.Deleted)
-
-	doc, err := svc.GetEditableDocument(ctx, date)
-	require.NoError(t, err)
-	require.Contains(t, doc, ". !!! My task")
-}
-
-func TestApplyChanges_DeleteEntry(t *testing.T) {
-	svc, bujoSvc, entryRepo := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	ids, err := bujoSvc.LogEntries(ctx, ". Task to keep\n. Task to delete", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	entry, err := entryRepo.GetByID(ctx, ids[1])
-	require.NoError(t, err)
-	deleteEntityID := entry.EntityID
-
-	newDoc := ". Task to keep"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, []domain.EntityID{deleteEntityID})
-
-	require.NoError(t, err)
-	require.Equal(t, 0, result.Inserted)
-	require.Equal(t, 0, result.Updated)
-	require.Equal(t, 1, result.Deleted)
-
-	doc, err := svc.GetEditableDocument(ctx, date)
-	require.NoError(t, err)
-	require.Contains(t, doc, ". Task to keep")
-	require.NotContains(t, doc, ". Task to delete")
-}
-
-func TestApplyChanges_ChangeEntryType(t *testing.T) {
-	svc, bujoSvc, _ := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	_, err := bujoSvc.LogEntries(ctx, ". Incomplete task", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	newDoc := "x Incomplete task"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
-
-	require.NoError(t, err)
-	require.Equal(t, 1, result.Updated)
-
-	doc, err := svc.GetEditableDocument(ctx, date)
-	require.NoError(t, err)
-	require.Contains(t, doc, "x Incomplete task")
-}
-
-func TestApplyChanges_MigrateEntry(t *testing.T) {
-	svc, bujoSvc, _ := setupEditableViewService(t)
-	ctx := context.Background()
-	sourceDate := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-	targetDate := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
-
-	_, err := bujoSvc.LogEntries(ctx, ". Task to migrate", LogEntriesOptions{Date: sourceDate})
-	require.NoError(t, err)
-
-	newDoc := ">[2026-01-29] . Task to migrate"
-	result, err := svc.ApplyChanges(ctx, newDoc, sourceDate, nil)
-
-	require.NoError(t, err)
-	require.Equal(t, 1, result.Migrated)
-
-	sourceDoc, err := svc.GetEditableDocument(ctx, sourceDate)
-	require.NoError(t, err)
-	require.Contains(t, sourceDoc, "> Task to migrate")
-
-	targetDoc, err := svc.GetEditableDocument(ctx, targetDate)
-	require.NoError(t, err)
-	require.Contains(t, targetDoc, ". Task to migrate")
-}
-
-func TestApplyChanges_MultipleOperations(t *testing.T) {
-	svc, bujoSvc, entryRepo := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	ids, err := bujoSvc.LogEntries(ctx, ". Keep unchanged\n. Will update priority\n. Will delete", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	deleteEntry, err := entryRepo.GetByID(ctx, ids[2])
-	require.NoError(t, err)
-
-	// Keep unchanged stays same, update priority on second (keeps content for matching), add new note
-	newDoc := ". Keep unchanged\n. !!! Will update priority\n- New note"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, []domain.EntityID{deleteEntry.EntityID})
-
-	require.NoError(t, err)
-	require.Equal(t, 1, result.Inserted)
-	require.Equal(t, 1, result.Updated)
-	require.Equal(t, 1, result.Deleted)
-}
-
-func TestApplyChanges_InsertChildEntriesWithParentID(t *testing.T) {
+func TestApplyChanges_InsertEntries(t *testing.T) {
 	svc, _, entryRepo := setupEditableViewService(t)
 	ctx := context.Background()
 	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
 
-	newDoc := ". Parent task\n  - Child note\n    - Grandchild note"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
+	result, err := svc.ApplyChanges(ctx, ". Task one\n- Note two", date)
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.Inserted)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.Equal(t, "Task one", entries[0].Content)
+	require.Equal(t, "Note two", entries[1].Content)
+}
+
+func TestApplyChanges_ReplacesExistingEntries(t *testing.T) {
+	svc, bujoSvc, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := bujoSvc.LogEntries(ctx, ". Old task\n- Old note", LogEntriesOptions{Date: date})
+	require.NoError(t, err)
+
+	result, err := svc.ApplyChanges(ctx, ". New task\no New event", date)
+
+	require.NoError(t, err)
+	require.Equal(t, 2, result.Inserted)
+	require.Equal(t, 2, result.Deleted)
+
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	require.Equal(t, "New task", entries[0].Content)
+	require.Equal(t, "New event", entries[1].Content)
+}
+
+func TestApplyChanges_ChildEntriesGetParentID(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.ApplyChanges(ctx, ". Parent task\n  - Child note\n    - Grandchild note", date)
 
 	require.NoError(t, err)
 	require.Equal(t, 3, result.Inserted)
@@ -304,103 +207,136 @@ func TestApplyChanges_InsertChildEntriesWithParentID(t *testing.T) {
 	require.Equal(t, "Child note", child.Content)
 	require.Equal(t, "Grandchild note", grandchild.Content)
 
-	require.Nil(t, parent.ParentID, "parent should have no parent_id")
-	require.NotNil(t, child.ParentID, "child should have parent_id set")
-	require.Equal(t, parent.ID, *child.ParentID, "child parent_id should point to parent row")
-	require.NotNil(t, grandchild.ParentID, "grandchild should have parent_id set")
-	require.Equal(t, child.ID, *grandchild.ParentID, "grandchild parent_id should point to child row")
+	require.Nil(t, parent.ParentID)
+	require.NotNil(t, child.ParentID)
+	require.Equal(t, parent.ID, *child.ParentID)
+	require.NotNil(t, grandchild.ParentID)
+	require.Equal(t, child.ID, *grandchild.ParentID)
 }
 
-func TestApplyChanges_InsertChildUnderExistingParent(t *testing.T) {
-	svc, bujoSvc, entryRepo := setupEditableViewService(t)
-	ctx := context.Background()
-	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-
-	_, err := bujoSvc.LogEntries(ctx, ". Existing parent", LogEntriesOptions{Date: date})
-	require.NoError(t, err)
-
-	newDoc := ". Existing parent\n  - New child"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
-
-	require.NoError(t, err)
-	require.Equal(t, 1, result.Inserted)
-
-	entries, err := entryRepo.GetByDate(ctx, date)
-	require.NoError(t, err)
-	require.Len(t, entries, 2)
-
-	parent := entries[0]
-	child := entries[1]
-
-	require.Equal(t, "Existing parent", parent.Content)
-	require.Equal(t, "New child", child.Content)
-	require.NotNil(t, child.ParentID, "child should have parent_id set")
-	require.Equal(t, parent.ID, *child.ParentID, "child parent_id should point to existing parent row")
-}
-
-func TestApplyChanges_InsertMultipleSiblingsUnderNewParent(t *testing.T) {
+func TestApplyChanges_SiblingsShareParent(t *testing.T) {
 	svc, _, entryRepo := setupEditableViewService(t)
 	ctx := context.Background()
 	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
 
-	newDoc := ". Parent task\n  - Sibling one\n  - Sibling two"
-	result, err := svc.ApplyChanges(ctx, newDoc, date, nil)
-
+	_, err := svc.ApplyChanges(ctx, ". Parent\n  - Sibling one\n  - Sibling two", date)
 	require.NoError(t, err)
-	require.Equal(t, 3, result.Inserted)
 
 	entries, err := entryRepo.GetByDate(ctx, date)
 	require.NoError(t, err)
 	require.Len(t, entries, 3)
 
-	parent := entries[0]
-	sibling1 := entries[1]
-	sibling2 := entries[2]
-
-	require.NotNil(t, sibling1.ParentID, "sibling one should have parent_id")
-	require.NotNil(t, sibling2.ParentID, "sibling two should have parent_id")
-	require.Equal(t, parent.ID, *sibling1.ParentID, "sibling one parent_id should point to parent")
-	require.Equal(t, parent.ID, *sibling2.ParentID, "sibling two parent_id should point to same parent")
+	require.NotNil(t, entries[1].ParentID)
+	require.NotNil(t, entries[2].ParentID)
+	require.Equal(t, entries[0].ID, *entries[1].ParentID)
+	require.Equal(t, entries[0].ID, *entries[2].ParentID)
 }
 
-func TestApplyChanges_ReparentSetsCorrectParentID(t *testing.T) {
+func TestApplyChanges_PreservesDocumentOrder(t *testing.T) {
+	svc, _, _ := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, ". First\n- Second\no Third", date)
+	require.NoError(t, err)
+
+	doc, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+	lines := splitNonEmpty(doc)
+	require.Len(t, lines, 3)
+	require.Contains(t, lines[0], "First")
+	require.Contains(t, lines[1], "Second")
+	require.Contains(t, lines[2], "Third")
+}
+
+func TestApplyChanges_ReorderPreserved(t *testing.T) {
+	svc, _, _ := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, ". First\n- Second\no Third", date)
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChanges(ctx, "o Third\n. First\n- Second", date)
+	require.NoError(t, err)
+
+	doc, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+	lines := splitNonEmpty(doc)
+	require.Len(t, lines, 3)
+	require.Contains(t, lines[0], "Third")
+	require.Contains(t, lines[1], "First")
+	require.Contains(t, lines[2], "Second")
+}
+
+func TestApplyChanges_ValidationErrors(t *testing.T) {
+	svc, _, _ := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, "invalid line", date)
+	require.Error(t, err)
+}
+
+func TestApplyChanges_EmptyDocument(t *testing.T) {
 	svc, bujoSvc, entryRepo := setupEditableViewService(t)
 	ctx := context.Background()
 	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
 
-	_, err := bujoSvc.LogEntries(ctx, ". Parent A\n. Standalone entry", LogEntriesOptions{Date: date})
+	_, err := bujoSvc.LogEntries(ctx, ". Task to remove", LogEntriesOptions{Date: date})
 	require.NoError(t, err)
 
-	entriesBefore, err := entryRepo.GetByDate(ctx, date)
+	result, err := svc.ApplyChanges(ctx, "", date)
 	require.NoError(t, err)
-	require.Len(t, entriesBefore, 2)
-	require.Nil(t, entriesBefore[1].ParentID, "standalone should have no parent initially")
+	require.Equal(t, 0, result.Inserted)
+	require.Equal(t, 1, result.Deleted)
 
-	newDoc := ". Parent A\n  . Standalone entry"
-	_, err = svc.ApplyChanges(ctx, newDoc, date, nil)
+	entries, err := entryRepo.GetByDate(ctx, date)
 	require.NoError(t, err)
-
-	entriesAfter, err := entryRepo.GetByDate(ctx, date)
-	require.NoError(t, err)
-	require.Len(t, entriesAfter, 2)
-
-	parentA := entriesAfter[0]
-	reparented := entriesAfter[1]
-
-	require.NotNil(t, reparented.ParentID, "reparented entry should have parent_id set")
-	require.Equal(t, parentA.ID, *reparented.ParentID, "reparented entry should point to Parent A")
+	require.Empty(t, entries)
 }
 
-func TestApplyChanges_ValidationErrors(t *testing.T) {
-	svc, bujoSvc, _ := setupEditableViewService(t)
+func TestApplyChanges_WithPriority(t *testing.T) {
+	svc, _, entryRepo := setupEditableViewService(t)
 	ctx := context.Background()
 	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
 
-	_, err := bujoSvc.LogEntries(ctx, ". Existing task", LogEntriesOptions{Date: date})
+	_, err := svc.ApplyChanges(ctx, ". !!! High priority task", date)
 	require.NoError(t, err)
 
-	newDoc := "invalid line without symbol"
-	_, err = svc.ApplyChanges(ctx, newDoc, date, nil)
+	entries, err := entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	require.Equal(t, domain.PriorityHigh, entries[0].Priority)
+	require.Equal(t, "High priority task", entries[0].Content)
+}
 
-	require.Error(t, err)
+func TestApplyChanges_RoundTrip(t *testing.T) {
+	svc, _, _ := setupEditableViewService(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	original := ". Parent task\n  - Child one\n  - Child two\no Standalone event"
+	_, err := svc.ApplyChanges(ctx, original, date)
+	require.NoError(t, err)
+
+	doc, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChanges(ctx, doc, date)
+	require.NoError(t, err)
+
+	doc2, err := svc.GetEditableDocument(ctx, date)
+	require.NoError(t, err)
+	require.Equal(t, doc, doc2)
+}
+
+func splitNonEmpty(s string) []string {
+	var result []string
+	for _, line := range strings.Split(s, "\n") {
+		if strings.TrimSpace(line) != "" {
+			result = append(result, line)
+		}
+	}
+	return result
 }

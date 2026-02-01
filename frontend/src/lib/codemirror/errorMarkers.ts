@@ -1,6 +1,9 @@
 import { StateField, StateEffect } from '@codemirror/state'
 import { ViewPlugin, Decoration, DecorationSet, EditorView } from '@codemirror/view'
-import type { DocumentError } from '../editableParser'
+export interface DocumentError {
+  lineNumber: number
+  message: string
+}
 
 export interface Diagnostic {
   from: number

@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
 import { useEditableDocument } from '@/hooks/useEditableDocument'
-import { DeletionReviewDialog } from './DeletionReviewDialog'
 import { BujoEditor } from '@/lib/codemirror/BujoEditor'
 
 interface EditableJournalViewProps {
@@ -15,32 +14,23 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
     error,
     isDirty,
     validationErrors,
-    deletedEntries,
-    restoreDeletion,
     save,
     discardChanges,
     lastSaved,
     hasDraft,
     restoreDraft,
     discardDraft,
-    debugLog,
   } = useEditableDocument(date)
 
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [showDeletionDialog, setShowDeletionDialog] = useState(false)
-  const [showDebug, setShowDebug] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = useCallback(async () => {
-    if (deletedEntries.length > 0) {
-      setShowDeletionDialog(true)
-      return
-    }
     const result = await save()
     if (!result.success && result.error) {
       setSaveError(result.error)
     }
-  }, [deletedEntries.length, save])
+  }, [save])
 
   const handleImport = useCallback(() => {
     fileInputRef.current?.click()
@@ -64,27 +54,6 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
       window.document.activeElement.blur()
     }
   }, [])
-
-  const handleConfirmDeletions = async () => {
-    setShowDeletionDialog(false)
-    const result = await save()
-    if (!result.success && result.error) {
-      setSaveError(result.error)
-    }
-  }
-
-  const handleCancelDeletions = () => {
-    setShowDeletionDialog(false)
-  }
-
-  const handleRestoreDeletion = (entityId: string) => {
-    restoreDeletion(entityId)
-  }
-
-  const handleDiscardAll = () => {
-    setShowDeletionDialog(false)
-    discardChanges()
-  }
 
   const handleDeleteLine = (lineNumber: number) => {
     const lines = document.split('\n')
@@ -186,21 +155,6 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         </div>
       )}
 
-      {deletedEntries.length > 0 && (
-        <div className="mt-3 text-sm text-muted-foreground">
-          {deletedEntries.length} deletions pending
-        </div>
-      )}
-
-      <DeletionReviewDialog
-        isOpen={showDeletionDialog}
-        deletedEntries={deletedEntries}
-        onConfirm={handleConfirmDeletions}
-        onCancel={handleCancelDeletions}
-        onRestore={handleRestoreDeletion}
-        onDiscardAll={handleDiscardAll}
-      />
-
       {saveError && (
         <div className="mt-3 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
           {saveError}
@@ -226,25 +180,6 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         </div>
       </div>
 
-      <div className="mt-2">
-        <button
-          onClick={() => setShowDebug((v) => !v)}
-          className="text-xs text-muted-foreground/50 hover:text-muted-foreground"
-        >
-          {showDebug ? 'Hide' : 'Debug'}
-        </button>
-        {showDebug && debugLog.length > 0 && (
-          <div className="mt-1 p-2 bg-black/80 text-green-400 rounded text-xs font-mono max-h-40 overflow-y-auto">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-green-600">Draft Debug Log</span>
-              <span className="text-green-600">hasDraft={String(hasDraft)} isDirty={String(isDirty)}</span>
-            </div>
-            {debugLog.map((line, i) => (
-              <div key={i}>{line}</div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

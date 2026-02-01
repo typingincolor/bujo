@@ -3,13 +3,11 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useEditableDocument } from './useEditableDocument'
 
 const mockGetEditableDocument = vi.fn()
-const mockGetEditableDocumentWithEntries = vi.fn()
 const mockValidateEditableDocument = vi.fn()
 const mockApplyEditableDocument = vi.fn()
 
 vi.mock('../wailsjs/go/wails/App', () => ({
   GetEditableDocument: (...args: unknown[]) => mockGetEditableDocument(...args),
-  GetEditableDocumentWithEntries: (...args: unknown[]) => mockGetEditableDocumentWithEntries(...args),
   ValidateEditableDocument: (...args: unknown[]) => mockValidateEditableDocument(...args),
   ApplyEditableDocument: (...args: unknown[]) => mockApplyEditableDocument(...args),
 }))
@@ -37,22 +35,13 @@ describe('useEditableDocument', () => {
     vi.clearAllMocks()
     localStorageMock.clear()
     mockGetEditableDocument.mockResolvedValue('. Buy groceries\n- Meeting notes')
-    mockGetEditableDocumentWithEntries.mockResolvedValue({
-      document: '. Buy groceries\n- Meeting notes',
-      entries: [
-        { entityId: 'entity-grocery', content: 'Buy groceries' },
-        { entityId: 'entity-meeting', content: 'Meeting notes' },
-      ],
-    })
     mockValidateEditableDocument.mockResolvedValue({
       isValid: true,
       errors: [],
     })
     mockApplyEditableDocument.mockResolvedValue({
       inserted: 0,
-      updated: 1,
       deleted: 0,
-      migrated: 0,
     })
   })
 
@@ -67,11 +56,11 @@ describe('useEditableDocument', () => {
       })
 
       expect(result.current.document).toBe('. Buy groceries\n- Meeting notes')
-      expect(mockGetEditableDocumentWithEntries).toHaveBeenCalled()
+      expect(mockGetEditableDocument).toHaveBeenCalled()
     })
 
     it('sets error state on load failure', async () => {
-      mockGetEditableDocumentWithEntries.mockRejectedValue(new Error('Network error'))
+      mockGetEditableDocument.mockRejectedValue(new Error('Network error'))
 
       const { result } = renderHook(() => useEditableDocument(testDate))
 
@@ -130,76 +119,6 @@ describe('useEditableDocument', () => {
   })
 
   describe('validation', () => {
-    it('does not validate when any entry has fewer than 5 characters of content', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      vi.useFakeTimers()
-
-      // Entry content "Hi" is only 2 characters (symbol doesn't count)
-      act(() => {
-        result.current.setDocument('. Hi')
-      })
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500)
-      })
-
-      expect(mockValidateEditableDocument).not.toHaveBeenCalled()
-
-      vi.useRealTimers()
-    })
-
-    it('validates when all entries have 5 or more characters of content', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      vi.useFakeTimers()
-
-      // Entry content "Hello" is 5 characters
-      act(() => {
-        result.current.setDocument('. Hello')
-      })
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500)
-      })
-
-      expect(mockValidateEditableDocument).toHaveBeenCalledWith('. Hello')
-
-      vi.useRealTimers()
-    })
-
-    it('does not validate when one entry is complete but another is short', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      vi.useFakeTimers()
-
-      // First entry is complete, second entry "Hi" is only 2 characters
-      act(() => {
-        result.current.setDocument('. Complete task\n. Hi')
-      })
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(500)
-      })
-
-      expect(mockValidateEditableDocument).not.toHaveBeenCalled()
-
-      vi.useRealTimers()
-    })
-
-
     it('validates document after change with debounce', async () => {
       const { result } = renderHook(() => useEditableDocument(testDate))
 
@@ -256,230 +175,8 @@ describe('useEditableDocument', () => {
     })
   })
 
-  describe('deletion tracking', () => {
-    it('starts with no deletions', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      expect(result.current.deletedEntries).toHaveLength(0)
-    })
-
-    it('auto-detects deletion when line is removed from document', async () => {
-      // Setup: return document with entries mapping
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '. Buy groceries\n- Meeting notes',
-        entries: [
-          { entityId: 'entity-grocery', content: 'Buy groceries' },
-          { entityId: 'entity-meeting', content: 'Meeting notes' },
-        ],
-      })
-
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      // User removes the first line
-      act(() => {
-        result.current.setDocument('- Meeting notes')
-      })
-
-      // Deletion should be auto-tracked
-      expect(result.current.deletedEntries).toHaveLength(1)
-      expect(result.current.deletedEntries[0].entityId).toBe('entity-grocery')
-      expect(result.current.deletedEntries[0].content).toBe('. Buy groceries')
-    })
-
-    it('tracks deleted line with entity ID', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      act(() => {
-        result.current.trackDeletion('entity-123', '. Deleted task')
-      })
-
-      expect(result.current.deletedEntries).toHaveLength(1)
-      expect(result.current.deletedEntries[0].entityId).toBe('entity-123')
-      expect(result.current.deletedEntries[0].content).toBe('. Deleted task')
-    })
-
-    it('can restore deleted entry', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      act(() => {
-        result.current.trackDeletion('entity-123', '. Deleted task')
-      })
-
-      expect(result.current.deletedEntries).toHaveLength(1)
-
-      act(() => {
-        result.current.restoreDeletion('entity-123')
-      })
-
-      expect(result.current.deletedEntries).toHaveLength(0)
-    })
-
-    it('clears deletions after save', async () => {
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      act(() => {
-        result.current.trackDeletion('entity-123', '. Deleted task')
-      })
-
-      await act(async () => {
-        await result.current.save()
-      })
-
-      expect(result.current.deletedEntries).toHaveLength(0)
-    })
-
-    it('detects all entries as deleted when document is cleared to empty in one step', async () => {
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '. Buy groceries\n- Meeting notes',
-        entries: [
-          { entityId: 'entity-grocery', content: 'Buy groceries' },
-          { entityId: 'entity-meeting', content: 'Meeting notes' },
-        ],
-      })
-
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      // Verify initial state has entries
-      expect(result.current.document).toBe('. Buy groceries\n- Meeting notes')
-      expect(result.current.deletedEntries).toHaveLength(0)
-
-      // Simulate clearing document in one step (e.g., Cmd+A, Delete)
-      act(() => {
-        result.current.setDocument('')
-      })
-
-      // Verify document is now empty
-      expect(result.current.document).toBe('')
-
-      // Both entries should be marked for deletion
-      expect(result.current.deletedEntries).toHaveLength(2)
-      expect(result.current.deletedEntries.map(e => e.entityId)).toContain('entity-grocery')
-      expect(result.current.deletedEntries.map(e => e.entityId)).toContain('entity-meeting')
-    })
-
-    it('un-tracks deletion when entity ID reappears after paste', async () => {
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '[entity-event] o Event 2x\n[entity-note] - Note 5',
-        entries: [
-          { entityId: 'entity-event', content: 'Event 2x' },
-          { entityId: 'entity-note', content: 'Note 5' },
-        ],
-      })
-
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      // Step 1: Cut — removes event line, triggers deletion detection
-      act(() => {
-        result.current.setDocument('[entity-note] - Note 5')
-      })
-
-      // After cut, entity-event is detected as deleted
-      expect(result.current.deletedEntries).toHaveLength(1)
-      expect(result.current.deletedEntries[0].entityId).toBe('entity-event')
-
-      // Step 2: Paste — entity ID reappears beneath note (with indentation)
-      act(() => {
-        result.current.setDocument('[entity-note] - Note 5\n  [entity-event] o Event 2x')
-      })
-
-      // Entity ID is back in the document — should be un-tracked
-      expect(result.current.deletedEntries).toHaveLength(0)
-    })
-
-    it('still detects deletion when entity ID is truly removed from document', async () => {
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '[entity-event] o Event 2x\n[entity-note] - Note 5',
-        entries: [
-          { entityId: 'entity-event', content: 'Event 2x' },
-          { entityId: 'entity-note', content: 'Note 5' },
-        ],
-      })
-
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      // User deletes the event line entirely (no paste back)
-      act(() => {
-        result.current.setDocument('[entity-note] - Note 5')
-      })
-
-      // Entity ID is gone — should be detected as deleted
-      expect(result.current.deletedEntries).toHaveLength(1)
-      expect(result.current.deletedEntries[0].entityId).toBe('entity-event')
-    })
-
-    it('sends detected deletions to backend when document cleared in one step', async () => {
-      // When the document is cleared in one step, the frontend detects the deletions
-      // The backend also auto-detects missing entries as a safety net
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '. Task\n- Note',
-        entries: [
-          { entityId: 'entity-task', content: 'Task' },
-          { entityId: 'entity-note', content: 'Note' },
-        ],
-      })
-
-      const { result } = renderHook(() => useEditableDocument(testDate))
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      // Clear document in one step - frontend detects both entries as deleted
-      act(() => result.current.setDocument(''))
-
-      // Save the empty document with detected deletions
-      await act(async () => {
-        await result.current.save()
-      })
-
-      // Frontend detected the deletions and sends them to backend
-      expect(mockApplyEditableDocument).toHaveBeenCalledWith(
-        '',
-        expect.any(String),
-        expect.arrayContaining(['entity-task', 'entity-note'])
-      )
-    })
-  })
-
   describe('saving', () => {
-    it('calls API with document and deletions', async () => {
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '. Original task',
-        entries: [],
-      })
-
+    it('calls API with document and date', async () => {
       const { result } = renderHook(() => useEditableDocument(testDate))
 
       await waitFor(() => {
@@ -488,7 +185,6 @@ describe('useEditableDocument', () => {
 
       act(() => {
         result.current.setDocument('. Updated task')
-        result.current.trackDeletion('entity-456', '. Old task')
       })
 
       await act(async () => {
@@ -497,8 +193,7 @@ describe('useEditableDocument', () => {
 
       expect(mockApplyEditableDocument).toHaveBeenCalledWith(
         '. Updated task',
-        expect.any(String),
-        ['entity-456']
+        expect.any(String)
       )
     })
 
@@ -529,9 +224,7 @@ describe('useEditableDocument', () => {
     it('returns save result with counts', async () => {
       mockApplyEditableDocument.mockResolvedValue({
         inserted: 2,
-        updated: 1,
         deleted: 1,
-        migrated: 0,
       })
 
       const { result } = renderHook(() => useEditableDocument(testDate))
@@ -580,7 +273,6 @@ describe('useEditableDocument', () => {
 
       act(() => {
         result.current.setDocument('. Modified')
-        result.current.trackDeletion('entity-1', '. Old')
       })
 
       expect(result.current.isDirty).toBe(true)
@@ -591,7 +283,6 @@ describe('useEditableDocument', () => {
 
       expect(result.current.document).toBe('. Buy groceries\n- Meeting notes')
       expect(result.current.isDirty).toBe(false)
-      expect(result.current.deletedEntries).toHaveLength(0)
     })
   })
 
@@ -623,7 +314,6 @@ describe('useEditableDocument', () => {
     it('detects existing draft on load', async () => {
       mockLocalStorage['bujo.draft.2026-01-27'] = JSON.stringify({
         document: '. Recovered content',
-        deletedIds: [],
         timestamp: Date.now(),
       })
 
@@ -639,7 +329,6 @@ describe('useEditableDocument', () => {
     it('restores draft when requested', async () => {
       mockLocalStorage['bujo.draft.2026-01-27'] = JSON.stringify({
         document: '. Recovered content',
-        deletedIds: ['entity-old'],
         timestamp: Date.now(),
       })
 
@@ -660,7 +349,6 @@ describe('useEditableDocument', () => {
     it('discards draft when requested', async () => {
       mockLocalStorage['bujo.draft.2026-01-27'] = JSON.stringify({
         document: '. Old draft',
-        deletedIds: [],
         timestamp: Date.now(),
       })
 
@@ -709,17 +397,13 @@ describe('useEditableDocument', () => {
       // Friday has a draft in localStorage
       mockLocalStorage['bujo.draft.2026-01-30'] = JSON.stringify({
         document: '. Unsaved friday edit',
-        deletedIds: [],
         timestamp: Date.now(),
       })
 
       // Thursday has no draft
       // (no entry in mockLocalStorage for bujo.draft.2026-01-29)
 
-      mockGetEditableDocumentWithEntries.mockResolvedValue({
-        document: '. Some content',
-        entries: [],
-      })
+      mockGetEditableDocument.mockResolvedValue('. Some content')
 
       const { result, rerender } = renderHook(
         ({ date }) => useEditableDocument(date),

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { getFoldRange } from './bujoFolding'
+import { EditorState } from '@codemirror/state'
+import { foldService, foldEffect } from '@codemirror/language'
+import { getFoldRange, bujoFoldExtension, expandRangeForFolds } from './bujoFolding'
 
 describe('getFoldRange', () => {
   it('returns null for entry without children', () => {
@@ -79,5 +81,106 @@ describe('getFoldRange', () => {
     const result = getFoldRange(lines, 1)
 
     expect(result).toBeNull()
+  })
+})
+
+function createState(doc: string): EditorState {
+  return EditorState.create({ doc, extensions: [bujoFoldExtension()] })
+}
+
+function getFoldAt(state: EditorState, lineNumber: number): { from: number; to: number } | null {
+  const line = state.doc.line(lineNumber)
+  const services = state.facet(foldService)
+  for (const service of services) {
+    const range = service(state, line.from, line.to)
+    if (range) return range
+  }
+  return null
+}
+
+describe('bujoFoldService', () => {
+  it('returns fold range for parent with children', () => {
+    const state = createState('. Parent\n  . Child 1\n  . Child 2')
+    const range = getFoldAt(state, 1)
+
+    expect(range).not.toBeNull()
+    expect(range!.from).toBe(state.doc.line(1).to)
+    expect(range!.to).toBe(state.doc.line(3).to)
+  })
+
+  it('returns null for line without children', () => {
+    const state = createState('. Task 1\n. Task 2')
+    const range = getFoldAt(state, 1)
+
+    expect(range).toBeNull()
+  })
+
+  it('folds nested hierarchies from mid-level parent', () => {
+    const state = createState('. Root\n  . Mid\n    . Leaf\n. Next')
+    const range = getFoldAt(state, 2)
+
+    expect(range).not.toBeNull()
+    expect(range!.from).toBe(state.doc.line(2).to)
+    expect(range!.to).toBe(state.doc.line(3).to)
+  })
+
+  it('recomputes after document changes (cut/paste simulation)', () => {
+    const state = createState('. A\n  . A1\n. B\n  . B1')
+
+    const rangeA = getFoldAt(state, 1)
+    expect(rangeA).not.toBeNull()
+
+    const newState = state.update({
+      changes: { from: 0, to: state.doc.line(2).to + 1, insert: '' },
+    }).state
+
+    const rangeBAfterCut = getFoldAt(newState, 1)
+    expect(rangeBAfterCut).not.toBeNull()
+    expect(rangeBAfterCut!.from).toBe(newState.doc.line(1).to)
+    expect(rangeBAfterCut!.to).toBe(newState.doc.line(2).to)
+  })
+})
+
+describe('expandRangeForFolds', () => {
+  it('returns original range when no folds exist', () => {
+    const state = createState('. Parent\n  . Child 1\n  . Child 2')
+    const line1 = state.doc.line(1)
+    const result = expandRangeForFolds(state, line1.from, line1.to)
+
+    expect(result.from).toBe(line1.from)
+    expect(result.to).toBe(line1.to)
+  })
+
+  it('expands range to include folded children when parent is folded', () => {
+    const state = createState('. Parent\n  . Child 1\n  . Child 2')
+    const foldRange = getFoldAt(state, 1)!
+    const foldedState = state.update({
+      effects: foldEffect.of({ from: foldRange.from, to: foldRange.to }),
+    }).state
+
+    const line1 = foldedState.doc.line(1)
+    const result = expandRangeForFolds(foldedState, line1.from, line1.to)
+
+    expect(result.from).toBe(line1.from)
+    expect(result.to).toBe(foldedState.doc.line(3).to)
+  })
+
+  it('expands range when selection spans multiple folded parents', () => {
+    const state = createState('. A\n  . A1\n. B\n  . B1')
+    const foldA = getFoldAt(state, 1)!
+    const foldB = getFoldAt(state, 3)!
+    const foldedState = state.update({
+      effects: [
+        foldEffect.of({ from: foldA.from, to: foldA.to }),
+        foldEffect.of({ from: foldB.from, to: foldB.to }),
+      ],
+    }).state
+
+    const line1 = foldedState.doc.line(1)
+    const line3 = foldedState.doc.line(3)
+    const result = expandRangeForFolds(foldedState, line1.from, line3.to)
+
+    expect(result.from).toBe(line1.from)
+    expect(result.to).toBe(foldedState.doc.line(4).to)
   })
 })

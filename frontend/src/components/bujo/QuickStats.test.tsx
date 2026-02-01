@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { format } from 'date-fns'
 import { QuickStats } from './QuickStats'
 import { DayEntries, Habit, Goal } from '@/types/bujo'
+
+const currentMonth = format(new Date(), 'yyyy-MM')
 
 const mockDays: DayEntries[] = [
   {
@@ -19,8 +22,8 @@ const mockHabits: Habit[] = [
 ]
 
 const mockGoals: Goal[] = [
-  { id: 1, content: 'Learn TypeScript', month: '2026-01', status: 'done' },
-  { id: 2, content: 'Build app', month: '2026-01', status: 'active' },
+  { id: 1, content: 'Learn TypeScript', month: currentMonth, status: 'done' },
+  { id: 2, content: 'Build app', month: currentMonth, status: 'active' },
 ]
 
 describe('QuickStats', () => {

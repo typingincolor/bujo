@@ -101,6 +101,7 @@ type Entry struct {
 	Location       *string
 	ScheduledDate  *time.Time
 	CreatedAt      time.Time
+	SortOrder      int
 }
 
 func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Entry {

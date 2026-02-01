@@ -2,11 +2,10 @@ package domain
 
 import (
 	"testing"
-	"time"
 )
 
 func TestParseLine_SymbolTypes(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	tests := []struct {
 		name     string
@@ -70,7 +69,7 @@ func TestParseLine_SymbolTypes(t *testing.T) {
 }
 
 func TestParseLine_Priority(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	tests := []struct {
 		name         string
@@ -119,7 +118,7 @@ func TestParseLine_Priority(t *testing.T) {
 }
 
 func TestParseLine_Indentation(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	tests := []struct {
 		name      string
@@ -165,7 +164,7 @@ func TestParseLine_Indentation(t *testing.T) {
 }
 
 func TestParseLine_InvalidLines(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	tests := []struct {
 		name         string
@@ -208,7 +207,7 @@ func TestParseLine_InvalidLines(t *testing.T) {
 }
 
 func TestParseLine_HeaderLines(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	tests := []struct {
 		name       string
@@ -239,7 +238,7 @@ func TestParseLine_HeaderLines(t *testing.T) {
 }
 
 func TestParse_FullDocument(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	input := `── Monday, Jan 27 ──────────────────
 . Buy groceries
@@ -249,7 +248,7 @@ func TestParse_FullDocument(t *testing.T) {
 . !! Urgent: fix prod bug
 x Deployed hotfix`
 
-	doc, err := parser.Parse(input, nil)
+	doc, err := parser.Parse(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -281,45 +280,14 @@ x Deployed hotfix`
 	}
 }
 
-func TestParse_WithExistingEntries(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
-
-	entityID1 := NewEntityID()
-	entityID2 := NewEntityID()
-
-	existing := []Entry{
-		{EntityID: entityID1, Content: "Task one", Type: EntryTypeTask, Depth: 0},
-		{EntityID: entityID2, Content: "Task two", Type: EntryTypeTask, Depth: 0},
-	}
-
-	input := `. Task one
-. Task two`
-
-	doc, err := parser.Parse(input, existing)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(doc.Lines) != 2 {
-		t.Fatalf("expected 2 lines, got %d", len(doc.Lines))
-	}
-
-	if doc.Lines[0].EntityID == nil || *doc.Lines[0].EntityID != entityID1 {
-		t.Errorf("expected line 0 to have EntityID %s", entityID1)
-	}
-	if doc.Lines[1].EntityID == nil || *doc.Lines[1].EntityID != entityID2 {
-		t.Errorf("expected line 1 to have EntityID %s", entityID2)
-	}
-}
-
 func TestParse_EmptyLines(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
+	parser := NewEditableDocumentParser()
 
 	input := `. Task one
 
 . Task two`
 
-	doc, err := parser.Parse(input, nil)
+	doc, err := parser.Parse(input)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -333,35 +301,6 @@ func TestParse_EmptyLines(t *testing.T) {
 
 	if validLines != 2 {
 		t.Errorf("expected 2 valid entry lines, got %d", validLines)
-	}
-}
-
-func TestParse_MigrationSyntax(t *testing.T) {
-	mockDateParser := func(s string) (time.Time, error) {
-		if s == "tomorrow" {
-			return time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC), nil
-		}
-		return time.Time{}, &time.ParseError{Value: s}
-	}
-	parser := NewEditableDocumentParser(mockDateParser)
-
-	input := `>[tomorrow] . Schedule follow-up`
-
-	doc, err := parser.Parse(input, nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(doc.Lines) != 1 {
-		t.Fatalf("expected 1 line, got %d", len(doc.Lines))
-	}
-
-	if doc.Lines[0].MigrateTarget == nil {
-		t.Error("expected MigrateTarget to be set")
-	}
-	expectedDate := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
-	if !doc.Lines[0].MigrateTarget.Equal(expectedDate) {
-		t.Errorf("got MigrateTarget %v, want %v", doc.Lines[0].MigrateTarget, expectedDate)
 	}
 }
 
@@ -579,132 +518,6 @@ func TestSerialize_NestedHierarchyFromParentID(t *testing.T) {
 
 	if got != want {
 		t.Errorf("got:\n%s\n\nwant:\n%s", got, want)
-	}
-}
-
-func TestSerialize_EmitsEntityIDPrefix(t *testing.T) {
-	entries := []Entry{
-		{EntityID: "abc-123", Type: EntryTypeTask, Content: "Buy groceries", Depth: 0},
-		{EntityID: "def-456", Type: EntryTypeNote, Content: "Meeting notes", Depth: 0},
-	}
-
-	got := Serialize(entries)
-	want := `[abc-123] . Buy groceries
-[def-456] - Meeting notes`
-
-	if got != want {
-		t.Errorf("got:\n%s\n\nwant:\n%s", got, want)
-	}
-}
-
-func TestSerialize_OmitsEntityIDPrefixWhenEmpty(t *testing.T) {
-	entries := []Entry{
-		{Type: EntryTypeTask, Content: "No entity ID", Depth: 0},
-	}
-
-	got := Serialize(entries)
-	want := `. No entity ID`
-
-	if got != want {
-		t.Errorf("got %q, want %q", got, want)
-	}
-}
-
-func TestParseLine_ExtractsEntityIDPrefix(t *testing.T) {
-	parser := NewEditableDocumentParser(nil)
-	line := "[abc-123] . Buy groceries"
-	parsed := parser.ParseLine(line, 1)
-
-	if !parsed.IsValid {
-		t.Fatal("expected valid line")
-	}
-	if parsed.EntityID == nil {
-		t.Fatal("expected entity ID to be parsed")
-	}
-	if *parsed.EntityID != "abc-123" {
-		t.Errorf("got entity ID %q, want %q", *parsed.EntityID, "abc-123")
-	}
-	if parsed.Symbol != EntryTypeTask {
-		t.Errorf("got symbol %q, want %q", parsed.Symbol, EntryTypeTask)
-	}
-	if parsed.Content != "Buy groceries" {
-		t.Errorf("got content %q, want %q", parsed.Content, "Buy groceries")
-	}
-}
-
-func TestParse_TypeChangePreservesEntityID(t *testing.T) {
-	entityID := EntityID("019c0b17-3424-7789-9147-252d483295ef")
-
-	existing := []Entry{
-		{EntityID: entityID, Type: EntryTypeNote, Content: "note 2x", Depth: 0},
-	}
-
-	doc := "[019c0b17-3424-7789-9147-252d483295ef] o event 2x"
-
-	parser := NewEditableDocumentParser(nil)
-	parsed, err := parser.Parse(doc, existing)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	validLines := 0
-	for _, line := range parsed.Lines {
-		if line.IsValid && !line.IsHeader {
-			validLines++
-			if line.EntityID == nil {
-				t.Fatal("expected entity ID to be preserved after type change")
-			}
-			if *line.EntityID != entityID {
-				t.Errorf("got entity ID %q, want %q", *line.EntityID, entityID)
-			}
-			if line.Symbol != EntryTypeEvent {
-				t.Errorf("got symbol %q, want %q", line.Symbol, EntryTypeEvent)
-			}
-			if line.Content != "event 2x" {
-				t.Errorf("got content %q, want %q", line.Content, "event 2x")
-			}
-		}
-	}
-	if validLines != 1 {
-		t.Errorf("expected 1 valid line, got %d", validLines)
-	}
-}
-
-func TestParse_DuplicateEntityIDTreatsSecondAsNew(t *testing.T) {
-	entityID := EntityID("019c0b17-3424-7789-9147-252d483295ef")
-
-	existing := []Entry{
-		{EntityID: entityID, Type: EntryTypeNote, Content: "note 2x", Depth: 0},
-	}
-
-	doc := "[019c0b17-3424-7789-9147-252d483295ef] - note 2x\n[019c0b17-3424-7789-9147-252d483295ef] - note 2x copy"
-
-	parser := NewEditableDocumentParser(nil)
-	parsed, err := parser.Parse(doc, existing)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	validLines := make([]ParsedLine, 0)
-	for _, line := range parsed.Lines {
-		if line.IsValid && !line.IsHeader {
-			validLines = append(validLines, line)
-		}
-	}
-
-	if len(validLines) != 2 {
-		t.Fatalf("expected 2 valid lines, got %d", len(validLines))
-	}
-
-	if validLines[0].EntityID == nil {
-		t.Fatal("first occurrence should keep entity ID")
-	}
-	if *validLines[0].EntityID != entityID {
-		t.Errorf("first occurrence entity ID: got %q, want %q", *validLines[0].EntityID, entityID)
-	}
-
-	if validLines[1].EntityID != nil {
-		t.Errorf("second occurrence should have nil entity ID (new insert), got %q", *validLines[1].EntityID)
 	}
 }
 

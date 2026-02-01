@@ -34,9 +34,9 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   MoveEntryToList: vi.fn().mockResolvedValue(undefined),
   MoveEntryToRoot: vi.fn().mockResolvedValue(undefined),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
-  GetEditableDocumentWithEntries: vi.fn().mockResolvedValue({ document: '', entries: [] }),
+  GetEditableDocument: vi.fn().mockResolvedValue(''),
   ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
-  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, deleted: 0, migrated: 0 }),
+  ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, deleted: 0 }),
   GetEntryContext: vi.fn().mockResolvedValue([]),
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
 }))

@@ -116,11 +116,10 @@ func TestApp_ApplyEditableDocument_InsertsNewEntries(t *testing.T) {
 	wailsApp.Startup(ctx)
 
 	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-	result, err := wailsApp.ApplyEditableDocument(". New task\n- New note", today, nil)
+	result, err := wailsApp.ApplyEditableDocument(". New task\n- New note", today)
 
 	require.NoError(t, err)
 	assert.Equal(t, 2, result.Inserted)
-	assert.Equal(t, 0, result.Updated)
 	assert.Equal(t, 0, result.Deleted)
 
 	doc, err := wailsApp.GetEditableDocument(today)
@@ -144,16 +143,11 @@ func TestApp_ApplyEditableDocument_DeletesEntries(t *testing.T) {
 	_, err = services.Bujo.LogEntries(ctx, ". Task to keep\n. Task to delete", service.LogEntriesOptions{Date: today})
 	require.NoError(t, err)
 
-	days, err := wailsApp.GetDayEntries(today, today)
-	require.NoError(t, err)
-	require.Len(t, days[0].Entries, 2)
-	deleteEntityID := days[0].Entries[1].EntityID
-
-	result, err := wailsApp.ApplyEditableDocument(". Task to keep", today, []string{string(deleteEntityID)})
+	result, err := wailsApp.ApplyEditableDocument(". Task to keep", today)
 
 	require.NoError(t, err)
-	assert.Equal(t, 0, result.Inserted)
-	assert.Equal(t, 1, result.Deleted)
+	assert.Equal(t, 1, result.Inserted)
+	assert.Equal(t, 2, result.Deleted)
 
 	doc, err := wailsApp.GetEditableDocument(today)
 	require.NoError(t, err)
@@ -173,7 +167,7 @@ func TestApp_ApplyEditableDocument_ValidationError(t *testing.T) {
 	wailsApp.Startup(ctx)
 
 	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-	_, err = wailsApp.ApplyEditableDocument("Invalid document", today, nil)
+	_, err = wailsApp.ApplyEditableDocument("Invalid document", today)
 
 	require.Error(t, err)
 }
@@ -201,11 +195,10 @@ func TestApp_ApplyEditableDocument_DeletesMissingEntries(t *testing.T) {
 
 	// Apply empty document WITHOUT explicit pendingDeletes
 	// The backend should auto-detect that both entries are missing
-	result, err := wailsApp.ApplyEditableDocument("", today, nil)
+	result, err := wailsApp.ApplyEditableDocument("", today)
 
 	require.NoError(t, err)
 	assert.Equal(t, 0, result.Inserted)
-	assert.Equal(t, 0, result.Updated)
 	assert.Equal(t, 2, result.Deleted, "Expected 2 entries to be auto-deleted")
 
 	// Verify entries are gone
@@ -271,29 +264,4 @@ func TestApp_ResolveDate_InvalidDate(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestApp_GetEditableDocumentWithEntries_ReturnsDocumentAndEntries(t *testing.T) {
-	ctx := context.Background()
 
-	factory := app.NewServiceFactory()
-	services, cleanup, err := factory.Create(ctx, ":memory:")
-	require.NoError(t, err)
-	defer cleanup()
-
-	wailsApp := NewApp(services)
-	wailsApp.Startup(ctx)
-
-	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
-	_, err = services.Bujo.LogEntries(ctx, ". Task one\n- Note two", service.LogEntriesOptions{Date: today})
-	require.NoError(t, err)
-
-	result, err := wailsApp.GetEditableDocumentWithEntries(today)
-
-	require.NoError(t, err)
-	assert.Contains(t, result.Document, ". Task one")
-	assert.Contains(t, result.Document, "- Note two")
-	assert.Len(t, result.Entries, 2)
-	assert.Equal(t, "Task one", result.Entries[0].Content)
-	assert.NotEmpty(t, result.Entries[0].EntityID)
-	assert.Equal(t, "Note two", result.Entries[1].Content)
-	assert.NotEmpty(t, result.Entries[1].EntityID)
-}

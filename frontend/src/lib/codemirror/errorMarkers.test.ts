@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import { linesToDiagnostics, errorHighlightExtension, setErrors } from './errorMarkers'
-import type { DocumentError } from '../editableParser'
+import type { DocumentError } from './errorMarkers'
 
 describe('linesToDiagnostics', () => {
   it('returns empty array when no errors', () => {
