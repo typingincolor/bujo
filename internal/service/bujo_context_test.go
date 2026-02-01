@@ -330,4 +330,3 @@ func TestBujoService_GetOutstandingTasks_Empty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, tasks)
 }
-

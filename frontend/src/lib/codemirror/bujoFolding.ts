@@ -38,6 +38,7 @@ export function getFoldRange(lines: string[], lineIndex: number): FoldRange | nu
   return { from: lineIndex, to: lastChildIndex }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function bujoFoldServiceFn(state: EditorState, lineStart: number, _lineEnd: number): { from: number; to: number } | null {
   const doc = state.doc
   const lines: string[] = []
