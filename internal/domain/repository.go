@@ -56,15 +56,6 @@ type DayContextRepository interface {
 	DeleteAll(ctx context.Context) error
 }
 
-type SummaryRepository interface {
-	Insert(ctx context.Context, summary Summary) (int64, error)
-	Get(ctx context.Context, horizon SummaryHorizon, start, end time.Time) (*Summary, error)
-	GetByHorizon(ctx context.Context, horizon SummaryHorizon) ([]Summary, error)
-	GetAll(ctx context.Context) ([]Summary, error)
-	Delete(ctx context.Context, id int64) error
-	DeleteAll(ctx context.Context) error
-}
-
 type ListRepository interface {
 	Create(ctx context.Context, name string) (*List, error)
 	InsertWithEntityID(ctx context.Context, list List) (int64, error)
