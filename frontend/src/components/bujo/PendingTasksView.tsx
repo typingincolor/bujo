@@ -24,6 +24,7 @@ interface PendingTasksViewProps {
   callbacks: EntryCallbacks;
   selectedEntry?: Entry;
   onSelectEntry: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
   onRefresh: () => void;
 }
 
@@ -33,6 +34,7 @@ export function PendingTasksView({
   callbacks,
   selectedEntry,
   onSelectEntry,
+  onNavigateToEntry,
   onRefresh,
 }: PendingTasksViewProps) {
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Map<number, Entry['type']>>(new Map());
@@ -142,6 +144,7 @@ export function PendingTasksView({
               now={now}
               isSelected={selectedEntry?.id === entry.id}
               onSelect={() => onSelectEntry(entry)}
+              onDoubleClick={() => onNavigateToEntry?.(entry)}
               callbacks={createEntryCallbacks(entry)}
             />
           ))
@@ -156,10 +159,11 @@ interface PendingTaskItemProps {
   now: Date;
   isSelected: boolean;
   onSelect: () => void;
+  onDoubleClick?: () => void;
   callbacks: Record<string, (() => void) | undefined>;
 }
 
-function PendingTaskItem({ entry, now, isSelected, onSelect, callbacks }: PendingTaskItemProps) {
+function PendingTaskItem({ entry, now, isSelected, onSelect, onDoubleClick, callbacks }: PendingTaskItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const attentionResult = calculateAttentionScore(entry, now);
   const symbol = ENTRY_SYMBOLS[entry.type];
@@ -177,6 +181,7 @@ function PendingTaskItem({ entry, now, isSelected, onSelect, callbacks }: Pendin
     >
       <button
         onClick={onSelect}
+        onDoubleClick={onDoubleClick}
         className="flex items-center gap-2 text-left min-w-0 flex-1"
       >
         <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">

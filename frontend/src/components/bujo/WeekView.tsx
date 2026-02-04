@@ -17,6 +17,7 @@ export interface WeekViewCallbacks {
   onDelete?: (entry: Entry) => void;
   onCyclePriority?: (entry: Entry) => void;
   onMoveToList?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
 }
 
 interface WeekViewProps {
@@ -116,6 +117,7 @@ export function WeekView({
               location={day.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
+              onNavigateToEntry={callbacks.onNavigateToEntry}
               createEntryCallbacks={createEntryCallbacks}
             />
           ))}
@@ -132,6 +134,7 @@ export function WeekView({
               sundayLocation={sunday.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
+              onNavigateToEntry={callbacks.onNavigateToEntry}
               createEntryCallbacks={createEntryCallbacks}
             />
           )}

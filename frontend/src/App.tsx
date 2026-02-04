@@ -567,6 +567,12 @@ function App() {
     })
   }, [])
 
+  const handleNavigateToEntry = useCallback((entry: Entry) => {
+    const entryDate = new Date(entry.loggedDate)
+    setCurrentDate(startOfDay(entryDate))
+    handleViewChange('today')
+  }, [handleViewChange])
+
   const handleSearchNavigate = useCallback((result: SearchResult) => {
     const entryDate = new Date(result.date)
     setReviewAnchorDate(startOfDay(entryDate))
@@ -674,6 +680,7 @@ function App() {
               callbacks={sidebarCallbacks}
               selectedEntry={pendingSelectedEntry ?? undefined}
               onSelectEntry={(entry) => setPendingSelectedEntry(entry)}
+              onNavigateToEntry={handleNavigateToEntry}
               onRefresh={loadData}
             />
           )}
@@ -727,6 +734,7 @@ function App() {
                     }
                   },
                   onMoveToList: (entry) => setMoveToListEntry(entry),
+                  onNavigateToEntry: handleNavigateToEntry,
                 }}
                 onSelectEntry={(entry) => setReviewSelectedEntry(entry ?? null)}
                 contextTree={reviewContextTree}
@@ -743,6 +751,7 @@ function App() {
                 onEntryChanged={loadData}
                 onError={setError}
                 onEdit={(entry) => setEditModalEntry(entry)}
+                onNavigateToEntry={handleNavigateToEntry}
               />
             </div>
           )}

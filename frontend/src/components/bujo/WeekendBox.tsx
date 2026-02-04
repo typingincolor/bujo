@@ -14,6 +14,7 @@ interface WeekendBoxProps {
   sundayLocation?: string;
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
   createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
@@ -28,6 +29,7 @@ export function WeekendBox({
   sundayLocation,
   selectedEntry,
   onSelectEntry,
+  onNavigateToEntry,
   createEntryCallbacks,
 }: WeekendBoxProps) {
   const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0;
@@ -63,6 +65,7 @@ export function WeekendBox({
                 datePrefix="Sat:"
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
+                onNavigateToEntry={onNavigateToEntry}
                 callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
@@ -81,6 +84,7 @@ export function WeekendBox({
                 datePrefix="Sun:"
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
+                onNavigateToEntry={onNavigateToEntry}
                 callbacks={createEntryCallbacks?.(entry)}
               />
             ))}

@@ -11,6 +11,7 @@ interface QuestionsViewProps {
   onEntryChanged?: () => void
   onError?: (message: string) => void
   onEdit?: (entry: Entry) => void
+  onNavigateToEntry?: (entry: Entry) => void
 }
 
 function groupByDate(entries: Entry[]): Map<string, Entry[]> {
@@ -46,7 +47,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
   return chain
 }
 
-export function QuestionsView({ questions, onEntryChanged, onError, onEdit }: QuestionsViewProps) {
+export function QuestionsView({ questions, onEntryChanged, onError, onEdit, onNavigateToEntry }: QuestionsViewProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -293,6 +294,7 @@ export function QuestionsView({ questions, onEntryChanged, onError, onEdit }: Qu
                           {/* Question entry */}
                           <div
                             onClick={() => toggleExpanded(entry.id)}
+                            onDoubleClick={() => onNavigateToEntry?.(entry)}
                             className={cn(
                               'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
                               'bg-card transition-colors group',

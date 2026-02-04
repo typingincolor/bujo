@@ -11,10 +11,11 @@ interface DayBoxProps {
   location?: string;
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
   createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
-export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, createEntryCallbacks }: DayBoxProps) {
+export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, onNavigateToEntry, createEntryCallbacks }: DayBoxProps) {
   const hasContent = entries.length > 0 || habits.length > 0;
 
   return (
@@ -43,6 +44,7 @@ export function DayBox({ dayNumber, dayName, entries, habits = [], location, sel
                 entry={entry}
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
+                onNavigateToEntry={onNavigateToEntry}
                 callbacks={createEntryCallbacks?.(entry)}
               />
             ))}

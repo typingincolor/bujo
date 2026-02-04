@@ -8,11 +8,12 @@ interface WeekEntryProps {
   entry: Entry;
   isSelected?: boolean;
   onSelect?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
   datePrefix?: string;
   callbacks?: ActionCallbacks;
 }
 
-export function WeekEntry({ entry, isSelected, onSelect, datePrefix, callbacks }: WeekEntryProps) {
+export function WeekEntry({ entry, isSelected, onSelect, onNavigateToEntry, datePrefix, callbacks }: WeekEntryProps) {
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
   const [isHovered, setIsHovered] = useState(false);
@@ -43,6 +44,7 @@ export function WeekEntry({ entry, isSelected, onSelect, datePrefix, callbacks }
     >
       <button
         onClick={() => onSelect?.(entry)}
+        onDoubleClick={() => onNavigateToEntry?.(entry)}
         className="flex items-center gap-2 text-left min-w-0 w-full"
       >
         {datePrefix && (
