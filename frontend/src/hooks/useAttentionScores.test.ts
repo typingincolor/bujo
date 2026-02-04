@@ -54,23 +54,6 @@ describe('useAttentionScores', () => {
     })
   })
 
-  it('indicates loading state while fetching', async () => {
-    let resolvePromise: (value: Record<number, unknown>) => void
-    mockGetAttentionScores.mockReturnValue(
-      new Promise((resolve) => { resolvePromise = resolve })
-    )
-
-    const { result } = renderHook(() => useAttentionScores([1]))
-
-    expect(result.current.loading).toBe(true)
-
-    resolvePromise!({ 1: { Score: 10, Indicators: [], DaysOld: 1 } })
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
-  })
-
   it('refetches when entry IDs change', async () => {
     mockGetAttentionScores.mockResolvedValue({
       1: { Score: 50, Indicators: [], DaysOld: 0 },

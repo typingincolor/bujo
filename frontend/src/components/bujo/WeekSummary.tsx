@@ -117,7 +117,7 @@ export function WeekSummary({ days, onShowAllAttention }: WeekSummaryProps) {
           {topAttentionEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">All caught up!</p>
           ) : (
-            topAttentionEntries.map(({ entry, score }) => {
+            topAttentionEntries.map(({ entry }) => {
               const indicators = scores[entry.id]?.indicators ?? [];
               const isHighPriority = entry.priority === 'high';
               return (

@@ -7,9 +7,20 @@ export interface AttentionScore {
   daysOld: number
 }
 
+function mapScores(result: Record<string, { Score: number; Indicators: string[]; DaysOld: number }>): Record<number, AttentionScore> {
+  const mapped: Record<number, AttentionScore> = {}
+  for (const [id, raw] of Object.entries(result)) {
+    mapped[Number(id)] = {
+      score: raw.Score,
+      indicators: raw.Indicators,
+      daysOld: raw.DaysOld,
+    }
+  }
+  return mapped
+}
+
 export function useAttentionScores(entryIds: number[]) {
   const [scores, setScores] = useState<Record<number, AttentionScore>>({})
-  const [loading, setLoading] = useState(false)
   const prevIdsRef = useRef<string>('')
 
   useEffect(() => {
@@ -18,25 +29,17 @@ export function useAttentionScores(entryIds: number[]) {
     prevIdsRef.current = idsKey
 
     if (entryIds.length === 0) {
-      setScores({})
-      setLoading(false)
       return
     }
 
-    setLoading(true)
+    let cancelled = false
     GetAttentionScores(entryIds).then((result) => {
-      const mapped: Record<number, AttentionScore> = {}
-      for (const [id, raw] of Object.entries(result)) {
-        mapped[Number(id)] = {
-          score: raw.Score,
-          indicators: raw.Indicators,
-          daysOld: raw.DaysOld,
-        }
+      if (!cancelled) {
+        setScores(mapScores(result))
       }
-      setScores(mapped)
-      setLoading(false)
     })
+    return () => { cancelled = true }
   }, [entryIds])
 
-  return { scores, loading }
+  return { scores }
 }
