@@ -7,9 +7,11 @@ import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 
 interface EditableJournalViewProps {
   date: Date
+  highlightText?: string | null
+  onHighlightDone?: () => void
 }
 
-export function EditableJournalView({ date }: EditableJournalViewProps) {
+export function EditableJournalView({ date, highlightText, onHighlightDone }: EditableJournalViewProps) {
   const {
     document,
     originalDocument,
@@ -176,6 +178,8 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
             onSave={handleSave}
             onImport={handleImport}
             onEscape={handleEscape}
+            highlightText={highlightText}
+            onHighlightDone={onHighlightDone}
           />
         </div>
       </div>

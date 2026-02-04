@@ -126,6 +126,10 @@ export const bujoTheme = EditorView.theme({
     opacity: '0.6',
   },
   '& .cm-entry-note': {},
+  '& .highlight-line': {
+    backgroundColor: 'hsl(var(--primary) / 0.15)',
+    transition: 'background-color 0.3s ease-out',
+  },
   '& .cm-panels': {
     backgroundColor: 'hsl(var(--card))',
     color: 'hsl(var(--foreground))',

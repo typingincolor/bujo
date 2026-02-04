@@ -29,7 +29,7 @@ import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
-import { startOfWeek, endOfWeek } from 'date-fns'
+import { startOfWeek, endOfWeek, isSameWeek } from 'date-fns'
 import { scrollToPosition } from '@/lib/scrollUtils'
 import './index.css'
 
@@ -86,6 +86,7 @@ function App() {
   const [pendingSelectedEntry, setPendingSelectedEntry] = useState<Entry | null>(null)
   const [pendingContextTree, setPendingContextTree] = useState<Entry[]>([])
   const initialLoadCompleteRef = useRef(false)
+  const [highlightText, setHighlightText] = useState<string | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -231,6 +232,10 @@ function App() {
     })
   }, [])
 
+  const handleGoToCurrentWeek = useCallback(() => {
+    setReviewAnchorDate(startOfDay(new Date()))
+  }, [])
+
   const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
     const daysMap = { week: 14, month: 45, quarter: 120 }
     setHabitDays(daysMap[period])
@@ -257,6 +262,7 @@ function App() {
         scrollPosition: window.scrollY,
       })
     }
+    setHighlightText(null)
     setView(newView)
     setSelectedIndex(0)
   }, [view, clearHistory, pushHistory])
@@ -568,10 +574,16 @@ function App() {
   }, [])
 
   const handleNavigateToEntry = useCallback((entry: Entry) => {
+    pushHistory({
+      view: view,
+      scrollPosition: window.scrollY,
+    })
     const entryDate = new Date(entry.loggedDate)
     setCurrentDate(startOfDay(entryDate))
-    handleViewChange('today')
-  }, [handleViewChange])
+    setHighlightText(entry.content)
+    setView('today')
+    setSelectedIndex(0)
+  }, [view, pushHistory])
 
   const handleSearchNavigate = useCallback((result: SearchResult) => {
     const entryDate = new Date(result.date)
@@ -669,7 +681,11 @@ function App() {
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
-              <EditableJournalView date={currentDate} />
+              <EditableJournalView
+                date={currentDate}
+                highlightText={highlightText}
+                onHighlightDone={() => setHighlightText(null)}
+              />
             </>
           )}
 
@@ -707,6 +723,14 @@ function App() {
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
+                {!isSameWeek(reviewAnchorDate, new Date(), { weekStartsOn: 1 }) && (
+                  <button
+                    onClick={handleGoToCurrentWeek}
+                    className="px-2 py-1 text-xs rounded hover:bg-secondary/50 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
               <WeekView
                 days={reviewDays}
