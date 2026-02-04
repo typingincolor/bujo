@@ -119,7 +119,7 @@ export function PendingTasksView({
   }, [selectedEntry, taskEntries]);
 
   return (
-    <div className="flex flex-col h-full max-w-3xl mx-auto">
+    <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-lg font-semibold">Pending Tasks ({taskEntries.length})</h2>
         <button
