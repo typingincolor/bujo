@@ -712,28 +712,6 @@ function App() {
                 days={reviewDays}
                 habits={habits}
                 callbacks={{
-                  onMarkDone: async (entry) => {
-                    try {
-                      await MarkEntryDone(entry.id)
-                      loadData()
-                    } catch (err) {
-                      console.error('Failed to mark entry done:', err)
-                      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
-                    }
-                  },
-                  onMigrate: (entry) => setMigrateModalEntry(entry),
-                  onEdit: (entry) => setEditModalEntry(entry),
-                  onDelete: handleDeleteEntryRequest,
-                  onCyclePriority: async (entry) => {
-                    try {
-                      await CyclePriority(entry.id)
-                      loadData()
-                    } catch (err) {
-                      console.error('Failed to cycle priority:', err)
-                      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
-                    }
-                  },
-                  onMoveToList: (entry) => setMoveToListEntry(entry),
                   onNavigateToEntry: handleNavigateToEntry,
                 }}
                 onSelectEntry={(entry) => setReviewSelectedEntry(entry ?? null)}

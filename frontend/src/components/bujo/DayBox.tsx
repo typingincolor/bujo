@@ -1,7 +1,6 @@
 import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
 import { HabitItem, HabitDisplay } from './HabitItem';
-import { ActionCallbacks } from './EntryActions/types';
 
 interface DayBoxProps {
   dayNumber: number;
@@ -12,10 +11,9 @@ interface DayBoxProps {
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
   onNavigateToEntry?: (entry: Entry) => void;
-  createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
-export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, onNavigateToEntry, createEntryCallbacks }: DayBoxProps) {
+export function DayBox({ dayNumber, dayName, entries, habits = [], location, selectedEntry, onSelectEntry, onNavigateToEntry }: DayBoxProps) {
   const hasContent = entries.length > 0 || habits.length > 0;
 
   return (
@@ -45,7 +43,6 @@ export function DayBox({ dayNumber, dayName, entries, habits = [], location, sel
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
                 onNavigateToEntry={onNavigateToEntry}
-                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
           </>

@@ -1,7 +1,6 @@
 import { Entry } from '@/types/bujo';
 import { WeekEntry } from './WeekEntry';
 import { HabitItem, HabitDisplay } from './HabitItem';
-import { ActionCallbacks } from './EntryActions/types';
 
 interface WeekendBoxProps {
   saturdayDay: number;
@@ -15,7 +14,6 @@ interface WeekendBoxProps {
   selectedEntry?: Entry;
   onSelectEntry?: (entry: Entry) => void;
   onNavigateToEntry?: (entry: Entry) => void;
-  createEntryCallbacks?: (entry: Entry) => ActionCallbacks;
 }
 
 export function WeekendBox({
@@ -30,7 +28,6 @@ export function WeekendBox({
   selectedEntry,
   onSelectEntry,
   onNavigateToEntry,
-  createEntryCallbacks,
 }: WeekendBoxProps) {
   const hasContent = saturdayEntries.length > 0 || sundayEntries.length > 0 || saturdayHabits.length > 0 || sundayHabits.length > 0;
 
@@ -66,7 +63,6 @@ export function WeekendBox({
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
                 onNavigateToEntry={onNavigateToEntry}
-                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
             {sundayHabits.map((habit, index) => (
@@ -85,7 +81,6 @@ export function WeekendBox({
                 isSelected={selectedEntry?.id === entry.id}
                 onSelect={onSelectEntry}
                 onNavigateToEntry={onNavigateToEntry}
-                callbacks={createEntryCallbacks?.(entry)}
               />
             ))}
           </>
