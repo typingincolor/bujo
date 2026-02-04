@@ -29,7 +29,7 @@ import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
-import { startOfWeek, endOfWeek } from 'date-fns'
+import { startOfWeek, endOfWeek, isSameWeek } from 'date-fns'
 import { scrollToPosition } from '@/lib/scrollUtils'
 import './index.css'
 
@@ -230,6 +230,10 @@ function App() {
       newDate.setDate(newDate.getDate() + 7)
       return newDate
     })
+  }, [])
+
+  const handleGoToCurrentWeek = useCallback(() => {
+    setReviewAnchorDate(startOfDay(new Date()))
   }, [])
 
   const handleHabitPeriodChange = useCallback((period: 'week' | 'month' | 'quarter') => {
@@ -719,6 +723,14 @@ function App() {
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
+                {!isSameWeek(reviewAnchorDate, new Date(), { weekStartsOn: 1 }) && (
+                  <button
+                    onClick={handleGoToCurrentWeek}
+                    className="px-2 py-1 text-xs rounded hover:bg-secondary/50 transition-colors"
+                  >
+                    Today
+                  </button>
+                )}
               </div>
               <WeekView
                 days={reviewDays}
