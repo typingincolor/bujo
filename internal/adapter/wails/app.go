@@ -358,20 +358,6 @@ func (a *App) GetLocationHistory() ([]string, error) {
 	return locations, nil
 }
 
-func (a *App) GetSummary(date time.Time) (string, error) {
-	if a.services.Summary == nil {
-		return "", nil
-	}
-	summary, err := a.services.Summary.GetSummary(a.ctx, domain.SummaryHorizonDaily, date)
-	if err != nil {
-		return "", err
-	}
-	if summary == nil {
-		return "", nil
-	}
-	return summary.Content, nil
-}
-
 func (a *App) GetVersion() string {
 	return cmd.Version()
 }
@@ -481,6 +467,135 @@ func (a *App) ApplyEditableDocumentWithActions(doc string, date time.Time, migra
 		Inserted: result.Inserted,
 		Deleted:  result.Deleted,
 	}, nil
+}
+
+func (a *App) IsInsightsAvailable() bool {
+	return a.services.InsightsRepo.IsAvailable()
+}
+
+func (a *App) GetInsightsDashboard() (*domain.InsightsDashboard, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return &domain.InsightsDashboard{Status: "not_initialized"}, nil
+	}
+
+	latest, err := repo.GetLatestSummary(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	initiatives, err := repo.GetActiveInitiatives(a.ctx, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	actions, err := repo.GetPendingActions(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var highPriority []domain.InsightsAction
+	for _, action := range actions {
+		if action.Priority == "high" {
+			highPriority = append(highPriority, action)
+		}
+	}
+
+	decisions, err := repo.GetRecentDecisions(a.ctx, 3)
+	if err != nil {
+		return nil, err
+	}
+
+	days, err := repo.GetDaysSinceLastSummary(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	status := "ready"
+	if latest == nil {
+		status = "empty"
+	}
+
+	return &domain.InsightsDashboard{
+		LatestSummary:        latest,
+		ActiveInitiatives:    initiatives,
+		HighPriorityActions:  highPriority,
+		RecentDecisions:      decisions,
+		DaysSinceLastSummary: days,
+		Status:               status,
+	}, nil
+}
+
+func (a *App) GetInsightsSummaries(limit int) ([]domain.InsightsSummary, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsSummary{}, nil
+	}
+	return repo.GetSummaries(a.ctx, limit)
+}
+
+func (a *App) GetInsightsSummaryDetail(summaryID int64) ([]domain.InsightsTopic, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsTopic{}, nil
+	}
+	return repo.GetTopicsForSummary(a.ctx, summaryID)
+}
+
+func (a *App) GetInsightsActions() ([]domain.InsightsAction, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsAction{}, nil
+	}
+	return repo.GetPendingActions(a.ctx)
+}
+
+type WeekSummaryDetail struct {
+	Summary *domain.InsightsSummary
+	Topics  []domain.InsightsTopic
+}
+
+func nextWeekStartFrom(weekStart string) (string, error) {
+	t, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		return "", fmt.Errorf("invalid weekStart date: %w", err)
+	}
+	return t.AddDate(0, 0, 7).Format("2006-01-02"), nil
+}
+
+func (a *App) GetInsightsSummaryForWeek(weekStart string) (*WeekSummaryDetail, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return &WeekSummaryDetail{Topics: []domain.InsightsTopic{}}, nil
+	}
+	nextWeek, err := nextWeekStartFrom(weekStart)
+	if err != nil {
+		return nil, err
+	}
+	summary, err := repo.GetSummaryForWeek(a.ctx, weekStart, nextWeek)
+	if err != nil {
+		return nil, err
+	}
+	if summary == nil {
+		return &WeekSummaryDetail{Topics: []domain.InsightsTopic{}}, nil
+	}
+	topics, err := repo.GetTopicsForSummary(a.ctx, summary.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &WeekSummaryDetail{Summary: summary, Topics: topics}, nil
+}
+
+func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsAction, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsAction{}, nil
+	}
+	nextWeek, err := nextWeekStartFrom(weekStart)
+	if err != nil {
+		return nil, err
+	}
+	return repo.GetActionsForWeek(a.ctx, weekStart, nextWeek)
 }
 
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {

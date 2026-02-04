@@ -10,7 +10,6 @@ import (
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
@@ -35,7 +34,6 @@ type Config struct {
 	HabitService    *service.HabitService
 	ListService     *service.ListService
 	GoalService     *service.GoalService
-	SummaryService  *service.SummaryService
 	StatsService    *service.StatsService
 	ChangeDetection ChangeDetector
 	Theme           string
@@ -46,7 +44,6 @@ type Model struct {
 	habitService             *service.HabitService
 	listService              *service.ListService
 	goalService              *service.GoalService
-	summaryService           *service.SummaryService
 	statsService             *service.StatsService
 	changeDetection          ChangeDetector
 	lastCheckedModified      time.Time
@@ -83,8 +80,6 @@ type Model struct {
 	confirmGoalDeleteMode    confirmGoalDeleteState
 	moveGoalMode             moveGoalState
 	migrateToGoalMode        migrateToGoalState
-	summaryState             summaryState
-	summaryCollapsed         bool
 	expandedOverdueContextID *int64
 	statsViewState           statsState
 	setLocationMode          setLocationState
@@ -95,7 +90,6 @@ type Model struct {
 	undoState                undoState
 	help                     help.Model
 	keyMap                   KeyMap
-	markdownRenderer         *glamour.TermRenderer
 	width                    int
 	height                   int
 	err                      error
@@ -254,16 +248,6 @@ type migrateToGoalState struct {
 	input   textinput.Model
 }
 
-type summaryState struct {
-	summary         *domain.Summary
-	loading         bool
-	streaming       bool
-	accumulatedText string
-	error           error
-	horizon         domain.SummaryHorizon
-	refDate         time.Time
-}
-
 type statsState struct {
 	stats   *domain.Stats
 	loading bool
@@ -385,17 +369,11 @@ func NewWithConfig(cfg Config) Model {
 	statsFrom := now.AddDate(0, 0, -29)
 	statsTo := now
 
-	mdRenderer, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(80),
-	)
-
 	return Model{
 		bujoService:       cfg.BujoService,
 		habitService:      cfg.HabitService,
 		listService:       cfg.ListService,
 		goalService:       cfg.GoalService,
-		summaryService:    cfg.SummaryService,
 		statsService:      cfg.StatsService,
 		changeDetection:   cfg.ChangeDetection,
 		collapsed:         make(map[domain.EntityID]bool),
@@ -405,7 +383,6 @@ func NewWithConfig(cfg Config) Model {
 		commandRegistry:   DefaultCommands(),
 		help:              help.New(),
 		keyMap:            DefaultKeyMap(),
-		markdownRenderer:  mdRenderer,
 		draftPath:         DraftPath(),
 		editMode:          editState{input: editInput},
 		addMode:           addState{input: addInput},
@@ -413,8 +390,6 @@ func NewWithConfig(cfg Config) Model {
 		gotoMode:          gotoState{input: gotoInput},
 		goalState:         goalState{viewMonth: currentMonth},
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
-		summaryState:      summaryState{horizon: domain.SummaryHorizonDaily, refDate: today},
-		summaryCollapsed:  true,
 		searchView:        searchViewState{input: searchInput},
 		statsViewState:    statsState{from: statsFrom, to: statsTo},
 	}
@@ -961,91 +936,6 @@ func (m Model) migrateToGoalCmd(entryID int64, content string, targetMonth time.
 		}
 
 		return entryMigratedToGoalMsg{entryID: entryID, goalID: goalID}
-	}
-}
-
-type streamChannels struct {
-	tokens  chan string
-	err     chan error
-	summary chan *domain.Summary
-	done    chan bool
-}
-
-func (s *streamChannels) cleanup() {
-	if s != nil {
-		close(s.tokens)
-		close(s.err)
-		close(s.summary)
-		close(s.done)
-	}
-}
-
-func (m Model) loadSummaryCmd() tea.Cmd {
-	horizon := m.summaryState.horizon
-	refDate := m.summaryState.refDate
-
-	return func() tea.Msg {
-		if m.summaryService == nil {
-			return summaryErrorMsg{fmt.Errorf("AI not configured. Set BUJO_MODEL or GEMINI_API_KEY")}
-		}
-
-		chans := &streamChannels{
-			tokens:  make(chan string, 100),
-			err:     make(chan error, 1),
-			summary: make(chan *domain.Summary, 1),
-			done:    make(chan bool, 1),
-		}
-
-		go func() {
-			ctx := context.Background()
-			summary, err := m.summaryService.CheckCacheOrGenerate(ctx, horizon, refDate, func(token string) {
-				select {
-				case chans.tokens <- token:
-				case <-chans.done:
-					return
-				}
-			})
-
-			if err != nil {
-				chans.err <- err
-			} else {
-				chans.summary <- summary
-			}
-			chans.done <- true
-		}()
-
-		return m.pollStreamCmdWithChans(chans)()
-	}
-}
-
-func (m Model) pollStreamCmdWithChans(chans *streamChannels) tea.Cmd {
-	return func() tea.Msg {
-		if chans == nil {
-			return nil
-		}
-
-		select {
-		case token, ok := <-chans.tokens:
-			if !ok {
-				return nil
-			}
-			return summaryTokenMsg{token: token}
-		case err := <-chans.err:
-			chans.cleanup()
-			return summaryErrorMsg{err: err}
-		case summary := <-chans.summary:
-			chans.cleanup()
-			return summaryLoadedMsg{summary: summary}
-		case <-time.After(50 * time.Millisecond):
-			select {
-			case <-chans.done:
-				return nil
-			default:
-				return tea.Tick(50*time.Millisecond, func(time.Time) tea.Msg {
-					return m.pollStreamCmdWithChans(chans)()
-				})()
-			}
-		}
 	}
 }
 

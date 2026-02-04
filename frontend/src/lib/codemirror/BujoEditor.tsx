@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import CodeMirror, { ReactCodeMirrorRef } from '@uiw/react-codemirror'
+import CodeMirror, { ReactCodeMirrorRef, EditorView } from '@uiw/react-codemirror'
 import { keymap } from '@codemirror/view'
 import {
   indentWithTab,
@@ -133,13 +133,20 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
     }
   }, [errors])
 
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const highlightTextRef = useRef(highlightText)
+  const onHighlightDoneRef = useRef(onHighlightDone)
   useEffect(() => {
-    if (!highlightText) return
+    highlightTextRef.current = highlightText
+    onHighlightDoneRef.current = onHighlightDone
+  })
 
-    const view = editorRef.current?.view
-    if (!view) return
+  const applyHighlight = useCallback((view: EditorView) => {
+    const text = highlightTextRef.current
+    if (!text) return
 
-    const match = findEntryLine(value, highlightText)
+    const doc = view.state.doc.toString()
+    const match = findEntryLine(doc, text)
     if (!match) return
 
     view.dispatch({
@@ -148,18 +155,31 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       scrollIntoView: true,
     })
 
-    const timer = setTimeout(() => {
-      const currentView = editorRef.current?.view
-      if (currentView) {
-        currentView.dispatch({
-          effects: setHighlight.of(null),
-        })
-      }
-      onHighlightDone?.()
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+    highlightTimerRef.current = setTimeout(() => {
+      try { view.dispatch({ effects: setHighlight.of(null) }) } catch { /* view may be destroyed */ }
+      onHighlightDoneRef.current?.()
     }, HIGHLIGHT_DURATION_MS)
+  }, [])
 
-    return () => clearTimeout(timer)
-  }, [highlightText]) // eslint-disable-line react-hooks/exhaustive-deps
+  const handleCreateEditor = useCallback((view: EditorView) => {
+    if (highlightTextRef.current) {
+      applyHighlight(view)
+    }
+  }, [applyHighlight])
+
+  useEffect(() => {
+    if (!highlightText) return
+
+    const view = editorRef.current?.view
+    if (!view) return
+
+    applyHighlight(view)
+
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+    }
+  }, [highlightText, applyHighlight])
 
   const basicSetupConfig = useMemo(() => ({
     lineNumbers: false,
@@ -176,6 +196,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       ref={editorRef}
       value={value}
       onChange={stableOnChange}
+      onCreateEditor={handleCreateEditor}
       extensions={extensions}
       theme="none"
       height="100%"

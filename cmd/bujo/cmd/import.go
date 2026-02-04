@@ -67,7 +67,6 @@ func runImport(cmd *cobra.Command, args []string) error {
 	fmt.Fprintf(os.Stderr, "  Habits:      %d\n", len(data.Habits))
 	fmt.Fprintf(os.Stderr, "  Habit Logs:  %d\n", len(data.HabitLogs))
 	fmt.Fprintf(os.Stderr, "  Day Contexts: %d\n", len(data.DayContexts))
-	fmt.Fprintf(os.Stderr, "  Summaries:   %d\n", len(data.Summaries))
 	fmt.Fprintf(os.Stderr, "  Lists:       %d\n", len(data.Lists))
 	fmt.Fprintf(os.Stderr, "  List Items:  %d\n", len(data.ListItems))
 	fmt.Fprintf(os.Stderr, "  Goals:       %d\n", len(data.Goals))

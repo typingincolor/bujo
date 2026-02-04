@@ -125,18 +125,6 @@ type entryMigratedToGoalMsg struct {
 	goalID  int64
 }
 
-type summaryLoadedMsg struct {
-	summary *domain.Summary
-}
-
-type summaryErrorMsg struct {
-	err error
-}
-
-type summaryTokenMsg struct {
-	token string
-}
-
 type searchResultsMsg struct {
 	results []domain.Entry
 	query   string

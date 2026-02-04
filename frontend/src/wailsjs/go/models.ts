@@ -94,6 +94,161 @@ export namespace domain {
 		    return a;
 		}
 	}
+	export class InsightsAction {
+	    ID: number;
+	    SummaryID: number;
+	    ActionText: string;
+	    Priority: string;
+	    Status: string;
+	    DueDate: string;
+	    CreatedAt: string;
+	    WeekStart: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsAction(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.SummaryID = source["SummaryID"];
+	        this.ActionText = source["ActionText"];
+	        this.Priority = source["Priority"];
+	        this.Status = source["Status"];
+	        this.DueDate = source["DueDate"];
+	        this.CreatedAt = source["CreatedAt"];
+	        this.WeekStart = source["WeekStart"];
+	    }
+	}
+	export class InsightsDecision {
+	    ID: number;
+	    DecisionText: string;
+	    Rationale: string;
+	    Participants: string;
+	    ExpectedOutcomes: string;
+	    DecisionDate: string;
+	    SummaryID?: number;
+	    CreatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsDecision(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.DecisionText = source["DecisionText"];
+	        this.Rationale = source["Rationale"];
+	        this.Participants = source["Participants"];
+	        this.ExpectedOutcomes = source["ExpectedOutcomes"];
+	        this.DecisionDate = source["DecisionDate"];
+	        this.SummaryID = source["SummaryID"];
+	        this.CreatedAt = source["CreatedAt"];
+	    }
+	}
+	export class InsightsInitiative {
+	    ID: number;
+	    Name: string;
+	    Status: string;
+	    Description: string;
+	    LastUpdated: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsInitiative(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.Name = source["Name"];
+	        this.Status = source["Status"];
+	        this.Description = source["Description"];
+	        this.LastUpdated = source["LastUpdated"];
+	    }
+	}
+	export class InsightsSummary {
+	    ID: number;
+	    WeekStart: string;
+	    WeekEnd: string;
+	    SummaryText: string;
+	    CreatedAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.WeekStart = source["WeekStart"];
+	        this.WeekEnd = source["WeekEnd"];
+	        this.SummaryText = source["SummaryText"];
+	        this.CreatedAt = source["CreatedAt"];
+	    }
+	}
+	export class InsightsDashboard {
+	    LatestSummary?: InsightsSummary;
+	    ActiveInitiatives: InsightsInitiative[];
+	    HighPriorityActions: InsightsAction[];
+	    RecentDecisions: InsightsDecision[];
+	    DaysSinceLastSummary: number;
+	    Status: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsDashboard(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.LatestSummary = this.convertValues(source["LatestSummary"], InsightsSummary);
+	        this.ActiveInitiatives = this.convertValues(source["ActiveInitiatives"], InsightsInitiative);
+	        this.HighPriorityActions = this.convertValues(source["HighPriorityActions"], InsightsAction);
+	        this.RecentDecisions = this.convertValues(source["RecentDecisions"], InsightsDecision);
+	        this.DaysSinceLastSummary = source["DaysSinceLastSummary"];
+	        this.Status = source["Status"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
+	export class InsightsTopic {
+	    ID: number;
+	    SummaryID: number;
+	    Topic: string;
+	    Content: string;
+	    Importance: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsTopic(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.SummaryID = source["SummaryID"];
+	        this.Topic = source["Topic"];
+	        this.Content = source["Content"];
+	        this.Importance = source["Importance"];
+	    }
+	}
 	export class ListItem {
 	    RowID: number;
 	    EntityID: string;
@@ -409,6 +564,38 @@ export namespace wails {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.isValid = source["isValid"];
 	        this.errors = this.convertValues(source["errors"], ValidationError);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class WeekSummaryDetail {
+	    Summary?: domain.InsightsSummary;
+	    Topics: domain.InsightsTopic[];
+	
+	    static createFrom(source: any = {}) {
+	        return new WeekSummaryDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Summary = this.convertValues(source["Summary"], domain.InsightsSummary);
+	        this.Topics = this.convertValues(source["Topics"], domain.InsightsTopic);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

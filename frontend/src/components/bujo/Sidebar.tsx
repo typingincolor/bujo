@@ -10,10 +10,11 @@ import {
   Search,
   BarChart3,
   HelpCircle,
-  FileEdit
+  FileEdit,
+  Lightbulb
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'pending' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'settings' | 'editable';
+export type ViewType = 'today' | 'pending' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'insights' | 'settings' | 'editable';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -29,7 +30,8 @@ const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'lists', icon: List, label: 'Lists' },
   { view: 'goals', icon: Target, label: 'Monthly Goals' },
   { view: 'search', icon: Search, label: 'Search' },
-  { view: 'stats', icon: BarChart3, label: 'Insights' },
+  { view: 'stats', icon: BarChart3, label: 'Statistics' },
+  { view: 'insights', icon: Lightbulb, label: 'Insights' },
 ];
 
 export function Sidebar({ currentView, onViewChange }: SidebarProps) {

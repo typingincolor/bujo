@@ -13,7 +13,7 @@ func TestOpenAndMigrate(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = db.Close() }()
 
-	tables := []string{"entries", "habits", "habit_logs", "day_context", "summaries", "lists"}
+	tables := []string{"entries", "habits", "habit_logs", "day_context", "lists"}
 	for _, table := range tables {
 		t.Run("table_"+table+"_exists", func(t *testing.T) {
 			var name string

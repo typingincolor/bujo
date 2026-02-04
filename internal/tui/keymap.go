@@ -52,7 +52,6 @@ type KeyMap struct {
 	ExpandAll            key.Binding
 	CollapseAll          key.Binding
 	OpenURL              key.Binding
-	ToggleSummary        key.Binding
 	SetLocation          key.Binding
 	ToggleOverdueContext key.Binding
 	GotoToday            key.Binding
@@ -255,10 +254,6 @@ func DefaultKeyMap() KeyMap {
 		OpenURL: key.NewBinding(
 			key.WithKeys("o"),
 			key.WithHelp("o", "open link"),
-		),
-		ToggleSummary: key.NewBinding(
-			key.WithKeys("s"),
-			key.WithHelp("s", "toggle summary"),
 		),
 		SetLocation: key.NewBinding(
 			key.WithKeys("@"),

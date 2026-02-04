@@ -11,7 +11,6 @@ type ExportData struct {
 	Habits      []Habit      `json:"habits"`
 	HabitLogs   []HabitLog   `json:"habit_logs"`
 	DayContexts []DayContext `json:"day_contexts"`
-	Summaries   []Summary    `json:"summaries"`
 	Lists       []List       `json:"lists"`
 	ListItems   []ListItem   `json:"list_items"`
 	Goals       []Goal       `json:"goals"`

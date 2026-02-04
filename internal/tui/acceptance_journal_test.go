@@ -305,42 +305,6 @@ func TestUAT_JournalView_PastDays_NoOverdueSection(t *testing.T) {
 	}
 }
 
-func TestUAT_JournalView_PastDays_ShowsAISummaryPrompt(t *testing.T) {
-	bujoSvc, habitSvc, listSvc, goalSvc := setupTestServices(t)
-
-	model := NewWithConfig(Config{
-		BujoService:  bujoSvc,
-		HabitService: habitSvc,
-		ListService:  listSvc,
-		GoalService:  goalSvc,
-	})
-	model.width = 80
-	model.height = 24
-
-	// Set view to a past date
-	model.viewDate = time.Now().AddDate(0, 0, -2)
-
-	// Load journal view
-	cmd := model.Init()
-	if cmd != nil {
-		msg := cmd()
-		newModel, cmd := model.Update(msg)
-		model = newModel.(Model)
-		if cmd != nil {
-			goalsMsg := cmd()
-			newModel, _ = model.Update(goalsMsg)
-			model = newModel.(Model)
-		}
-	}
-
-	view := model.View()
-
-	// When viewing past dates, should show AI summary section
-	if !strings.Contains(view, "🤖 AI") || !strings.Contains(view, "Summary") {
-		t.Error("viewing past dates should show AI summary section")
-	}
-}
-
 func TestUAT_JournalView_MarkDone(t *testing.T) {
 	bujoSvc, habitSvc, listSvc, _ := setupTestServices(t)
 	ctx := context.Background()

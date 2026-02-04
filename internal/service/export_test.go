@@ -50,14 +50,6 @@ func (m *mockDayContextRepoForExport) GetAll(ctx context.Context) ([]domain.DayC
 	return m.contexts, nil
 }
 
-type mockSummaryRepoForExport struct {
-	summaries []domain.Summary
-}
-
-func (m *mockSummaryRepoForExport) GetAll(ctx context.Context) ([]domain.Summary, error) {
-	return m.summaries, nil
-}
-
 type mockListRepoForExport struct {
 	lists []domain.List
 }
@@ -108,11 +100,6 @@ func TestExportService_Export_AllData(t *testing.T) {
 			{Date: date, EntityID: domain.NewEntityID()},
 		},
 	}
-	summaryRepo := &mockSummaryRepoForExport{
-		summaries: []domain.Summary{
-			{ID: 1, Horizon: domain.SummaryHorizonDaily, Content: "Test summary"},
-		},
-	}
 	listRepo := &mockListRepoForExport{
 		lists: []domain.List{
 			{ID: 1, Name: "Groceries"},
@@ -129,7 +116,7 @@ func TestExportService_Export_AllData(t *testing.T) {
 		},
 	}
 
-	svc := NewExportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, summaryRepo, listRepo, listItemRepo, goalRepo)
+	svc := NewExportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, listRepo, listItemRepo, goalRepo)
 
 	data, err := svc.Export(ctx, domain.NewExportOptions())
 	if err != nil {
@@ -154,10 +141,6 @@ func TestExportService_Export_AllData(t *testing.T) {
 
 	if len(data.DayContexts) != 1 {
 		t.Errorf("Expected 1 day context, got %d", len(data.DayContexts))
-	}
-
-	if len(data.Summaries) != 1 {
-		t.Errorf("Expected 1 summary, got %d", len(data.Summaries))
 	}
 
 	if len(data.Lists) != 1 {
@@ -188,7 +171,7 @@ func TestExportService_Export_WithDateRange(t *testing.T) {
 	}
 
 	svc := NewExportService(entryRepo, &mockHabitRepoForExport{}, &mockHabitLogRepoForExport{},
-		&mockDayContextRepoForExport{}, &mockSummaryRepoForExport{}, &mockListRepoForExport{},
+		&mockDayContextRepoForExport{}, &mockListRepoForExport{},
 		&mockListItemRepoForExport{}, &mockGoalRepoForExport{})
 
 	from := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
@@ -213,7 +196,7 @@ func TestExportService_Export_EmptyData(t *testing.T) {
 	ctx := context.Background()
 
 	svc := NewExportService(&mockEntryRepoForExport{}, &mockHabitRepoForExport{}, &mockHabitLogRepoForExport{},
-		&mockDayContextRepoForExport{}, &mockSummaryRepoForExport{}, &mockListRepoForExport{},
+		&mockDayContextRepoForExport{}, &mockListRepoForExport{},
 		&mockListItemRepoForExport{}, &mockGoalRepoForExport{})
 
 	data, err := svc.Export(ctx, domain.NewExportOptions())
@@ -301,21 +284,6 @@ func (m *mockImportDayContextRepo) DeleteAll(ctx context.Context) error {
 	return nil
 }
 
-type mockImportSummaryRepo struct {
-	inserted []domain.Summary
-	cleared  bool
-}
-
-func (m *mockImportSummaryRepo) Insert(ctx context.Context, s domain.Summary) (int64, error) {
-	m.inserted = append(m.inserted, s)
-	return int64(len(m.inserted)), nil
-}
-
-func (m *mockImportSummaryRepo) DeleteAll(ctx context.Context) error {
-	m.cleared = true
-	return nil
-}
-
 type mockImportListRepo struct {
 	existing map[domain.EntityID]bool
 	inserted []domain.List
@@ -395,12 +363,11 @@ func TestImportService_Import_MergeMode(t *testing.T) {
 	habitRepo := &mockImportHabitRepo{existing: make(map[domain.EntityID]bool)}
 	habitLogRepo := &mockImportHabitLogRepo{}
 	dayContextRepo := &mockImportDayContextRepo{}
-	summaryRepo := &mockImportSummaryRepo{}
 	listRepo := &mockImportListRepo{existing: make(map[domain.EntityID]bool)}
 	listItemRepo := &mockImportListItemRepo{}
 	goalRepo := &mockImportGoalRepo{existing: make(map[domain.EntityID]bool)}
 
-	svc := NewImportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, summaryRepo, listRepo, listItemRepo, goalRepo)
+	svc := NewImportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, listRepo, listItemRepo, goalRepo)
 
 	data := &domain.ExportData{
 		Version: domain.ExportVersion,
@@ -430,12 +397,11 @@ func TestImportService_Import_ReplaceMode(t *testing.T) {
 	habitRepo := &mockImportHabitRepo{existing: make(map[domain.EntityID]bool)}
 	habitLogRepo := &mockImportHabitLogRepo{}
 	dayContextRepo := &mockImportDayContextRepo{}
-	summaryRepo := &mockImportSummaryRepo{}
 	listRepo := &mockImportListRepo{existing: make(map[domain.EntityID]bool)}
 	listItemRepo := &mockImportListItemRepo{}
 	goalRepo := &mockImportGoalRepo{existing: make(map[domain.EntityID]bool)}
 
-	svc := NewImportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, summaryRepo, listRepo, listItemRepo, goalRepo)
+	svc := NewImportService(entryRepo, habitRepo, habitLogRepo, dayContextRepo, listRepo, listItemRepo, goalRepo)
 
 	data := &domain.ExportData{
 		Version: domain.ExportVersion,
