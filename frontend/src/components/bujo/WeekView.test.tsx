@@ -117,12 +117,7 @@ describe('WeekView', () => {
 
   it('accepts callbacks prop without errors', () => {
     const callbacks = {
-      onMarkDone: vi.fn(),
-      onMigrate: vi.fn(),
-      onEdit: vi.fn(),
-      onDelete: vi.fn(),
-      onCyclePriority: vi.fn(),
-      onMoveToList: vi.fn(),
+      onNavigateToEntry: vi.fn(),
     };
 
     // This test verifies that WeekView accepts callbacks prop
