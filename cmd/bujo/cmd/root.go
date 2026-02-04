@@ -6,11 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"errors"
-
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/typingincolor/bujo/internal/adapter/ai"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/repository/sqlite"
 	"github.com/typingincolor/bujo/internal/service"
@@ -29,7 +26,6 @@ var (
 	habitService           *service.HabitService
 	listService            *service.ListService
 	goalService            *service.GoalService
-	summaryService         *service.SummaryService
 	statsService           *service.StatsService
 	changeDetectionService *service.ChangeDetectionService
 	archiveService         *service.ArchiveService
@@ -102,19 +98,6 @@ var rootCmd = &cobra.Command{
 			entryRepo, habitRepo, habitLogRepo, dayCtxRepo,
 			listRepo, listItemRepo, goalRepo,
 		)
-		aiClient, err := ai.NewAIClient(cmd.Context())
-		if err != nil && !errors.Is(err, ai.ErrAIDisabled) {
-			fmt.Fprintf(os.Stderr, "Warning: failed to initialize AI: %v\n", err)
-		}
-		if err == nil {
-			promptsDir := getDefaultPromptsDir()
-			promptLoader := ai.NewPromptLoader(promptsDir)
-			if err := promptLoader.EnsureDefaults(cmd.Context()); err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to create default prompts: %v\n", err)
-			}
-			generator := ai.NewGeminiGeneratorWithLoader(aiClient, promptLoader)
-			summaryService = service.NewSummaryService(entryRepo, summaryRepo, generator)
-		}
 
 		return nil
 	},
@@ -153,13 +136,4 @@ func getDefaultDBPath() string {
 	}
 
 	return filepath.Join(bujoDir, "bujo.db")
-}
-
-func getDefaultPromptsDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-
-	return filepath.Join(home, ".bujo", "prompts")
 }

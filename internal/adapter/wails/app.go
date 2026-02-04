@@ -358,20 +358,6 @@ func (a *App) GetLocationHistory() ([]string, error) {
 	return locations, nil
 }
 
-func (a *App) GetSummary(date time.Time) (string, error) {
-	if a.services.Summary == nil {
-		return "", nil
-	}
-	summary, err := a.services.Summary.GetSummary(a.ctx, domain.SummaryHorizonDaily, date)
-	if err != nil {
-		return "", err
-	}
-	if summary == nil {
-		return "", nil
-	}
-	return summary.Content, nil
-}
-
 func (a *App) GetVersion() string {
 	return cmd.Version()
 }
