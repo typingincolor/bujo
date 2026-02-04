@@ -540,9 +540,13 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 	// tree[0] is the parent; tree[1:] are all descendants ordered by depth, id
 	descendants := tree[1:]
 
-	originalTypes := make(map[int64]domain.EntryType, len(tree))
+	type originalEntry struct {
+		Type     domain.EntryType
+		Priority domain.Priority
+	}
+	originals := make(map[int64]originalEntry, len(tree))
 	for _, e := range tree {
-		originalTypes[e.ID] = e.Type
+		originals[e.ID] = originalEntry{Type: e.Type, Priority: e.Priority}
 	}
 
 	// Mark all original entries as migrated
@@ -557,6 +561,7 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 	newEntry := domain.Entry{
 		Type:          domain.EntryTypeTask,
 		Content:       entry.Content,
+		Priority:      entry.Priority,
 		ScheduledDate: &toDate,
 		CreatedAt:     time.Now(),
 	}
@@ -574,9 +579,11 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		if child.ParentID != nil {
 			newChildParentID = idMap[*child.ParentID]
 		}
+		orig := originals[child.ID]
 		newChild := domain.Entry{
-			Type:          originalTypes[child.ID],
+			Type:          orig.Type,
 			Content:       child.Content,
+			Priority:      orig.Priority,
 			ParentID:      &newChildParentID,
 			Depth:         child.Depth,
 			ScheduledDate: &toDate,

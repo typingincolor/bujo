@@ -333,6 +333,55 @@ func TestBujoService_MigrateEntry_WithGrandchildren(t *testing.T) {
 	}
 }
 
+func TestBujoService_MigrateEntry_PreservesPriority(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+
+	// Create parent with a prioritized child
+	ids, err := service.LogEntries(ctx, `. Parent task
+  . Child task`, LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+	require.Len(t, ids, 2)
+
+	parentID := ids[0]
+	childID := ids[1]
+
+	// Set priority on both parent and child
+	err = service.CyclePriority(ctx, parentID)
+	require.NoError(t, err)
+	err = service.CyclePriority(ctx, childID)
+	require.NoError(t, err)
+	err = service.CyclePriority(ctx, childID)
+	require.NoError(t, err)
+
+	// Verify priorities before migration
+	parent, err := entryRepo.GetByID(ctx, parentID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, parent.Priority)
+
+	child, err := entryRepo.GetByID(ctx, childID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityMedium, child.Priority)
+
+	// Migrate
+	newParentID, err := service.MigrateEntry(ctx, parentID, tomorrow)
+	require.NoError(t, err)
+
+	// Verify new parent preserves priority
+	newParent, err := entryRepo.GetByID(ctx, newParentID)
+	require.NoError(t, err)
+	assert.Equal(t, domain.PriorityLow, newParent.Priority, "migrated parent should preserve priority")
+
+	// Verify new child preserves priority
+	newChildren, err := entryRepo.GetChildren(ctx, newParentID)
+	require.NoError(t, err)
+	require.Len(t, newChildren, 1)
+	assert.Equal(t, domain.PriorityMedium, newChildren[0].Priority, "migrated child should preserve priority")
+}
+
 func TestBujoService_MoveEntry_ChangeParent(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()
