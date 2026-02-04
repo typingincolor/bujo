@@ -470,15 +470,12 @@ func (a *App) ApplyEditableDocumentWithActions(doc string, date time.Time, migra
 }
 
 func (a *App) IsInsightsAvailable() bool {
-	if a.services.InsightsRepo == nil {
-		return false
-	}
 	return a.services.InsightsRepo.IsAvailable()
 }
 
 func (a *App) GetInsightsDashboard() (*domain.InsightsDashboard, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return &domain.InsightsDashboard{Status: "not_initialized"}, nil
 	}
 
@@ -531,7 +528,7 @@ func (a *App) GetInsightsDashboard() (*domain.InsightsDashboard, error) {
 
 func (a *App) GetInsightsSummaries(limit int) ([]domain.InsightsSummary, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return []domain.InsightsSummary{}, nil
 	}
 	return repo.GetSummaries(a.ctx, limit)
@@ -539,7 +536,7 @@ func (a *App) GetInsightsSummaries(limit int) ([]domain.InsightsSummary, error) 
 
 func (a *App) GetInsightsSummaryDetail(summaryID int64) ([]domain.InsightsTopic, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return []domain.InsightsTopic{}, nil
 	}
 	return repo.GetTopicsForSummary(a.ctx, summaryID)
@@ -547,7 +544,7 @@ func (a *App) GetInsightsSummaryDetail(summaryID int64) ([]domain.InsightsTopic,
 
 func (a *App) GetInsightsActions() ([]domain.InsightsAction, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return []domain.InsightsAction{}, nil
 	}
 	return repo.GetPendingActions(a.ctx)
@@ -568,7 +565,7 @@ func nextWeekStartFrom(weekStart string) (string, error) {
 
 func (a *App) GetInsightsSummaryForWeek(weekStart string) (*WeekSummaryDetail, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return &WeekSummaryDetail{Topics: []domain.InsightsTopic{}}, nil
 	}
 	nextWeek, err := nextWeekStartFrom(weekStart)
@@ -591,7 +588,7 @@ func (a *App) GetInsightsSummaryForWeek(weekStart string) (*WeekSummaryDetail, e
 
 func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsAction, error) {
 	repo := a.services.InsightsRepo
-	if repo == nil || !repo.IsAvailable() {
+	if !repo.IsAvailable() {
 		return []domain.InsightsAction{}, nil
 	}
 	nextWeek, err := nextWeekStartFrom(weekStart)

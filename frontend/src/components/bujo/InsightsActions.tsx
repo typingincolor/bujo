@@ -31,7 +31,8 @@ export function InsightsActions({ weekStart }: InsightsActionsProps) {
     );
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   const priorityBadge = (priority: string) => {
     const colors: Record<string, string> = {

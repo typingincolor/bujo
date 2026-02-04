@@ -233,6 +233,14 @@ func TestInsightsRepository_GetDaysSinceLastSummary(t *testing.T) {
 		assert.Greater(t, days, 0)
 	})
 
+	t.Run("returns zero when no summaries exist", func(t *testing.T) {
+		db := setupEmptyInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+		days, err := repo.GetDaysSinceLastSummary(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 0, days)
+	})
+
 	t.Run("returns -1 when db is nil", func(t *testing.T) {
 		repo := NewInsightsRepository(nil)
 		days, err := repo.GetDaysSinceLastSummary(ctx)

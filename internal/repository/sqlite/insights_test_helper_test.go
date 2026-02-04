@@ -95,6 +95,27 @@ func setupInsightsTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func setupEmptyInsightsTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
+
+	schema := `
+		CREATE TABLE summaries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			week_start TEXT NOT NULL,
+			week_end TEXT NOT NULL,
+			summary_text TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
+		);
+	`
+	_, err = db.Exec(schema)
+	require.NoError(t, err)
+	return db
+}
+
 func seedInsightsData(t *testing.T, db *sql.DB) {
 	t.Helper()
 

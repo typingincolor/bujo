@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/typingincolor/bujo/internal/domain"
 )
@@ -273,10 +274,10 @@ func (r *InsightsRepository) GetDaysSinceLastSummary(ctx context.Context) (int, 
 
 	var days sql.NullInt64
 	if err := row.Scan(&days); err != nil {
-		return -1, nil
+		return 0, fmt.Errorf("failed to query days since last summary: %w", err)
 	}
 	if !days.Valid {
-		return -1, nil
+		return 0, nil
 	}
 	return int(days.Int64), nil
 }
