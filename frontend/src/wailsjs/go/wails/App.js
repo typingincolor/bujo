@@ -78,6 +78,10 @@ export function EditListItem(arg1, arg2) {
   return window['go']['wails']['App']['EditListItem'](arg1, arg2);
 }
 
+export function GetAttentionScores(arg1) {
+  return window['go']['wails']['App']['GetAttentionScores'](arg1);
+}
+
 export function GetDayEntries(arg1, arg2) {
   return window['go']['wails']['App']['GetDayEntries'](arg1, arg2);
 }

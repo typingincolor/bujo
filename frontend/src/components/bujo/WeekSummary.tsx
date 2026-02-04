@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { DayEntries, Entry } from '@/types/bujo';
-import { calculateAttentionScore, sortByAttentionScore } from '@/lib/attentionScore';
+import { useAttentionScores } from '@/hooks/useAttentionScores';
 import { cn } from '@/lib/utils';
 import { EntrySymbol } from './EntrySymbol';
 
@@ -26,8 +27,10 @@ function flattenEntries(entries: Entry[]): Entry[] {
 }
 
 export function WeekSummary({ days, onShowAllAttention }: WeekSummaryProps) {
-  const allEntries = days.flatMap(day => flattenEntries(day.entries));
-  const now = new Date();
+  const allEntries = useMemo(
+    () => days.flatMap(day => flattenEntries(day.entries)),
+    [days]
+  );
 
   const createdCount = allEntries.filter(e => e.type === 'task').length;
   const doneCount = allEntries.filter(e => e.type === 'done').length;
@@ -44,15 +47,26 @@ export function WeekSummary({ days, onShowAllAttention }: WeekSummaryProps) {
     return allEntries.filter(e => e.parentId === eventId).length;
   };
 
-  const needsAttentionEntries = allEntries.filter(
-    e => e.type === 'task' || e.type === 'question'
+  const needsAttentionEntries = useMemo(
+    () => allEntries.filter(e => e.type === 'task' || e.type === 'question'),
+    [allEntries]
   );
-  const sortedAttentionEntries = sortByAttentionScore(needsAttentionEntries, now);
-  const filteredAttentionEntries = sortedAttentionEntries.filter(
-    e => calculateAttentionScore(e, now).score >= MIN_ATTENTION_SCORE
+
+  const attentionIds = useMemo(
+    () => needsAttentionEntries.map(e => e.id),
+    [needsAttentionEntries]
   );
-  const hasMoreThanLimit = filteredAttentionEntries.length > MAX_ATTENTION_ITEMS;
-  const topAttentionEntries = filteredAttentionEntries.slice(0, MAX_ATTENTION_ITEMS);
+  const { scores } = useAttentionScores(attentionIds);
+
+  const sortedAttentionEntries = useMemo(() => {
+    return [...needsAttentionEntries]
+      .map(entry => ({ entry, score: scores[entry.id]?.score ?? 0 }))
+      .filter(({ score }) => score >= MIN_ATTENTION_SCORE)
+      .sort((a, b) => b.score - a.score);
+  }, [needsAttentionEntries, scores]);
+
+  const hasMoreThanLimit = sortedAttentionEntries.length > MAX_ATTENTION_ITEMS;
+  const topAttentionEntries = sortedAttentionEntries.slice(0, MAX_ATTENTION_ITEMS);
 
   return (
     <div data-testid="week-summary" className="space-y-6">
@@ -103,8 +117,8 @@ export function WeekSummary({ days, onShowAllAttention }: WeekSummaryProps) {
           {topAttentionEntries.length === 0 ? (
             <p className="text-sm text-muted-foreground">All caught up!</p>
           ) : (
-            topAttentionEntries.map(entry => {
-              const { indicators } = calculateAttentionScore(entry, now);
+            topAttentionEntries.map(({ entry, score }) => {
+              const indicators = scores[entry.id]?.indicators ?? [];
               const isHighPriority = entry.priority === 'high';
               return (
                 <button

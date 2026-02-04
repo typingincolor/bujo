@@ -44,6 +44,8 @@ export function EditEntry(arg1:number,arg2:string):Promise<void>;
 
 export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
+export function GetAttentionScores(arg1:Array<number>):Promise<{[key: number]: domain.AttentionResult}>;
+
 export function GetDayEntries(arg1:time.Time,arg2:time.Time):Promise<Array<service.DayEntries>>;
 
 export function GetEditableDocument(arg1:time.Time):Promise<string>;

@@ -1,12 +1,11 @@
-import { useMemo } from 'react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
-import { calculateAttentionScore, AttentionIndicator } from '@/lib/attentionScore';
+import { AttentionScore } from '@/hooks/useAttentionScores';
 import { cn } from '@/lib/utils';
 
 interface OverdueItemProps {
   entry: Entry;
-  now: Date;
+  attentionScore?: AttentionScore;
   breadcrumb?: string;
   onSelect?: (entry: Entry) => void;
   isSelected?: boolean;
@@ -18,7 +17,7 @@ function getBadgeColor(score: number): string {
   return 'bg-yellow-500';
 }
 
-function formatIndicator(indicator: AttentionIndicator): string {
+function formatIndicator(indicator: string): string {
   switch (indicator) {
     case 'overdue':
       return 'Overdue';
@@ -35,15 +34,13 @@ function formatIndicator(indicator: AttentionIndicator): string {
 
 export function OverdueItem({
   entry,
-  now,
+  attentionScore,
   breadcrumb,
   onSelect,
   isSelected = false,
 }: OverdueItemProps) {
-  const attentionResult = useMemo(
-    () => calculateAttentionScore(entry, now),
-    [entry, now]
-  );
+  const score = attentionScore?.score ?? 0;
+  const indicators = attentionScore?.indicators ?? [];
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
   const hasParent = entry.parentId !== null;
@@ -103,10 +100,10 @@ export function OverdueItem({
               data-testid="attention-badge"
               className={cn(
                 'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
-                getBadgeColor(attentionResult.score)
+                getBadgeColor(score)
               )}
             >
-              {attentionResult.score}
+              {score}
             </span>
           </Tooltip.Trigger>
           <Tooltip.Portal>
@@ -115,9 +112,9 @@ export function OverdueItem({
               className="z-50 bg-popover border border-border rounded-lg shadow-lg p-2 text-sm"
               sideOffset={5}
             >
-              <div className="font-medium mb-1">Attention Score: {attentionResult.score}</div>
+              <div className="font-medium mb-1">Attention Score: {score}</div>
               <ul className="text-muted-foreground text-xs space-y-0.5">
-                {attentionResult.indicators.map((indicator) => (
+                {indicators.map((indicator) => (
                   <li key={indicator}>{formatIndicator(indicator)}</li>
                 ))}
               </ul>

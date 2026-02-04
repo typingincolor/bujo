@@ -249,6 +249,22 @@ export namespace domain {
 	        this.Importance = source["Importance"];
 	    }
 	}
+	export class AttentionResult {
+	    Score: number;
+	    Indicators: string[];
+	    DaysOld: number;
+
+	    static createFrom(source: any = {}) {
+	        return new AttentionResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Score = source["Score"];
+	        this.Indicators = source["Indicators"];
+	        this.DaysOld = source["DaysOld"];
+	    }
+	}
 	export class ListItem {
 	    RowID: number;
 	    EntityID: string;

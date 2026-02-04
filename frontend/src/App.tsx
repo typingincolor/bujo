@@ -694,7 +694,6 @@ function App() {
           {view === 'pending' && (
             <PendingTasksView
               overdueEntries={overdueEntries}
-              now={new Date()}
               callbacks={sidebarCallbacks}
               selectedEntry={pendingSelectedEntry ?? undefined}
               onSelectEntry={(entry) => setPendingSelectedEntry(entry)}

@@ -1,7 +1,15 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { WeekSummary } from './WeekSummary'
 import { DayEntries, Entry } from '@/types/bujo'
+
+vi.mock('@/wailsjs/go/wails/App', () => ({
+  GetAttentionScores: vi.fn(),
+}))
+
+import { GetAttentionScores } from '@/wailsjs/go/wails/App'
+
+const mockGetAttentionScores = vi.mocked(GetAttentionScores)
 
 const createEntry = (overrides: Partial<Entry> = {}): Entry => ({
   id: 1,
@@ -23,6 +31,11 @@ const createDay = (overrides: Partial<DayEntries> = {}): DayEntries => ({
 })
 
 describe('WeekSummary', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetAttentionScores.mockResolvedValue({})
+  })
+
   describe('Task Flow', () => {
     it('renders task flow section', () => {
       render(<WeekSummary days={[]} />)
@@ -94,7 +107,11 @@ describe('WeekSummary', () => {
       expect(screen.getByText('Meetings')).toBeInTheDocument()
     })
 
-    it('shows events with children', () => {
+    it('shows events with children', async () => {
+      mockGetAttentionScores.mockResolvedValue({
+        3: { Score: 10, Indicators: [], DaysOld: 0 },
+      })
+
       const days = [
         createDay({
           entries: [
@@ -126,6 +143,10 @@ describe('WeekSummary', () => {
 
   describe('Entry Symbols', () => {
     it('shows event symbol in meetings section', () => {
+      mockGetAttentionScores.mockResolvedValue({
+        2: { Score: 20, Indicators: [], DaysOld: 0 },
+      })
+
       const days: DayEntries[] = [{
         date: '2026-01-25',
         entries: [
@@ -139,20 +160,23 @@ describe('WeekSummary', () => {
       expect(meetingSection).toHaveTextContent('⚬') // event symbol
     })
 
-    it('shows task symbol in attention section for tasks', () => {
-      // Use an old date to trigger attention (5+ days old)
-      const oldDate = new Date()
-      oldDate.setDate(oldDate.getDate() - 6)
+    it('shows task symbol in attention section for tasks', async () => {
+      mockGetAttentionScores.mockResolvedValue({
+        1: { Score: 50, Indicators: ['priority'], DaysOld: 6 },
+      })
+
       const days: DayEntries[] = [{
-        date: oldDate.toISOString().split('T')[0],
+        date: '2026-01-19',
         entries: [
-          { id: 1, content: 'Old task', type: 'task', priority: 'high', parentId: null, loggedDate: oldDate.toISOString().split('T')[0] },
+          { id: 1, content: 'Old task', type: 'task', priority: 'high', parentId: null, loggedDate: '2026-01-19' },
         ],
       }]
       render(<WeekSummary days={days} />)
 
-      const attentionSection = screen.getByTestId('week-summary-attention')
-      expect(attentionSection).toHaveTextContent('•') // task symbol
+      await waitFor(() => {
+        const attentionSection = screen.getByTestId('week-summary-attention')
+        expect(attentionSection).toHaveTextContent('•') // task symbol
+      })
     })
   })
 
@@ -162,9 +186,11 @@ describe('WeekSummary', () => {
       expect(screen.getByText('Needs Attention')).toBeInTheDocument()
     })
 
-    it('shows open tasks sorted by attention score', () => {
-      const fourDaysAgo = new Date()
-      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
+    it('shows open tasks sorted by attention score', async () => {
+      mockGetAttentionScores.mockResolvedValue({
+        1: { Score: 20, Indicators: [], DaysOld: 0 },
+        2: { Score: 80, Indicators: ['priority'], DaysOld: 4 },
+      })
 
       const days = [
         createDay({
@@ -175,19 +201,23 @@ describe('WeekSummary', () => {
               type: 'task',
               content: 'Old urgent task',
               priority: 'high',
-              loggedDate: fourDaysAgo.toISOString(),
             }),
           ],
         }),
       ]
       render(<WeekSummary days={days} />)
 
-      // Old urgent task should appear first (higher attention score)
-      const items = screen.getAllByTestId('attention-item')
-      expect(items[0]).toHaveTextContent('Old urgent task')
+      await waitFor(() => {
+        const items = screen.getAllByTestId('attention-item')
+        expect(items[0]).toHaveTextContent('Old urgent task')
+      })
     })
 
-    it('shows unanswered questions', () => {
+    it('shows unanswered questions', async () => {
+      mockGetAttentionScores.mockResolvedValue({
+        1: { Score: 30, Indicators: [], DaysOld: 0 },
+      })
+
       const days = [
         createDay({
           entries: [
@@ -197,10 +227,16 @@ describe('WeekSummary', () => {
       ]
       render(<WeekSummary days={days} />)
 
-      expect(screen.getByText('What is the deadline?')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('What is the deadline?')).toBeInTheDocument()
+      })
     })
 
-    it('shows attention indicators', () => {
+    it('shows attention indicators', async () => {
+      mockGetAttentionScores.mockResolvedValue({
+        1: { Score: 50, Indicators: ['priority'], DaysOld: 0 },
+      })
+
       const days = [
         createDay({
           entries: [
@@ -215,12 +251,17 @@ describe('WeekSummary', () => {
       ]
       render(<WeekSummary days={days} />)
 
-      expect(screen.getByText(/priority/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/priority/i)).toBeInTheDocument()
+      })
     })
 
-    it('limits to top 5 items', () => {
-      const fourDaysAgo = new Date()
-      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
+    it('limits to top 5 items', async () => {
+      const scores: Record<number, { Score: number; Indicators: string[]; DaysOld: number }> = {}
+      Array.from({ length: 10 }, (_, i) => {
+        scores[i + 1] = { Score: 50 + i, Indicators: [], DaysOld: i }
+      })
+      mockGetAttentionScores.mockResolvedValue(scores)
 
       const days = [
         createDay({
@@ -229,20 +270,24 @@ describe('WeekSummary', () => {
               id: i + 1,
               type: 'task',
               content: `Task ${i + 1}`,
-              loggedDate: fourDaysAgo.toISOString(),
             })
           ),
         }),
       ]
       render(<WeekSummary days={days} />)
 
-      const items = screen.getAllByTestId('attention-item')
-      expect(items.length).toBe(5)
+      await waitFor(() => {
+        const items = screen.getAllByTestId('attention-item')
+        expect(items.length).toBe(5)
+      })
     })
 
-    it('shows "Show all" link when more than 5 items', () => {
-      const fourDaysAgo = new Date()
-      fourDaysAgo.setDate(fourDaysAgo.getDate() - 4)
+    it('shows "Show all" link when more than 5 items', async () => {
+      const scores: Record<number, { Score: number; Indicators: string[]; DaysOld: number }> = {}
+      Array.from({ length: 10 }, (_, i) => {
+        scores[i + 1] = { Score: 50 + i, Indicators: [], DaysOld: i }
+      })
+      mockGetAttentionScores.mockResolvedValue(scores)
 
       const days = [
         createDay({
@@ -251,19 +296,24 @@ describe('WeekSummary', () => {
               id: i + 1,
               type: 'task',
               content: `Task ${i + 1}`,
-              loggedDate: fourDaysAgo.toISOString(),
             })
           ),
         }),
       ]
       render(<WeekSummary days={days} />)
 
-      expect(screen.getByText(/show all/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/show all/i)).toBeInTheDocument()
+      })
     })
   })
 
   describe('WeekSummary without popover', () => {
     it('does not render entry context popover wrapper', () => {
+      mockGetAttentionScores.mockResolvedValue({
+        2: { Score: 10, Indicators: [], DaysOld: 0 },
+      })
+
       const days: DayEntries[] = [{
         date: '2026-01-25',
         entries: [

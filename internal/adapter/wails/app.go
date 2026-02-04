@@ -598,6 +598,10 @@ func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsActi
 	return repo.GetActionsForWeek(a.ctx, weekStart, nextWeek)
 }
 
+func (a *App) GetAttentionScores(ids []int64) (map[int64]domain.AttentionResult, error) {
+	return a.services.Bujo.GetAttentionScores(a.ctx, ids)
+}
+
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
 	parsed, err := dateutil.ParseFuture(input)
 	if err != nil {

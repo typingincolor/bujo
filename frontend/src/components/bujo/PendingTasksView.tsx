@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo';
 import { EntryActionBar } from './EntryActions/EntryActionBar';
 import { cn } from '@/lib/utils';
-import { calculateAttentionScore } from '@/lib/attentionScore';
+import { useAttentionScores, AttentionScore } from '@/hooks/useAttentionScores';
 import { RefreshCw } from 'lucide-react';
 
 export interface EntryCallbacks {
@@ -20,7 +20,6 @@ export interface EntryCallbacks {
 
 interface PendingTasksViewProps {
   overdueEntries: Entry[];
-  now: Date;
   callbacks: EntryCallbacks;
   selectedEntry?: Entry;
   onSelectEntry: (entry: Entry) => void;
@@ -30,7 +29,6 @@ interface PendingTasksViewProps {
 
 export function PendingTasksView({
   overdueEntries,
-  now,
   callbacks,
   selectedEntry,
   onSelectEntry,
@@ -42,16 +40,22 @@ export function PendingTasksView({
 
   const taskEntries = useMemo(() => {
     const filtered = overdueEntries.filter(e => e.type === 'task');
-    const withOverrides = filtered.map(entry => {
+    return filtered.map(entry => {
       const override = localStatusOverrides.get(entry.id);
       return override ? { ...entry, type: override } : entry;
     });
-    return withOverrides.sort((a, b) => {
-      const scoreA = calculateAttentionScore(a, now).score;
-      const scoreB = calculateAttentionScore(b, now).score;
+  }, [overdueEntries, localStatusOverrides]);
+
+  const taskIds = useMemo(() => taskEntries.map(e => e.id), [taskEntries]);
+  const { scores } = useAttentionScores(taskIds);
+
+  const sortedTaskEntries = useMemo(() => {
+    return [...taskEntries].sort((a, b) => {
+      const scoreA = scores[a.id]?.score ?? 0;
+      const scoreB = scores[b.id]?.score ?? 0;
       return scoreB - scoreA;
     });
-  }, [overdueEntries, localStatusOverrides, now]);
+  }, [taskEntries, scores]);
 
   const createEntryCallbacks = useCallback((entry: Entry) => ({
     onMarkDone: callbacks.onMarkDone ? () => {
@@ -91,34 +95,34 @@ export function PendingTasksView({
 
       if (e.key === 'j' || e.key === 'ArrowDown') {
         e.preventDefault();
-        if (taskEntries.length === 0) return;
-        const nextIndex = Math.min(selectedIndexRef.current + 1, taskEntries.length - 1);
+        if (sortedTaskEntries.length === 0) return;
+        const nextIndex = Math.min(selectedIndexRef.current + 1, sortedTaskEntries.length - 1);
         selectedIndexRef.current = nextIndex;
-        onSelectEntry(taskEntries[nextIndex]);
+        onSelectEntry(sortedTaskEntries[nextIndex]);
       }
 
       if (e.key === 'k' || e.key === 'ArrowUp') {
         e.preventDefault();
-        if (taskEntries.length === 0) return;
+        if (sortedTaskEntries.length === 0) return;
         const prevIndex = Math.max(selectedIndexRef.current - 1, 0);
         selectedIndexRef.current = prevIndex;
-        onSelectEntry(taskEntries[prevIndex]);
+        onSelectEntry(sortedTaskEntries[prevIndex]);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [taskEntries, onSelectEntry]);
+  }, [sortedTaskEntries, onSelectEntry]);
 
   // Sync selectedIndexRef when selectedEntry changes
   useEffect(() => {
     if (selectedEntry) {
-      const idx = taskEntries.findIndex(e => e.id === selectedEntry.id);
+      const idx = sortedTaskEntries.findIndex(e => e.id === selectedEntry.id);
       if (idx !== -1) selectedIndexRef.current = idx;
     } else {
       selectedIndexRef.current = -1;
     }
-  }, [selectedEntry, taskEntries]);
+  }, [selectedEntry, sortedTaskEntries]);
 
   return (
     <div className="flex flex-col h-full">
@@ -137,11 +141,11 @@ export function PendingTasksView({
         {taskEntries.length === 0 ? (
           <p className="text-sm text-muted-foreground">No pending tasks</p>
         ) : (
-          taskEntries.map((entry) => (
+          sortedTaskEntries.map((entry) => (
             <PendingTaskItem
               key={entry.id}
               entry={entry}
-              now={now}
+              attentionScore={scores[entry.id]}
               isSelected={selectedEntry?.id === entry.id}
               onSelect={() => onSelectEntry(entry)}
               onDoubleClick={() => onNavigateToEntry?.(entry)}
@@ -156,16 +160,16 @@ export function PendingTasksView({
 
 interface PendingTaskItemProps {
   entry: Entry;
-  now: Date;
+  attentionScore?: AttentionScore;
   isSelected: boolean;
   onSelect: () => void;
   onDoubleClick?: () => void;
   callbacks: Record<string, (() => void) | undefined>;
 }
 
-function PendingTaskItem({ entry, now, isSelected, onSelect, onDoubleClick, callbacks }: PendingTaskItemProps) {
+function PendingTaskItem({ entry, attentionScore, isSelected, onSelect, onDoubleClick, callbacks }: PendingTaskItemProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const attentionResult = calculateAttentionScore(entry, now);
+  const score = attentionScore?.score ?? 0;
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
 
@@ -192,11 +196,11 @@ function PendingTaskItem({ entry, now, isSelected, onSelect, onDoubleClick, call
           data-testid="attention-badge"
           className={cn(
             'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
-            attentionResult.score >= 80 ? 'bg-red-500' :
-            attentionResult.score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
+            score >= 80 ? 'bg-red-500' :
+            score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
           )}
         >
-          {attentionResult.score}
+          {score}
         </span>
 
         {prioritySymbol && (
