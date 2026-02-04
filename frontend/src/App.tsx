@@ -287,7 +287,7 @@ function App() {
       // View navigation shortcuts (CMD+1 through CMD+9) - always available
       if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
         e.preventDefault()
-        const viewMap: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+        const viewMap: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'insights']
         const viewIndex = parseInt(e.key) - 1
         if (viewIndex < viewMap.length) {
           handleViewChange(viewMap[viewIndex])
