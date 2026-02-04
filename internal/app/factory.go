@@ -17,7 +17,6 @@ type Services struct {
 	List            *service.ListService
 	Goal            *service.GoalService
 	Stats           *service.StatsService
-	Summary         *service.SummaryService
 	ChangeDetection *service.ChangeDetectionService
 	EditableView    *service.EditableViewService
 }
