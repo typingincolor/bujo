@@ -9,7 +9,6 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   CancelEntry: vi.fn(),
   UncancelEntry: vi.fn(),
   CyclePriority: vi.fn(),
-  GetSummary: vi.fn(),
   RetypeEntry: vi.fn(),
   MoveEntryToRoot: vi.fn(),
 }))

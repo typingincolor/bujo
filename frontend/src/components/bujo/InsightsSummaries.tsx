@@ -1,32 +1,17 @@
 import { useEffect, useState } from 'react';
-import { GetInsightsSummaries, GetInsightsSummaryDetail } from '../../../wailsjs/go/wails/App';
+import { GetInsightsSummaries, GetInsightsSummaryDetail } from '@/wailsjs/go/wails/App';
+import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
 
-interface Summary {
-  ID: number;
-  WeekStart: string;
-  WeekEnd: string;
-  SummaryText: string;
-  CreatedAt: string;
-}
-
-interface Topic {
-  ID: number;
-  SummaryID: number;
-  Topic: string;
-  Content: string;
-  Importance: string;
-}
-
 export function InsightsSummaries() {
-  const [summaries, setSummaries] = useState<Summary[]>([]);
+  const [summaries, setSummaries] = useState<domain.InsightsSummary[]>([]);
   const [expandedID, setExpandedID] = useState<number | null>(null);
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [topics, setTopics] = useState<domain.InsightsTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     GetInsightsSummaries(10)
-      .then((data: Summary[]) => setSummaries(data))
+      .then((data) => setSummaries(data))
       .catch((err: Error) => setError(err.message));
   }, []);
 

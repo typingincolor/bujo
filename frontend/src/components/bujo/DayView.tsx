@@ -1,10 +1,10 @@
 import { DayEntries, Entry } from '@/types/bujo';
 import { EntryItem } from './EntryItem';
-import { Calendar, Sparkles } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { format, isToday, isTomorrow, isYesterday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useState, useMemo, useEffect } from 'react';
-import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, GetSummary, MoveEntryToRoot } from '@/wailsjs/go/wails/App';
+import { MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry, MoveEntryToRoot } from '@/wailsjs/go/wails/App';
 
 interface DayViewProps {
   day: DayEntries;
@@ -150,9 +150,6 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
   const tree = useMemo(() => buildTree(day.entries), [day.entries]);
   const initialCollapsed = useMemo(() => getParentIds(tree), [tree]);
   const [collapsedIds, setCollapsedIds] = useState<Set<number>>(initialCollapsed);
-  const [showSummary, setShowSummary] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
   const dateObj = new Date(day.date + 'T00:00:00');
 
   useEffect(() => {
@@ -236,24 +233,6 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
     }
   };
 
-  const handleToggleSummary = async () => {
-    if (showSummary) {
-      setShowSummary(false);
-      return;
-    }
-
-    setLoadingSummary(true);
-    try {
-      const result = await GetSummary(dateObj.toISOString());
-      setSummary(result || null);
-      setShowSummary(true);
-    } catch (error) {
-      console.error('Failed to get summary:', error);
-      setSummary(null);
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
 
   return (
     <div className="animate-fade-in">
@@ -271,39 +250,7 @@ export function DayView({ day, selectedEntryId, onEntryChanged, onSelectEntry, o
             {format(dateObj, 'MMM d, yyyy')}
           </span>
         </div>
-        
-        {/* AI Summary toggle */}
-        <div className="flex items-center ml-auto">
-          <button
-            onClick={handleToggleSummary}
-            title="Toggle AI summary"
-            disabled={loadingSummary}
-            className={cn(
-              'flex items-center gap-1 p-1 rounded transition-colors',
-              showSummary ? 'text-primary bg-primary/10' : 'hover:text-foreground hover:bg-secondary/50'
-            )}
-          >
-            <Sparkles className={cn('w-3.5 h-3.5', loadingSummary && 'animate-pulse')} />
-          </button>
-        </div>
       </div>
-
-      {/* AI Summary */}
-      {showSummary && (
-        <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <div className="flex items-center gap-2 mb-2 text-sm font-medium text-primary">
-            <Sparkles className="w-4 h-4" />
-            AI Summary
-          </div>
-          {summary ? (
-            <p className="text-sm text-muted-foreground">{summary}</p>
-          ) : (
-            <p className="text-sm text-muted-foreground italic">
-              AI summaries not configured. Set GEMINI_API_KEY to enable.
-            </p>
-          )}
-        </div>
-      )}
 
       {/* Entries */}
       <div className="space-y-0.5">

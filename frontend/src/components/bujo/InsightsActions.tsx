@@ -1,25 +1,15 @@
 import { useEffect, useState } from 'react';
-import { GetInsightsActions } from '../../../wailsjs/go/wails/App';
+import { GetInsightsActions } from '@/wailsjs/go/wails/App';
+import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
 
-interface Action {
-  ID: number;
-  SummaryID: number;
-  ActionText: string;
-  Priority: string;
-  Status: string;
-  DueDate: string;
-  CreatedAt: string;
-  WeekStart: string;
-}
-
 export function InsightsActions() {
-  const [actions, setActions] = useState<Action[]>([]);
+  const [actions, setActions] = useState<domain.InsightsAction[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     GetInsightsActions()
-      .then((data: Action[]) => setActions(data))
+      .then((data) => setActions(data))
       .catch((err: Error) => setError(err.message));
   }, []);
 

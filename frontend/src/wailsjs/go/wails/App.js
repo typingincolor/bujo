@@ -106,6 +106,22 @@ export function GetHabits(arg1) {
   return window['go']['wails']['App']['GetHabits'](arg1);
 }
 
+export function GetInsightsActions() {
+  return window['go']['wails']['App']['GetInsightsActions']();
+}
+
+export function GetInsightsDashboard() {
+  return window['go']['wails']['App']['GetInsightsDashboard']();
+}
+
+export function GetInsightsSummaries(arg1) {
+  return window['go']['wails']['App']['GetInsightsSummaries'](arg1);
+}
+
+export function GetInsightsSummaryDetail(arg1) {
+  return window['go']['wails']['App']['GetInsightsSummaryDetail'](arg1);
+}
+
 export function GetLists() {
   return window['go']['wails']['App']['GetLists']();
 }
@@ -122,10 +138,6 @@ export function GetOverdue() {
   return window['go']['wails']['App']['GetOverdue']();
 }
 
-export function GetSummary(arg1) {
-  return window['go']['wails']['App']['GetSummary'](arg1);
-}
-
 export function GetVersion() {
   return window['go']['wails']['App']['GetVersion']();
 }
@@ -136,6 +148,10 @@ export function Greet(arg1) {
 
 export function HasChildren(arg1) {
   return window['go']['wails']['App']['HasChildren'](arg1);
+}
+
+export function IsInsightsAvailable() {
+  return window['go']['wails']['App']['IsInsightsAvailable']();
 }
 
 export function LogHabit(arg1, arg2) {

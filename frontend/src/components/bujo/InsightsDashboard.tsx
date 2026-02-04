@@ -1,45 +1,14 @@
 import { useEffect, useState } from 'react';
-import { GetInsightsDashboard } from '../../../wailsjs/go/wails/App';
-
-interface Dashboard {
-  LatestSummary: {
-    ID: number;
-    WeekStart: string;
-    WeekEnd: string;
-    SummaryText: string;
-    CreatedAt: string;
-  } | null;
-  ActiveInitiatives: {
-    ID: number;
-    Name: string;
-    Status: string;
-    Description: string;
-    LastUpdated: string;
-  }[];
-  HighPriorityActions: {
-    ID: number;
-    ActionText: string;
-    Priority: string;
-    DueDate: string;
-    WeekStart: string;
-  }[];
-  RecentDecisions: {
-    ID: number;
-    DecisionText: string;
-    Rationale: string;
-    DecisionDate: string;
-  }[];
-  DaysSinceLastSummary: number;
-  Status: string;
-}
+import { GetInsightsDashboard } from '@/wailsjs/go/wails/App';
+import { domain } from '@/wailsjs/go/models';
 
 export function InsightsDashboard() {
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [dashboard, setDashboard] = useState<domain.InsightsDashboard | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     GetInsightsDashboard()
-      .then((data: Dashboard) => setDashboard(data))
+      .then((data) => setDashboard(data))
       .catch((err: Error) => setError(err.message));
   }, []);
 

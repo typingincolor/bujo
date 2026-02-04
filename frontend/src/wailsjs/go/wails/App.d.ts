@@ -58,6 +58,14 @@ export function GetGoals(arg1:time.Time):Promise<Array<domain.Goal>>;
 
 export function GetHabits(arg1:number):Promise<service.TrackerStatus>;
 
+export function GetInsightsActions():Promise<Array<domain.InsightsAction>>;
+
+export function GetInsightsDashboard():Promise<domain.InsightsDashboard>;
+
+export function GetInsightsSummaries(arg1:number):Promise<Array<domain.InsightsSummary>>;
+
+export function GetInsightsSummaryDetail(arg1:number):Promise<Array<domain.InsightsTopic>>;
+
 export function GetLists():Promise<Array<wails.ListWithItems>>;
 
 export function GetLocationHistory():Promise<Array<string>>;
@@ -66,13 +74,13 @@ export function GetOutstandingQuestions():Promise<Array<domain.Entry>>;
 
 export function GetOverdue():Promise<Array<domain.Entry>>;
 
-export function GetSummary(arg1:time.Time):Promise<string>;
-
 export function GetVersion():Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;
 
 export function HasChildren(arg1:number):Promise<boolean>;
+
+export function IsInsightsAvailable():Promise<boolean>;
 
 export function LogHabit(arg1:number,arg2:number):Promise<void>;
 
