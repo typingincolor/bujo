@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { Calendar, FileEdit, Smile, Cloud, MapPin, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SetMood, SetWeather, SetLocation, GetLocationHistory } from '@/wailsjs/go/wails/App';
+import { toWailsTime } from '@/lib/wailsTime';
 
 const MOOD_OPTIONS = [
   { emoji: '😊', value: 'happy' },
@@ -102,20 +103,20 @@ export function Header({
   }, [showLocationPicker]);
 
   const handleMoodSelect = async (mood: MoodValue) => {
-    await SetMood(displayDate.toISOString(), mood);
+    await SetMood(toWailsTime(displayDate), mood);
     setShowMoodPicker(false);
     onMoodChanged?.();
   };
 
   const handleWeatherSelect = async (weather: WeatherValue) => {
-    await SetWeather(displayDate.toISOString(), weather);
+    await SetWeather(toWailsTime(displayDate), weather);
     setShowWeatherPicker(false);
     onWeatherChanged?.();
   };
 
   const handleLocationSelect = async (location: string) => {
     if (!location.trim()) return;
-    await SetLocation(displayDate.toISOString(), location);
+    await SetLocation(toWailsTime(displayDate), location);
     setShowLocationPicker(false);
     setLocationInput('');
     onLocationChanged?.();

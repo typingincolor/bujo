@@ -567,6 +567,12 @@ function App() {
     })
   }, [])
 
+  const handleNavigateToEntry = useCallback((entry: Entry) => {
+    const entryDate = new Date(entry.loggedDate)
+    setCurrentDate(startOfDay(entryDate))
+    handleViewChange('today')
+  }, [handleViewChange])
+
   const handleSearchNavigate = useCallback((result: SearchResult) => {
     const entryDate = new Date(result.date)
     setReviewAnchorDate(startOfDay(entryDate))
@@ -674,6 +680,7 @@ function App() {
               callbacks={sidebarCallbacks}
               selectedEntry={pendingSelectedEntry ?? undefined}
               onSelectEntry={(entry) => setPendingSelectedEntry(entry)}
+              onNavigateToEntry={handleNavigateToEntry}
               onRefresh={loadData}
             />
           )}
@@ -705,28 +712,7 @@ function App() {
                 days={reviewDays}
                 habits={habits}
                 callbacks={{
-                  onMarkDone: async (entry) => {
-                    try {
-                      await MarkEntryDone(entry.id)
-                      loadData()
-                    } catch (err) {
-                      console.error('Failed to mark entry done:', err)
-                      setError(err instanceof Error ? err.message : 'Failed to mark entry done')
-                    }
-                  },
-                  onMigrate: (entry) => setMigrateModalEntry(entry),
-                  onEdit: (entry) => setEditModalEntry(entry),
-                  onDelete: handleDeleteEntryRequest,
-                  onCyclePriority: async (entry) => {
-                    try {
-                      await CyclePriority(entry.id)
-                      loadData()
-                    } catch (err) {
-                      console.error('Failed to cycle priority:', err)
-                      setError(err instanceof Error ? err.message : 'Failed to cycle priority')
-                    }
-                  },
-                  onMoveToList: (entry) => setMoveToListEntry(entry),
+                  onNavigateToEntry: handleNavigateToEntry,
                 }}
                 onSelectEntry={(entry) => setReviewSelectedEntry(entry ?? null)}
                 contextTree={reviewContextTree}
@@ -742,6 +728,8 @@ function App() {
                 questions={outstandingQuestions}
                 onEntryChanged={loadData}
                 onError={setError}
+                onEdit={(entry) => setEditModalEntry(entry)}
+                onNavigateToEntry={handleNavigateToEntry}
               />
             </div>
           )}

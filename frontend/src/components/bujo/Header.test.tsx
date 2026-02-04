@@ -377,4 +377,54 @@ describe('Header - currentDate prop', () => {
 
     expect(screen.getByText('Thursday, January 15, 2026')).toBeInTheDocument()
   })
+
+  it('passes date with timezone offset (not UTC) to SetMood', async () => {
+    const user = userEvent.setup()
+    const localDate = new Date(2026, 0, 15, 0, 0, 0)
+    render(<Header title="Today" currentDate={localDate} />)
+
+    await user.click(screen.getByTitle('Set mood'))
+    await user.click(screen.getByText('😊'))
+
+    await waitFor(() => {
+      expect(SetMood).toHaveBeenCalled()
+      const dateStr = vi.mocked(SetMood).mock.calls[0][0] as unknown as string
+      // toISOString() produces UTC ending in 'Z' which shifts dates for non-UTC timezones
+      // toWailsTime() preserves local date with timezone offset like +00:00 or -05:00
+      expect(dateStr).not.toMatch(/Z$/)
+      expect(dateStr).toMatch(/[+-]\d{2}:\d{2}$/)
+    })
+  })
+
+  it('passes date with timezone offset (not UTC) to SetWeather', async () => {
+    const user = userEvent.setup()
+    const localDate = new Date(2026, 0, 15, 0, 0, 0)
+    render(<Header title="Today" currentDate={localDate} />)
+
+    await user.click(screen.getByTitle('Set weather'))
+    await user.click(screen.getByText('☀️'))
+
+    await waitFor(() => {
+      expect(SetWeather).toHaveBeenCalled()
+      const dateStr = vi.mocked(SetWeather).mock.calls[0][0] as unknown as string
+      expect(dateStr).not.toMatch(/Z$/)
+      expect(dateStr).toMatch(/[+-]\d{2}:\d{2}$/)
+    })
+  })
+
+  it('passes date with timezone offset (not UTC) to SetLocation', async () => {
+    const user = userEvent.setup()
+    const localDate = new Date(2026, 0, 15, 0, 0, 0)
+    render(<Header title="Today" currentDate={localDate} />)
+
+    await user.click(screen.getByTitle('Set location'))
+    await user.click(screen.getByText('🏢'))
+
+    await waitFor(() => {
+      expect(SetLocation).toHaveBeenCalled()
+      const dateStr = vi.mocked(SetLocation).mock.calls[0][0] as unknown as string
+      expect(dateStr).not.toMatch(/Z$/)
+      expect(dateStr).toMatch(/[+-]\d{2}:\d{2}$/)
+    })
+  })
 })

@@ -63,7 +63,7 @@ export function DateNavigator({ date, onDateChange }: DateNavigatorProps) {
       <Popover.Root open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <Popover.Trigger asChild>
           <button
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-secondary/50 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-secondary/50 transition-colors min-w-[10rem]"
             aria-label={isToday ? 'Today' : format(date, 'EEE, MMM d, yyyy')}
             data-testid="date-picker"
           >

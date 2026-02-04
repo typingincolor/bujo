@@ -532,31 +532,36 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		return 0, fmt.Errorf("only tasks can be migrated, this is a %s", entry.Type)
 	}
 
-	children, err := s.entryRepo.GetChildren(ctx, id)
+	tree, err := s.entryRepo.GetWithChildren(ctx, id)
 	if err != nil {
 		return 0, err
 	}
 
-	originalChildTypes := make([]domain.EntryType, len(children))
-	for i, child := range children {
-		originalChildTypes[i] = child.Type
+	// tree[0] is the parent; tree[1:] are all descendants ordered by depth, id
+	descendants := tree[1:]
+
+	type originalEntry struct {
+		Type     domain.EntryType
+		Priority domain.Priority
+	}
+	originals := make(map[int64]originalEntry, len(tree))
+	for _, e := range tree {
+		originals[e.ID] = originalEntry{Type: e.Type, Priority: e.Priority}
 	}
 
-	entry.Type = domain.EntryTypeMigrated
-	if err := s.entryRepo.Update(ctx, *entry); err != nil {
-		return 0, err
-	}
-
-	for i := range children {
-		children[i].Type = domain.EntryTypeMigrated
-		if err := s.entryRepo.Update(ctx, children[i]); err != nil {
+	// Mark all original entries as migrated
+	for _, e := range tree {
+		e.Type = domain.EntryTypeMigrated
+		if err := s.entryRepo.Update(ctx, e); err != nil {
 			return 0, err
 		}
 	}
 
+	// Create new parent
 	newEntry := domain.Entry{
 		Type:          domain.EntryTypeTask,
 		Content:       entry.Content,
+		Priority:      entry.Priority,
 		ScheduledDate: &toDate,
 		CreatedAt:     time.Now(),
 	}
@@ -566,18 +571,29 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		return 0, err
 	}
 
-	for i, child := range children {
+	// Map old IDs to new IDs so descendants can find their new parent
+	idMap := map[int64]int64{id: newParentID}
+
+	for _, child := range descendants {
+		var newChildParentID int64
+		if child.ParentID != nil {
+			newChildParentID = idMap[*child.ParentID]
+		}
+		orig := originals[child.ID]
 		newChild := domain.Entry{
-			Type:          originalChildTypes[i],
+			Type:          orig.Type,
 			Content:       child.Content,
-			ParentID:      &newParentID,
+			Priority:      orig.Priority,
+			ParentID:      &newChildParentID,
 			Depth:         child.Depth,
 			ScheduledDate: &toDate,
 			CreatedAt:     time.Now(),
 		}
-		if _, err := s.entryRepo.Insert(ctx, newChild); err != nil {
+		newChildID, err := s.entryRepo.Insert(ctx, newChild)
+		if err != nil {
 			return 0, err
 		}
+		idMap[child.ID] = newChildID
 	}
 
 	return newParentID, nil

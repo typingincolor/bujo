@@ -4,19 +4,13 @@ import { DayBox } from './DayBox';
 import { WeekendBox } from './WeekendBox';
 import { filterWeekEntries, flattenEntries } from '@/lib/weekView';
 import { format, parseISO } from 'date-fns';
-import { ActionCallbacks } from './EntryActions/types';
 import { buildTree } from '@/lib/buildTree';
 import { ContextTree } from './ContextTree';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface WeekViewCallbacks {
-  onMarkDone?: (entry: Entry) => void;
-  onMigrate?: (entry: Entry) => void;
-  onEdit?: (entry: Entry) => void;
-  onDelete?: (entry: Entry) => void;
-  onCyclePriority?: (entry: Entry) => void;
-  onMoveToList?: (entry: Entry) => void;
+  onNavigateToEntry?: (entry: Entry) => void;
 }
 
 interface WeekViewProps {
@@ -47,15 +41,6 @@ export function WeekView({
       onSelectEntry(selectedEntry);
     }
   }, [selectedEntry, onSelectEntry]);
-
-  const createEntryCallbacks = (entry: Entry): ActionCallbacks => ({
-    onCancel: callbacks.onMarkDone ? () => callbacks.onMarkDone!(entry) : undefined,
-    onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
-    onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
-    onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
-    onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
-    onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
-  });
 
   const weekDays = days.slice(0, 5).map((day, index) => ({
     ...day,
@@ -116,7 +101,7 @@ export function WeekView({
               location={day.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
-              createEntryCallbacks={createEntryCallbacks}
+              onNavigateToEntry={callbacks.onNavigateToEntry}
             />
           ))}
 
@@ -132,7 +117,7 @@ export function WeekView({
               sundayLocation={sunday.location}
               selectedEntry={selectedEntry}
               onSelectEntry={setSelectedEntry}
-              createEntryCallbacks={createEntryCallbacks}
+              onNavigateToEntry={callbacks.onNavigateToEntry}
             />
           )}
         </div>

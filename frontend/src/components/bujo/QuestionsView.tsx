@@ -1,6 +1,6 @@
 import { Entry, ENTRY_SYMBOLS, PRIORITY_SYMBOLS } from '@/types/bujo'
 import { cn } from '@/lib/utils'
-import { HelpCircle, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle } from 'lucide-react'
+import { HelpCircle, ChevronDown, ChevronRight, X, RotateCcw, Trash2, Flag, RefreshCw, MessageCircle, Pencil } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CancelEntry, UncancelEntry, DeleteEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App'
@@ -10,6 +10,8 @@ interface QuestionsViewProps {
   questions: Entry[]
   onEntryChanged?: () => void
   onError?: (message: string) => void
+  onEdit?: (entry: Entry) => void
+  onNavigateToEntry?: (entry: Entry) => void
 }
 
 function groupByDate(entries: Entry[]): Map<string, Entry[]> {
@@ -45,7 +47,7 @@ function buildParentChain(entry: Entry, entriesById: Map<number, Entry>): Entry[
   return chain
 }
 
-export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsViewProps) {
+export function QuestionsView({ questions, onEntryChanged, onError, onEdit, onNavigateToEntry }: QuestionsViewProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -209,6 +211,13 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
             handleAnswer(selected)
           }
           break
+        case 'e':
+          e.preventDefault()
+          if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
+            const selected = flatEntries[selectedIndex]
+            onEdit?.(selected)
+          }
+          break
         case 'Enter':
           e.preventDefault()
           if (selectedIndex >= 0 && selectedIndex < flatEntries.length) {
@@ -285,6 +294,7 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                           {/* Question entry */}
                           <div
                             onClick={() => toggleExpanded(entry.id)}
+                            onDoubleClick={() => onNavigateToEntry?.(entry)}
                             className={cn(
                               'flex items-center gap-3 p-2 rounded-lg border border-border cursor-pointer',
                               'bg-card transition-colors group',
@@ -318,6 +328,14 @@ export function QuestionsView({ questions, onEntryChanged, onError }: QuestionsV
                                 {PRIORITY_SYMBOLS[entry.priority]}
                               </span>
                             )}
+                            <button
+                              data-action-slot
+                              onClick={(e) => { e.stopPropagation(); onEdit?.(entry); }}
+                              title="Edit question"
+                              className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
                             <button
                               data-action-slot
                               onClick={(e) => { e.stopPropagation(); handleAnswer(entry); }}
