@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { HabitTracker } from './HabitTracker'
+import { HabitTracker } from './HabitTrackerView'
 import { Habit } from '@/types/bujo'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({

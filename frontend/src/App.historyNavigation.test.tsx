@@ -132,7 +132,7 @@ describe('App - Navigation History', () => {
       const todayButton = screen.getByRole('button', { name: /journal/i })
       await user.click(todayButton)
 
-      // EditableJournalView is now shown - verify by checking for the editor textbox
+      // JournalView is now shown - verify by checking for the editor textbox
       await waitFor(() => {
         expect(screen.getByRole('textbox')).toBeInTheDocument()
       })

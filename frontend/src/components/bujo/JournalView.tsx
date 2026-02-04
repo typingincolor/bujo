@@ -5,13 +5,13 @@ import { scanForNewSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDia
 import { MigrateBatchModal } from '@/components/bujo/MigrateBatchModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
 
-interface EditableJournalViewProps {
+interface JournalViewProps {
   date: Date
   highlightText?: string | null
   onHighlightDone?: () => void
 }
 
-export function EditableJournalView({ date, highlightText, onHighlightDone }: EditableJournalViewProps) {
+export function JournalView({ date, highlightText, onHighlightDone }: JournalViewProps) {
   const {
     document,
     originalDocument,

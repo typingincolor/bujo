@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { EditableJournalView } from './EditableJournalView'
+import { JournalView } from './JournalView'
 
 const mockUseEditableDocument = vi.fn()
 
@@ -26,7 +26,7 @@ const createMockState = (overrides = {}) => ({
   ...overrides,
 })
 
-describe('EditableJournalView', () => {
+describe('JournalView', () => {
   const testDate = new Date(2026, 0, 27) // Jan 27, 2026
 
   beforeEach(() => {
@@ -36,7 +36,7 @@ describe('EditableJournalView', () => {
 
   describe('initial render', () => {
     it('passes date to useEditableDocument hook', () => {
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(mockUseEditableDocument).toHaveBeenCalledWith(testDate)
     })
@@ -44,7 +44,7 @@ describe('EditableJournalView', () => {
     it('shows loading state while loading', () => {
       mockUseEditableDocument.mockReturnValue(createMockState({ isLoading: true }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText(/loading/i)).toBeInTheDocument()
     })
@@ -54,13 +54,13 @@ describe('EditableJournalView', () => {
         createMockState({ error: 'Failed to load document' })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText(/failed to load document/i)).toBeInTheDocument()
     })
 
     it('renders document content in editor', () => {
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const editor = screen.getByRole('textbox')
       expect(editor).toHaveTextContent('Buy groceries')
@@ -73,7 +73,7 @@ describe('EditableJournalView', () => {
       const setDocument = vi.fn()
       mockUseEditableDocument.mockReturnValue(createMockState({ setDocument }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       // BujoEditor receives setDocument as onChange prop
       // The actual change handling is tested in BujoEditor.test.tsx
@@ -85,7 +85,7 @@ describe('EditableJournalView', () => {
     it('shows unsaved dot symbol when dirty', () => {
       mockUseEditableDocument.mockReturnValue(createMockState({ isDirty: true }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const indicator = screen.getByTestId('unsaved-indicator')
       expect(indicator).toBeInTheDocument()
@@ -95,7 +95,7 @@ describe('EditableJournalView', () => {
     it('does not show unsaved dot when not dirty', () => {
       mockUseEditableDocument.mockReturnValue(createMockState({ isDirty: false }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.queryByTestId('unsaved-indicator')).not.toBeInTheDocument()
     })
@@ -109,7 +109,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       // Text is split across elements: <span>Line 1:</span> Unknown entry type
       expect(screen.getByText(/line 1/i)).toBeInTheDocument()
@@ -126,7 +126,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText('2 errors')).toBeInTheDocument()
     })
@@ -141,7 +141,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByRole('button', { name: /delete line/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /change to task/i })).toBeInTheDocument()
@@ -159,7 +159,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /delete line/i }))
 
@@ -178,7 +178,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /change to task/i }))
 
@@ -191,7 +191,7 @@ describe('EditableJournalView', () => {
       const save = vi.fn().mockResolvedValue({ success: true })
       mockUseEditableDocument.mockReturnValue(createMockState({ save }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const editor = screen.getByRole('textbox')
       fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
@@ -208,7 +208,7 @@ describe('EditableJournalView', () => {
         })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText(/✓ saved at 2:30 pm/i)).toBeInTheDocument()
     })
@@ -217,7 +217,7 @@ describe('EditableJournalView', () => {
       const save = vi.fn().mockResolvedValue({ success: false, error: 'Validation failed' })
       mockUseEditableDocument.mockReturnValue(createMockState({ save }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const editor = screen.getByRole('textbox')
       fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
@@ -235,7 +235,7 @@ describe('EditableJournalView', () => {
         createMockState({ isDirty: true, discardChanges })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /discard/i }))
 
@@ -247,7 +247,7 @@ describe('EditableJournalView', () => {
     it('shows draft recovery prompt when draft exists', () => {
       mockUseEditableDocument.mockReturnValue(createMockState({ hasDraft: true }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText(/unsaved changes found/i)).toBeInTheDocument()
     })
@@ -258,7 +258,7 @@ describe('EditableJournalView', () => {
         createMockState({ hasDraft: true, restoreDraft })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /restore/i }))
 
@@ -271,7 +271,7 @@ describe('EditableJournalView', () => {
         createMockState({ hasDraft: true, discardDraft })
       )
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       fireEvent.click(screen.getByRole('button', { name: /discard draft/i }))
 
@@ -282,7 +282,7 @@ describe('EditableJournalView', () => {
 
   describe('file import', () => {
     it('has hidden file input for import', () => {
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const fileInput = document.querySelector('input[type="file"]')
       expect(fileInput).toBeInTheDocument()
@@ -295,7 +295,7 @@ describe('EditableJournalView', () => {
         setDocument,
       }))
 
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
       const fileContent = '. Imported task\n- Imported note'
@@ -317,14 +317,14 @@ describe('EditableJournalView', () => {
       // The actual Escape key behavior (calling blur) is verified via:
       // 1. BujoEditor.test.tsx verifies onEscape callback is called on Escape key
       // 2. E2E tests verify actual blur behavior in real browser
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       // Verify editor renders - blur behavior is integration tested in E2E
       expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
 
     it('shows keyboard shortcut legend below the editor', () => {
-      render(<EditableJournalView date={testDate} />)
+      render(<JournalView date={testDate} />)
 
       expect(screen.getByText(/⌘S/)).toBeInTheDocument()
       expect(screen.getByText(/Save/)).toBeInTheDocument()
