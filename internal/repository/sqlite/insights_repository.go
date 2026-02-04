@@ -51,7 +51,7 @@ func (r *InsightsRepository) GetSummaries(ctx context.Context, limit int) ([]dom
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var summaries []domain.InsightsSummary
 	for rows.Next() {
@@ -83,7 +83,7 @@ func (r *InsightsRepository) GetTopicsForSummary(ctx context.Context, summaryID 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var topics []domain.InsightsTopic
 	for rows.Next() {
@@ -113,7 +113,7 @@ func (r *InsightsRepository) GetActiveInitiatives(ctx context.Context, limit int
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var initiatives []domain.InsightsInitiative
 	for rows.Next() {
@@ -153,7 +153,7 @@ func (r *InsightsRepository) GetPendingActions(ctx context.Context) ([]domain.In
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var actions []domain.InsightsAction
 	for rows.Next() {
@@ -183,7 +183,7 @@ func (r *InsightsRepository) GetRecentDecisions(ctx context.Context, limit int) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var decisions []domain.InsightsDecision
 	for rows.Next() {
@@ -246,7 +246,7 @@ func (r *InsightsRepository) GetActionsForWeek(ctx context.Context, weekStart, n
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var actions []domain.InsightsAction
 	for rows.Next() {

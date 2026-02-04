@@ -13,7 +13,7 @@ func setupInsightsTestDB(t *testing.T) *sql.DB {
 
 	db, err := sql.Open("sqlite3", ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	schema := `
 		CREATE TABLE summaries (
@@ -100,7 +100,7 @@ func setupEmptyInsightsTestDB(t *testing.T) *sql.DB {
 
 	db, err := sql.Open("sqlite3", ":memory:")
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	schema := `
 		CREATE TABLE summaries (
