@@ -94,14 +94,13 @@ var rootCmd = &cobra.Command{
 		archiveService = service.NewArchiveService(listItemRepo)
 		historyService = service.NewHistoryService(listItemRepo)
 
-		summaryRepo := sqlite.NewSummaryRepository(db)
 		exportService = service.NewExportService(
 			entryRepo, habitRepo, habitLogRepo, dayCtxRepo,
-			summaryRepo, listRepo, listItemRepo, goalRepo,
+			listRepo, listItemRepo, goalRepo,
 		)
 		importService = service.NewImportService(
 			entryRepo, habitRepo, habitLogRepo, dayCtxRepo,
-			summaryRepo, listRepo, listItemRepo, goalRepo,
+			listRepo, listItemRepo, goalRepo,
 		)
 		aiClient, err := ai.NewAIClient(cmd.Context())
 		if err != nil && !errors.Is(err, ai.ErrAIDisabled) {

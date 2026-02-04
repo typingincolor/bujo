@@ -24,10 +24,6 @@ type ExportDayContextRepository interface {
 	GetAll(ctx context.Context) ([]domain.DayContext, error)
 }
 
-type ExportSummaryRepository interface {
-	GetAll(ctx context.Context) ([]domain.Summary, error)
-}
-
 type ExportListRepository interface {
 	GetAll(ctx context.Context) ([]domain.List, error)
 }
@@ -45,7 +41,6 @@ type ExportService struct {
 	habitRepo      ExportHabitRepository
 	habitLogRepo   ExportHabitLogRepository
 	dayContextRepo ExportDayContextRepository
-	summaryRepo    ExportSummaryRepository
 	listRepo       ExportListRepository
 	listItemRepo   ExportListItemRepository
 	goalRepo       ExportGoalRepository
@@ -56,7 +51,6 @@ func NewExportService(
 	habitRepo ExportHabitRepository,
 	habitLogRepo ExportHabitLogRepository,
 	dayContextRepo ExportDayContextRepository,
-	summaryRepo ExportSummaryRepository,
 	listRepo ExportListRepository,
 	listItemRepo ExportListItemRepository,
 	goalRepo ExportGoalRepository,
@@ -66,7 +60,6 @@ func NewExportService(
 		habitRepo:      habitRepo,
 		habitLogRepo:   habitLogRepo,
 		dayContextRepo: dayContextRepo,
-		summaryRepo:    summaryRepo,
 		listRepo:       listRepo,
 		listItemRepo:   listItemRepo,
 		goalRepo:       goalRepo,
@@ -94,11 +87,6 @@ type ImportDayContextRepository interface {
 	DeleteAll(ctx context.Context) error
 }
 
-type ImportSummaryRepository interface {
-	Insert(ctx context.Context, s domain.Summary) (int64, error)
-	DeleteAll(ctx context.Context) error
-}
-
 type ImportListRepository interface {
 	InsertWithEntityID(ctx context.Context, list domain.List) (int64, error)
 	GetByEntityID(ctx context.Context, entityID domain.EntityID) (*domain.List, error)
@@ -121,7 +109,6 @@ type ImportService struct {
 	habitRepo      ImportHabitRepository
 	habitLogRepo   ImportHabitLogRepository
 	dayContextRepo ImportDayContextRepository
-	summaryRepo    ImportSummaryRepository
 	listRepo       ImportListRepository
 	listItemRepo   ImportListItemRepository
 	goalRepo       ImportGoalRepository
@@ -132,7 +119,6 @@ func NewImportService(
 	habitRepo ImportHabitRepository,
 	habitLogRepo ImportHabitLogRepository,
 	dayContextRepo ImportDayContextRepository,
-	summaryRepo ImportSummaryRepository,
 	listRepo ImportListRepository,
 	listItemRepo ImportListItemRepository,
 	goalRepo ImportGoalRepository,
@@ -142,7 +128,6 @@ func NewImportService(
 		habitRepo:      habitRepo,
 		habitLogRepo:   habitLogRepo,
 		dayContextRepo: dayContextRepo,
-		summaryRepo:    summaryRepo,
 		listRepo:       listRepo,
 		listItemRepo:   listItemRepo,
 		goalRepo:       goalRepo,
@@ -187,12 +172,6 @@ func (s *ImportService) Import(ctx context.Context, data *domain.ExportData, opt
 
 	for _, dc := range data.DayContexts {
 		if err := s.dayContextRepo.Upsert(ctx, dc); err != nil {
-			return err
-		}
-	}
-
-	for _, summary := range data.Summaries {
-		if _, err := s.summaryRepo.Insert(ctx, summary); err != nil {
 			return err
 		}
 	}
@@ -248,9 +227,6 @@ func (s *ImportService) clearAllData(ctx context.Context) error {
 		return err
 	}
 	if err := s.goalRepo.DeleteAll(ctx); err != nil {
-		return err
-	}
-	if err := s.summaryRepo.DeleteAll(ctx); err != nil {
 		return err
 	}
 	if err := s.dayContextRepo.DeleteAll(ctx); err != nil {
@@ -309,14 +285,6 @@ func (s *ExportService) Export(ctx context.Context, opts domain.ExportOptions) (
 	}
 	if data.DayContexts == nil {
 		data.DayContexts = []domain.DayContext{}
-	}
-
-	data.Summaries, err = s.summaryRepo.GetAll(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if data.Summaries == nil {
-		data.Summaries = []domain.Summary{}
 	}
 
 	data.Lists, err = s.listRepo.GetAll(ctx)
