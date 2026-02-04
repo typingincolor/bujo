@@ -126,4 +126,56 @@ export const bujoTheme = EditorView.theme({
     opacity: '0.6',
   },
   '& .cm-entry-note': {},
+  '& .cm-panels': {
+    backgroundColor: 'hsl(var(--card))',
+    color: 'hsl(var(--foreground))',
+    borderBottom: '1px solid hsl(var(--border))',
+  },
+  '& .cm-panels.cm-panels-top': {
+    borderBottom: '1px solid hsl(var(--border))',
+  },
+  '& .cm-search': {
+    padding: '8px 12px',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '4px',
+    alignItems: 'center',
+    fontSize: '13px',
+  },
+  '& .cm-search input': {
+    backgroundColor: 'hsl(var(--background))',
+    color: 'hsl(var(--foreground))',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: '4px',
+    padding: '2px 6px',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  '& .cm-search input:focus': {
+    borderColor: 'hsl(var(--primary))',
+    boxShadow: '0 0 0 1px hsl(var(--primary) / 0.3)',
+  },
+  '& .cm-search button': {
+    backgroundColor: 'hsl(var(--secondary))',
+    color: 'hsl(var(--secondary-foreground))',
+    border: '1px solid hsl(var(--border))',
+    borderRadius: '4px',
+    padding: '2px 8px',
+    fontSize: '12px',
+    cursor: 'pointer',
+  },
+  '& .cm-search button:hover': {
+    backgroundColor: 'hsl(var(--secondary) / 0.8)',
+  },
+  '& .cm-search label': {
+    fontSize: '12px',
+    color: 'hsl(var(--muted-foreground))',
+  },
+  '& .cm-searchMatch': {
+    backgroundColor: 'hsl(var(--primary) / 0.2)',
+    outline: '1px solid hsl(var(--primary) / 0.4)',
+  },
+  '& .cm-searchMatch-selected': {
+    backgroundColor: 'hsl(var(--primary) / 0.4)',
+  },
 })

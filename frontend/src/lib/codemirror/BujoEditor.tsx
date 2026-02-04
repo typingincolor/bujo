@@ -9,6 +9,7 @@ import {
   copyLineDown,
   insertBlankLine,
 } from '@codemirror/commands'
+import { search, searchKeymap } from '@codemirror/search'
 import { EditorSelection } from '@codemirror/state'
 import { bujoTheme } from './bujoTheme'
 import { priorityBadgeExtension } from './priorityBadges'
@@ -111,6 +112,8 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
     return [
       bujoTheme,
       keybindings,
+      search(),
+      keymap.of(searchKeymap),
       priorityBadgeExtension(),
       indentGuidesExtension(),
       errorHighlightExtension(),

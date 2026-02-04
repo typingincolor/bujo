@@ -203,6 +203,8 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
         <span><kbd>⌘S</kbd> Save</span>
         <span><kbd>⌘I</kbd> Import</span>
+        <span><kbd>⌘F</kbd> Find</span>
+        <span><kbd>⌘H</kbd> Replace</span>
         <span><kbd>Tab</kbd> Indent</span>
         <span><kbd>Esc</kbd> Unfocus</span>
         <span className="text-muted-foreground/50">|</span>
