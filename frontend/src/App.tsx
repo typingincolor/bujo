@@ -86,6 +86,7 @@ function App() {
   const [pendingSelectedEntry, setPendingSelectedEntry] = useState<Entry | null>(null)
   const [pendingContextTree, setPendingContextTree] = useState<Entry[]>([])
   const initialLoadCompleteRef = useRef(false)
+  const [highlightText, setHighlightText] = useState<string | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   const loadData = useCallback(async () => {
@@ -257,6 +258,7 @@ function App() {
         scrollPosition: window.scrollY,
       })
     }
+    setHighlightText(null)
     setView(newView)
     setSelectedIndex(0)
   }, [view, clearHistory, pushHistory])
@@ -568,10 +570,16 @@ function App() {
   }, [])
 
   const handleNavigateToEntry = useCallback((entry: Entry) => {
+    pushHistory({
+      view: view,
+      scrollPosition: window.scrollY,
+    })
     const entryDate = new Date(entry.loggedDate)
     setCurrentDate(startOfDay(entryDate))
-    handleViewChange('today')
-  }, [handleViewChange])
+    setHighlightText(entry.content)
+    setView('today')
+    setSelectedIndex(0)
+  }, [view, pushHistory])
 
   const handleSearchNavigate = useCallback((result: SearchResult) => {
     const entryDate = new Date(result.date)
@@ -669,7 +677,11 @@ function App() {
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
-              <EditableJournalView date={currentDate} />
+              <EditableJournalView
+                date={currentDate}
+                highlightText={highlightText}
+                onHighlightDone={() => setHighlightText(null)}
+              />
             </>
           )}
 

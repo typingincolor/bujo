@@ -16,7 +16,11 @@ import { indentGuidesExtension } from './indentGuides'
 import { errorHighlightExtension, setErrors } from './errorMarkers'
 import { bujoFoldExtension } from './bujoFolding'
 import { entryTypeStyleExtension } from './entryTypeStyles'
+import { highlightLineExtension, setHighlight } from './highlightLine'
+import { findEntryLine } from './findEntryLine'
 import type { DocumentError } from './errorMarkers'
+
+const HIGHLIGHT_DURATION_MS = 2000
 
 interface BujoEditorProps {
   value: string
@@ -25,9 +29,11 @@ interface BujoEditorProps {
   onImport?: () => void
   onEscape?: () => void
   errors?: DocumentError[]
+  highlightText?: string | null
+  onHighlightDone?: () => void
 }
 
-export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors = [] }: BujoEditorProps) {
+export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors = [], highlightText, onHighlightDone }: BujoEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null)
 
   const onChangeRef = useRef(onChange)
@@ -114,6 +120,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       errorHighlightExtension(),
       bujoFoldExtension(),
       entryTypeStyleExtension(),
+      highlightLineExtension(),
     ]
   })
 
@@ -125,6 +132,34 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       })
     }
   }, [errors])
+
+  useEffect(() => {
+    if (!highlightText) return
+
+    const view = editorRef.current?.view
+    if (!view) return
+
+    const match = findEntryLine(value, highlightText)
+    if (!match) return
+
+    view.dispatch({
+      effects: setHighlight.of({ from: match.from, to: match.to }),
+      selection: { anchor: match.from },
+      scrollIntoView: true,
+    })
+
+    const timer = setTimeout(() => {
+      const currentView = editorRef.current?.view
+      if (currentView) {
+        currentView.dispatch({
+          effects: setHighlight.of(null),
+        })
+      }
+      onHighlightDone?.()
+    }, HIGHLIGHT_DURATION_MS)
+
+    return () => clearTimeout(timer)
+  }, [highlightText]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const basicSetupConfig = useMemo(() => ({
     lineNumbers: false,

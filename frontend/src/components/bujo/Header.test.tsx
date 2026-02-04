@@ -256,6 +256,31 @@ describe('Header - Location', () => {
   })
 })
 
+describe('Header - Back Button', () => {
+  it('renders back button when canGoBack is true', () => {
+    render(<Header title="Journal" canGoBack={true} onBack={() => {}} />)
+    expect(screen.getByLabelText('Go back')).toBeInTheDocument()
+  })
+
+  it('does not render back button when canGoBack is false', () => {
+    render(<Header title="Journal" canGoBack={false} onBack={() => {}} />)
+    expect(screen.queryByLabelText('Go back')).not.toBeInTheDocument()
+  })
+
+  it('does not render back button when onBack is not provided', () => {
+    render(<Header title="Journal" canGoBack={true} />)
+    expect(screen.queryByLabelText('Go back')).not.toBeInTheDocument()
+  })
+
+  it('calls onBack when back button is clicked', async () => {
+    const onBack = vi.fn()
+    const user = userEvent.setup()
+    render(<Header title="Journal" canGoBack={true} onBack={onBack} />)
+    await user.click(screen.getByLabelText('Go back'))
+    expect(onBack).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('Header - Styling', () => {
   it('renders with bg-card/50 background and border-b', () => {
     render(<Header title="Journal" />)
