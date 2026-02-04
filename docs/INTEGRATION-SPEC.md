@@ -9,17 +9,17 @@
 
 | Use Case | Status | Notes |
 |----------|--------|-------|
-| 1. Weekly Summary Dashboard | Planned (MVP) | |
+| 1. Weekly Summary Dashboard | Implemented | |
 | 2. Topic Timeline View | Not planned | Future work |
 | 3. Initiative Portfolio View | Not planned | Future work |
 | 4. Initiative Detail View | Not planned | Future work |
-| 5. Action Items Widget | Planned (MVP) | |
+| 5. Action Items Widget | Implemented | |
 | 6. Decision Log | Not planned | Future work |
-| 7. Insights Dashboard | Planned (MVP) | |
+| 7. Insights Dashboard | Implemented | |
 | 8. Weekly Report Generator | Not planned | Future work |
-| Database Access Layer | Planned (MVP) | InsightsRepository with optional read-only DB |
-| Domain Types | Planned (MVP) | Summary, Topic, Initiative, Action, Decision structs |
-| Deprecate Gemini AI | Planned (MVP) | Replaces existing AI summary functionality |
+| Database Access Layer | Implemented | InsightsRepository with optional read-only DB |
+| Domain Types | Implemented | Summary, Topic, Initiative, Action, Decision structs |
+| Deprecate Gemini AI | Implemented | Removed 22+ files, dropped summaries table |
 
 ## Overview
 
