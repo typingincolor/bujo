@@ -9,13 +9,16 @@ import (
 func TestInsightsDashboard_StatusReady(t *testing.T) {
 	d := InsightsDashboard{
 		LatestSummary: &InsightsSummary{ID: 1, WeekStart: "2026-01-27"},
+		Status:        "ready",
 	}
-	assert.Equal(t, "ready", d.Status())
+	assert.Equal(t, "ready", d.Status)
 }
 
 func TestInsightsDashboard_StatusEmpty(t *testing.T) {
-	d := InsightsDashboard{}
-	assert.Equal(t, "empty", d.Status())
+	d := InsightsDashboard{
+		Status: "empty",
+	}
+	assert.Equal(t, "empty", d.Status)
 }
 
 func TestInsightsAction_IsOverdue(t *testing.T) {

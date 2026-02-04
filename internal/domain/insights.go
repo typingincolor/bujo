@@ -59,11 +59,5 @@ type InsightsDashboard struct {
 	HighPriorityActions  []InsightsAction
 	RecentDecisions      []InsightsDecision
 	DaysSinceLastSummary int
-}
-
-func (d InsightsDashboard) Status() string {
-	if d.LatestSummary != nil {
-		return "ready"
-	}
-	return "empty"
+	Status               string
 }

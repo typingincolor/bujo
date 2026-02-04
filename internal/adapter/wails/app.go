@@ -469,6 +469,90 @@ func (a *App) ApplyEditableDocumentWithActions(doc string, date time.Time, migra
 	}, nil
 }
 
+func (a *App) IsInsightsAvailable() bool {
+	if a.services.InsightsRepo == nil {
+		return false
+	}
+	return a.services.InsightsRepo.IsAvailable()
+}
+
+func (a *App) GetInsightsDashboard() (*domain.InsightsDashboard, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return &domain.InsightsDashboard{Status: "not_initialized"}, nil
+	}
+
+	latest, err := repo.GetLatestSummary(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	initiatives, err := repo.GetActiveInitiatives(a.ctx, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	actions, err := repo.GetPendingActions(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var highPriority []domain.InsightsAction
+	for _, action := range actions {
+		if action.Priority == "high" {
+			highPriority = append(highPriority, action)
+		}
+	}
+
+	decisions, err := repo.GetRecentDecisions(a.ctx, 3)
+	if err != nil {
+		return nil, err
+	}
+
+	days, err := repo.GetDaysSinceLastSummary(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	status := "ready"
+	if latest == nil {
+		status = "empty"
+	}
+
+	return &domain.InsightsDashboard{
+		LatestSummary:        latest,
+		ActiveInitiatives:    initiatives,
+		HighPriorityActions:  highPriority,
+		RecentDecisions:      decisions,
+		DaysSinceLastSummary: days,
+		Status:               status,
+	}, nil
+}
+
+func (a *App) GetInsightsSummaries(limit int) ([]domain.InsightsSummary, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return []domain.InsightsSummary{}, nil
+	}
+	return repo.GetSummaries(a.ctx, limit)
+}
+
+func (a *App) GetInsightsSummaryDetail(summaryID int64) ([]domain.InsightsTopic, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return []domain.InsightsTopic{}, nil
+	}
+	return repo.GetTopicsForSummary(a.ctx, summaryID)
+}
+
+func (a *App) GetInsightsActions() ([]domain.InsightsAction, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return []domain.InsightsAction{}, nil
+	}
+	return repo.GetPendingActions(a.ctx)
+}
+
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
 	parsed, err := dateutil.ParseFuture(input)
 	if err != nil {
