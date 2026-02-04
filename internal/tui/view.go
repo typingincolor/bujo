@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -161,11 +160,6 @@ func (m Model) renderJournalContent() string {
 	}
 
 	var sb strings.Builder
-
-	if m.isViewingPast() {
-		sb.WriteString(m.renderJournalAISummary())
-		sb.WriteString("\n")
-	}
 
 	if len(m.entries) == 0 {
 		emptyMsg := "No entries for today."
@@ -1311,65 +1305,3 @@ func (m Model) isViewingPast() bool {
 	return viewDate.Before(today)
 }
 
-func (m Model) renderJournalAISummary() string {
-	var sb strings.Builder
-
-	horizonLabel := "Daily"
-	if m.summaryState.horizon == "weekly" {
-		horizonLabel = "Weekly"
-	}
-
-	sb.WriteString(strings.Repeat("─", 50))
-	sb.WriteString("\n\n")
-
-	collapseIndicator := "▼"
-	if m.summaryCollapsed {
-		collapseIndicator = "▶"
-	}
-
-	sb.WriteString(fmt.Sprintf("%s 🤖 AI %s Summary", collapseIndicator, horizonLabel))
-
-	if m.summaryCollapsed {
-		sb.WriteString(HelpStyle.Render("  (press 's' to expand)"))
-		sb.WriteString("\n\n")
-		return sb.String()
-	}
-
-	sb.WriteString("\n\n")
-
-	if m.summaryState.streaming && m.summaryState.accumulatedText != "" {
-		sb.WriteString("⏳ Generating...\n\n")
-		rendered, err := m.renderMarkdown(m.summaryState.accumulatedText)
-		if err != nil {
-			sb.WriteString(m.summaryState.accumulatedText)
-		} else {
-			sb.WriteString(rendered)
-		}
-		sb.WriteString("\n")
-	} else if m.summaryState.summary != nil {
-		rendered, err := m.renderMarkdown(m.summaryState.summary.Content)
-		if err != nil {
-			sb.WriteString(m.summaryState.summary.Content)
-		} else {
-			sb.WriteString(rendered)
-		}
-		sb.WriteString("\n")
-	} else if m.summaryService == nil {
-		sb.WriteString(HelpStyle.Render("AI summaries unavailable - configure BUJO_MODEL or GEMINI_API_KEY"))
-		sb.WriteString("\n")
-	} else if m.summaryState.loading {
-		sb.WriteString("⏳ Generating AI summary...\n")
-	} else if m.summaryState.error != nil {
-		if errors.Is(m.summaryState.error, domain.ErrNoEntries) {
-			sb.WriteString(HelpStyle.Render("No entries to summarize for this period"))
-			sb.WriteString("\n")
-		} else {
-			sb.WriteString(fmt.Sprintf("❌ Error: %v\n", m.summaryState.error))
-		}
-	} else {
-		sb.WriteString(HelpStyle.Render("No summary generated for this period"))
-		sb.WriteString("\n")
-	}
-
-	return sb.String()
-}

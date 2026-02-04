@@ -18,7 +18,6 @@ var tuiCmd = &cobra.Command{
 			HabitService:    habitService,
 			ListService:     listService,
 			GoalService:     goalService,
-			SummaryService:  summaryService,
 			StatsService:    statsService,
 			ChangeDetection: changeDetectionService,
 		})

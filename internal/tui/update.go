@@ -55,19 +55,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scrollOffset = 0
 		m = m.syncKeyMapToSelection()
 
-		if m.currentView == ViewTypeJournal && m.isViewingPast() && m.summaryService != nil {
-			switch m.viewMode {
-			case ViewModeDay:
-				m.summaryState.horizon = domain.SummaryHorizonDaily
-			case ViewModeWeek:
-				m.summaryState.horizon = domain.SummaryHorizonWeekly
-			}
-			m.summaryState.refDate = m.viewDate
-			m.summaryState.loading = true
-			m.summaryState.error = nil
-			return m.ensuredVisible(), tea.Batch(m.loadJournalGoalsCmd(), m.loadSummaryCmd())
-		}
-
 		return m.ensuredVisible(), m.loadJournalGoalsCmd()
 
 	case journalGoalsLoadedMsg:
@@ -192,26 +179,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case entryMigratedToGoalMsg:
 		return m, m.loadDaysCmd()
-
-	case summaryTokenMsg:
-		m.summaryState.streaming = true
-		m.summaryState.accumulatedText += msg.token
-		return m, nil
-
-	case summaryLoadedMsg:
-		m.summaryState.loading = false
-		m.summaryState.streaming = false
-		m.summaryState.error = nil
-		m.summaryState.summary = msg.summary
-		m.summaryState.accumulatedText = ""
-		return m, nil
-
-	case summaryErrorMsg:
-		m.summaryState.loading = false
-		m.summaryState.streaming = false
-		m.summaryState.error = msg.err
-		m.summaryState.accumulatedText = ""
-		return m, nil
 
 	case statsLoadedMsg:
 		m.statsViewState.loading = false
@@ -387,10 +354,6 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keyMap.Back):
 		return m.handleBack()
-
-	case key.Matches(msg, m.keyMap.ToggleSummary):
-		m.summaryCollapsed = !m.summaryCollapsed
-		return m, nil
 
 	case key.Matches(msg, m.keyMap.ToggleOverdueContext):
 		m = m.toggleOverdueContext()
