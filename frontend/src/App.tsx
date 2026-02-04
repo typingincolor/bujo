@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
 import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
-import { HabitTracker } from '@/components/bujo/HabitTracker'
+import { HabitTracker } from '@/components/bujo/HabitTrackerView'
 import { ListsView } from '@/components/bujo/ListsView'
 import { GoalsView } from '@/components/bujo/GoalsView'
 import { QuestionsView } from '@/components/bujo/QuestionsView'
@@ -24,7 +24,7 @@ import { WeekView } from '@/components/bujo/WeekView'
 import { PendingTasksView } from '@/components/bujo/PendingTasksView'
 import { ContextTree } from '@/components/bujo/ContextTree'
 import { buildTree } from '@/lib/buildTree'
-import { EditableJournalView } from '@/components/bujo/EditableJournalView'
+import { JournalView } from '@/components/bujo/JournalView'
 import { InsightsView } from '@/components/bujo/InsightsView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
@@ -683,7 +683,7 @@ function App() {
                   onDateChange={handleDateNavigatorChange}
                 />
               </div>
-              <EditableJournalView
+              <JournalView
                 date={currentDate}
                 highlightText={highlightText}
                 onHighlightDone={() => setHighlightText(null)}

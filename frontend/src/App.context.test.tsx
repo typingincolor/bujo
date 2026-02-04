@@ -206,7 +206,7 @@ describe('App - Day Context (Mood/Weather/Location)', () => {
       expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
     })
 
-    // Location should be displayed (appears in both Header and DayView)
+    // Location should be displayed (appears in both Header and JournalView)
     const locationElements = screen.getAllByText('Home Office')
     expect(locationElements.length).toBeGreaterThanOrEqual(1)
   })
