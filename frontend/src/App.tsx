@@ -25,6 +25,7 @@ import { PendingTasksView } from '@/components/bujo/PendingTasksView'
 import { ContextTree } from '@/components/bujo/ContextTree'
 import { buildTree } from '@/lib/buildTree'
 import { EditableJournalView } from '@/components/bujo/EditableJournalView'
+import { InsightsView } from '@/components/bujo/InsightsView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -47,7 +48,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'settings']
+const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'insights', 'settings']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -619,7 +620,8 @@ function App() {
     lists: 'Lists',
     goals: 'Monthly Goals',
     search: 'Search',
-    stats: 'Insights',
+    stats: 'Statistics',
+    insights: 'Insights',
     settings: 'Settings',
     editable: 'Edit Journal',
   }
@@ -796,6 +798,12 @@ function App() {
           {view === 'stats' && (
             <div className="max-w-4xl mx-auto">
               <StatsView days={days} habits={habits} goals={goals} />
+            </div>
+          )}
+
+          {view === 'insights' && (
+            <div className="max-w-4xl mx-auto h-full">
+              <InsightsView />
             </div>
           )}
 
