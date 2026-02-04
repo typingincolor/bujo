@@ -742,6 +742,7 @@ function App() {
                 questions={outstandingQuestions}
                 onEntryChanged={loadData}
                 onError={setError}
+                onEdit={(entry) => setEditModalEntry(entry)}
               />
             </div>
           )}
