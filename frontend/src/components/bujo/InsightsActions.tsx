@@ -12,10 +12,11 @@ export function InsightsActions({ weekStart }: InsightsActionsProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setError(null);
+    let cancelled = false;
     GetInsightsActionsForWeek(weekStart)
-      .then((data) => setActions(data))
-      .catch((err: Error) => setError(err.message));
+      .then((data) => { if (!cancelled) { setError(null); setActions(data); } })
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
   }, [weekStart]);
 
   if (error) {

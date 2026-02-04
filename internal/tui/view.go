@@ -1297,11 +1297,3 @@ func (m Model) renderMoveToListModal() string {
 	sb.WriteString("\n1-9 or Enter to move, Esc to cancel")
 	return ConfirmStyle.Render(sb.String())
 }
-
-func (m Model) isViewingPast() bool {
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	viewDate := time.Date(m.viewDate.Year(), m.viewDate.Month(), m.viewDate.Day(), 0, 0, 0, 0, m.viewDate.Location())
-	return viewDate.Before(today)
-}
-

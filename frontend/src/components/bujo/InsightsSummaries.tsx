@@ -14,13 +14,17 @@ export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setError(null);
+    let cancelled = false;
     GetInsightsSummaryForWeek(weekStart)
       .then((detail) => {
-        setSummary(detail.Summary ?? null);
-        setTopics(detail.Topics ?? []);
+        if (!cancelled) {
+          setError(null);
+          setSummary(detail.Summary ?? null);
+          setTopics(detail.Topics ?? []);
+        }
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
   }, [weekStart]);
 
   if (error) {
