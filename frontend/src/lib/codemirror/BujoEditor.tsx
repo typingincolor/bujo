@@ -6,7 +6,6 @@ import {
   deleteLine,
   moveLineUp,
   moveLineDown,
-  copyLineDown,
   insertBlankLine,
 } from '@codemirror/commands'
 import { search, searchKeymap } from '@codemirror/search'
@@ -93,10 +92,6 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       {
         key: 'Mod-Shift-Enter',
         run: insertBlankLineAbove,
-      },
-      {
-        key: 'Mod-Shift-d',
-        run: copyLineDown,
       },
       {
         key: 'Alt-ArrowUp',

@@ -211,7 +211,6 @@ export function EditableJournalView({ date }: EditableJournalViewProps) {
         <span><kbd>⌘⏎</kbd> Line below</span>
         <span><kbd>⌘⇧⏎</kbd> Line above</span>
         <span><kbd>⌘⇧K</kbd> Delete line</span>
-        <span><kbd>⌘⇧D</kbd> Duplicate</span>
         <span><kbd>⌥↑</kbd> Move up</span>
         <span><kbd>⌥↓</kbd> Move down</span>
         <span><kbd>⌃A</kbd> Line start</span>
