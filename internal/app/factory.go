@@ -19,6 +19,7 @@ type Services struct {
 	Stats           *service.StatsService
 	ChangeDetection *service.ChangeDetectionService
 	EditableView    *service.EditableViewService
+	InsightsRepo    *sqlite.InsightsRepository
 }
 
 type ServiceFactory struct{}
