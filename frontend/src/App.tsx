@@ -802,7 +802,7 @@ function App() {
           )}
 
           {view === 'insights' && (
-            <div className="max-w-4xl mx-auto h-full">
+            <div className="h-full">
               <InsightsView />
             </div>
           )}

@@ -60,11 +60,15 @@ export function GetHabits(arg1:number):Promise<service.TrackerStatus>;
 
 export function GetInsightsActions():Promise<Array<domain.InsightsAction>>;
 
+export function GetInsightsActionsForWeek(arg1:string):Promise<Array<domain.InsightsAction>>;
+
 export function GetInsightsDashboard():Promise<domain.InsightsDashboard>;
 
 export function GetInsightsSummaries(arg1:number):Promise<Array<domain.InsightsSummary>>;
 
 export function GetInsightsSummaryDetail(arg1:number):Promise<Array<domain.InsightsTopic>>;
+
+export function GetInsightsSummaryForWeek(arg1:string):Promise<wails.WeekSummaryDetail>;
 
 export function GetLists():Promise<Array<wails.ListWithItems>>;
 

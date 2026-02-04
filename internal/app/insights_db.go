@@ -25,5 +25,5 @@ func DefaultInsightsDBPath() string {
 	if err != nil {
 		return ""
 	}
-	return home + "/bujo-companion/claude-insights.db"
+	return home + "/.bujo/claude-insights.db"
 }

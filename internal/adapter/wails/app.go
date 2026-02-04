@@ -553,6 +553,54 @@ func (a *App) GetInsightsActions() ([]domain.InsightsAction, error) {
 	return repo.GetPendingActions(a.ctx)
 }
 
+type WeekSummaryDetail struct {
+	Summary *domain.InsightsSummary
+	Topics  []domain.InsightsTopic
+}
+
+func nextWeekStartFrom(weekStart string) (string, error) {
+	t, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		return "", fmt.Errorf("invalid weekStart date: %w", err)
+	}
+	return t.AddDate(0, 0, 7).Format("2006-01-02"), nil
+}
+
+func (a *App) GetInsightsSummaryForWeek(weekStart string) (*WeekSummaryDetail, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return &WeekSummaryDetail{Topics: []domain.InsightsTopic{}}, nil
+	}
+	nextWeek, err := nextWeekStartFrom(weekStart)
+	if err != nil {
+		return nil, err
+	}
+	summary, err := repo.GetSummaryForWeek(a.ctx, weekStart, nextWeek)
+	if err != nil {
+		return nil, err
+	}
+	if summary == nil {
+		return &WeekSummaryDetail{Topics: []domain.InsightsTopic{}}, nil
+	}
+	topics, err := repo.GetTopicsForSummary(a.ctx, summary.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &WeekSummaryDetail{Summary: summary, Topics: topics}, nil
+}
+
+func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsAction, error) {
+	repo := a.services.InsightsRepo
+	if repo == nil || !repo.IsAvailable() {
+		return []domain.InsightsAction{}, nil
+	}
+	nextWeek, err := nextWeekStartFrom(weekStart)
+	if err != nil {
+		return nil, err
+	}
+	return repo.GetActionsForWeek(a.ctx, weekStart, nextWeek)
+}
+
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
 	parsed, err := dateutil.ParseFuture(input)
 	if err != nil {

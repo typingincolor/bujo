@@ -110,6 +110,10 @@ export function GetInsightsActions() {
   return window['go']['wails']['App']['GetInsightsActions']();
 }
 
+export function GetInsightsActionsForWeek(arg1) {
+  return window['go']['wails']['App']['GetInsightsActionsForWeek'](arg1);
+}
+
 export function GetInsightsDashboard() {
   return window['go']['wails']['App']['GetInsightsDashboard']();
 }
@@ -120,6 +124,10 @@ export function GetInsightsSummaries(arg1) {
 
 export function GetInsightsSummaryDetail(arg1) {
   return window['go']['wails']['App']['GetInsightsSummaryDetail'](arg1);
+}
+
+export function GetInsightsSummaryForWeek(arg1) {
+  return window['go']['wails']['App']['GetInsightsSummaryForWeek'](arg1);
 }
 
 export function GetLists() {

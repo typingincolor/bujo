@@ -1,43 +1,36 @@
 import { useEffect, useState } from 'react';
-import { GetInsightsSummaries, GetInsightsSummaryDetail } from '@/wailsjs/go/wails/App';
+import ReactMarkdown from 'react-markdown';
+import { GetInsightsSummaryForWeek } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
 
-export function InsightsSummaries() {
-  const [summaries, setSummaries] = useState<domain.InsightsSummary[]>([]);
-  const [expandedID, setExpandedID] = useState<number | null>(null);
+interface InsightsSummariesProps {
+  weekStart: string;
+}
+
+export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
+  const [summary, setSummary] = useState<domain.InsightsSummary | null>(null);
   const [topics, setTopics] = useState<domain.InsightsTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    GetInsightsSummaries(10)
-      .then((data) => setSummaries(data))
+    setError(null);
+    GetInsightsSummaryForWeek(weekStart)
+      .then((detail) => {
+        setSummary(detail.Summary ?? null);
+        setTopics(detail.Topics ?? []);
+      })
       .catch((err: Error) => setError(err.message));
-  }, []);
-
-  const toggleSummary = async (id: number) => {
-    if (expandedID === id) {
-      setExpandedID(null);
-      setTopics([]);
-      return;
-    }
-    setExpandedID(id);
-    try {
-      const detail = await GetInsightsSummaryDetail(id);
-      setTopics(detail);
-    } catch {
-      setTopics([]);
-    }
-  };
+  }, [weekStart]);
 
   if (error) {
-    return <div className="text-destructive text-sm">Failed to load summaries: {error}</div>;
+    return <div className="text-destructive text-sm">Failed to load summary: {error}</div>;
   }
 
-  if (summaries.length === 0) {
+  if (!summary) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">No weekly summaries yet.</p>
+        <p className="text-muted-foreground">No summary for this week.</p>
       </div>
     );
   }
@@ -56,45 +49,36 @@ export function InsightsSummaries() {
   };
 
   return (
-    <div className="space-y-3">
-      {summaries.map((s) => (
-        <div key={s.ID} className="border border-border rounded-lg">
-          <button
-            onClick={() => toggleSummary(s.ID)}
-            className="w-full text-left p-4 hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-medium">
-                {s.WeekStart} — {s.WeekEnd}
-              </h3>
-              <span className="text-xs text-muted-foreground">{s.CreatedAt.split(' ')[0]}</span>
-            </div>
-            {expandedID !== s.ID && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {s.SummaryText}
-              </p>
-            )}
-          </button>
-          {expandedID === s.ID && (
-            <div className="px-4 pb-4 space-y-3">
-              <p className="text-sm whitespace-pre-wrap">{s.SummaryText}</p>
-              {topics.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium text-muted-foreground mb-1">Topics</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {topics.map((t) => (
-                      <span key={t.ID} className="inline-flex items-center gap-1">
-                        {importanceBadge(t.Importance)}
-                        <span className="text-xs">{t.Topic}</span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="border border-border rounded-lg p-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-medium">
+            {summary.WeekStart} — {summary.WeekEnd}
+          </h3>
+          <span className="text-xs text-muted-foreground">{summary.CreatedAt.split(' ')[0]}</span>
         </div>
-      ))}
+        <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown>{summary.SummaryText}</ReactMarkdown>
+        </div>
+      </div>
+      {topics.length > 0 && (
+        <div className="border border-border rounded-lg p-4">
+          <h4 className="text-xs font-medium text-muted-foreground mb-2">Topics</h4>
+          <div className="space-y-2">
+            {topics.map((t) => (
+              <div key={t.ID} className="flex items-start gap-2">
+                {importanceBadge(t.Importance)}
+                <div>
+                  <span className="text-sm font-medium">{t.Topic}</span>
+                  {t.Content && (
+                    <p className="text-sm text-muted-foreground mt-0.5">{t.Content}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

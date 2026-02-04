@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
-import { GetInsightsActions } from '@/wailsjs/go/wails/App';
+import { GetInsightsActionsForWeek } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
 
-export function InsightsActions() {
+interface InsightsActionsProps {
+  weekStart: string;
+}
+
+export function InsightsActions({ weekStart }: InsightsActionsProps) {
   const [actions, setActions] = useState<domain.InsightsAction[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    GetInsightsActions()
+    setError(null);
+    GetInsightsActionsForWeek(weekStart)
       .then((data) => setActions(data))
       .catch((err: Error) => setError(err.message));
-  }, []);
+  }, [weekStart]);
 
   if (error) {
     return <div className="text-destructive text-sm">Failed to load actions: {error}</div>;
@@ -20,7 +25,7 @@ export function InsightsActions() {
   if (actions.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">No pending actions.</p>
+        <p className="text-muted-foreground">No actions for this week.</p>
       </div>
     );
   }

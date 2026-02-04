@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { GetInsightsDashboard } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
 
@@ -54,21 +55,21 @@ export function InsightsDashboard() {
 
       {/* Latest Summary */}
       {dashboard.LatestSummary && (
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-border rounded-lg p-4 max-h-80 overflow-y-auto">
           <h3 className="text-sm font-medium mb-2">
             Latest Summary ({dashboard.LatestSummary.WeekStart} — {dashboard.LatestSummary.WeekEnd})
           </h3>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {dashboard.LatestSummary.SummaryText.length > 500
-              ? dashboard.LatestSummary.SummaryText.substring(0, 500) + '...'
-              : dashboard.LatestSummary.SummaryText}
-          </p>
+          <div className="text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown>
+              {dashboard.LatestSummary.SummaryText}
+            </ReactMarkdown>
+          </div>
         </div>
       )}
 
       {/* Active Initiatives */}
       {dashboard.ActiveInitiatives?.length > 0 && (
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-border rounded-lg p-4 max-h-64 overflow-y-auto">
           <h3 className="text-sm font-medium mb-2">Active Initiatives</h3>
           <ul className="space-y-1">
             {dashboard.ActiveInitiatives.map((i) => (
@@ -83,14 +84,14 @@ export function InsightsDashboard() {
 
       {/* High Priority Actions */}
       {dashboard.HighPriorityActions?.length > 0 && (
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-border rounded-lg p-4 max-h-64 overflow-y-auto">
           <h3 className="text-sm font-medium mb-2">High Priority Actions</h3>
-          <ul className="space-y-1">
+          <ul className="list-disc list-inside space-y-1">
             {dashboard.HighPriorityActions.map((a) => (
-              <li key={a.ID} className="text-sm flex justify-between">
+              <li key={a.ID} className="text-sm">
                 <span>{a.ActionText}</span>
                 {a.DueDate && (
-                  <span className="text-xs text-muted-foreground">{a.DueDate}</span>
+                  <span className="text-xs text-muted-foreground ml-2">{a.DueDate}</span>
                 )}
               </li>
             ))}
@@ -100,7 +101,7 @@ export function InsightsDashboard() {
 
       {/* Recent Decisions */}
       {dashboard.RecentDecisions?.length > 0 && (
-        <div className="border border-border rounded-lg p-4">
+        <div className="border border-border rounded-lg p-4 max-h-64 overflow-y-auto">
           <h3 className="text-sm font-medium mb-2">Recent Decisions</h3>
           <ul className="space-y-2">
             {dashboard.RecentDecisions.map((d) => (

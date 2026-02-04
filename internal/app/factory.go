@@ -34,15 +34,20 @@ func (f *ServiceFactory) Create(ctx context.Context, dbPath string) (*Services, 
 		return nil, nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	insightsDB, _ := OpenInsightsDB(DefaultInsightsDBPath())
+
 	cleanup := func() {
 		_ = db.Close()
+		if insightsDB != nil {
+			_ = insightsDB.Close()
+		}
 	}
 
-	services := f.createServices(db)
+	services := f.createServices(db, insightsDB)
 	return services, cleanup, nil
 }
 
-func (f *ServiceFactory) createServices(db *sql.DB) *Services {
+func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Services {
 	entryRepo := sqlite.NewEntryRepository(db)
 	dayCtxRepo := sqlite.NewDayContextRepository(db)
 	habitRepo := sqlite.NewHabitRepository(db)
@@ -74,5 +79,6 @@ func (f *ServiceFactory) createServices(db *sql.DB) *Services {
 		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
 		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
 		EditableView:    service.NewEditableViewService(entryRepo, entryToListMover, listRepo),
+		InsightsRepo:    sqlite.NewInsightsRepository(insightsDB),
 	}
 }

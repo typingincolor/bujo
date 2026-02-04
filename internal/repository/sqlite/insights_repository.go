@@ -203,6 +203,65 @@ func (r *InsightsRepository) GetRecentDecisions(ctx context.Context, limit int) 
 	return decisions, rows.Err()
 }
 
+func (r *InsightsRepository) GetSummaryForWeek(ctx context.Context, weekStart, nextWeekStart string) (*domain.InsightsSummary, error) {
+	if r.db == nil {
+		return nil, nil
+	}
+
+	row := r.db.QueryRowContext(ctx,
+		`SELECT id, week_start, week_end, summary_text, created_at
+		 FROM summaries WHERE week_start >= ? AND week_start < ?
+		 ORDER BY week_start DESC LIMIT 1`, weekStart, nextWeekStart)
+
+	var s domain.InsightsSummary
+	err := row.Scan(&s.ID, &s.WeekStart, &s.WeekEnd, &s.SummaryText, &s.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func (r *InsightsRepository) GetActionsForWeek(ctx context.Context, weekStart, nextWeekStart string) ([]domain.InsightsAction, error) {
+	if r.db == nil {
+		return []domain.InsightsAction{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT a.id, a.summary_id, a.action_text, a.priority, a.status,
+		        COALESCE(a.due_date, ''), a.created_at, s.week_start
+		 FROM actions a
+		 JOIN summaries s ON a.summary_id = s.id
+		 WHERE s.week_start >= ? AND s.week_start < ?
+		 ORDER BY
+			CASE a.priority
+				WHEN 'high' THEN 1
+				WHEN 'medium' THEN 2
+				WHEN 'low' THEN 3
+			END,
+			a.due_date ASC NULLS LAST`, weekStart, nextWeekStart)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var actions []domain.InsightsAction
+	for rows.Next() {
+		var a domain.InsightsAction
+		if err := rows.Scan(&a.ID, &a.SummaryID, &a.ActionText, &a.Priority,
+			&a.Status, &a.DueDate, &a.CreatedAt, &a.WeekStart); err != nil {
+			return nil, err
+		}
+		actions = append(actions, a)
+	}
+	if actions == nil {
+		actions = []domain.InsightsAction{}
+	}
+	return actions, rows.Err()
+}
+
 func (r *InsightsRepository) GetDaysSinceLastSummary(ctx context.Context) (int, error) {
 	if r.db == nil {
 		return -1, nil

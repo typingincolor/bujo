@@ -152,6 +152,76 @@ func TestInsightsRepository_GetRecentDecisions(t *testing.T) {
 	})
 }
 
+func TestInsightsRepository_GetSummaryForWeek(t *testing.T) {
+	ctx := context.Background()
+	db := setupInsightsTestDB(t)
+	repo := NewInsightsRepository(db)
+
+	t.Run("returns summary matching week_start range", func(t *testing.T) {
+		summary, err := repo.GetSummaryForWeek(ctx, "2026-01-20", "2026-01-27")
+		require.NoError(t, err)
+		require.NotNil(t, summary)
+		assert.Equal(t, "2026-01-20", summary.WeekStart)
+		assert.Equal(t, "2026-01-26", summary.WeekEnd)
+	})
+
+	t.Run("finds summary when week_start falls within range", func(t *testing.T) {
+		// Monday before the Tuesday week_start in test data
+		summary, err := repo.GetSummaryForWeek(ctx, "2026-01-19", "2026-01-26")
+		require.NoError(t, err)
+		require.NotNil(t, summary)
+		assert.Equal(t, "2026-01-20", summary.WeekStart)
+	})
+
+	t.Run("returns nil for non-existent week", func(t *testing.T) {
+		summary, err := repo.GetSummaryForWeek(ctx, "2025-12-01", "2025-12-08")
+		require.NoError(t, err)
+		assert.Nil(t, summary)
+	})
+
+	t.Run("returns nil when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		summary, err := repo.GetSummaryForWeek(ctx, "2026-01-20", "2026-01-27")
+		require.NoError(t, err)
+		assert.Nil(t, summary)
+	})
+}
+
+func TestInsightsRepository_GetActionsForWeek(t *testing.T) {
+	ctx := context.Background()
+	db := setupInsightsTestDB(t)
+	repo := NewInsightsRepository(db)
+
+	t.Run("returns actions from the specified week range", func(t *testing.T) {
+		actions, err := repo.GetActionsForWeek(ctx, "2026-01-27", "2026-02-03")
+		require.NoError(t, err)
+		require.Len(t, actions, 2)
+		for _, a := range actions {
+			assert.Equal(t, "2026-01-27", a.WeekStart)
+		}
+	})
+
+	t.Run("finds actions when week_start falls within range", func(t *testing.T) {
+		// Monday before the actual week_start in test data
+		actions, err := repo.GetActionsForWeek(ctx, "2026-01-26", "2026-02-02")
+		require.NoError(t, err)
+		require.Len(t, actions, 2)
+	})
+
+	t.Run("returns empty for week with no actions", func(t *testing.T) {
+		actions, err := repo.GetActionsForWeek(ctx, "2025-12-01", "2025-12-08")
+		require.NoError(t, err)
+		assert.Empty(t, actions)
+	})
+
+	t.Run("returns empty when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		actions, err := repo.GetActionsForWeek(ctx, "2026-01-27", "2026-02-03")
+		require.NoError(t, err)
+		assert.Empty(t, actions)
+	})
+}
+
 func TestInsightsRepository_GetDaysSinceLastSummary(t *testing.T) {
 	ctx := context.Background()
 
