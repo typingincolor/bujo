@@ -1,5 +1,21 @@
 export namespace domain {
 	
+	export class AttentionResult {
+	    Score: number;
+	    Indicators: string[];
+	    DaysOld: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AttentionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Score = source["Score"];
+	        this.Indicators = source["Indicators"];
+	        this.DaysOld = source["DaysOld"];
+	    }
+	}
 	export class Entry {
 	    ID: number;
 	    EntityID: string;

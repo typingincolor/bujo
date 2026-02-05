@@ -952,6 +952,40 @@ func formatEntryMarkdown(entry domain.Entry, children map[int64][]domain.Entry, 
 	return sb.String()
 }
 
+func (s *BujoService) GetAttentionScores(ctx context.Context, ids []int64) (map[int64]domain.AttentionResult, error) {
+	if len(ids) == 0 {
+		return make(map[int64]domain.AttentionResult), nil
+	}
+
+	now := time.Now()
+	result := make(map[int64]domain.AttentionResult, len(ids))
+
+	for _, id := range ids {
+		entry, err := s.entryRepo.GetByID(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if entry == nil {
+			continue
+		}
+
+		var parentType domain.EntryType
+		if entry.ParentID != nil {
+			parent, err := s.entryRepo.GetByID(ctx, *entry.ParentID)
+			if err != nil {
+				return nil, err
+			}
+			if parent != nil {
+				parentType = parent.Type
+			}
+		}
+
+		result[id] = domain.CalculateAttentionScore(*entry, now, parentType)
+	}
+
+	return result, nil
+}
+
 func (s *BujoService) MoveEntryToList(ctx context.Context, entryID int64, listID int64) error {
 	entry, err := s.getEntry(ctx, entryID)
 	if err != nil {
