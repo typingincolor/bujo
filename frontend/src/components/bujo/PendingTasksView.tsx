@@ -36,15 +36,18 @@ export function PendingTasksView({
   onRefresh,
 }: PendingTasksViewProps) {
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Map<number, Entry['type']>>(new Map());
+  // Track IDs that should remain visible until refresh
+  const [preservedIds, setPreservedIds] = useState<Set<number>>(new Set());
   const selectedIndexRef = useRef(-1);
 
   const taskEntries = useMemo(() => {
-    const filtered = overdueEntries.filter(e => e.type === 'task');
+    // Show entries that are either: (1) currently tasks, or (2) preserved from before type change
+    const filtered = overdueEntries.filter(e => e.type === 'task' || preservedIds.has(e.id));
     return filtered.map(entry => {
       const override = localStatusOverrides.get(entry.id);
       return override ? { ...entry, type: override } : entry;
     });
-  }, [overdueEntries, localStatusOverrides]);
+  }, [overdueEntries, localStatusOverrides, preservedIds]);
 
   const taskIds = useMemo(() => taskEntries.map(e => e.id), [taskEntries]);
   const { scores } = useAttentionScores(taskIds);
@@ -57,8 +60,13 @@ export function PendingTasksView({
     });
   }, [taskEntries, scores]);
 
+  const preserveEntry = useCallback((id: number) => {
+    setPreservedIds(prev => new Set(prev).add(id));
+  }, []);
+
   const createEntryCallbacks = useCallback((entry: Entry) => ({
     onMarkDone: callbacks.onMarkDone ? () => {
+      preserveEntry(entry.id);
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'done'));
       callbacks.onMarkDone!(entry);
     } : undefined,
@@ -66,13 +74,23 @@ export function PendingTasksView({
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'task'));
       callbacks.onUnmarkDone!(entry);
     } : undefined,
-    onMigrate: callbacks.onMigrate ? () => callbacks.onMigrate!(entry) : undefined,
+    onMigrate: callbacks.onMigrate ? () => {
+      preserveEntry(entry.id);
+      callbacks.onMigrate!(entry);
+    } : undefined,
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
-    onCycleType: callbacks.onCycleType ? () => callbacks.onCycleType!(entry) : undefined,
-    onMoveToList: callbacks.onMoveToList ? () => callbacks.onMoveToList!(entry) : undefined,
+    onCycleType: callbacks.onCycleType ? () => {
+      preserveEntry(entry.id);
+      callbacks.onCycleType!(entry);
+    } : undefined,
+    onMoveToList: callbacks.onMoveToList ? () => {
+      preserveEntry(entry.id);
+      callbacks.onMoveToList!(entry);
+    } : undefined,
     onCancel: callbacks.onCancel ? () => {
+      preserveEntry(entry.id);
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'cancelled'));
       callbacks.onCancel!(entry);
     } : undefined,
@@ -80,10 +98,11 @@ export function PendingTasksView({
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'task'));
       callbacks.onUncancel!(entry);
     } : undefined,
-  }), [callbacks]);
+  }), [callbacks, preserveEntry]);
 
   const handleRefresh = useCallback(() => {
     setLocalStatusOverrides(new Map());
+    setPreservedIds(new Set());
     onRefresh();
   }, [onRefresh]);
 
@@ -170,67 +189,90 @@ interface PendingTaskItemProps {
 function PendingTaskItem({ entry, attentionScore, isSelected, onSelect, onDoubleClick, callbacks }: PendingTaskItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const score = attentionScore?.score ?? 0;
+  const indicators = attentionScore?.indicators ?? [];
   const symbol = ENTRY_SYMBOLS[entry.type];
   const prioritySymbol = PRIORITY_SYMBOLS[entry.priority];
 
   return (
     <div
       className={cn(
-        'group flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
+        'group flex flex-col gap-1 px-3 py-2 rounded-lg text-sm transition-colors',
         !isSelected && isHovered && 'bg-secondary/50',
         isSelected && 'bg-primary/10 ring-1 ring-primary/30'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <button
-        onClick={onSelect}
-        onDoubleClick={onDoubleClick}
-        className="flex items-center gap-2 text-left min-w-0 flex-1"
-      >
-        <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
-          {symbol}
-        </span>
-
-        <span
-          data-testid="attention-badge"
-          className={cn(
-            'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
-            score >= 80 ? 'bg-red-500' :
-            score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
-          )}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onSelect}
+          onDoubleClick={onDoubleClick}
+          className="flex items-center gap-2 text-left min-w-0 flex-1"
         >
-          {score}
-        </span>
-
-        {prioritySymbol && (
-          <span
-            data-testid="priority-indicator"
-            className="text-orange-500 font-medium flex-shrink-0"
-          >
-            {prioritySymbol}
+          <span data-testid="entry-symbol" className="text-muted-foreground flex-shrink-0">
+            {symbol}
           </span>
+
+          <span
+            data-testid="attention-badge"
+            className={cn(
+              'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
+              score >= 80 ? 'bg-red-500' :
+              score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
+            )}
+          >
+            {score}
+          </span>
+
+          {prioritySymbol && (
+            <span
+              data-testid="priority-indicator"
+              className="text-orange-500 font-medium flex-shrink-0"
+            >
+              {prioritySymbol}
+            </span>
+          )}
+
+          <span className={cn(
+            "flex-1 truncate",
+            entry.type === 'cancelled' && "line-through text-muted-foreground"
+          )}>
+            {entry.content}
+          </span>
+        </button>
+
+        {(isSelected || isHovered) && (
+          <div className="flex-shrink-0">
+            <EntryActionBar
+              entry={entry}
+              callbacks={callbacks}
+              variant="always-visible"
+              size="sm"
+            />
+          </div>
         )}
-
-        <span className={cn(
-          "flex-1 truncate",
-          entry.type === 'cancelled' && "line-through text-muted-foreground"
-        )}>
-          {entry.content}
-        </span>
-      </button>
-
-      {/* Inline action bar - visible on hover or selection */}
-      <div className="flex-shrink-0">
-        <EntryActionBar
-          entry={entry}
-          callbacks={callbacks}
-          variant="hover-reveal"
-          size="sm"
-          isSelected={isSelected}
-          isHovered={isHovered}
-        />
       </div>
+
+      {indicators.length > 0 && (
+        <div className="flex gap-1 pl-14" data-testid="attention-indicators">
+          {indicators.map(indicator => (
+            <span
+              key={indicator}
+              data-indicator={indicator}
+              title={indicator}
+              className={cn(
+                'text-xs px-1.5 py-0.5 rounded',
+                indicator === 'priority' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+                indicator === 'overdue' && 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+                indicator === 'aging' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                indicator === 'migrated' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+              )}
+            >
+              {indicator === 'priority' ? '!' : indicator}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

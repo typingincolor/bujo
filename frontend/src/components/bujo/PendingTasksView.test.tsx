@@ -200,4 +200,50 @@ describe('PendingTasksView', () => {
       expect(mockGetAttentionScores).toHaveBeenCalledWith([10, 30]);
     })
   });
+
+  it('renders indicator badges when attention score has indicators', async () => {
+    mockGetAttentionScores.mockResolvedValue({
+      1: { Score: 85, Indicators: ['overdue', 'priority'], DaysOld: 10 },
+    })
+
+    const entries = [createEntry({ id: 1, content: 'Urgent task' })];
+    render(<PendingTasksView {...defaultProps} overdueEntries={entries} />);
+
+    await waitFor(() => {
+      const indicators = screen.getByTestId('attention-indicators');
+      expect(indicators).toBeInTheDocument();
+      expect(screen.getByText('overdue')).toBeInTheDocument();
+      expect(screen.getByText('!')).toBeInTheDocument();
+    })
+  });
+
+  it('does not render indicator row when indicators are empty', async () => {
+    mockGetAttentionScores.mockResolvedValue({
+      1: { Score: 30, Indicators: [], DaysOld: 2 },
+    })
+
+    const entries = [createEntry({ id: 1, content: 'Low priority task' })];
+    render(<PendingTasksView {...defaultProps} overdueEntries={entries} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('attention-badge')).toHaveTextContent('30');
+    })
+    expect(screen.queryByTestId('attention-indicators')).not.toBeInTheDocument();
+  });
+
+  it('renders all indicator types with correct labels', async () => {
+    mockGetAttentionScores.mockResolvedValue({
+      1: { Score: 90, Indicators: ['overdue', 'priority', 'aging', 'migrated'], DaysOld: 15 },
+    })
+
+    const entries = [createEntry({ id: 1, content: 'All indicators task' })];
+    render(<PendingTasksView {...defaultProps} overdueEntries={entries} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('overdue')).toBeInTheDocument();
+      expect(screen.getByText('!')).toBeInTheDocument();
+      expect(screen.getByText('aging')).toBeInTheDocument();
+      expect(screen.getByText('migrated')).toBeInTheDocument();
+    })
+  });
 });

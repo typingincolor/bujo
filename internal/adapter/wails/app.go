@@ -599,7 +599,17 @@ func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsActi
 }
 
 func (a *App) GetAttentionScores(ids []int64) (map[int64]domain.AttentionResult, error) {
-	return a.services.Bujo.GetAttentionScores(a.ctx, ids)
+	result, err := a.services.Bujo.GetAttentionScores(a.ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetAttentionResultType forces Wails to generate TypeScript bindings for domain.AttentionResult.
+// Without this method, Wails doesn't generate types for structs only used as map values.
+func (a *App) GetAttentionResultType() domain.AttentionResult {
+	return domain.AttentionResult{}
 }
 
 func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
