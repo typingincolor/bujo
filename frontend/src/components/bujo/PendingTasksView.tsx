@@ -222,17 +222,6 @@ function PendingTaskItem({ entry, attentionScore, isSelected, onSelect, onDouble
             {symbol}
           </span>
 
-          <span
-            data-testid="attention-badge"
-            className={cn(
-              'px-1.5 py-0.5 rounded text-xs font-medium text-white flex-shrink-0',
-              score >= 80 ? 'bg-red-500' :
-              score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
-            )}
-          >
-            {score}
-          </span>
-
           {prioritySymbol && (
             <span
               data-testid="priority-indicator"
@@ -262,26 +251,34 @@ function PendingTaskItem({ entry, attentionScore, isSelected, onSelect, onDouble
         )}
       </div>
 
-      {indicators.length > 0 && (
-        <div className="flex gap-1 pl-14" data-testid="attention-indicators">
-          {indicators.map(indicator => (
-            <span
-              key={indicator}
-              data-indicator={indicator}
-              title={indicator}
-              className={cn(
-                'text-xs px-1.5 py-0.5 rounded',
-                indicator === 'priority' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-                indicator === 'overdue' && 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                indicator === 'aging' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                indicator === 'migrated' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-              )}
-            >
-              {indicator === 'priority' ? '!' : indicator}
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="flex gap-1 pl-6" data-testid="attention-indicators">
+        <span
+          data-testid="attention-badge"
+          className={cn(
+            'px-1.5 py-0.5 rounded text-xs font-medium text-white',
+            score >= 80 ? 'bg-red-500' :
+            score >= 50 ? 'bg-orange-500' : 'bg-yellow-500'
+          )}
+        >
+          {score}
+        </span>
+        {indicators.map(indicator => (
+          <span
+            key={indicator}
+            data-indicator={indicator}
+            title={indicator}
+            className={cn(
+              'text-xs px-1.5 py-0.5 rounded',
+              indicator === 'priority' && 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+              indicator === 'overdue' && 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+              indicator === 'aging' && 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+              indicator === 'migrated' && 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+            )}
+          >
+            {indicator === 'priority' ? '!' : indicator}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

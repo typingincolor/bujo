@@ -217,7 +217,7 @@ describe('PendingTasksView', () => {
     })
   });
 
-  it('does not render indicator row when indicators are empty', async () => {
+  it('renders only score badge when indicators are empty', async () => {
     mockGetAttentionScores.mockResolvedValue({
       1: { Score: 30, Indicators: [], DaysOld: 2 },
     })
@@ -228,7 +228,10 @@ describe('PendingTasksView', () => {
     await waitFor(() => {
       expect(screen.getByTestId('attention-badge')).toHaveTextContent('30');
     })
-    expect(screen.queryByTestId('attention-indicators')).not.toBeInTheDocument();
+    // Score badge shows but no indicator badges
+    expect(screen.queryByText('overdue')).not.toBeInTheDocument();
+    expect(screen.queryByText('aging')).not.toBeInTheDocument();
+    expect(screen.queryByText('migrated')).not.toBeInTheDocument();
   });
 
   it('renders all indicator types with correct labels', async () => {
