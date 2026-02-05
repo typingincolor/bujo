@@ -674,7 +674,7 @@ function App() {
           onBack={handleBack}
         />
 
-        <main className={`flex-1 p-6 ${view === 'today' || view === 'pending' ? 'flex flex-col overflow-hidden pb-2' : 'overflow-y-auto pb-32'}`}>
+        <main className="flex-1 p-6 pb-2 flex flex-col overflow-hidden">
           {view === 'today' && (
             <>
               <div className="flex items-center justify-center mb-6">
