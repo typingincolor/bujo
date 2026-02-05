@@ -36,18 +36,27 @@ export function PendingTasksView({
   onRefresh,
 }: PendingTasksViewProps) {
   const [localStatusOverrides, setLocalStatusOverrides] = useState<Map<number, Entry['type']>>(new Map());
-  // Track IDs that should remain visible until refresh
-  const [preservedIds, setPreservedIds] = useState<Set<number>>(new Set());
+  // Keep entries that were acted on so they don't disappear until refresh
+  const [preservedEntries, setPreservedEntries] = useState<Map<number, Entry>>(new Map());
   const selectedIndexRef = useRef(-1);
 
   const taskEntries = useMemo(() => {
-    // Show entries that are either: (1) currently tasks, or (2) preserved from before type change
-    const filtered = overdueEntries.filter(e => e.type === 'task' || preservedIds.has(e.id));
-    return filtered.map(entry => {
+    // Start with current tasks from overdueEntries
+    const currentTasks = overdueEntries.filter(e => e.type === 'task');
+    const currentTaskIds = new Set(currentTasks.map(e => e.id));
+
+    // Add preserved entries that aren't in the current list
+    const preserved = Array.from(preservedEntries.values()).filter(e => !currentTaskIds.has(e.id));
+
+    // Combine both lists
+    const combined = [...currentTasks, ...preserved];
+
+    // Apply local status overrides
+    return combined.map(entry => {
       const override = localStatusOverrides.get(entry.id);
       return override ? { ...entry, type: override } : entry;
     });
-  }, [overdueEntries, localStatusOverrides, preservedIds]);
+  }, [overdueEntries, localStatusOverrides, preservedEntries]);
 
   const taskIds = useMemo(() => taskEntries.map(e => e.id), [taskEntries]);
   const { scores } = useAttentionScores(taskIds);
@@ -60,13 +69,13 @@ export function PendingTasksView({
     });
   }, [taskEntries, scores]);
 
-  const preserveEntry = useCallback((id: number) => {
-    setPreservedIds(prev => new Set(prev).add(id));
+  const preserveEntry = useCallback((entry: Entry) => {
+    setPreservedEntries(prev => new Map(prev).set(entry.id, entry));
   }, []);
 
   const createEntryCallbacks = useCallback((entry: Entry) => ({
     onMarkDone: callbacks.onMarkDone ? () => {
-      preserveEntry(entry.id);
+      preserveEntry(entry);
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'done'));
       callbacks.onMarkDone!(entry);
     } : undefined,
@@ -75,22 +84,22 @@ export function PendingTasksView({
       callbacks.onUnmarkDone!(entry);
     } : undefined,
     onMigrate: callbacks.onMigrate ? () => {
-      preserveEntry(entry.id);
+      preserveEntry(entry);
       callbacks.onMigrate!(entry);
     } : undefined,
     onEdit: callbacks.onEdit ? () => callbacks.onEdit!(entry) : undefined,
     onDelete: callbacks.onDelete ? () => callbacks.onDelete!(entry) : undefined,
     onCyclePriority: callbacks.onCyclePriority ? () => callbacks.onCyclePriority!(entry) : undefined,
     onCycleType: callbacks.onCycleType ? () => {
-      preserveEntry(entry.id);
+      preserveEntry(entry);
       callbacks.onCycleType!(entry);
     } : undefined,
     onMoveToList: callbacks.onMoveToList ? () => {
-      preserveEntry(entry.id);
+      preserveEntry(entry);
       callbacks.onMoveToList!(entry);
     } : undefined,
     onCancel: callbacks.onCancel ? () => {
-      preserveEntry(entry.id);
+      preserveEntry(entry);
       setLocalStatusOverrides(prev => new Map(prev).set(entry.id, 'cancelled'));
       callbacks.onCancel!(entry);
     } : undefined,
@@ -102,7 +111,7 @@ export function PendingTasksView({
 
   const handleRefresh = useCallback(() => {
     setLocalStatusOverrides(new Map());
-    setPreservedIds(new Set());
+    setPreservedEntries(new Map());
     onRefresh();
   }, [onRefresh]);
 
