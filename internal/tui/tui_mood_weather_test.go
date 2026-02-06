@@ -191,7 +191,7 @@ func TestMood_EnterNoOpOnEmptyInput(t *testing.T) {
 }
 
 func TestMood_PresetsContainExpectedValues(t *testing.T) {
-	expected := []string{"happy", "neutral", "sad", "frustrated", "tired", "sick", "anxious", "grateful"}
+	expected := []string{"Happy", "Neutral", "Sad", "Frustrated", "Tired", "Sick", "Anxious", "Grateful"}
 	if len(moodPresets) != len(expected) {
 		t.Fatalf("expected %d mood presets, got %d", len(expected), len(moodPresets))
 	}
@@ -312,7 +312,7 @@ func TestWeather_EnterSubmitsSelectedPreset(t *testing.T) {
 }
 
 func TestWeather_PresetsContainExpectedValues(t *testing.T) {
-	expected := []string{"sunny", "partly-cloudy", "cloudy", "rainy", "stormy", "snowy"}
+	expected := []string{"Sunny", "Partly-Cloudy", "Cloudy", "Rainy", "Stormy", "Snowy"}
 	if len(weatherPresets) != len(expected) {
 		t.Fatalf("expected %d weather presets, got %d", len(expected), len(weatherPresets))
 	}
@@ -383,12 +383,12 @@ func TestWeather_WKeyNoOpInSearchView(t *testing.T) {
 }
 
 func TestMergePresets_CaseInsensitiveDedup(t *testing.T) {
-	defaults := []string{"happy", "sad"}
-	history := []string{"Happy", "excited"}
+	defaults := []string{"Happy", "Sad"}
+	history := []string{"happy", "Excited"}
 
 	result := mergePresets(defaults, history)
 
-	expected := []string{"happy", "sad", "excited"}
+	expected := []string{"Happy", "Sad", "Excited"}
 	if len(result) != len(expected) {
 		t.Fatalf("expected %d presets, got %d: %v", len(expected), len(result), result)
 	}

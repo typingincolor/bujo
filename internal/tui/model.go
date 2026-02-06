@@ -196,9 +196,9 @@ type presetPickerState struct {
 	pickerLabel  string
 }
 
-var moodPresets = []string{"happy", "neutral", "sad", "frustrated", "tired", "sick", "anxious", "grateful"}
+var moodPresets = []string{"Happy", "Neutral", "Sad", "Frustrated", "Tired", "Sick", "Anxious", "Grateful"}
 
-var weatherPresets = []string{"sunny", "partly-cloudy", "cloudy", "rainy", "stormy", "snowy"}
+var weatherPresets = []string{"Sunny", "Partly-Cloudy", "Cloudy", "Rainy", "Stormy", "Snowy"}
 
 type retypeState struct {
 	active      bool

@@ -222,9 +222,9 @@ func TestBujoService_SetLocation_PreservesExistingMoodAndWeather(t *testing.T) {
 	require.NotNil(t, dayCtx.Location, "Location should be set")
 	assert.Equal(t, "Office", *dayCtx.Location)
 	require.NotNil(t, dayCtx.Mood, "Mood should be preserved after setting location")
-	assert.Equal(t, "happy", *dayCtx.Mood)
+	assert.Equal(t, "Happy", *dayCtx.Mood)
 	require.NotNil(t, dayCtx.Weather, "Weather should be preserved after setting location")
-	assert.Equal(t, "sunny", *dayCtx.Weather)
+	assert.Equal(t, "Sunny", *dayCtx.Weather)
 }
 
 func TestBujoService_MarkDone(t *testing.T) {

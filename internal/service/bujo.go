@@ -237,6 +237,21 @@ func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location 
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 
+func normalizeContextValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	words := strings.Fields(trimmed)
+	for i, word := range words {
+		if len(word) > 0 && unicode.IsDigit([]rune(word)[0]) {
+			continue
+		}
+		words[i] = titleCaseHyphenated(word)
+	}
+	return strings.Join(words, " ")
+}
+
 func normalizeLocation(location string) string {
 	trimmed := strings.TrimSpace(location)
 	if trimmed == "" {
@@ -247,10 +262,18 @@ func normalizeLocation(location string) string {
 		if isLocationCode(word) {
 			words[i] = strings.ToUpper(word)
 		} else {
-			words[i] = titleCaseWord(word)
+			words[i] = titleCaseHyphenated(word)
 		}
 	}
 	return strings.Join(words, " ")
+}
+
+func titleCaseHyphenated(word string) string {
+	parts := strings.Split(word, "-")
+	for i, part := range parts {
+		parts[i] = titleCaseWord(part)
+	}
+	return strings.Join(parts, "-")
 }
 
 func isLocationCode(word string) bool {
@@ -305,8 +328,8 @@ func (s *BujoService) SetMood(ctx context.Context, date time.Time, mood string) 
 	if dayCtx == nil {
 		dayCtx = &domain.DayContext{Date: date}
 	}
-	trimmedMood := strings.TrimSpace(mood)
-	dayCtx.Mood = &trimmedMood
+	normalizedMood := normalizeContextValue(mood)
+	dayCtx.Mood = &normalizedMood
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 
@@ -345,8 +368,8 @@ func (s *BujoService) SetWeather(ctx context.Context, date time.Time, weather st
 	if dayCtx == nil {
 		dayCtx = &domain.DayContext{Date: date}
 	}
-	trimmedWeather := strings.TrimSpace(weather)
-	dayCtx.Weather = &trimmedWeather
+	normalizedWeather := normalizeContextValue(weather)
+	dayCtx.Weather = &normalizedWeather
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 

@@ -136,7 +136,7 @@ func TestBujoService_GetMood(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, mood)
-	assert.Equal(t, "energetic", *mood)
+	assert.Equal(t, "Energetic", *mood)
 }
 
 func TestBujoService_GetMood_NotSet(t *testing.T) {
@@ -213,7 +213,7 @@ func TestBujoService_GetWeather(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, weather)
-	assert.Equal(t, "rainy, 15°C", *weather)
+	assert.Equal(t, "Rainy, 15°C", *weather)
 }
 
 func TestBujoService_GetWeather_NotSet(t *testing.T) {
@@ -334,12 +334,12 @@ func TestNormalizeLocation(t *testing.T) {
 	}
 }
 
-func TestBujoService_SetMood_TrimsWhitespace(t *testing.T) {
+func TestBujoService_SetMood_NormalizesToTitleCase(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()
 
 	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
-	err := service.SetMood(ctx, today, "  Happy  ")
+	err := service.SetMood(ctx, today, "  happy  ")
 	require.NoError(t, err)
 
 	mood, err := service.GetMood(ctx, today)
@@ -348,18 +348,43 @@ func TestBujoService_SetMood_TrimsWhitespace(t *testing.T) {
 	assert.Equal(t, "Happy", *mood)
 }
 
-func TestBujoService_SetWeather_TrimsWhitespace(t *testing.T) {
+func TestBujoService_SetWeather_NormalizesToTitleCase(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()
 
 	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
-	err := service.SetWeather(ctx, today, "  Sunny  ")
+	err := service.SetWeather(ctx, today, "  partly-cloudy  ")
 	require.NoError(t, err)
 
 	weather, err := service.GetWeather(ctx, today)
 	require.NoError(t, err)
 	require.NotNil(t, weather)
-	assert.Equal(t, "Sunny", *weather)
+	assert.Equal(t, "Partly-Cloudy", *weather)
+}
+
+func TestNormalizeContextValue(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"happy", "Happy"},
+		{"Happy", "Happy"},
+		{"HAPPY", "Happy"},
+		{"partly-cloudy", "Partly-Cloudy"},
+		{"Partly-Cloudy", "Partly-Cloudy"},
+		{"PARTLY-CLOUDY", "Partly-Cloudy"},
+		{"very tired", "Very Tired"},
+		{"rainy, 15°C", "Rainy, 15°C"},
+		{"cloudy, 72°F", "Cloudy, 72°F"},
+		{"  sunny  ", "Sunny"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, normalizeContextValue(tt.input))
+		})
+	}
 }
 
 func TestBujoService_GetOutstandingTasks(t *testing.T) {
