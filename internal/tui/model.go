@@ -1081,20 +1081,6 @@ func (m Model) loadQuestionsCmd() tea.Cmd {
 	}
 }
 
-func (m Model) loadParentChainCmd(entryID int64) tea.Cmd {
-	return func() tea.Msg {
-		if m.bujoService == nil {
-			return errMsg{fmt.Errorf("bujo service not available")}
-		}
-		ctx := context.Background()
-		ancestors, err := m.bujoService.GetEntryAncestors(ctx, entryID)
-		if err != nil {
-			return errMsg{err}
-		}
-		return parentChainLoadedMsg{entryID: entryID, chain: ancestors}
-	}
-}
-
 func (m Model) loadInsightsDashboardCmd() tea.Cmd {
 	return func() tea.Msg {
 		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
