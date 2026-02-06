@@ -676,7 +676,7 @@ function App() {
           onMoodChanged={loadData}
           onWeatherChanged={loadData}
           onLocationChanged={loadData}
-          canGoBack={canGoBack}
+          canGoBack={canGoBack && view === 'today'}
           onBack={handleBack}
         />
 

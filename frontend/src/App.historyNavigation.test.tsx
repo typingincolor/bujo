@@ -123,10 +123,9 @@ describe('App - Navigation History', () => {
         expect(screen.getByText(/–.*\d{4}/)).toBeInTheDocument()
       })
 
-      // Back button should be visible (can go back to today)
-      await waitFor(() => {
-        expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
-      })
+      // Back button should NOT be visible on weekly review view
+      // (back button only appears on journal view after double-click navigation)
+      expect(screen.queryByRole('button', { name: /go back/i })).not.toBeInTheDocument()
 
       // Manually navigate to today via sidebar
       const todayButton = screen.getByRole('button', { name: /journal/i })

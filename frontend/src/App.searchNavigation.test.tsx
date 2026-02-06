@@ -134,4 +134,106 @@ describe('App - Search Navigation', () => {
     const journalElements = screen.getAllByText('Journal')
     expect(journalElements.length).toBeGreaterThanOrEqual(2) // sidebar + header
   })
+
+  it('shows back button on journal view after navigating from search', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockSearchResult({
+        ID: 42,
+        Content: 'Test entry',
+        Type: 'task',
+        CreatedAt: '2026-01-15T10:00:00Z',
+      }),
+    ] as never)
+
+    vi.mocked(GetDayEntries).mockResolvedValue([
+      { Date: '2026-01-15T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' },
+    ] as never)
+
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Navigate to search view
+    await user.click(screen.getByRole('button', { name: /search/i }))
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    })
+
+    // Back button should NOT appear on search view
+    expect(screen.queryByRole('button', { name: /go back/i })).not.toBeInTheDocument()
+
+    // Search and double-click result
+    await user.type(screen.getByPlaceholderText(/search entries/i), 'test')
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    const result = screen.getByText('Test entry').closest('[data-result-id]')
+    await user.dblClick(result!)
+
+    // Now on journal view - back button SHOULD appear
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
+    })
+  })
+
+  it('back button returns to search view after double-click navigation', async () => {
+    vi.mocked(Search).mockResolvedValue([
+      createMockSearchResult({
+        ID: 42,
+        Content: 'Test entry',
+        Type: 'task',
+        CreatedAt: '2026-01-15T10:00:00Z',
+      }),
+    ] as never)
+
+    vi.mocked(GetDayEntries).mockResolvedValue([
+      { Date: '2026-01-15T00:00:00Z', Entries: [], Location: '', Mood: '', Weather: '' },
+    ] as never)
+
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    // Navigate to search, double-click result
+    await user.click(screen.getByRole('button', { name: /search/i }))
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText(/search entries/i), 'test')
+    await waitFor(() => {
+      expect(screen.getByText('Test entry')).toBeInTheDocument()
+    })
+
+    await user.dblClick(screen.getByText('Test entry').closest('[data-result-id]')!)
+
+    // Now on journal view
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+
+    // Click back button
+    await user.click(screen.getByRole('button', { name: /go back/i }))
+
+    // Should be back on search view
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    })
+  })
 })
