@@ -75,6 +75,14 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderSetLocationInput())
 		sb.WriteString("\n")
+	} else if m.setMoodMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSetMoodInput())
+		sb.WriteString("\n")
+	} else if m.setWeatherMode.active {
+		sb.WriteString("\n")
+		sb.WriteString(m.renderSetWeatherInput())
+		sb.WriteString("\n")
 	} else if m.searchMode.active {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderSearchInput())
@@ -624,6 +632,50 @@ func (m Model) renderSetLocationInput() string {
 				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", loc)))
 			} else {
 				sb.WriteString(fmt.Sprintf("    %s", loc))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
+	} else {
+		sb.WriteString("\n\nEnter to save, Esc to cancel")
+	}
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderSetMoodInput() string {
+	var sb strings.Builder
+	sb.WriteString("Set mood:\n")
+	sb.WriteString(m.setMoodMode.input.View())
+
+	if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
+		sb.WriteString("\n\nMood presets:\n")
+		for i, preset := range m.setMoodMode.presets {
+			if i == m.setMoodMode.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", preset)))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s", preset))
+			}
+			sb.WriteString("\n")
+		}
+		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
+	} else {
+		sb.WriteString("\n\nEnter to save, Esc to cancel")
+	}
+	return ConfirmStyle.Render(sb.String())
+}
+
+func (m Model) renderSetWeatherInput() string {
+	var sb strings.Builder
+	sb.WriteString("Set weather:\n")
+	sb.WriteString(m.setWeatherMode.input.View())
+
+	if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
+		sb.WriteString("\n\nWeather presets:\n")
+		for i, preset := range m.setWeatherMode.presets {
+			if i == m.setWeatherMode.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", preset)))
+			} else {
+				sb.WriteString(fmt.Sprintf("    %s", preset))
 			}
 			sb.WriteString("\n")
 		}

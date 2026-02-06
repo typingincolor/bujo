@@ -218,6 +218,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.setLocationMode.locations = msg.locations
 		return m, nil
 
+	case moodsLoadedMsg:
+		m.setMoodMode.presets = mergePresets(moodPresets, msg.moods)
+		return m, nil
+
+	case weathersLoadedMsg:
+		m.setWeatherMode.presets = mergePresets(weatherPresets, msg.weathers)
+		return m, nil
+
 	case editorFinishedMsg:
 		_ = DeleteDraft(m.draftPath)
 		_ = CleanupCaptureTempFile(CaptureTempFilePath())
@@ -271,6 +279,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.setLocationMode.active {
 			return m.handleSetLocationMode(msg)
+		}
+		if m.setMoodMode.active {
+			return m.handleSetMoodMode(msg)
+		}
+		if m.setWeatherMode.active {
+			return m.handleSetWeatherMode(msg)
 		}
 		if m.commandPalette.active {
 			return m.handleCommandPaletteMode(msg)
@@ -703,6 +717,34 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.loadLocationsCmd()
 
+	case key.Matches(msg, m.keyMap.SetMood):
+		input := textinput.New()
+		input.Placeholder = "Enter mood..."
+		input.Focus()
+		m.setMoodMode = setMoodState{
+			active:      true,
+			pickerMode:  true,
+			date:        m.viewDate,
+			input:       input,
+			presets:     moodPresets,
+			selectedIdx: 0,
+		}
+		return m, m.loadMoodsCmd()
+
+	case key.Matches(msg, m.keyMap.SetWeather):
+		input := textinput.New()
+		input.Placeholder = "Enter weather..."
+		input.Focus()
+		m.setWeatherMode = setWeatherState{
+			active:      true,
+			pickerMode:  true,
+			date:        m.viewDate,
+			input:       input,
+			presets:     weatherPresets,
+			selectedIdx: 0,
+		}
+		return m, m.loadWeathersCmd()
+
 	case key.Matches(msg, m.keyMap.Capture):
 		return m, m.launchExternalEditorCmd()
 	}
@@ -1110,6 +1152,182 @@ func (m Model) setLocationCmd(date time.Time, location string) tea.Cmd {
 		}
 		return agendaReloadNeededMsg{}
 	}
+}
+
+func (m Model) handleSetMoodMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.setMoodMode.active = false
+		return m, nil
+
+	case tea.KeyUp:
+		if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
+			if m.setMoodMode.selectedIdx > 0 {
+				m.setMoodMode.selectedIdx--
+			}
+			return m, nil
+		}
+
+	case tea.KeyDown:
+		if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
+			if m.setMoodMode.selectedIdx < len(m.setMoodMode.presets)-1 {
+				m.setMoodMode.selectedIdx++
+			}
+			return m, nil
+		}
+
+	case tea.KeyEnter:
+		var mood string
+		inputValue := m.setMoodMode.input.Value()
+		if inputValue != "" {
+			mood = inputValue
+		} else if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
+			mood = m.setMoodMode.presets[m.setMoodMode.selectedIdx]
+		}
+		m.setMoodMode.active = false
+		if mood == "" {
+			return m, nil
+		}
+		return m, m.setMoodCmd(m.setMoodMode.date, mood)
+	}
+
+	var cmd tea.Cmd
+	m.setMoodMode.input, cmd = m.setMoodMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) setMoodCmd(date time.Time, mood string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if m.bujoService == nil {
+			return nil
+		}
+		err := m.bujoService.SetMood(ctx, date, mood)
+		if err != nil {
+			return errMsg{err}
+		}
+		return agendaReloadNeededMsg{}
+	}
+}
+
+func (m Model) handleSetWeatherMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.setWeatherMode.active = false
+		return m, nil
+
+	case tea.KeyUp:
+		if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
+			if m.setWeatherMode.selectedIdx > 0 {
+				m.setWeatherMode.selectedIdx--
+			}
+			return m, nil
+		}
+
+	case tea.KeyDown:
+		if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
+			if m.setWeatherMode.selectedIdx < len(m.setWeatherMode.presets)-1 {
+				m.setWeatherMode.selectedIdx++
+			}
+			return m, nil
+		}
+
+	case tea.KeyEnter:
+		var weather string
+		inputValue := m.setWeatherMode.input.Value()
+		if inputValue != "" {
+			weather = inputValue
+		} else if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
+			weather = m.setWeatherMode.presets[m.setWeatherMode.selectedIdx]
+		}
+		m.setWeatherMode.active = false
+		if weather == "" {
+			return m, nil
+		}
+		return m, m.setWeatherCmd(m.setWeatherMode.date, weather)
+	}
+
+	var cmd tea.Cmd
+	m.setWeatherMode.input, cmd = m.setWeatherMode.input.Update(msg)
+	return m, cmd
+}
+
+func (m Model) setWeatherCmd(date time.Time, weather string) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if m.bujoService == nil {
+			return nil
+		}
+		err := m.bujoService.SetWeather(ctx, date, weather)
+		if err != nil {
+			return errMsg{err}
+		}
+		return agendaReloadNeededMsg{}
+	}
+}
+
+func (m Model) loadMoodsCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return moodsLoadedMsg{moods: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		from := now.AddDate(0, -locationHistoryMonths, 0)
+		history, err := m.bujoService.GetMoodHistory(ctx, from, now)
+		if err != nil {
+			return moodsLoadedMsg{moods: nil}
+		}
+		seen := make(map[string]bool)
+		var moods []string
+		for _, dayCtx := range history {
+			if dayCtx.Mood != nil && *dayCtx.Mood != "" && !seen[*dayCtx.Mood] {
+				seen[*dayCtx.Mood] = true
+				moods = append(moods, *dayCtx.Mood)
+			}
+		}
+		return moodsLoadedMsg{moods: moods}
+	}
+}
+
+func (m Model) loadWeathersCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.bujoService == nil {
+			return weathersLoadedMsg{weathers: nil}
+		}
+		ctx := context.Background()
+		now := time.Now()
+		from := now.AddDate(0, -locationHistoryMonths, 0)
+		history, err := m.bujoService.GetWeatherHistory(ctx, from, now)
+		if err != nil {
+			return weathersLoadedMsg{weathers: nil}
+		}
+		seen := make(map[string]bool)
+		var weathers []string
+		for _, dayCtx := range history {
+			if dayCtx.Weather != nil && *dayCtx.Weather != "" && !seen[*dayCtx.Weather] {
+				seen[*dayCtx.Weather] = true
+				weathers = append(weathers, *dayCtx.Weather)
+			}
+		}
+		return weathersLoadedMsg{weathers: weathers}
+	}
+}
+
+func mergePresets(defaults []string, history []string) []string {
+	seen := make(map[string]bool)
+	result := make([]string, len(defaults))
+	copy(result, defaults)
+	for _, d := range defaults {
+		seen[d] = true
+	}
+	for _, h := range history {
+		if !seen[h] {
+			seen[h] = true
+			result = append(result, h)
+		}
+	}
+	return result
 }
 
 func (m Model) handleRetypeMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

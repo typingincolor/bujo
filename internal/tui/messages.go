@@ -153,6 +153,14 @@ type locationsLoadedMsg struct {
 	locations []string
 }
 
+type moodsLoadedMsg struct {
+	moods []string
+}
+
+type weathersLoadedMsg struct {
+	weathers []string
+}
+
 type editorFinishedMsg struct {
 	content string
 	err     error

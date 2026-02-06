@@ -83,6 +83,8 @@ type Model struct {
 	expandedOverdueContextID *int64
 	statsViewState           statsState
 	setLocationMode          setLocationState
+	setMoodMode              setMoodState
+	setWeatherMode           setWeatherState
 	commandPalette           commandPaletteState
 	commandRegistry          *CommandRegistry
 	pendingTasksState        pendingTasksState
@@ -159,6 +161,28 @@ type setLocationState struct {
 	locations   []string
 	selectedIdx int
 }
+
+type setMoodState struct {
+	active      bool
+	pickerMode  bool
+	date        time.Time
+	input       textinput.Model
+	presets     []string
+	selectedIdx int
+}
+
+type setWeatherState struct {
+	active      bool
+	pickerMode  bool
+	date        time.Time
+	input       textinput.Model
+	presets     []string
+	selectedIdx int
+}
+
+var moodPresets = []string{"happy", "neutral", "sad", "frustrated", "tired", "sick", "anxious", "grateful"}
+
+var weatherPresets = []string{"sunny", "partly-cloudy", "cloudy", "rainy", "stormy", "snowy"}
 
 type retypeState struct {
 	active      bool

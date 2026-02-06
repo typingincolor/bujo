@@ -53,6 +53,8 @@ type KeyMap struct {
 	CollapseAll          key.Binding
 	OpenURL              key.Binding
 	SetLocation          key.Binding
+	SetMood              key.Binding
+	SetWeather           key.Binding
 	ToggleOverdueContext key.Binding
 	GotoToday            key.Binding
 }
@@ -258,6 +260,14 @@ func DefaultKeyMap() KeyMap {
 		SetLocation: key.NewBinding(
 			key.WithKeys("@"),
 			key.WithHelp("@", "set location"),
+		),
+		SetMood: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "set mood"),
+		),
+		SetWeather: key.NewBinding(
+			key.WithKeys("W"),
+			key.WithHelp("W", "set weather"),
 		),
 		ToggleOverdueContext: key.NewBinding(
 			key.WithKeys("C"),
