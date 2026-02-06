@@ -45,6 +45,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
   ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, deleted: 0 }),
   SearchEntries: vi.fn().mockResolvedValue([]),
+  GetEntryContext: vi.fn().mockResolvedValue([]),
   GetStats: vi.fn().mockResolvedValue({
     TotalEntries: 0,
     TasksCompleted: 0,
@@ -139,6 +140,41 @@ describe('App - Navigation History', () => {
       // Back button should be gone (history cleared by navigating to today)
       await waitFor(() => {
         expect(screen.queryByRole('button', { name: /go back/i })).not.toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('back button on journal after weekly review double-click', () => {
+    it('shows back button on journal view after double-clicking an entry in weekly review', async () => {
+      const user = userEvent.setup()
+      render(
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+      })
+
+      // Navigate to weekly review
+      const reviewButton = screen.getByRole('button', { name: /weekly review/i })
+      await user.click(reviewButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/–.*\d{4}/)).toBeInTheDocument()
+      })
+
+      // Double-click an entry in the weekly review to navigate to journal
+      const entryText = screen.getByText('Task needing attention')
+      await user.dblClick(entryText)
+
+      // Should navigate to journal view with back button visible
+      await waitFor(() => {
+        expect(screen.getByRole('textbox')).toBeInTheDocument()
+      })
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /go back/i })).toBeInTheDocument()
       })
     })
   })
