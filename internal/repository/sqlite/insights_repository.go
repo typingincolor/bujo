@@ -604,7 +604,7 @@ func (r *InsightsRepository) GetDecisionsWithInitiatives(ctx context.Context) ([
 	if err != nil {
 		return nil, fmt.Errorf("failed to query decisions with initiatives: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var results []domain.InsightsDecisionWithInitiatives
 	for rows.Next() {
