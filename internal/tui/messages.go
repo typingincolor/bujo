@@ -153,6 +153,29 @@ type locationsLoadedMsg struct {
 	locations []string
 }
 
+type moodsLoadedMsg struct {
+	moods []string
+}
+
+type weathersLoadedMsg struct {
+	weathers []string
+}
+
+type insightsDashboardLoadedMsg struct {
+	dashboard domain.InsightsDashboard
+}
+
+type insightsSummaryLoadedMsg struct {
+	summary *domain.InsightsSummary
+	topics  []domain.InsightsTopic
+	err     error
+}
+
+type insightsActionsLoadedMsg struct {
+	actions []domain.InsightsAction
+	err     error
+}
+
 type editorFinishedMsg struct {
 	content string
 	err     error

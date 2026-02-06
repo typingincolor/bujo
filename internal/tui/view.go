@@ -39,6 +39,8 @@ func (m Model) View() string {
 		sb.WriteString(m.renderGoalsContent())
 	case ViewTypeSettings:
 		sb.WriteString(m.renderSettingsContent())
+	case ViewTypeInsights:
+		sb.WriteString(m.renderInsightsContent())
 	case ViewTypePendingTasks:
 		sb.WriteString(m.renderPendingTasksContent())
 	case ViewTypeQuestions:
@@ -71,9 +73,9 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderGotoInput())
 		sb.WriteString("\n")
-	} else if m.setLocationMode.active {
+	} else if m.presetPicker.active {
 		sb.WriteString("\n")
-		sb.WriteString(m.renderSetLocationInput())
+		sb.WriteString(m.renderPresetPicker())
 		sb.WriteString("\n")
 	} else if m.searchMode.active {
 		sb.WriteString("\n")
@@ -142,13 +144,15 @@ func (m Model) renderContextHelp() string {
 	case ViewTypeGoals:
 		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  >: move  esc: back  q: quit"
 	case ViewTypeSearch:
-		return "j/k: navigate  /: search  enter: go to  esc: back  q: quit"
+		return "j/k: navigate  /: search  enter: go to  space: done  x: cancel  e: edit  d: delete  t: retype  !: priority  R: answer  esc: back  q: quit"
 	case ViewTypeStats:
 		return "esc: back  q: quit"
+	case ViewTypeInsights:
+		return "tab/shift+tab: switch tab  h/l: prev/next week  esc: back  q: quit"
 	case ViewTypePendingTasks:
-		return "j/k: navigate  esc: back  q: quit"
+		return "j/k: navigate  enter: go to  space: done  x: cancel  e: edit  d: delete  >: migrate  t: retype  !: priority  L: list  esc: back  q: quit"
 	case ViewTypeQuestions:
-		return "j/k: navigate  esc: back  q: quit"
+		return "j/k: navigate  enter: go to  space: done  x: cancel  R: answer  e: edit  d: delete  esc: back  q: quit"
 	default:
 		return m.help.View(m.keyMap)
 	}
@@ -612,18 +616,18 @@ func (m Model) renderGotoInput() string {
 	return ConfirmStyle.Render(sb.String())
 }
 
-func (m Model) renderSetLocationInput() string {
+func (m Model) renderPresetPicker() string {
 	var sb strings.Builder
-	sb.WriteString("Set location:\n")
-	sb.WriteString(m.setLocationMode.input.View())
+	sb.WriteString(m.presetPicker.title + "\n")
+	sb.WriteString(m.presetPicker.input.View())
 
-	if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
-		sb.WriteString("\n\nPrevious locations:\n")
-		for i, loc := range m.setLocationMode.locations {
-			if i == m.setLocationMode.selectedIdx {
-				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", loc)))
+	if m.presetPicker.pickerMode && len(m.presetPicker.items) > 0 {
+		sb.WriteString("\n\n" + m.presetPicker.pickerLabel + "\n")
+		for i, item := range m.presetPicker.items {
+			if i == m.presetPicker.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", item)))
 			} else {
-				sb.WriteString(fmt.Sprintf("    %s", loc))
+				sb.WriteString(fmt.Sprintf("    %s", item))
 			}
 			sb.WriteString("\n")
 		}
@@ -726,6 +730,8 @@ func (m Model) renderToolbar() string {
 		viewTypeStr = "Stats"
 	case ViewTypeSettings:
 		viewTypeStr = "Settings"
+	case ViewTypeInsights:
+		viewTypeStr = "Insights"
 	default:
 		viewTypeStr = "Journal"
 	}
@@ -1007,14 +1013,185 @@ func (m Model) renderSettingsContent() string {
 
 	sb.WriteString("⚙️  Settings\n\n")
 
-	sb.WriteString("Current configuration:\n\n")
-	sb.WriteString(fmt.Sprintf("  Theme:         %s\n", "default"))
-	sb.WriteString(fmt.Sprintf("  Default view:  %s\n", "journal"))
-	sb.WriteString(fmt.Sprintf("  Date format:   %s\n", "Mon, Jan 2 2006"))
+	version := m.appVersion
+	if version == "" {
+		version = "dev"
+	}
+	commit := m.appCommit
+	if commit == "" {
+		commit = "none"
+	}
+	buildDate := m.appDate
+	if buildDate == "" {
+		buildDate = "unknown"
+	}
+	dbPath := m.appDBPath
+	if dbPath == "" {
+		dbPath = "default"
+	}
+
+	sb.WriteString("Application\n")
+	sb.WriteString(fmt.Sprintf("  Version:       %s\n", version))
+	sb.WriteString(fmt.Sprintf("  Commit:        %s\n", commit))
+	sb.WriteString(fmt.Sprintf("  Built:         %s\n", buildDate))
+	sb.WriteString(fmt.Sprintf("  Database:      %s\n", dbPath))
 	sb.WriteString("\n")
 
-	sb.WriteString(HelpStyle.Render("Edit ~/.config/bujo/config.yaml to change settings"))
+	sb.WriteString("Keyboard Shortcuts\n")
+	sb.WriteString("  1-9, 0         Switch views\n")
+	sb.WriteString("  j/k            Navigate up/down\n")
+	sb.WriteString("  h/l            Previous/next period\n")
+	sb.WriteString("  space          Toggle done\n")
+	sb.WriteString("  e              Edit entry\n")
+	sb.WriteString("  /              Search\n")
+	sb.WriteString("  :              Command palette\n")
+	sb.WriteString("  ?              Help\n")
+	sb.WriteString("  q              Quit\n")
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsContent() string {
+	var sb strings.Builder
+
+	// Tab bar
+	tabs := []string{"Dashboard", "Summaries", "Actions"}
+	var tabParts []string
+	for i, name := range tabs {
+		if InsightsTab(i) == m.insightsState.activeTab {
+			tabParts = append(tabParts, fmt.Sprintf("[%s]", name))
+		} else {
+			tabParts = append(tabParts, fmt.Sprintf(" %s ", name))
+		}
+	}
+	sb.WriteString("🔍 Insights  " + strings.Join(tabParts, "  "))
+	sb.WriteString("\n")
+	sb.WriteString(strings.Repeat("─", 50))
 	sb.WriteString("\n\n")
+
+	if m.insightsState.loading {
+		sb.WriteString("Loading insights...\n")
+		return sb.String()
+	}
+
+	switch m.insightsState.activeTab {
+	case InsightsTabDashboard:
+		sb.WriteString(m.renderInsightsDashboard())
+	case InsightsTabSummaries:
+		sb.WriteString(m.renderInsightsSummaries())
+	case InsightsTabActions:
+		sb.WriteString(m.renderInsightsActions())
+	}
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsDashboard() string {
+	var sb strings.Builder
+	d := m.insightsState.dashboard
+
+	if d.LatestSummary != nil {
+		sb.WriteString(fmt.Sprintf("Latest Summary (%s to %s)\n", d.LatestSummary.WeekStart, d.LatestSummary.WeekEnd))
+		sb.WriteString(strings.Repeat("─", 40))
+		sb.WriteString("\n")
+		sb.WriteString(d.LatestSummary.SummaryText)
+		sb.WriteString("\n\n")
+	} else {
+		sb.WriteString(HelpStyle.Render("No summaries available yet."))
+		sb.WriteString("\n\n")
+	}
+
+	if d.DaysSinceLastSummary > 0 {
+		sb.WriteString(fmt.Sprintf("Days since last summary: %d\n\n", d.DaysSinceLastSummary))
+	}
+
+	if len(d.ActiveInitiatives) > 0 {
+		sb.WriteString("Active Initiatives\n")
+		for _, init := range d.ActiveInitiatives {
+			sb.WriteString(fmt.Sprintf("  • %s (%s)\n", init.Name, init.Status))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(d.HighPriorityActions) > 0 {
+		sb.WriteString("High Priority Actions\n")
+		for _, action := range d.HighPriorityActions {
+			sb.WriteString(fmt.Sprintf("  ‼ %s\n", action.ActionText))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(d.RecentDecisions) > 0 {
+		sb.WriteString("Recent Decisions\n")
+		for _, dec := range d.RecentDecisions {
+			sb.WriteString(fmt.Sprintf("  → %s\n", dec.DecisionText))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsSummaries() string {
+	var sb strings.Builder
+
+	weekStart := m.insightsState.weekAnchor.Format("Jan 2")
+	weekEnd := m.insightsState.weekAnchor.AddDate(0, 0, 6).Format("Jan 2, 2006")
+	sb.WriteString(fmt.Sprintf("Week: %s - %s\n\n", weekStart, weekEnd))
+
+	if m.insightsState.weekSummary == nil {
+		sb.WriteString(HelpStyle.Render("No summary for this week."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString(m.insightsState.weekSummary.SummaryText)
+	sb.WriteString("\n\n")
+
+	if len(m.insightsState.weekTopics) > 0 {
+		sb.WriteString("Topics\n")
+		sb.WriteString(strings.Repeat("─", 30))
+		sb.WriteString("\n")
+		for _, topic := range m.insightsState.weekTopics {
+			importance := ""
+			if topic.Importance == "high" {
+				importance = " ‼"
+			}
+			sb.WriteString(fmt.Sprintf("  %s%s\n", topic.Topic, importance))
+			sb.WriteString(fmt.Sprintf("    %s\n", topic.Content))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsActions() string {
+	var sb strings.Builder
+
+	weekStart := m.insightsState.weekAnchor.Format("Jan 2")
+	weekEnd := m.insightsState.weekAnchor.AddDate(0, 0, 6).Format("Jan 2, 2006")
+	sb.WriteString(fmt.Sprintf("Week: %s - %s\n\n", weekStart, weekEnd))
+
+	if len(m.insightsState.weekActions) == 0 {
+		sb.WriteString(HelpStyle.Render("No actions for this week."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for _, action := range m.insightsState.weekActions {
+		priority := " "
+		if action.Priority == "high" {
+			priority = "‼"
+		}
+		status := "○"
+		if action.Status == "done" {
+			status = "✓"
+		}
+		sb.WriteString(fmt.Sprintf("  %s %s %s\n", status, priority, action.ActionText))
+	}
+	sb.WriteString("\n")
 
 	return sb.String()
 }

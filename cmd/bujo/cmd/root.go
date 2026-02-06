@@ -3,11 +3,13 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
+	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/repository/sqlite"
 	"github.com/typingincolor/bujo/internal/service"
@@ -22,6 +24,8 @@ var (
 	verbose bool
 
 	db                     *sql.DB
+	insightsDB             *sql.DB
+	insightsRepo           *sqlite.InsightsRepository
 	bujoService            *service.BujoService
 	habitService           *service.HabitService
 	listService            *service.ListService
@@ -99,9 +103,18 @@ var rootCmd = &cobra.Command{
 			listRepo, listItemRepo, goalRepo,
 		)
 
+		insightsDB, err = app.OpenInsightsDB(app.DefaultInsightsDBPath())
+		if err != nil {
+			log.Printf("warning: could not open insights database: %v", err)
+		}
+		insightsRepo = sqlite.NewInsightsRepository(insightsDB)
+
 		return nil
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		if insightsDB != nil {
+			_ = insightsDB.Close()
+		}
 		if db != nil {
 			_ = db.Close()
 		}

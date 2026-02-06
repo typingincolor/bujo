@@ -29,14 +29,31 @@ type ChangeDetector interface {
 	GetLastModified(ctx context.Context) (time.Time, error)
 }
 
+type InsightsReader interface {
+	IsAvailable() bool
+	GetLatestSummary(ctx context.Context) (*domain.InsightsSummary, error)
+	GetActiveInitiatives(ctx context.Context, limit int) ([]domain.InsightsInitiative, error)
+	GetPendingActions(ctx context.Context) ([]domain.InsightsAction, error)
+	GetRecentDecisions(ctx context.Context, limit int) ([]domain.InsightsDecision, error)
+	GetDaysSinceLastSummary(ctx context.Context) (int, error)
+	GetSummaryForWeek(ctx context.Context, weekStart, nextWeekStart string) (*domain.InsightsSummary, error)
+	GetTopicsForSummary(ctx context.Context, summaryID int64) ([]domain.InsightsTopic, error)
+	GetActionsForWeek(ctx context.Context, weekStart, nextWeekStart string) ([]domain.InsightsAction, error)
+}
+
 type Config struct {
 	BujoService     *service.BujoService
 	HabitService    *service.HabitService
 	ListService     *service.ListService
 	GoalService     *service.GoalService
 	StatsService    *service.StatsService
+	InsightsReader  InsightsReader
 	ChangeDetection ChangeDetector
 	Theme           string
+	Version         string
+	Commit          string
+	Date            string
+	DBPath          string
 }
 
 type Model struct {
@@ -81,13 +98,19 @@ type Model struct {
 	moveGoalMode             moveGoalState
 	migrateToGoalMode        migrateToGoalState
 	expandedOverdueContextID *int64
+	insightsReader           InsightsReader
 	statsViewState           statsState
-	setLocationMode          setLocationState
+	insightsState            insightsState
+	presetPicker             presetPickerState
 	commandPalette           commandPaletteState
 	commandRegistry          *CommandRegistry
 	pendingTasksState        pendingTasksState
 	questionsState           questionsState
 	undoState                undoState
+	appVersion               string
+	appCommit                string
+	appDate                  string
+	appDBPath                string
 	help                     help.Model
 	keyMap                   KeyMap
 	width                    int
@@ -151,14 +174,30 @@ type gotoState struct {
 	input  textinput.Model
 }
 
-type setLocationState struct {
-	active      bool
-	pickerMode  bool
-	date        time.Time
-	input       textinput.Model
-	locations   []string
-	selectedIdx int
+type presetPickerKind int
+
+const (
+	pickerLocation presetPickerKind = iota
+	pickerMood
+	pickerWeather
+)
+
+type presetPickerState struct {
+	active       bool
+	pickerMode   bool
+	kind         presetPickerKind
+	date         time.Time
+	input        textinput.Model
+	items        []string
+	defaultItems []string
+	selectedIdx  int
+	title        string
+	pickerLabel  string
 }
+
+var moodPresets = []string{"happy", "neutral", "sad", "frustrated", "tired", "sick", "anxious", "grateful"}
+
+var weatherPresets = []string{"sunny", "partly-cloudy", "cloudy", "rainy", "stormy", "snowy"}
 
 type retypeState struct {
 	active      bool
@@ -255,6 +294,25 @@ type statsState struct {
 	to      time.Time
 }
 
+type InsightsTab int
+
+const (
+	InsightsTabDashboard InsightsTab = iota
+	InsightsTabSummaries
+	InsightsTabActions
+	insightsTabCount
+)
+
+type insightsState struct {
+	loading     bool
+	activeTab   InsightsTab
+	weekAnchor  time.Time
+	dashboard   domain.InsightsDashboard
+	weekSummary *domain.InsightsSummary
+	weekTopics  []domain.InsightsTopic
+	weekActions []domain.InsightsAction
+}
+
 type commandPaletteState struct {
 	active      bool
 	query       string
@@ -297,6 +355,7 @@ const (
 	ViewTypeSearch                       // key 8
 	ViewTypeStats                        // key 9
 	ViewTypeSettings                     // key 0
+	ViewTypeInsights                     // key i
 	ViewTypeListItems                    // internal (accessed via Lists)
 )
 
@@ -369,6 +428,10 @@ func NewWithConfig(cfg Config) Model {
 	statsFrom := now.AddDate(0, 0, -29)
 	statsTo := now
 
+	weekday := today.Weekday()
+	daysFromMonday := (int(weekday) - int(time.Monday) + 7) % 7
+	currentMonday := today.AddDate(0, 0, -daysFromMonday)
+
 	return Model{
 		bujoService:       cfg.BujoService,
 		habitService:      cfg.HabitService,
@@ -392,6 +455,12 @@ func NewWithConfig(cfg Config) Model {
 		migrateToGoalMode: migrateToGoalState{input: migrateToGoalInput},
 		searchView:        searchViewState{input: searchInput},
 		statsViewState:    statsState{from: statsFrom, to: statsTo},
+		insightsReader:    cfg.InsightsReader,
+		insightsState:     insightsState{weekAnchor: currentMonday},
+		appVersion:        cfg.Version,
+		appCommit:         cfg.Commit,
+		appDate:           cfg.Date,
+		appDBPath:         cfg.DBPath,
 	}
 }
 
@@ -1004,17 +1073,99 @@ func (m Model) loadQuestionsCmd() tea.Cmd {
 	}
 }
 
-func (m Model) loadParentChainCmd(entryID int64) tea.Cmd {
+func (m Model) loadInsightsDashboardCmd() tea.Cmd {
 	return func() tea.Msg {
-		if m.bujoService == nil {
-			return errMsg{fmt.Errorf("bujo service not available")}
+		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
+			return insightsDashboardLoadedMsg{dashboard: domain.InsightsDashboard{Status: "unavailable"}}
 		}
 		ctx := context.Background()
-		ancestors, err := m.bujoService.GetEntryAncestors(ctx, entryID)
+		var errs []error
+		summary, err := m.insightsReader.GetLatestSummary(ctx)
 		if err != nil {
-			return errMsg{err}
+			errs = append(errs, err)
 		}
-		return parentChainLoadedMsg{entryID: entryID, chain: ancestors}
+		initiatives, err := m.insightsReader.GetActiveInitiatives(ctx, 5)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		actions, err := m.insightsReader.GetPendingActions(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		decisions, err := m.insightsReader.GetRecentDecisions(ctx, 5)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		daysSince, err := m.insightsReader.GetDaysSinceLastSummary(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		var highPriority []domain.InsightsAction
+		for _, a := range actions {
+			if a.Priority == "high" {
+				highPriority = append(highPriority, a)
+			}
+		}
+
+		status := "ok"
+		if len(errs) > 0 {
+			status = "error"
+		}
+
+		return insightsDashboardLoadedMsg{
+			dashboard: domain.InsightsDashboard{
+				LatestSummary:        summary,
+				ActiveInitiatives:    initiatives,
+				HighPriorityActions:  highPriority,
+				RecentDecisions:      decisions,
+				DaysSinceLastSummary: daysSince,
+				Status:               status,
+			},
+		}
+	}
+}
+
+func (m Model) loadInsightsTabDataCmd() tea.Cmd {
+	tab := m.insightsState.activeTab
+	weekStart := m.insightsState.weekAnchor.Format("2006-01-02")
+	nextWeek := m.insightsState.weekAnchor.AddDate(0, 0, 7).Format("2006-01-02")
+
+	return func() tea.Msg {
+		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
+			switch tab {
+			case InsightsTabSummaries:
+				return insightsSummaryLoadedMsg{}
+			case InsightsTabActions:
+				return insightsActionsLoadedMsg{}
+			default:
+				return insightsDashboardLoadedMsg{dashboard: domain.InsightsDashboard{Status: "unavailable"}}
+			}
+		}
+		ctx := context.Background()
+
+		switch tab {
+		case InsightsTabSummaries:
+			summary, err := m.insightsReader.GetSummaryForWeek(ctx, weekStart, nextWeek)
+			if err != nil {
+				return insightsSummaryLoadedMsg{err: err}
+			}
+			var topics []domain.InsightsTopic
+			if summary != nil {
+				topics, err = m.insightsReader.GetTopicsForSummary(ctx, summary.ID)
+				if err != nil {
+					return insightsSummaryLoadedMsg{summary: summary, err: err}
+				}
+			}
+			return insightsSummaryLoadedMsg{summary: summary, topics: topics}
+
+		case InsightsTabActions:
+			actions, err := m.insightsReader.GetActionsForWeek(ctx, weekStart, nextWeek)
+			return insightsActionsLoadedMsg{actions: actions, err: err}
+
+		default:
+			return nil
+		}
 	}
 }
 

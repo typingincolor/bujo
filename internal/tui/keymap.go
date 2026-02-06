@@ -42,6 +42,7 @@ type KeyMap struct {
 	ViewSearch           key.Binding
 	ViewStats            key.Binding
 	ViewSettings         key.Binding
+	ViewInsights         key.Binding
 	CommandPalette       key.Binding
 	LogHabit             key.Binding
 	RemoveHabitLog       key.Binding
@@ -53,6 +54,8 @@ type KeyMap struct {
 	CollapseAll          key.Binding
 	OpenURL              key.Binding
 	SetLocation          key.Binding
+	SetMood              key.Binding
+	SetWeather           key.Binding
 	ToggleOverdueContext key.Binding
 	GotoToday            key.Binding
 }
@@ -215,6 +218,10 @@ func DefaultKeyMap() KeyMap {
 			key.WithKeys("0"),
 			key.WithHelp("0", "settings"),
 		),
+		ViewInsights: key.NewBinding(
+			key.WithKeys("i"),
+			key.WithHelp("i", "insights"),
+		),
 		CommandPalette: key.NewBinding(
 			key.WithKeys("ctrl+p", ":"),
 			key.WithHelp("ctrl+p/:", "commands"),
@@ -258,6 +265,14 @@ func DefaultKeyMap() KeyMap {
 		SetLocation: key.NewBinding(
 			key.WithKeys("@"),
 			key.WithHelp("@", "set location"),
+		),
+		SetMood: key.NewBinding(
+			key.WithKeys("m"),
+			key.WithHelp("m", "set mood"),
+		),
+		SetWeather: key.NewBinding(
+			key.WithKeys("W"),
+			key.WithHelp("W", "set weather"),
 		),
 		ToggleOverdueContext: key.NewBinding(
 			key.WithKeys("C"),
