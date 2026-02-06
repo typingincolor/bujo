@@ -142,7 +142,7 @@ func (m Model) renderContextHelp() string {
 	case ViewTypeGoals:
 		return "j/k: navigate  h/l: month  space: toggle  a: add  e: edit  d: delete  >: move  esc: back  q: quit"
 	case ViewTypeSearch:
-		return "j/k: navigate  /: search  enter: go to  esc: back  q: quit"
+		return "j/k: navigate  /: search  enter: go to  space: done  x: cancel  e: edit  d: delete  t: retype  !: priority  R: answer  esc: back  q: quit"
 	case ViewTypeStats:
 		return "esc: back  q: quit"
 	case ViewTypePendingTasks:

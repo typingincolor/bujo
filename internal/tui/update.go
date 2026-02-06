@@ -2325,7 +2325,10 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if entry.ScheduledDate != nil {
 				m.viewDate = *entry.ScheduledDate
 			}
+			m.viewStack = append(m.viewStack, m.currentView)
 			m.currentView = ViewTypeJournal
+			m.viewMode = ViewModeDay
+			m.selectedIdx = 0
 			return m, m.loadDaysCmd()
 		}
 		return m, nil
@@ -2363,6 +2366,76 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(cmd, m.searchEntriesCmd(newQuery))
 		}
 		return m, cmd
+	}
+
+	if len(m.searchView.results) > 0 && m.searchView.selectedIdx < len(m.searchView.results) {
+		entry := m.searchView.results[m.searchView.selectedIdx]
+
+		switch {
+		case key.Matches(msg, m.keyMap.Done):
+			return m, m.toggleDoneForEntryCmd(entry)
+
+		case key.Matches(msg, m.keyMap.CancelEntry):
+			if !entry.CanCancel() {
+				return m, nil
+			}
+			return m, m.cancelForEntryCmd(entry)
+
+		case key.Matches(msg, m.keyMap.UncancelEntry):
+			if !entry.CanUncancel() {
+				return m, nil
+			}
+			return m, m.uncancelForEntryCmd(entry)
+
+		case key.Matches(msg, m.keyMap.Edit):
+			ti := textinput.New()
+			ti.SetValue(entry.Content)
+			ti.Focus()
+			ti.CharLimit = 256
+			ti.Width = m.width - 10
+			m.editMode = editState{
+				active:  true,
+				entryID: entry.ID,
+				input:   ti,
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keyMap.Delete):
+			m.confirmMode.active = true
+			m.confirmMode.entryID = entry.ID
+			return m, nil
+
+		case key.Matches(msg, m.keyMap.Priority):
+			newPriority := entry.Priority.Cycle()
+			return m, m.cyclePriorityCmd(entry.ID, newPriority)
+
+		case key.Matches(msg, m.keyMap.Retype):
+			if !entry.CanCycleType() {
+				return m, nil
+			}
+			m.retypeMode = retypeState{
+				active:      true,
+				entryID:     entry.ID,
+				selectedIdx: 0,
+			}
+			return m, nil
+
+		case key.Matches(msg, m.keyMap.Answer):
+			if entry.Type != domain.EntryTypeQuestion {
+				return m, nil
+			}
+			ti := textinput.New()
+			ti.Placeholder = "Enter your answer..."
+			ti.Focus()
+			ti.CharLimit = 512
+			ti.Width = m.width - 10
+			m.answerMode = answerState{
+				active:     true,
+				questionID: entry.ID,
+				input:      ti,
+			}
+			return m, nil
+		}
 	}
 
 	return m, nil
