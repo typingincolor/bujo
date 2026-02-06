@@ -244,6 +244,9 @@ func normalizeContextValue(value string) string {
 	}
 	words := strings.Fields(trimmed)
 	for i, word := range words {
+		if len(word) > 0 && unicode.IsDigit([]rune(word)[0]) {
+			continue
+		}
 		words[i] = titleCaseHyphenated(word)
 	}
 	return strings.Join(words, " ")

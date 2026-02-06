@@ -213,7 +213,7 @@ func TestBujoService_GetWeather(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, weather)
-	assert.Equal(t, "Rainy, 15°c", *weather)
+	assert.Equal(t, "Rainy, 15°C", *weather)
 }
 
 func TestBujoService_GetWeather_NotSet(t *testing.T) {
@@ -374,7 +374,8 @@ func TestNormalizeContextValue(t *testing.T) {
 		{"Partly-Cloudy", "Partly-Cloudy"},
 		{"PARTLY-CLOUDY", "Partly-Cloudy"},
 		{"very tired", "Very Tired"},
-		{"rainy, 15°C", "Rainy, 15°c"},
+		{"rainy, 15°C", "Rainy, 15°C"},
+		{"cloudy, 72°F", "Cloudy, 72°F"},
 		{"  sunny  ", "Sunny"},
 		{"", ""},
 	}
