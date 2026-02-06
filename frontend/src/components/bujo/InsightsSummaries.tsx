@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { FileText } from 'lucide-react';
 import { GetInsightsSummaryForWeek } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
+import { InsightsWeeklyReport } from './InsightsWeeklyReport';
 
 interface InsightsSummariesProps {
   weekStart: string;
 }
 
 export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
+  const [showReport, setShowReport] = useState(false);
   const [summary, setSummary] = useState<domain.InsightsSummary | null>(null);
   const [topics, setTopics] = useState<domain.InsightsTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { setShowReport(false); }, [weekStart]);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +34,10 @@ export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
 
   if (error) {
     return <div className="text-destructive text-sm">Failed to load summary: {error}</div>;
+  }
+
+  if (showReport) {
+    return <InsightsWeeklyReport weekStart={weekStart} onBack={() => setShowReport(false)} />;
   }
 
   if (!summary) {
@@ -59,7 +68,17 @@ export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
           <h3 className="text-sm font-medium">
             {summary.WeekStart} — {summary.WeekEnd}
           </h3>
-          <span className="text-xs text-muted-foreground">{summary.CreatedAt.split(' ')[0]}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowReport(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground"
+              title="View full weekly report"
+            >
+              <FileText className="w-3 h-3" />
+              Report
+            </button>
+            <span className="text-xs text-muted-foreground">{summary.CreatedAt.split(' ')[0]}</span>
+          </div>
         </div>
         <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
           <ReactMarkdown>{summary.SummaryText}</ReactMarkdown>

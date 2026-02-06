@@ -110,6 +110,32 @@ func setupEmptyInsightsTestDB(t *testing.T) *sql.DB {
 			summary_text TEXT NOT NULL,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
+
+		CREATE TABLE initiatives (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			status TEXT CHECK(status IN ('active', 'planning', 'blocked', 'completed', 'on-hold')),
+			description TEXT,
+			last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE topics (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			summary_id INTEGER NOT NULL,
+			topic TEXT NOT NULL,
+			content TEXT,
+			importance TEXT CHECK(importance IN ('high', 'medium', 'low')),
+			FOREIGN KEY (summary_id) REFERENCES summaries(id)
+		);
+
+		CREATE TABLE initiative_mentions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			summary_id INTEGER NOT NULL,
+			initiative_id INTEGER NOT NULL,
+			update_text TEXT,
+			FOREIGN KEY (summary_id) REFERENCES summaries(id),
+			FOREIGN KEY (initiative_id) REFERENCES initiatives(id)
+		);
 	`
 	_, err = db.Exec(schema)
 	require.NoError(t, err)
@@ -166,6 +192,13 @@ func seedInsightsData(t *testing.T, db *sql.DB) {
 		INSERT INTO decisions (decision_text, rationale, participants, expected_outcomes, decision_date, summary_id, created_at) VALUES
 		('Adopt Claude as primary AI provider', 'Best performance on code tasks', 'Engineering team', 'Improved developer productivity', '2026-01-15', 1, '2026-01-20 09:00:00'),
 		('Move to biweekly sprints', 'Better planning cadence', 'Team leads', 'More predictable delivery', '2026-01-28', 3, '2026-02-03 09:00:00')
+	`)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		INSERT INTO decision_initiatives (decision_id, initiative_id) VALUES
+		(1, 1),
+		(2, 3)
 	`)
 	require.NoError(t, err)
 }

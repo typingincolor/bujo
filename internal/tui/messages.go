@@ -176,6 +176,36 @@ type insightsActionsLoadedMsg struct {
 	err     error
 }
 
+type insightsInitiativesLoadedMsg struct {
+	initiatives []domain.InsightsInitiativePortfolio
+	err         error
+}
+
+type insightsInitiativeDetailLoadedMsg struct {
+	detail *domain.InsightsInitiativeDetail
+	err    error
+}
+
+type insightsTopicsListLoadedMsg struct {
+	topics []string
+	err    error
+}
+
+type insightsTopicTimelineLoadedMsg struct {
+	timeline []domain.InsightsTopicTimeline
+	err      error
+}
+
+type insightsDecisionsLoadedMsg struct {
+	decisions []domain.InsightsDecisionWithInitiatives
+	err       error
+}
+
+type insightsWeeklyReportLoadedMsg struct {
+	report *domain.InsightsWeeklyReport
+	err    error
+}
+
 type editorFinishedMsg struct {
 	content string
 	err     error

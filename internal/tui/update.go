@@ -207,6 +207,54 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case insightsInitiativesLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.initiatives = msg.initiatives
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
+	case insightsInitiativeDetailLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.initiativeDetail = msg.detail
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
+	case insightsTopicsListLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.distinctTopics = msg.topics
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
+	case insightsTopicTimelineLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.topicTimeline = msg.timeline
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
+	case insightsDecisionsLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.decisions = msg.decisions
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
+	case insightsWeeklyReportLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.weeklyReport = msg.report
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
+		return m, nil
+
 	case searchResultsMsg:
 		m.searchView.loading = false
 		m.searchView.results = msg.results
@@ -2355,12 +2403,101 @@ func (m Model) handleInsightsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return newModel, cmd
 	}
 
+	if m.insightsState.activeTab == InsightsTabSummaries && m.insightsState.weeklyReport != nil {
+		if msg.Type == tea.KeyEscape {
+			m.insightsState.weeklyReport = nil
+			return m, nil
+		}
+		switch {
+		case key.Matches(msg, m.keyMap.Quit):
+			return m.handleQuit()
+		}
+		return m, nil
+	}
+
+	if m.insightsState.activeTab == InsightsTabInitiatives && m.insightsState.selectedInitiativeID != nil {
+		if msg.Type == tea.KeyEscape {
+			m.insightsState.selectedInitiativeID = nil
+			m.insightsState.initiativeDetail = nil
+			return m, nil
+		}
+		switch {
+		case key.Matches(msg, m.keyMap.Quit):
+			return m.handleQuit()
+		}
+		return m, nil
+	}
+
+	if m.insightsState.activeTab == InsightsTabTopics && m.insightsState.selectedTopic != "" {
+		if msg.Type == tea.KeyEscape {
+			m.insightsState.selectedTopic = ""
+			m.insightsState.topicTimeline = nil
+			return m, nil
+		}
+		switch {
+		case key.Matches(msg, m.keyMap.Quit):
+			return m.handleQuit()
+		}
+		return m, nil
+	}
+
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Back):
 		return m.handleBack()
+	}
+
+	if m.insightsState.activeTab == InsightsTabInitiatives && m.insightsState.selectedInitiativeID == nil {
+		switch msg.Type {
+		case tea.KeyEnter:
+			if len(m.insightsState.initiatives) > 0 {
+				idx := m.insightsState.initiativeSelectedIdx
+				id := m.insightsState.initiatives[idx].ID
+				m.insightsState.selectedInitiativeID = &id
+				m.insightsState.loading = true
+				return m, m.loadInsightsInitiativeDetailCmd(id)
+			}
+		}
+
+		switch string(msg.Runes) {
+		case "j":
+			if m.insightsState.initiativeSelectedIdx < len(m.insightsState.initiatives)-1 {
+				m.insightsState.initiativeSelectedIdx++
+			}
+			return m, nil
+		case "k":
+			if m.insightsState.initiativeSelectedIdx > 0 {
+				m.insightsState.initiativeSelectedIdx--
+			}
+			return m, nil
+		}
+	}
+
+	if m.insightsState.activeTab == InsightsTabTopics && m.insightsState.selectedTopic == "" {
+		switch msg.Type {
+		case tea.KeyEnter:
+			if len(m.insightsState.distinctTopics) > 0 {
+				idx := m.insightsState.topicSelectedIdx
+				m.insightsState.selectedTopic = m.insightsState.distinctTopics[idx]
+				m.insightsState.loading = true
+				return m, m.loadInsightsTopicTimelineCmd(m.insightsState.selectedTopic)
+			}
+		}
+
+		switch string(msg.Runes) {
+		case "j":
+			if m.insightsState.topicSelectedIdx < len(m.insightsState.distinctTopics)-1 {
+				m.insightsState.topicSelectedIdx++
+			}
+			return m, nil
+		case "k":
+			if m.insightsState.topicSelectedIdx > 0 {
+				m.insightsState.topicSelectedIdx--
+			}
+			return m, nil
+		}
 	}
 
 	switch msg.Type {
@@ -2383,6 +2520,11 @@ func (m Model) handleInsightsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.insightsState.activeTab != InsightsTabDashboard {
 			m.insightsState.weekAnchor = m.insightsState.weekAnchor.AddDate(0, 0, 7)
 			return m, m.loadInsightsTabDataCmd()
+		}
+	case "r":
+		if m.insightsState.activeTab == InsightsTabSummaries {
+			m.insightsState.loading = true
+			return m, m.loadInsightsWeeklyReportCmd()
 		}
 	}
 

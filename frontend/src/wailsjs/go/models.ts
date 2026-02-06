@@ -243,7 +243,128 @@ export namespace domain {
 		}
 	}
 	
+	export class InsightsDecisionWithInitiatives {
+	    ID: number;
+	    DecisionText: string;
+	    Rationale: string;
+	    Participants: string;
+	    ExpectedOutcomes: string;
+	    DecisionDate: string;
+	    SummaryID?: number;
+	    CreatedAt: string;
+	    Initiatives: string;
 	
+	    static createFrom(source: any = {}) {
+	        return new InsightsDecisionWithInitiatives(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.DecisionText = source["DecisionText"];
+	        this.Rationale = source["Rationale"];
+	        this.Participants = source["Participants"];
+	        this.ExpectedOutcomes = source["ExpectedOutcomes"];
+	        this.DecisionDate = source["DecisionDate"];
+	        this.SummaryID = source["SummaryID"];
+	        this.CreatedAt = source["CreatedAt"];
+	        this.Initiatives = source["Initiatives"];
+	    }
+	}
+	
+	export class InsightsInitiativeUpdate {
+	    WeekStart: string;
+	    WeekEnd: string;
+	    UpdateText: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsInitiativeUpdate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.WeekStart = source["WeekStart"];
+	        this.WeekEnd = source["WeekEnd"];
+	        this.UpdateText = source["UpdateText"];
+	    }
+	}
+	export class InsightsInitiativeDetail {
+	    Initiative: InsightsInitiative;
+	    Updates: InsightsInitiativeUpdate[];
+	    PendingActions: InsightsAction[];
+	    Decisions: InsightsDecision[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsInitiativeDetail(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Initiative = this.convertValues(source["Initiative"], InsightsInitiative);
+	        this.Updates = this.convertValues(source["Updates"], InsightsInitiativeUpdate);
+	        this.PendingActions = this.convertValues(source["PendingActions"], InsightsAction);
+	        this.Decisions = this.convertValues(source["Decisions"], InsightsDecision);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class InsightsInitiativePortfolio {
+	    ID: number;
+	    Name: string;
+	    Status: string;
+	    Description: string;
+	    LastUpdated: string;
+	    MentionCount: number;
+	    LastMentionWeek: string;
+	    ActivityWeeks: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsInitiativePortfolio(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.Name = source["Name"];
+	        this.Status = source["Status"];
+	        this.Description = source["Description"];
+	        this.LastUpdated = source["LastUpdated"];
+	        this.MentionCount = source["MentionCount"];
+	        this.LastMentionWeek = source["LastMentionWeek"];
+	        this.ActivityWeeks = source["ActivityWeeks"];
+	    }
+	}
+	
+	export class InsightsInitiativeWeekUpdate {
+	    InitiativeName: string;
+	    UpdateText: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsInitiativeWeekUpdate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.InitiativeName = source["InitiativeName"];
+	        this.UpdateText = source["UpdateText"];
+	    }
+	}
 	
 	export class InsightsTopic {
 	    ID: number;
@@ -264,6 +385,62 @@ export namespace domain {
 	        this.Content = source["Content"];
 	        this.Importance = source["Importance"];
 	    }
+	}
+	export class InsightsTopicTimeline {
+	    Topic: string;
+	    Content: string;
+	    Importance: string;
+	    WeekStart: string;
+	    WeekEnd: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsTopicTimeline(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Topic = source["Topic"];
+	        this.Content = source["Content"];
+	        this.Importance = source["Importance"];
+	        this.WeekStart = source["WeekStart"];
+	        this.WeekEnd = source["WeekEnd"];
+	    }
+	}
+	export class InsightsWeeklyReport {
+	    Summary?: InsightsSummary;
+	    Topics: InsightsTopic[];
+	    InitiativeUpdates: InsightsInitiativeWeekUpdate[];
+	    Actions: InsightsAction[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InsightsWeeklyReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Summary = this.convertValues(source["Summary"], InsightsSummary);
+	        this.Topics = this.convertValues(source["Topics"], InsightsTopic);
+	        this.InitiativeUpdates = this.convertValues(source["InitiativeUpdates"], InsightsInitiativeWeekUpdate);
+	        this.Actions = this.convertValues(source["Actions"], InsightsAction);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class ListItem {
 	    RowID: number;

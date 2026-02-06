@@ -222,6 +222,189 @@ func TestInsightsRepository_GetActionsForWeek(t *testing.T) {
 	})
 }
 
+func TestInsightsRepository_GetInitiativePortfolio(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns all initiatives sorted by status priority then mention count", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		portfolio, err := repo.GetInitiativePortfolio(ctx)
+		require.NoError(t, err)
+		require.Len(t, portfolio, 3)
+
+		// Active initiatives first (GenAI has 2 mentions, Tech Scorecard has 1)
+		assert.Equal(t, "GenAI Integration", portfolio[0].Name)
+		assert.Equal(t, "active", portfolio[0].Status)
+		assert.Equal(t, 2, portfolio[0].MentionCount)
+
+		assert.Equal(t, "Tech Scorecard", portfolio[1].Name)
+		assert.Equal(t, "active", portfolio[1].Status)
+		assert.Equal(t, 1, portfolio[1].MentionCount)
+
+		// Completed last
+		assert.Equal(t, "Q1 OKRs", portfolio[2].Name)
+		assert.Equal(t, "completed", portfolio[2].Status)
+		assert.Equal(t, 0, portfolio[2].MentionCount)
+	})
+
+	t.Run("includes last mention week and activity weeks", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		portfolio, err := repo.GetInitiativePortfolio(ctx)
+		require.NoError(t, err)
+
+		// GenAI Integration: mentioned in weeks Jan 13 and Jan 27
+		assert.Equal(t, "2026-01-27", portfolio[0].LastMentionWeek)
+		assert.Contains(t, portfolio[0].ActivityWeeks, "2026-01-13")
+		assert.Contains(t, portfolio[0].ActivityWeeks, "2026-01-27")
+	})
+
+	t.Run("returns empty when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		portfolio, err := repo.GetInitiativePortfolio(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, portfolio)
+	})
+
+	t.Run("returns empty for empty database", func(t *testing.T) {
+		db := setupEmptyInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+		portfolio, err := repo.GetInitiativePortfolio(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, portfolio)
+	})
+}
+
+func TestInsightsRepository_GetInitiativeDetail(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns full detail for initiative with mentions, actions, and decisions", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		detail, err := repo.GetInitiativeDetail(ctx, 1)
+		require.NoError(t, err)
+		require.NotNil(t, detail)
+
+		assert.Equal(t, "GenAI Integration", detail.Initiative.Name)
+		assert.Equal(t, "active", detail.Initiative.Status)
+
+		require.Len(t, detail.Updates, 2)
+		assert.Equal(t, "2026-01-13", detail.Updates[0].WeekStart)
+		assert.Equal(t, "Started planning AI integration approach", detail.Updates[0].UpdateText)
+		assert.Equal(t, "2026-01-27", detail.Updates[1].WeekStart)
+		assert.Equal(t, "AI integration sprint completed", detail.Updates[1].UpdateText)
+
+		require.Len(t, detail.PendingActions, 2)
+		for _, a := range detail.PendingActions {
+			assert.Equal(t, "pending", a.Status)
+		}
+
+		require.Len(t, detail.Decisions, 1)
+		assert.Equal(t, "Adopt Claude as primary AI provider", detail.Decisions[0].DecisionText)
+	})
+
+	t.Run("returns detail for initiative with no mentions", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		detail, err := repo.GetInitiativeDetail(ctx, 3)
+		require.NoError(t, err)
+		require.NotNil(t, detail)
+
+		assert.Equal(t, "Q1 OKRs", detail.Initiative.Name)
+		assert.Empty(t, detail.Updates)
+		assert.Empty(t, detail.PendingActions)
+		require.Len(t, detail.Decisions, 1)
+		assert.Equal(t, "Move to biweekly sprints", detail.Decisions[0].DecisionText)
+	})
+
+	t.Run("returns nil for non-existent initiative", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		detail, err := repo.GetInitiativeDetail(ctx, 999)
+		require.NoError(t, err)
+		assert.Nil(t, detail)
+	})
+
+	t.Run("returns nil when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		detail, err := repo.GetInitiativeDetail(ctx, 1)
+		require.NoError(t, err)
+		assert.Nil(t, detail)
+	})
+}
+
+func TestInsightsRepository_GetDistinctTopics(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns all unique topic names sorted alphabetically", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		topics, err := repo.GetDistinctTopics(ctx)
+		require.NoError(t, err)
+		require.Len(t, topics, 5)
+		assert.Equal(t, "GenAI", topics[0])
+		assert.Equal(t, "Quarterly Planning", topics[1])
+		assert.Equal(t, "Sprint Review", topics[2])
+		assert.Equal(t, "Team Planning", topics[3])
+		assert.Equal(t, "Tech Scorecard", topics[4])
+	})
+
+	t.Run("returns empty when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		topics, err := repo.GetDistinctTopics(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, topics)
+	})
+
+	t.Run("returns empty for empty database", func(t *testing.T) {
+		db := setupEmptyInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+		topics, err := repo.GetDistinctTopics(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, topics)
+	})
+}
+
+func TestInsightsRepository_GetTopicTimeline(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns topic mentions across weeks for given topic", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		timeline, err := repo.GetTopicTimeline(ctx, "GenAI")
+		require.NoError(t, err)
+		require.Len(t, timeline, 1)
+		assert.Equal(t, "GenAI", timeline[0].Topic)
+		assert.Equal(t, "Integration planning for AI features", timeline[0].Content)
+		assert.Equal(t, "high", timeline[0].Importance)
+		assert.Equal(t, "2026-01-13", timeline[0].WeekStart)
+		assert.Equal(t, "2026-01-19", timeline[0].WeekEnd)
+	})
+
+	t.Run("returns empty for non-existent topic", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		timeline, err := repo.GetTopicTimeline(ctx, "NonExistent")
+		require.NoError(t, err)
+		assert.Empty(t, timeline)
+	})
+
+	t.Run("returns empty when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+		timeline, err := repo.GetTopicTimeline(ctx, "GenAI")
+		require.NoError(t, err)
+		assert.Empty(t, timeline)
+	})
+}
+
 func TestInsightsRepository_GetDaysSinceLastSummary(t *testing.T) {
 	ctx := context.Background()
 
@@ -246,5 +429,94 @@ func TestInsightsRepository_GetDaysSinceLastSummary(t *testing.T) {
 		days, err := repo.GetDaysSinceLastSummary(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, -1, days)
+	})
+}
+
+func TestInsightsRepository_GetWeeklyReport(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns full report for week with data", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		report, err := repo.GetWeeklyReport(ctx, "2026-01-27", "2026-02-03")
+		require.NoError(t, err)
+		require.NotNil(t, report)
+
+		require.NotNil(t, report.Summary)
+		assert.Equal(t, "2026-01-27", report.Summary.WeekStart)
+
+		require.Len(t, report.Topics, 2)
+		assert.Equal(t, "Quarterly Planning", report.Topics[0].Topic)
+		assert.Equal(t, "Sprint Review", report.Topics[1].Topic)
+
+		require.Len(t, report.InitiativeUpdates, 1)
+		assert.Equal(t, "GenAI Integration", report.InitiativeUpdates[0].InitiativeName)
+		assert.Equal(t, "AI integration sprint completed", report.InitiativeUpdates[0].UpdateText)
+
+		require.Len(t, report.Actions, 2)
+		assert.Equal(t, "high", report.Actions[0].Priority)
+		assert.Equal(t, "low", report.Actions[1].Priority)
+	})
+
+	t.Run("returns nil report for week with no summary", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		report, err := repo.GetWeeklyReport(ctx, "2025-12-01", "2025-12-08")
+		require.NoError(t, err)
+		assert.Nil(t, report)
+	})
+
+	t.Run("returns nil when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+
+		report, err := repo.GetWeeklyReport(ctx, "2026-01-27", "2026-02-03")
+		require.NoError(t, err)
+		assert.Nil(t, report)
+	})
+
+	t.Run("returns report with single topic and initiative update", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		report, err := repo.GetWeeklyReport(ctx, "2026-01-20", "2026-01-27")
+		require.NoError(t, err)
+		require.NotNil(t, report)
+
+		assert.Equal(t, "2026-01-20", report.Summary.WeekStart)
+		require.Len(t, report.Topics, 1)
+		assert.Equal(t, "Tech Scorecard", report.Topics[0].Topic)
+
+		require.Len(t, report.InitiativeUpdates, 1)
+		assert.Equal(t, "Tech Scorecard", report.InitiativeUpdates[0].InitiativeName)
+		assert.Equal(t, "Completed tech scorecard assessment", report.InitiativeUpdates[0].UpdateText)
+	})
+}
+
+func TestInsightsRepository_GetDecisionsWithInitiatives(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns decisions with linked initiative names", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		decisions, err := repo.GetDecisionsWithInitiatives(ctx)
+		require.NoError(t, err)
+		require.Len(t, decisions, 2)
+
+		assert.Equal(t, "Move to biweekly sprints", decisions[0].DecisionText)
+		assert.Equal(t, "Q1 OKRs", decisions[0].Initiatives)
+
+		assert.Equal(t, "Adopt Claude as primary AI provider", decisions[1].DecisionText)
+		assert.Equal(t, "GenAI Integration", decisions[1].Initiatives)
+	})
+
+	t.Run("returns empty slice when db is nil", func(t *testing.T) {
+		repo := NewInsightsRepository(nil)
+
+		decisions, err := repo.GetDecisionsWithInitiatives(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, decisions)
 	})
 }

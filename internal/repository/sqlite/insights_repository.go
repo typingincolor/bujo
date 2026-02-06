@@ -263,6 +263,240 @@ func (r *InsightsRepository) GetActionsForWeek(ctx context.Context, weekStart, n
 	return actions, rows.Err()
 }
 
+func (r *InsightsRepository) GetInitiativePortfolio(ctx context.Context) ([]domain.InsightsInitiativePortfolio, error) {
+	if r.db == nil {
+		return []domain.InsightsInitiativePortfolio{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT
+			i.id, i.name, i.status, COALESCE(i.description, ''), i.last_updated,
+			COUNT(im.id) as mention_count,
+			COALESCE(MAX(s.week_start), '') as last_mentioned_week,
+			COALESCE(GROUP_CONCAT(DISTINCT s.week_start), '') as activity_weeks
+		 FROM initiatives i
+		 LEFT JOIN initiative_mentions im ON i.id = im.initiative_id
+		 LEFT JOIN summaries s ON im.summary_id = s.id
+		 GROUP BY i.id
+		 ORDER BY
+			CASE i.status
+				WHEN 'active' THEN 1
+				WHEN 'planning' THEN 2
+				WHEN 'blocked' THEN 3
+				WHEN 'on-hold' THEN 4
+				WHEN 'completed' THEN 5
+			END,
+			mention_count DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var portfolio []domain.InsightsInitiativePortfolio
+	for rows.Next() {
+		var p domain.InsightsInitiativePortfolio
+		if err := rows.Scan(&p.ID, &p.Name, &p.Status, &p.Description, &p.LastUpdated,
+			&p.MentionCount, &p.LastMentionWeek, &p.ActivityWeeks); err != nil {
+			return nil, err
+		}
+		portfolio = append(portfolio, p)
+	}
+	if portfolio == nil {
+		portfolio = []domain.InsightsInitiativePortfolio{}
+	}
+	return portfolio, rows.Err()
+}
+
+func (r *InsightsRepository) GetInitiativeDetail(ctx context.Context, initiativeID int64) (*domain.InsightsInitiativeDetail, error) {
+	if r.db == nil {
+		return nil, nil
+	}
+
+	var init domain.InsightsInitiative
+	var desc sql.NullString
+	err := r.db.QueryRowContext(ctx,
+		`SELECT id, name, status, COALESCE(description, ''), last_updated
+		 FROM initiatives WHERE id = ?`, initiativeID).
+		Scan(&init.ID, &init.Name, &init.Status, &desc, &init.LastUpdated)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	init.Description = desc.String
+
+	updates, err := r.getInitiativeUpdates(ctx, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+
+	pendingActions, err := r.getInitiativePendingActions(ctx, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+
+	decisions, err := r.getInitiativeDecisions(ctx, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.InsightsInitiativeDetail{
+		Initiative:     init,
+		Updates:        updates,
+		PendingActions: pendingActions,
+		Decisions:      decisions,
+	}, nil
+}
+
+func (r *InsightsRepository) getInitiativeUpdates(ctx context.Context, initiativeID int64) ([]domain.InsightsInitiativeUpdate, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT s.week_start, s.week_end, im.update_text
+		 FROM initiative_mentions im
+		 JOIN summaries s ON im.summary_id = s.id
+		 WHERE im.initiative_id = ?
+		 ORDER BY s.week_start ASC`, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var updates []domain.InsightsInitiativeUpdate
+	for rows.Next() {
+		var u domain.InsightsInitiativeUpdate
+		var text sql.NullString
+		if err := rows.Scan(&u.WeekStart, &u.WeekEnd, &text); err != nil {
+			return nil, err
+		}
+		u.UpdateText = text.String
+		updates = append(updates, u)
+	}
+	if updates == nil {
+		updates = []domain.InsightsInitiativeUpdate{}
+	}
+	return updates, rows.Err()
+}
+
+func (r *InsightsRepository) getInitiativePendingActions(ctx context.Context, initiativeID int64) ([]domain.InsightsAction, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT a.id, a.summary_id, a.action_text, a.priority, a.status,
+		        COALESCE(a.due_date, ''), a.created_at, s.week_start
+		 FROM actions a
+		 JOIN summaries s ON a.summary_id = s.id
+		 JOIN initiative_mentions im ON im.summary_id = s.id AND im.initiative_id = ?
+		 WHERE a.status = 'pending'
+		 ORDER BY
+			CASE a.priority
+				WHEN 'high' THEN 1
+				WHEN 'medium' THEN 2
+				WHEN 'low' THEN 3
+			END,
+			a.due_date ASC NULLS LAST`, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var actions []domain.InsightsAction
+	for rows.Next() {
+		var a domain.InsightsAction
+		if err := rows.Scan(&a.ID, &a.SummaryID, &a.ActionText, &a.Priority,
+			&a.Status, &a.DueDate, &a.CreatedAt, &a.WeekStart); err != nil {
+			return nil, err
+		}
+		actions = append(actions, a)
+	}
+	if actions == nil {
+		actions = []domain.InsightsAction{}
+	}
+	return actions, rows.Err()
+}
+
+func (r *InsightsRepository) getInitiativeDecisions(ctx context.Context, initiativeID int64) ([]domain.InsightsDecision, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT d.id, d.decision_text, COALESCE(d.rationale, ''),
+		        COALESCE(d.participants, ''), COALESCE(d.expected_outcomes, ''),
+		        d.decision_date, d.summary_id, d.created_at
+		 FROM decisions d
+		 JOIN decision_initiatives di ON d.id = di.decision_id
+		 WHERE di.initiative_id = ?
+		 ORDER BY d.decision_date DESC`, initiativeID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var decisions []domain.InsightsDecision
+	for rows.Next() {
+		var d domain.InsightsDecision
+		if err := rows.Scan(&d.ID, &d.DecisionText, &d.Rationale, &d.Participants,
+			&d.ExpectedOutcomes, &d.DecisionDate, &d.SummaryID, &d.CreatedAt); err != nil {
+			return nil, err
+		}
+		decisions = append(decisions, d)
+	}
+	if decisions == nil {
+		decisions = []domain.InsightsDecision{}
+	}
+	return decisions, rows.Err()
+}
+
+func (r *InsightsRepository) GetDistinctTopics(ctx context.Context) ([]string, error) {
+	if r.db == nil {
+		return []string{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT DISTINCT topic FROM topics ORDER BY topic ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var topics []string
+	for rows.Next() {
+		var topic string
+		if err := rows.Scan(&topic); err != nil {
+			return nil, err
+		}
+		topics = append(topics, topic)
+	}
+	if topics == nil {
+		topics = []string{}
+	}
+	return topics, rows.Err()
+}
+
+func (r *InsightsRepository) GetTopicTimeline(ctx context.Context, topic string) ([]domain.InsightsTopicTimeline, error) {
+	if r.db == nil {
+		return []domain.InsightsTopicTimeline{}, nil
+	}
+
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT t.topic, COALESCE(t.content, ''), t.importance, s.week_start, s.week_end
+		 FROM topics t
+		 JOIN summaries s ON t.summary_id = s.id
+		 WHERE t.topic = ?
+		 ORDER BY s.week_start ASC`, topic)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var timeline []domain.InsightsTopicTimeline
+	for rows.Next() {
+		var tl domain.InsightsTopicTimeline
+		if err := rows.Scan(&tl.Topic, &tl.Content, &tl.Importance, &tl.WeekStart, &tl.WeekEnd); err != nil {
+			return nil, err
+		}
+		timeline = append(timeline, tl)
+	}
+	if timeline == nil {
+		timeline = []domain.InsightsTopicTimeline{}
+	}
+	return timeline, rows.Err()
+}
+
 func (r *InsightsRepository) GetDaysSinceLastSummary(ctx context.Context) (int, error) {
 	if r.db == nil {
 		return -1, nil
@@ -280,4 +514,124 @@ func (r *InsightsRepository) GetDaysSinceLastSummary(ctx context.Context) (int, 
 		return 0, nil
 	}
 	return int(days.Int64), nil
+}
+
+func (r *InsightsRepository) GetWeeklyReport(ctx context.Context, weekStart, nextWeekStart string) (*domain.InsightsWeeklyReport, error) {
+	if r.db == nil {
+		return nil, nil
+	}
+
+	summary, err := r.GetSummaryForWeek(ctx, weekStart, nextWeekStart)
+	if err != nil {
+		return nil, err
+	}
+	if summary == nil {
+		return nil, nil
+	}
+
+	topics, err := r.GetTopicsForSummary(ctx, summary.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	actions, err := r.GetActionsForWeek(ctx, weekStart, nextWeekStart)
+	if err != nil {
+		return nil, err
+	}
+
+	initiativeUpdates, err := r.getInitiativeUpdatesForSummary(ctx, summary.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.InsightsWeeklyReport{
+		Summary:           summary,
+		Topics:            topics,
+		InitiativeUpdates: initiativeUpdates,
+		Actions:           actions,
+	}, nil
+}
+
+func (r *InsightsRepository) getInitiativeUpdatesForSummary(ctx context.Context, summaryID int64) ([]domain.InsightsInitiativeWeekUpdate, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT i.name, COALESCE(im.update_text, '')
+		 FROM initiative_mentions im
+		 JOIN initiatives i ON im.initiative_id = i.id
+		 WHERE im.summary_id = ?
+		 ORDER BY i.name ASC`, summaryID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var updates []domain.InsightsInitiativeWeekUpdate
+	for rows.Next() {
+		var u domain.InsightsInitiativeWeekUpdate
+		if err := rows.Scan(&u.InitiativeName, &u.UpdateText); err != nil {
+			return nil, err
+		}
+		updates = append(updates, u)
+	}
+	if updates == nil {
+		updates = []domain.InsightsInitiativeWeekUpdate{}
+	}
+	return updates, rows.Err()
+}
+
+func (r *InsightsRepository) GetDecisionsWithInitiatives(ctx context.Context) ([]domain.InsightsDecisionWithInitiatives, error) {
+	if r.db == nil {
+		return []domain.InsightsDecisionWithInitiatives{}, nil
+	}
+
+	query := `
+		SELECT
+			d.id,
+			d.decision_text,
+			d.rationale,
+			d.participants,
+			d.expected_outcomes,
+			d.decision_date,
+			d.summary_id,
+			d.created_at,
+			GROUP_CONCAT(i.name) as initiatives
+		FROM decisions d
+		LEFT JOIN decision_initiatives di ON d.id = di.decision_id
+		LEFT JOIN initiatives i ON di.initiative_id = i.id
+		GROUP BY d.id
+		ORDER BY d.decision_date DESC`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query decisions with initiatives: %w", err)
+	}
+	defer rows.Close()
+
+	var results []domain.InsightsDecisionWithInitiatives
+	for rows.Next() {
+		var d domain.InsightsDecisionWithInitiatives
+		var initiatives sql.NullString
+		err := rows.Scan(
+			&d.ID,
+			&d.DecisionText,
+			&d.Rationale,
+			&d.Participants,
+			&d.ExpectedOutcomes,
+			&d.DecisionDate,
+			&d.SummaryID,
+			&d.CreatedAt,
+			&initiatives,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan decision: %w", err)
+		}
+		if initiatives.Valid {
+			d.Initiatives = initiatives.String
+		}
+		results = append(results, d)
+	}
+
+	if results == nil {
+		return []domain.InsightsDecisionWithInitiatives{}, nil
+	}
+	return results, nil
 }

@@ -1056,7 +1056,7 @@ func (m Model) renderInsightsContent() string {
 	var sb strings.Builder
 
 	// Tab bar
-	tabs := []string{"Dashboard", "Summaries", "Actions"}
+	tabs := []string{"Dashboard", "Summaries", "Actions", "Initiatives", "Topics", "Decisions"}
 	var tabParts []string
 	for i, name := range tabs {
 		if InsightsTab(i) == m.insightsState.activeTab {
@@ -1079,9 +1079,27 @@ func (m Model) renderInsightsContent() string {
 	case InsightsTabDashboard:
 		sb.WriteString(m.renderInsightsDashboard())
 	case InsightsTabSummaries:
-		sb.WriteString(m.renderInsightsSummaries())
+		if m.insightsState.weeklyReport != nil {
+			sb.WriteString(m.renderInsightsWeeklyReport())
+		} else {
+			sb.WriteString(m.renderInsightsSummaries())
+		}
 	case InsightsTabActions:
 		sb.WriteString(m.renderInsightsActions())
+	case InsightsTabInitiatives:
+		if m.insightsState.selectedInitiativeID != nil && m.insightsState.initiativeDetail != nil {
+			sb.WriteString(m.renderInsightsInitiativeDetail())
+		} else {
+			sb.WriteString(m.renderInsightsInitiatives())
+		}
+	case InsightsTabTopics:
+		if m.insightsState.selectedTopic != "" && m.insightsState.topicTimeline != nil {
+			sb.WriteString(m.renderInsightsTopicTimeline())
+		} else {
+			sb.WriteString(m.renderInsightsTopicsList())
+		}
+	case InsightsTabDecisions:
+		sb.WriteString(m.renderInsightsDecisions())
 	}
 
 	return sb.String()
@@ -1167,6 +1185,65 @@ func (m Model) renderInsightsSummaries() string {
 	return sb.String()
 }
 
+func (m Model) renderInsightsWeeklyReport() string {
+	var sb strings.Builder
+	report := m.insightsState.weeklyReport
+
+	sb.WriteString("Weekly Report\n")
+	sb.WriteString(strings.Repeat("═", 40))
+	sb.WriteString("\n\n")
+
+	if report.Summary != nil {
+		sb.WriteString(fmt.Sprintf("%s to %s\n", report.Summary.WeekStart, report.Summary.WeekEnd))
+		sb.WriteString(strings.Repeat("─", 30))
+		sb.WriteString("\n")
+		sb.WriteString(report.Summary.SummaryText)
+		sb.WriteString("\n\n")
+	}
+
+	if len(report.Topics) > 0 {
+		sb.WriteString("Topics\n")
+		sb.WriteString(strings.Repeat("─", 30))
+		sb.WriteString("\n")
+		for _, topic := range report.Topics {
+			importance := ""
+			if topic.Importance == "high" {
+				importance = " ‼"
+			}
+			sb.WriteString(fmt.Sprintf("  %s%s\n", topic.Topic, importance))
+			sb.WriteString(fmt.Sprintf("    %s\n", topic.Content))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(report.InitiativeUpdates) > 0 {
+		sb.WriteString("Initiative Updates\n")
+		sb.WriteString(strings.Repeat("─", 30))
+		sb.WriteString("\n")
+		for _, update := range report.InitiativeUpdates {
+			sb.WriteString(fmt.Sprintf("  %s\n", update.InitiativeName))
+			sb.WriteString(fmt.Sprintf("    %s\n", update.UpdateText))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(report.Actions) > 0 {
+		sb.WriteString("Actions\n")
+		sb.WriteString(strings.Repeat("─", 30))
+		sb.WriteString("\n")
+		for _, action := range report.Actions {
+			priority := ""
+			if action.Priority == "high" {
+				priority = " ‼"
+			}
+			sb.WriteString(fmt.Sprintf("  [%s] %s%s\n", action.Status, action.ActionText, priority))
+		}
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
 func (m Model) renderInsightsActions() string {
 	var sb strings.Builder
 
@@ -1192,6 +1269,166 @@ func (m Model) renderInsightsActions() string {
 		sb.WriteString(fmt.Sprintf("  %s %s %s\n", status, priority, action.ActionText))
 	}
 	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsInitiatives() string {
+	var sb strings.Builder
+
+	if len(m.insightsState.initiatives) == 0 {
+		sb.WriteString(HelpStyle.Render("No initiatives found."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	currentStatus := ""
+	for i, init := range m.insightsState.initiatives {
+		if init.Status != currentStatus {
+			currentStatus = init.Status
+			sb.WriteString(fmt.Sprintf("\n%s\n", currentStatus))
+		}
+		prefix := "  "
+		if i == m.insightsState.initiativeSelectedIdx {
+			prefix = "> "
+		}
+		mentions := fmt.Sprintf("(%d mentions)", init.MentionCount)
+		sb.WriteString(fmt.Sprintf("%s%s  %s\n", prefix, init.Name, HelpStyle.Render(mentions)))
+		if init.Description != "" {
+			sb.WriteString(fmt.Sprintf("    %s\n", init.Description))
+		}
+		if init.LastMentionWeek != "" {
+			sb.WriteString(fmt.Sprintf("    Last: %s\n", init.LastMentionWeek))
+		}
+	}
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsInitiativeDetail() string {
+	var sb strings.Builder
+	d := m.insightsState.initiativeDetail
+
+	sb.WriteString(fmt.Sprintf("%s  [%s]\n", d.Initiative.Name, d.Initiative.Status))
+	if d.Initiative.Description != "" {
+		sb.WriteString(fmt.Sprintf("%s\n", d.Initiative.Description))
+	}
+	sb.WriteString("\n")
+
+	if len(d.Updates) > 0 {
+		sb.WriteString("Timeline\n")
+		for _, u := range d.Updates {
+			sb.WriteString(fmt.Sprintf("  %s - %s\n", u.WeekStart, u.UpdateText))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(d.PendingActions) > 0 {
+		sb.WriteString("Pending Actions\n")
+		for _, a := range d.PendingActions {
+			sb.WriteString(fmt.Sprintf("  [%s] %s\n", a.Priority, a.ActionText))
+		}
+		sb.WriteString("\n")
+	}
+
+	if len(d.Decisions) > 0 {
+		sb.WriteString("Decisions\n")
+		for _, dec := range d.Decisions {
+			sb.WriteString(fmt.Sprintf("  %s\n", dec.DecisionText))
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(HelpStyle.Render("Press Esc to go back"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsTopicsList() string {
+	var sb strings.Builder
+
+	if len(m.insightsState.distinctTopics) == 0 {
+		sb.WriteString(HelpStyle.Render("No topics found."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString("All Topics\n")
+	sb.WriteString(strings.Repeat("─", 30))
+	sb.WriteString("\n")
+	for i, topic := range m.insightsState.distinctTopics {
+		prefix := "  "
+		if i == m.insightsState.topicSelectedIdx {
+			prefix = "> "
+		}
+		sb.WriteString(fmt.Sprintf("%s%s\n", prefix, topic))
+	}
+	sb.WriteString("\n")
+	sb.WriteString(HelpStyle.Render("Enter: view timeline  j/k: navigate"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsTopicTimeline() string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("Topic: %s\n", m.insightsState.selectedTopic))
+	sb.WriteString(strings.Repeat("─", 30))
+	sb.WriteString("\n\n")
+
+	if len(m.insightsState.topicTimeline) == 0 {
+		sb.WriteString(HelpStyle.Render("No timeline entries found."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	for _, entry := range m.insightsState.topicTimeline {
+		importance := ""
+		if entry.Importance == "high" {
+			importance = " ‼"
+		}
+		sb.WriteString(fmt.Sprintf("  %s - %s%s\n", entry.WeekStart, entry.WeekEnd, importance))
+		if entry.Content != "" {
+			sb.WriteString(fmt.Sprintf("    %s\n", entry.Content))
+		}
+		sb.WriteString("\n")
+	}
+
+	sb.WriteString(HelpStyle.Render("Press Esc to go back"))
+	sb.WriteString("\n")
+
+	return sb.String()
+}
+
+func (m Model) renderInsightsDecisions() string {
+	var sb strings.Builder
+
+	if len(m.insightsState.decisions) == 0 {
+		sb.WriteString(HelpStyle.Render("No decisions found."))
+		sb.WriteString("\n\n")
+		return sb.String()
+	}
+
+	sb.WriteString(fmt.Sprintf("Decision Log (%d)\n", len(m.insightsState.decisions)))
+	sb.WriteString(strings.Repeat("─", 30))
+	sb.WriteString("\n\n")
+
+	for _, d := range m.insightsState.decisions {
+		sb.WriteString(fmt.Sprintf("  %s  %s\n", d.DecisionDate, d.DecisionText))
+		if d.Rationale != "" {
+			sb.WriteString(fmt.Sprintf("    Rationale: %s\n", d.Rationale))
+		}
+		if d.Participants != "" {
+			sb.WriteString(fmt.Sprintf("    Participants: %s\n", d.Participants))
+		}
+		if d.Initiatives != "" {
+			sb.WriteString(fmt.Sprintf("    Initiatives: %s\n", d.Initiatives))
+		}
+		sb.WriteString("\n")
+	}
 
 	return sb.String()
 }

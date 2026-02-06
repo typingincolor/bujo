@@ -53,6 +53,55 @@ type InsightsDecision struct {
 	CreatedAt        string
 }
 
+type InsightsDecisionWithInitiatives struct {
+	InsightsDecision
+	Initiatives string
+}
+
+type InsightsInitiativePortfolio struct {
+	ID              int64
+	Name            string
+	Status          string
+	Description     string
+	LastUpdated     string
+	MentionCount    int
+	LastMentionWeek string
+	ActivityWeeks   string
+}
+
+type InsightsInitiativeUpdate struct {
+	WeekStart  string
+	WeekEnd    string
+	UpdateText string
+}
+
+type InsightsInitiativeDetail struct {
+	Initiative     InsightsInitiative
+	Updates        []InsightsInitiativeUpdate
+	PendingActions []InsightsAction
+	Decisions      []InsightsDecision
+}
+
+type InsightsTopicTimeline struct {
+	Topic      string
+	Content    string
+	Importance string
+	WeekStart  string
+	WeekEnd    string
+}
+
+type InsightsInitiativeWeekUpdate struct {
+	InitiativeName string
+	UpdateText     string
+}
+
+type InsightsWeeklyReport struct {
+	Summary           *InsightsSummary
+	Topics            []InsightsTopic
+	InitiativeUpdates []InsightsInitiativeWeekUpdate
+	Actions           []InsightsAction
+}
+
 type InsightsDashboard struct {
 	LatestSummary        *InsightsSummary
 	ActiveInitiatives    []InsightsInitiative

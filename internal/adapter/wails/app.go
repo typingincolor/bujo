@@ -598,6 +598,59 @@ func (a *App) GetInsightsActionsForWeek(weekStart string) ([]domain.InsightsActi
 	return repo.GetActionsForWeek(a.ctx, weekStart, nextWeek)
 }
 
+func (a *App) GetInsightsInitiativePortfolio() ([]domain.InsightsInitiativePortfolio, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsInitiativePortfolio{}, nil
+	}
+	return repo.GetInitiativePortfolio(a.ctx)
+}
+
+func (a *App) GetInsightsInitiativeDetail(initiativeID int64) (*domain.InsightsInitiativeDetail, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return &domain.InsightsInitiativeDetail{}, nil
+	}
+	return repo.GetInitiativeDetail(a.ctx, initiativeID)
+}
+
+func (a *App) GetInsightsDistinctTopics() ([]string, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []string{}, nil
+	}
+	return repo.GetDistinctTopics(a.ctx)
+}
+
+func (a *App) GetInsightsTopicTimeline(topic string) ([]domain.InsightsTopicTimeline, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsTopicTimeline{}, nil
+	}
+	return repo.GetTopicTimeline(a.ctx, topic)
+}
+
+func (a *App) GetInsightsDecisionLog() ([]domain.InsightsDecisionWithInitiatives, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return []domain.InsightsDecisionWithInitiatives{}, nil
+	}
+	return repo.GetDecisionsWithInitiatives(a.ctx)
+}
+
+func (a *App) GetInsightsWeeklyReport(weekStart string) (*domain.InsightsWeeklyReport, error) {
+	repo := a.services.InsightsRepo
+	if !repo.IsAvailable() {
+		return &domain.InsightsWeeklyReport{}, nil
+	}
+	t, err := time.Parse("2006-01-02", weekStart)
+	if err != nil {
+		return nil, err
+	}
+	nextWeekStart := t.AddDate(0, 0, 7).Format("2006-01-02")
+	return repo.GetWeeklyReport(a.ctx, weekStart, nextWeekStart)
+}
+
 func (a *App) GetAttentionScores(ids []int64) (map[int64]domain.AttentionResult, error) {
 	result, err := a.services.Bujo.GetAttentionScores(a.ctx, ids)
 	if err != nil {

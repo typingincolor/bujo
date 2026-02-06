@@ -5,13 +5,19 @@ import { cn } from '@/lib/utils';
 import { InsightsDashboard } from './InsightsDashboard';
 import { InsightsSummaries } from './InsightsSummaries';
 import { InsightsActions } from './InsightsActions';
+import { InsightsInitiatives } from './InsightsInitiatives';
+import { InsightsTopics } from './InsightsTopics';
+import { InsightsDecisions } from './InsightsDecisions';
 
-type InsightsTab = 'dashboard' | 'summaries' | 'actions';
+type InsightsTab = 'dashboard' | 'summaries' | 'actions' | 'initiatives' | 'topics' | 'decisions';
 
 const tabs: { id: InsightsTab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'summaries', label: 'Summaries' },
   { id: 'actions', label: 'Actions' },
+  { id: 'initiatives', label: 'Initiatives' },
+  { id: 'topics', label: 'Topics' },
+  { id: 'decisions', label: 'Decisions' },
 ];
 
 function getWeekStart(date: Date): string {
@@ -40,7 +46,7 @@ export function InsightsView() {
   const handleGoToCurrentWeek = () =>
     setWeekAnchor(startOfWeek(new Date(), { weekStartsOn: 1 }));
 
-  const showWeekNav = activeTab !== 'dashboard';
+  const showWeekNav = activeTab !== 'dashboard' && activeTab !== 'initiatives' && activeTab !== 'topics' && activeTab !== 'decisions';
 
   return (
     <div className="flex flex-col h-full">
@@ -97,6 +103,9 @@ export function InsightsView() {
         {activeTab === 'dashboard' && <InsightsDashboard />}
         {activeTab === 'summaries' && <InsightsSummaries weekStart={weekStart} />}
         {activeTab === 'actions' && <InsightsActions weekStart={weekStart} />}
+        {activeTab === 'initiatives' && <InsightsInitiatives />}
+        {activeTab === 'topics' && <InsightsTopics />}
+        {activeTab === 'decisions' && <InsightsDecisions />}
       </div>
     </div>
   );
