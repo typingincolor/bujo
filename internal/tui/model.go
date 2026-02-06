@@ -314,23 +314,23 @@ const (
 )
 
 type insightsState struct {
-	loading                bool
-	activeTab              InsightsTab
-	weekAnchor             time.Time
-	dashboard              domain.InsightsDashboard
-	weekSummary            *domain.InsightsSummary
-	weekTopics             []domain.InsightsTopic
-	weekActions            []domain.InsightsAction
-	initiatives            []domain.InsightsInitiativePortfolio
-	initiativeSelectedIdx  int
-	selectedInitiativeID   *int64
-	initiativeDetail       *domain.InsightsInitiativeDetail
-	distinctTopics         []string
-	topicSelectedIdx       int
-	selectedTopic          string
-	topicTimeline          []domain.InsightsTopicTimeline
-	decisions              []domain.InsightsDecisionWithInitiatives
-	weeklyReport           *domain.InsightsWeeklyReport
+	loading               bool
+	activeTab             InsightsTab
+	weekAnchor            time.Time
+	dashboard             domain.InsightsDashboard
+	weekSummary           *domain.InsightsSummary
+	weekTopics            []domain.InsightsTopic
+	weekActions           []domain.InsightsAction
+	initiatives           []domain.InsightsInitiativePortfolio
+	initiativeSelectedIdx int
+	selectedInitiativeID  *int64
+	initiativeDetail      *domain.InsightsInitiativeDetail
+	distinctTopics        []string
+	topicSelectedIdx      int
+	selectedTopic         string
+	topicTimeline         []domain.InsightsTopicTimeline
+	decisions             []domain.InsightsDecisionWithInitiatives
+	weeklyReport          *domain.InsightsWeeklyReport
 }
 
 type commandPaletteState struct {

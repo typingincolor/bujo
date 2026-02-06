@@ -16,8 +16,6 @@ export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
   const [topics, setTopics] = useState<domain.InsightsTopic[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { setShowReport(false); }, [weekStart]);
-
   useEffect(() => {
     let cancelled = false;
     GetInsightsSummaryForWeek(weekStart)
@@ -26,6 +24,7 @@ export function InsightsSummaries({ weekStart }: InsightsSummariesProps) {
           setError(null);
           setSummary(detail.Summary ?? null);
           setTopics(detail.Topics ?? []);
+          setShowReport(false);
         }
       })
       .catch((err: Error) => { if (!cancelled) setError(err.message); });
