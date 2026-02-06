@@ -946,40 +946,34 @@ func TestPendingTasks_ShowsParentChainForSelectedEntry(t *testing.T) {
 	}
 }
 
-func TestPendingTasks_EnterTogglesContextExpansion(t *testing.T) {
+func TestPendingTasks_EnterNavigatesToJournalDate(t *testing.T) {
 	today := time.Now()
 	model := New(nil)
 	model.currentView = ViewTypePendingTasks
 	model.width = 80
 	model.height = 24
 
-	parentID := int64(100)
 	model.pendingTasksState.entries = []domain.Entry{
-		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
+		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today},
 	}
 	model.pendingTasksState.selectedIdx = 0
-	model.pendingTasksState.expandedID = 0
-	model.pendingTasksState.parentChains = map[int64][]domain.Entry{
-		2: {{ID: 100, Content: "Parent event", Type: domain.EntryTypeEvent}},
-	}
 
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	newModel, _ := model.Update(msg)
+	newModel, cmd := model.Update(msg)
 	m := newModel.(Model)
 
-	if m.pendingTasksState.expandedID != 2 {
-		t.Errorf("expected expandedID to be 2 after Enter, got %d", m.pendingTasksState.expandedID)
+	if m.currentView != ViewTypeJournal {
+		t.Errorf("expected enter to navigate to journal view, got %v", m.currentView)
 	}
-
-	newModel, _ = m.Update(msg)
-	m = newModel.(Model)
-
-	if m.pendingTasksState.expandedID != 0 {
-		t.Errorf("expected expandedID to be 0 after second Enter (toggle off), got %d", m.pendingTasksState.expandedID)
+	if !m.viewDate.Equal(today) {
+		t.Errorf("expected viewDate to match entry scheduled date")
+	}
+	if cmd == nil {
+		t.Error("expected a load command for journal view")
 	}
 }
 
-func TestPendingTasks_EnterTriggersParentChainLoadingWhenNotCached(t *testing.T) {
+func TestPendingTasks_EnterNavigatesToJournalForNestedEntry(t *testing.T) {
 	today := time.Now()
 	model := New(nil)
 	model.currentView = ViewTypePendingTasks
@@ -991,14 +985,17 @@ func TestPendingTasks_EnterTriggersParentChainLoadingWhenNotCached(t *testing.T)
 		{ID: 2, Content: "Nested task", Type: domain.EntryTypeTask, ScheduledDate: &today, ParentID: &parentID},
 	}
 	model.pendingTasksState.selectedIdx = 0
-	model.pendingTasksState.expandedID = 0
 	model.pendingTasksState.parentChains = make(map[int64][]domain.Entry)
 
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	_, cmd := model.Update(msg)
+	newModel, cmd := model.Update(msg)
+	m := newModel.(Model)
 
+	if m.currentView != ViewTypeJournal {
+		t.Errorf("expected enter to navigate to journal view even for nested entry, got %v", m.currentView)
+	}
 	if cmd == nil {
-		t.Error("expected a command to be returned to load parent chain, got nil")
+		t.Error("expected a load command for journal view")
 	}
 }
 

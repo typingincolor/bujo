@@ -1165,12 +1165,7 @@ func (m Model) migrateEntryCmd(id int64, dateStr string, fromDate time.Time) tea
 	}
 }
 
-func (m Model) toggleDoneCmd() tea.Cmd {
-	if len(m.entries) == 0 {
-		return nil
-	}
-	entry := m.entries[m.selectedIdx].Entry
-
+func (m Model) toggleDoneForEntryCmd(entry domain.Entry) tea.Cmd {
 	validTypes := entry.Type == domain.EntryTypeTask ||
 		entry.Type == domain.EntryTypeDone ||
 		entry.Type == domain.EntryTypeAnswered
@@ -1199,6 +1194,13 @@ func (m Model) toggleDoneCmd() tea.Cmd {
 	}
 }
 
+func (m Model) toggleDoneCmd() tea.Cmd {
+	if len(m.entries) == 0 {
+		return nil
+	}
+	return m.toggleDoneForEntryCmd(m.entries[m.selectedIdx].Entry)
+}
+
 func (m Model) cyclePriorityCmd(entryID int64, newPriority domain.Priority) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -1210,15 +1212,27 @@ func (m Model) cyclePriorityCmd(entryID int64, newPriority domain.Priority) tea.
 	}
 }
 
+func (m Model) cancelForEntryCmd(entry domain.Entry) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		if err := m.bujoService.CancelEntry(ctx, entry.ID); err != nil {
+			return errMsg{err}
+		}
+		return entryUpdatedMsg{entry.ID}
+	}
+}
+
 func (m Model) cancelEntryCmd() tea.Cmd {
 	if len(m.entries) == 0 {
 		return nil
 	}
-	entry := m.entries[m.selectedIdx].Entry
+	return m.cancelForEntryCmd(m.entries[m.selectedIdx].Entry)
+}
 
+func (m Model) uncancelForEntryCmd(entry domain.Entry) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
-		if err := m.bujoService.CancelEntry(ctx, entry.ID); err != nil {
+		if err := m.bujoService.UncancelEntry(ctx, entry.ID); err != nil {
 			return errMsg{err}
 		}
 		return entryUpdatedMsg{entry.ID}
@@ -1229,15 +1243,7 @@ func (m Model) uncancelEntryCmd() tea.Cmd {
 	if len(m.entries) == 0 {
 		return nil
 	}
-	entry := m.entries[m.selectedIdx].Entry
-
-	return func() tea.Msg {
-		ctx := context.Background()
-		if err := m.bujoService.UncancelEntry(ctx, entry.ID); err != nil {
-			return errMsg{err}
-		}
-		return entryUpdatedMsg{entry.ID}
-	}
+	return m.uncancelForEntryCmd(m.entries[m.selectedIdx].Entry)
 }
 
 func (m Model) retypeEntryCmd(newType domain.EntryType) tea.Cmd {
@@ -1435,20 +1441,147 @@ func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.pendingTasksState.entries) > 0 &&
 			m.pendingTasksState.selectedIdx < len(m.pendingTasksState.entries) {
 			entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-			if m.pendingTasksState.expandedID == entry.ID {
-				m.pendingTasksState.expandedID = 0
-				return m, nil
+			if entry.ScheduledDate != nil {
+				m.viewStack = append(m.viewStack, m.currentView)
+				m.currentView = ViewTypeJournal
+				m.viewDate = *entry.ScheduledDate
+				m.viewMode = ViewModeDay
+				m.selectedIdx = 0
+				return m, m.loadDaysCmd()
 			}
-
-			if entry.ParentID != nil {
-				_, cached := m.pendingTasksState.parentChains[entry.ID]
-				if !cached {
-					return m, m.loadParentChainCmd(entry.ID)
-				}
-			}
-			m.pendingTasksState.expandedID = entry.ID
 		}
 		return m, nil
+
+	case key.Matches(msg, m.keyMap.Done):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		return m, m.toggleDoneForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.CancelEntry):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if !entry.CanCancel() {
+			return m, nil
+		}
+		return m, m.cancelForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.UncancelEntry):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if !entry.CanUncancel() {
+			return m, nil
+		}
+		return m, m.uncancelForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.Edit):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		ti := textinput.New()
+		ti.SetValue(entry.Content)
+		ti.Focus()
+		ti.CharLimit = 256
+		ti.Width = m.width - 10
+		m.editMode = editState{
+			active:  true,
+			entryID: entry.ID,
+			input:   ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Delete):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		m.confirmMode.active = true
+		m.confirmMode.entryID = entry.ID
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Migrate):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if entry.Type != domain.EntryTypeTask {
+			return m, nil
+		}
+		ti := textinput.New()
+		ti.Placeholder = "tomorrow, next monday, 2026-01-15"
+		ti.Focus()
+		ti.CharLimit = 64
+		ti.Width = m.width - 10
+		fromDate := m.viewDate
+		if entry.ScheduledDate != nil {
+			fromDate = *entry.ScheduledDate
+		}
+		m.migrateMode = migrateState{
+			active:   true,
+			entryID:  entry.ID,
+			fromDate: fromDate,
+			input:    ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Retype):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if !entry.CanCycleType() {
+			return m, nil
+		}
+		m.retypeMode = retypeState{
+			active:      true,
+			entryID:     entry.ID,
+			selectedIdx: 0,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Priority):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		newPriority := entry.Priority.Cycle()
+		return m, m.cyclePriorityCmd(entry.ID, newPriority)
+
+	case key.Matches(msg, m.keyMap.Answer):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if entry.Type != domain.EntryTypeQuestion {
+			return m, nil
+		}
+		ti := textinput.New()
+		ti.Placeholder = "Enter your answer..."
+		ti.Focus()
+		ti.CharLimit = 512
+		ti.Width = m.width - 10
+		m.answerMode = answerState{
+			active:     true,
+			questionID: entry.ID,
+			input:      ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.MoveToList):
+		if len(m.pendingTasksState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
+		if !entry.CanMoveToList() {
+			return m, nil
+		}
+		return m, m.loadListsForMoveCmd(entry.ID)
 	}
 
 	return m, nil

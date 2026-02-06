@@ -146,7 +146,7 @@ func (m Model) renderContextHelp() string {
 	case ViewTypeStats:
 		return "esc: back  q: quit"
 	case ViewTypePendingTasks:
-		return "j/k: navigate  esc: back  q: quit"
+		return "j/k: navigate  enter: go to  space: done  x: cancel  e: edit  d: delete  >: migrate  t: retype  !: priority  L: list  esc: back  q: quit"
 	case ViewTypeQuestions:
 		return "j/k: navigate  esc: back  q: quit"
 	default:
