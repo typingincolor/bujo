@@ -346,4 +346,3 @@ func TestInsights_ViewTypeDisplayName(t *testing.T) {
 		t.Error("expected view to contain 'Insights' display name")
 	}
 }
-
