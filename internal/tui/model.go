@@ -50,6 +50,10 @@ type Config struct {
 	InsightsReader  InsightsReader
 	ChangeDetection ChangeDetector
 	Theme           string
+	Version         string
+	Commit          string
+	Date            string
+	DBPath          string
 }
 
 type Model struct {
@@ -105,6 +109,10 @@ type Model struct {
 	pendingTasksState        pendingTasksState
 	questionsState           questionsState
 	undoState                undoState
+	appVersion               string
+	appCommit                string
+	appDate                  string
+	appDBPath                string
 	help                     help.Model
 	keyMap                   KeyMap
 	width                    int
@@ -457,6 +465,10 @@ func NewWithConfig(cfg Config) Model {
 		statsViewState:    statsState{from: statsFrom, to: statsTo},
 		insightsReader:    cfg.InsightsReader,
 		insightsState:     insightsState{weekAnchor: currentMonday},
+		appVersion:        cfg.Version,
+		appCommit:         cfg.Commit,
+		appDate:           cfg.Date,
+		appDBPath:         cfg.DBPath,
 	}
 }
 

@@ -1065,14 +1065,41 @@ func (m Model) renderSettingsContent() string {
 
 	sb.WriteString("⚙️  Settings\n\n")
 
-	sb.WriteString("Current configuration:\n\n")
-	sb.WriteString(fmt.Sprintf("  Theme:         %s\n", "default"))
-	sb.WriteString(fmt.Sprintf("  Default view:  %s\n", "journal"))
-	sb.WriteString(fmt.Sprintf("  Date format:   %s\n", "Mon, Jan 2 2006"))
+	version := m.appVersion
+	if version == "" {
+		version = "dev"
+	}
+	commit := m.appCommit
+	if commit == "" {
+		commit = "none"
+	}
+	buildDate := m.appDate
+	if buildDate == "" {
+		buildDate = "unknown"
+	}
+	dbPath := m.appDBPath
+	if dbPath == "" {
+		dbPath = "default"
+	}
+
+	sb.WriteString("Application\n")
+	sb.WriteString(fmt.Sprintf("  Version:       %s\n", version))
+	sb.WriteString(fmt.Sprintf("  Commit:        %s\n", commit))
+	sb.WriteString(fmt.Sprintf("  Built:         %s\n", buildDate))
+	sb.WriteString(fmt.Sprintf("  Database:      %s\n", dbPath))
 	sb.WriteString("\n")
 
-	sb.WriteString(HelpStyle.Render("Edit ~/.config/bujo/config.yaml to change settings"))
-	sb.WriteString("\n\n")
+	sb.WriteString("Keyboard Shortcuts\n")
+	sb.WriteString("  1-9, 0         Switch views\n")
+	sb.WriteString("  j/k            Navigate up/down\n")
+	sb.WriteString("  h/l            Previous/next period\n")
+	sb.WriteString("  space          Toggle done\n")
+	sb.WriteString("  e              Edit entry\n")
+	sb.WriteString("  /              Search\n")
+	sb.WriteString("  :              Command palette\n")
+	sb.WriteString("  ?              Help\n")
+	sb.WriteString("  q              Quit\n")
+	sb.WriteString("\n")
 
 	return sb.String()
 }

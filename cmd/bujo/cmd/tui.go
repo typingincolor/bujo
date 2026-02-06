@@ -21,6 +21,10 @@ var tuiCmd = &cobra.Command{
 			StatsService:    statsService,
 			ChangeDetection: changeDetectionService,
 			InsightsReader:  insightsRepo,
+			Version:         version,
+			Commit:          commit,
+			Date:            date,
+			DBPath:          dbPath,
 		})
 		p := tea.NewProgram(model, tea.WithAltScreen())
 
