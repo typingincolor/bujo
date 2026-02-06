@@ -126,6 +126,22 @@ export function GetInsightsDashboard() {
   return window['go']['wails']['App']['GetInsightsDashboard']();
 }
 
+export function GetInsightsDecisionLog() {
+  return window['go']['wails']['App']['GetInsightsDecisionLog']();
+}
+
+export function GetInsightsDistinctTopics() {
+  return window['go']['wails']['App']['GetInsightsDistinctTopics']();
+}
+
+export function GetInsightsInitiativeDetail(arg1) {
+  return window['go']['wails']['App']['GetInsightsInitiativeDetail'](arg1);
+}
+
+export function GetInsightsInitiativePortfolio() {
+  return window['go']['wails']['App']['GetInsightsInitiativePortfolio']();
+}
+
 export function GetInsightsSummaries(arg1) {
   return window['go']['wails']['App']['GetInsightsSummaries'](arg1);
 }
@@ -136,6 +152,14 @@ export function GetInsightsSummaryDetail(arg1) {
 
 export function GetInsightsSummaryForWeek(arg1) {
   return window['go']['wails']['App']['GetInsightsSummaryForWeek'](arg1);
+}
+
+export function GetInsightsTopicTimeline(arg1) {
+  return window['go']['wails']['App']['GetInsightsTopicTimeline'](arg1);
+}
+
+export function GetInsightsWeeklyReport(arg1) {
+  return window['go']['wails']['App']['GetInsightsWeeklyReport'](arg1);
 }
 
 export function GetLists() {

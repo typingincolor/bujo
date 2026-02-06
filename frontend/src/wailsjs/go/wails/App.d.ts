@@ -68,11 +68,23 @@ export function GetInsightsActionsForWeek(arg1:string):Promise<Array<domain.Insi
 
 export function GetInsightsDashboard():Promise<domain.InsightsDashboard>;
 
+export function GetInsightsDecisionLog():Promise<Array<domain.InsightsDecisionWithInitiatives>>;
+
+export function GetInsightsDistinctTopics():Promise<Array<string>>;
+
+export function GetInsightsInitiativeDetail(arg1:number):Promise<domain.InsightsInitiativeDetail>;
+
+export function GetInsightsInitiativePortfolio():Promise<Array<domain.InsightsInitiativePortfolio>>;
+
 export function GetInsightsSummaries(arg1:number):Promise<Array<domain.InsightsSummary>>;
 
 export function GetInsightsSummaryDetail(arg1:number):Promise<Array<domain.InsightsTopic>>;
 
 export function GetInsightsSummaryForWeek(arg1:string):Promise<wails.WeekSummaryDetail>;
+
+export function GetInsightsTopicTimeline(arg1:string):Promise<Array<domain.InsightsTopicTimeline>>;
+
+export function GetInsightsWeeklyReport(arg1:string):Promise<domain.InsightsWeeklyReport>;
 
 export function GetLists():Promise<Array<wails.ListWithItems>>;
 

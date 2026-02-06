@@ -40,6 +40,12 @@ type InsightsReader interface {
 	GetSummaryForWeek(ctx context.Context, weekStart, nextWeekStart string) (*domain.InsightsSummary, error)
 	GetTopicsForSummary(ctx context.Context, summaryID int64) ([]domain.InsightsTopic, error)
 	GetActionsForWeek(ctx context.Context, weekStart, nextWeekStart string) ([]domain.InsightsAction, error)
+	GetInitiativePortfolio(ctx context.Context) ([]domain.InsightsInitiativePortfolio, error)
+	GetInitiativeDetail(ctx context.Context, initiativeID int64) (*domain.InsightsInitiativeDetail, error)
+	GetDistinctTopics(ctx context.Context) ([]string, error)
+	GetTopicTimeline(ctx context.Context, topic string) ([]domain.InsightsTopicTimeline, error)
+	GetDecisionsWithInitiatives(ctx context.Context) ([]domain.InsightsDecisionWithInitiatives, error)
+	GetWeeklyReport(ctx context.Context, weekStart, nextWeekStart string) (*domain.InsightsWeeklyReport, error)
 }
 
 type Config struct {
@@ -301,17 +307,30 @@ const (
 	InsightsTabDashboard InsightsTab = iota
 	InsightsTabSummaries
 	InsightsTabActions
+	InsightsTabInitiatives
+	InsightsTabTopics
+	InsightsTabDecisions
 	insightsTabCount
 )
 
 type insightsState struct {
-	loading     bool
-	activeTab   InsightsTab
-	weekAnchor  time.Time
-	dashboard   domain.InsightsDashboard
-	weekSummary *domain.InsightsSummary
-	weekTopics  []domain.InsightsTopic
-	weekActions []domain.InsightsAction
+	loading               bool
+	activeTab             InsightsTab
+	weekAnchor            time.Time
+	dashboard             domain.InsightsDashboard
+	weekSummary           *domain.InsightsSummary
+	weekTopics            []domain.InsightsTopic
+	weekActions           []domain.InsightsAction
+	initiatives           []domain.InsightsInitiativePortfolio
+	initiativeSelectedIdx int
+	selectedInitiativeID  *int64
+	initiativeDetail      *domain.InsightsInitiativeDetail
+	distinctTopics        []string
+	topicSelectedIdx      int
+	selectedTopic         string
+	topicTimeline         []domain.InsightsTopicTimeline
+	decisions             []domain.InsightsDecisionWithInitiatives
+	weeklyReport          *domain.InsightsWeeklyReport
 }
 
 type commandPaletteState struct {
@@ -1139,6 +1158,12 @@ func (m Model) loadInsightsTabDataCmd() tea.Cmd {
 				return insightsSummaryLoadedMsg{}
 			case InsightsTabActions:
 				return insightsActionsLoadedMsg{}
+			case InsightsTabInitiatives:
+				return insightsInitiativesLoadedMsg{}
+			case InsightsTabTopics:
+				return insightsTopicsListLoadedMsg{}
+			case InsightsTabDecisions:
+				return insightsDecisionsLoadedMsg{}
 			default:
 				return insightsDashboardLoadedMsg{dashboard: domain.InsightsDashboard{Status: "unavailable"}}
 			}
@@ -1164,9 +1189,56 @@ func (m Model) loadInsightsTabDataCmd() tea.Cmd {
 			actions, err := m.insightsReader.GetActionsForWeek(ctx, weekStart, nextWeek)
 			return insightsActionsLoadedMsg{actions: actions, err: err}
 
+		case InsightsTabInitiatives:
+			initiatives, err := m.insightsReader.GetInitiativePortfolio(ctx)
+			return insightsInitiativesLoadedMsg{initiatives: initiatives, err: err}
+
+		case InsightsTabTopics:
+			topics, err := m.insightsReader.GetDistinctTopics(ctx)
+			return insightsTopicsListLoadedMsg{topics: topics, err: err}
+
+		case InsightsTabDecisions:
+			decisions, err := m.insightsReader.GetDecisionsWithInitiatives(ctx)
+			return insightsDecisionsLoadedMsg{decisions: decisions, err: err}
+
 		default:
 			return nil
 		}
+	}
+}
+
+func (m Model) loadInsightsInitiativeDetailCmd(id int64) tea.Cmd {
+	return func() tea.Msg {
+		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
+			return insightsInitiativeDetailLoadedMsg{}
+		}
+		ctx := context.Background()
+		detail, err := m.insightsReader.GetInitiativeDetail(ctx, id)
+		return insightsInitiativeDetailLoadedMsg{detail: detail, err: err}
+	}
+}
+
+func (m Model) loadInsightsTopicTimelineCmd(topic string) tea.Cmd {
+	return func() tea.Msg {
+		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
+			return insightsTopicTimelineLoadedMsg{}
+		}
+		ctx := context.Background()
+		timeline, err := m.insightsReader.GetTopicTimeline(ctx, topic)
+		return insightsTopicTimelineLoadedMsg{timeline: timeline, err: err}
+	}
+}
+
+func (m Model) loadInsightsWeeklyReportCmd() tea.Cmd {
+	return func() tea.Msg {
+		if m.insightsReader == nil || !m.insightsReader.IsAvailable() {
+			return insightsWeeklyReportLoadedMsg{}
+		}
+		ctx := context.Background()
+		weekStart := m.insightsState.weekAnchor.Format("2006-01-02")
+		nextWeekStart := m.insightsState.weekAnchor.AddDate(0, 0, 7).Format("2006-01-02")
+		report, err := m.insightsReader.GetWeeklyReport(ctx, weekStart, nextWeekStart)
+		return insightsWeeklyReportLoadedMsg{report: report, err: err}
 	}
 }
 
