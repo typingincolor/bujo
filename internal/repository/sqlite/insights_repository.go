@@ -379,7 +379,7 @@ func (r *InsightsRepository) getInitiativeUpdates(ctx context.Context, initiativ
 
 func (r *InsightsRepository) getInitiativePendingActions(ctx context.Context, initiativeID int64) ([]domain.InsightsAction, error) {
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT a.id, a.summary_id, a.action_text, a.priority, a.status,
+		`SELECT DISTINCT a.id, a.summary_id, a.action_text, a.priority, a.status,
 		        COALESCE(a.due_date, ''), a.created_at, s.week_start
 		 FROM actions a
 		 JOIN summaries s ON a.summary_id = s.id
@@ -633,5 +633,5 @@ func (r *InsightsRepository) GetDecisionsWithInitiatives(ctx context.Context) ([
 	if results == nil {
 		return []domain.InsightsDecisionWithInitiatives{}, nil
 	}
-	return results, nil
+	return results, rows.Err()
 }

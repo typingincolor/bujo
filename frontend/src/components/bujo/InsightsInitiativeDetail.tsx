@@ -3,6 +3,7 @@ import { GetInsightsInitiativeDetail } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
 import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
+import { statusColors, priorityColors } from './insights-constants';
 
 interface InsightsInitiativeDetailProps {
   initiativeId: number;
@@ -29,19 +30,6 @@ export function InsightsInitiativeDetailView({ initiativeId, onBack }: InsightsI
     return <div className="text-muted-foreground text-sm">Loading...</div>;
   }
 
-  const statusColors: Record<string, string> = {
-    active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    planned: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    completed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    on_hold: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  };
-
-  const priorityColors: Record<string, string> = {
-    high: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-    low: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-  };
-
   const init = detail.Initiative;
   const status = init?.Status || 'unknown';
 
@@ -59,7 +47,7 @@ export function InsightsInitiativeDetailView({ initiativeId, onBack }: InsightsI
         <div className="flex items-center gap-2 mb-2">
           <h2 className="text-lg font-semibold">{init?.Name}</h2>
           <span className={cn('px-1.5 py-0.5 rounded text-xs', statusColors[status] || statusColors.completed)}>
-            {status.replace('_', ' ')}
+            {status.replace('-', ' ')}
           </span>
         </div>
         {init?.Description && (

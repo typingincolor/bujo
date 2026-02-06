@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { GetInsightsWeeklyReport } from '@/wailsjs/go/wails/App';
 import { domain } from '@/wailsjs/go/models';
-import { cn } from '@/lib/utils';
 import { ArrowLeft } from 'lucide-react';
+import { LevelBadge } from './insights-styles';
 
 interface InsightsWeeklyReportProps {
   weekStart: string;
@@ -34,32 +34,6 @@ export function InsightsWeeklyReport({ weekStart, onBack }: InsightsWeeklyReport
     );
   }
 
-  const importanceBadge = (importance: string) => {
-    const colors: Record<string, string> = {
-      high: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      low: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    };
-    return (
-      <span className={cn('px-1.5 py-0.5 rounded text-xs', colors[importance] || colors.low)}>
-        {importance}
-      </span>
-    );
-  };
-
-  const priorityBadge = (priority: string) => {
-    const colors: Record<string, string> = {
-      high: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      medium: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-      low: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-    };
-    return (
-      <span className={cn('px-1.5 py-0.5 rounded text-xs', colors[priority] || colors.low)}>
-        {priority}
-      </span>
-    );
-  };
-
   return (
     <div className="space-y-4">
       <button
@@ -89,7 +63,7 @@ export function InsightsWeeklyReport({ weekStart, onBack }: InsightsWeeklyReport
           <div className="space-y-2">
             {report.Topics.map((t) => (
               <div key={t.ID} className="flex items-start gap-2">
-                {importanceBadge(t.Importance)}
+                <LevelBadge level={t.Importance} />
                 <div>
                   <span className="text-sm font-medium">{t.Topic}</span>
                   {t.Content && (
@@ -122,7 +96,7 @@ export function InsightsWeeklyReport({ weekStart, onBack }: InsightsWeeklyReport
           <div className="space-y-2">
             {report.Actions.map((a) => (
               <div key={a.ID} className="flex items-start gap-2">
-                {priorityBadge(a.Priority)}
+                <LevelBadge level={a.Priority} />
                 <div className="flex-1">
                   <p className="text-sm">{a.ActionText}</p>
                   {a.DueDate && (

@@ -21,9 +21,11 @@ export function InsightsTopics() {
   const handleSelectTopic = (topic: string) => {
     setSelectedTopic(topic);
     setTimelineError(null);
+    let cancelled = false;
     GetInsightsTopicTimeline(topic)
-      .then((data) => setTimeline(data))
-      .catch((err: Error) => setTimelineError(err.message));
+      .then((data) => { if (!cancelled) setTimeline(data); })
+      .catch((err: Error) => { if (!cancelled) setTimelineError(err.message); });
+    return () => { cancelled = true; };
   };
 
   if (selectedTopic) {
