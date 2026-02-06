@@ -185,6 +185,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statsViewState.stats = msg.stats
 		return m, nil
 
+	case insightsDashboardLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.dashboard = msg.dashboard
+		return m, nil
+
+	case insightsSummaryLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.weekSummary = msg.summary
+		m.insightsState.weekTopics = msg.topics
+		return m, nil
+
+	case insightsActionsLoadedMsg:
+		m.insightsState.loading = false
+		m.insightsState.weekActions = msg.actions
+		return m, nil
+
 	case searchResultsMsg:
 		m.searchView.loading = false
 		m.searchView.results = msg.results
@@ -337,6 +353,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleGoalsMode(msg)
 		case ViewTypeStats:
 			return m.handleStatsMode(msg)
+		case ViewTypeInsights:
+			return m.handleInsightsMode(msg)
 		case ViewTypeSearch:
 			return m.handleSearchViewMode(msg)
 		case ViewTypePendingTasks:
@@ -2525,6 +2543,45 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	return m, nil
 }
+func (m Model) handleInsightsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+	}
+
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch msg.Type {
+	case tea.KeyTab:
+		m.insightsState.activeTab = (m.insightsState.activeTab + 1) % insightsTabCount
+		return m, m.loadInsightsTabDataCmd()
+
+	case tea.KeyShiftTab:
+		m.insightsState.activeTab = (m.insightsState.activeTab - 1 + insightsTabCount) % insightsTabCount
+		return m, m.loadInsightsTabDataCmd()
+	}
+
+	switch string(msg.Runes) {
+	case "h":
+		if m.insightsState.activeTab != InsightsTabDashboard {
+			m.insightsState.weekAnchor = m.insightsState.weekAnchor.AddDate(0, 0, -7)
+			return m, m.loadInsightsTabDataCmd()
+		}
+	case "l":
+		if m.insightsState.activeTab != InsightsTabDashboard {
+			m.insightsState.weekAnchor = m.insightsState.weekAnchor.AddDate(0, 0, 7)
+			return m, m.loadInsightsTabDataCmd()
+		}
+	}
+
+	return m, nil
+}
+
 func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
 		return newModel, cmd
@@ -2719,6 +2776,12 @@ func (m Model) handleViewSwitch(msg tea.KeyMsg) (bool, Model, tea.Cmd) {
 	case key.Matches(msg, m.keyMap.ViewSettings):
 		newView = ViewTypeSettings
 		switched = true
+
+	case key.Matches(msg, m.keyMap.ViewInsights):
+		newView = ViewTypeInsights
+		m.insightsState.loading = true
+		cmd = m.loadInsightsDashboardCmd()
+		switched = true
 	}
 
 	if switched && newView != m.currentView {
@@ -2752,6 +2815,9 @@ func (m Model) handleBack() (Model, tea.Cmd) {
 			cmd = m.loadGoalsCmd()
 		case ViewTypeStats:
 			cmd = m.loadStatsCmd()
+		case ViewTypeInsights:
+			m.insightsState.loading = true
+			cmd = m.loadInsightsDashboardCmd()
 		}
 		return m, cmd
 	}

@@ -161,6 +161,19 @@ type weathersLoadedMsg struct {
 	weathers []string
 }
 
+type insightsDashboardLoadedMsg struct {
+	dashboard domain.InsightsDashboard
+}
+
+type insightsSummaryLoadedMsg struct {
+	summary *domain.InsightsSummary
+	topics  []domain.InsightsTopic
+}
+
+type insightsActionsLoadedMsg struct {
+	actions []domain.InsightsAction
+}
+
 type editorFinishedMsg struct {
 	content string
 	err     error
