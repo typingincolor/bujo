@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/typingincolor/bujo/internal/domain"
 )
@@ -231,8 +232,50 @@ func (s *BujoService) SetLocation(ctx context.Context, date time.Time, location 
 	if dayCtx == nil {
 		dayCtx = &domain.DayContext{Date: date}
 	}
-	dayCtx.Location = &location
+	normalized := normalizeLocation(location)
+	dayCtx.Location = &normalized
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
+}
+
+func normalizeLocation(location string) string {
+	trimmed := strings.TrimSpace(location)
+	if trimmed == "" {
+		return ""
+	}
+	words := strings.Fields(trimmed)
+	for i, word := range words {
+		if isLocationCode(word) {
+			words[i] = strings.ToUpper(word)
+		} else {
+			words[i] = titleCaseWord(word)
+		}
+	}
+	return strings.Join(words, " ")
+}
+
+func isLocationCode(word string) bool {
+	hasLetter := false
+	hasDigit := false
+	for _, r := range word {
+		if unicode.IsLetter(r) {
+			hasLetter = true
+		} else if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+	}
+	return hasLetter && hasDigit
+}
+
+func titleCaseWord(word string) string {
+	if word == "" {
+		return ""
+	}
+	runes := []rune(word)
+	runes[0] = unicode.ToUpper(runes[0])
+	for i := 1; i < len(runes); i++ {
+		runes[i] = unicode.ToLower(runes[i])
+	}
+	return string(runes)
 }
 
 func (s *BujoService) GetLocationHistory(ctx context.Context, from, to time.Time) ([]domain.DayContext, error) {
@@ -262,7 +305,8 @@ func (s *BujoService) SetMood(ctx context.Context, date time.Time, mood string) 
 	if dayCtx == nil {
 		dayCtx = &domain.DayContext{Date: date}
 	}
-	dayCtx.Mood = &mood
+	trimmedMood := strings.TrimSpace(mood)
+	dayCtx.Mood = &trimmedMood
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 
@@ -301,7 +345,8 @@ func (s *BujoService) SetWeather(ctx context.Context, date time.Time, weather st
 	if dayCtx == nil {
 		dayCtx = &domain.DayContext{Date: date}
 	}
-	dayCtx.Weather = &weather
+	trimmedWeather := strings.TrimSpace(weather)
+	dayCtx.Weather = &trimmedWeather
 	return s.dayCtxRepo.Upsert(ctx, *dayCtx)
 }
 

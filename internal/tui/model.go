@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -1465,9 +1466,12 @@ func (m Model) loadLocationsCmd() tea.Cmd {
 		seen := make(map[string]bool)
 		var locations []string
 		for _, dayCtx := range history {
-			if dayCtx.Location != nil && *dayCtx.Location != "" && !seen[*dayCtx.Location] {
-				seen[*dayCtx.Location] = true
-				locations = append(locations, *dayCtx.Location)
+			if dayCtx.Location != nil && *dayCtx.Location != "" {
+				lower := strings.ToLower(*dayCtx.Location)
+				if !seen[lower] {
+					seen[lower] = true
+					locations = append(locations, *dayCtx.Location)
+				}
 			}
 		}
 		return locationsLoadedMsg{locations: locations}

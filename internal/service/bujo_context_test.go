@@ -265,6 +265,103 @@ func TestBujoService_ClearWeather(t *testing.T) {
 	assert.Nil(t, weather)
 }
 
+func TestBujoService_SetLocation_TrimsWhitespace(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetLocation(ctx, today, "  Office  ")
+	require.NoError(t, err)
+
+	location, err := service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, location)
+	assert.Equal(t, "Office", *location)
+}
+
+func TestBujoService_SetLocation_NormalizesToTitleCase(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetLocation(ctx, today, "london office")
+	require.NoError(t, err)
+
+	location, err := service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, location)
+	assert.Equal(t, "London Office", *location)
+}
+
+func TestBujoService_SetLocation_PreservesBuildingCodes(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetLocation(ctx, today, "AMS20")
+	require.NoError(t, err)
+
+	location, err := service.GetLocation(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, location)
+	assert.Equal(t, "AMS20", *location)
+}
+
+func TestNormalizeLocation(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"home", "Home"},
+		{"Home", "Home"},
+		{"HOME", "Home"},
+		{"london office", "London Office"},
+		{"London Office", "London Office"},
+		{"LONDON OFFICE", "London Office"},
+		{"AMS20", "AMS20"},
+		{"ams20", "AMS20"},
+		{"MAN8", "MAN8"},
+		{"man8", "MAN8"},
+		{"ABC10", "ABC10"},
+		{"  home  ", "Home"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, normalizeLocation(tt.input))
+		})
+	}
+}
+
+func TestBujoService_SetMood_TrimsWhitespace(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetMood(ctx, today, "  Happy  ")
+	require.NoError(t, err)
+
+	mood, err := service.GetMood(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, mood)
+	assert.Equal(t, "Happy", *mood)
+}
+
+func TestBujoService_SetWeather_TrimsWhitespace(t *testing.T) {
+	service, _, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	err := service.SetWeather(ctx, today, "  Sunny  ")
+	require.NoError(t, err)
+
+	weather, err := service.GetWeather(ctx, today)
+	require.NoError(t, err)
+	require.NotNil(t, weather)
+	assert.Equal(t, "Sunny", *weather)
+}
+
 func TestBujoService_GetOutstandingTasks(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()

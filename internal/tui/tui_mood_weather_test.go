@@ -382,6 +382,23 @@ func TestWeather_WKeyNoOpInSearchView(t *testing.T) {
 	}
 }
 
+func TestMergePresets_CaseInsensitiveDedup(t *testing.T) {
+	defaults := []string{"happy", "sad"}
+	history := []string{"Happy", "excited"}
+
+	result := mergePresets(defaults, history)
+
+	expected := []string{"happy", "sad", "excited"}
+	if len(result) != len(expected) {
+		t.Fatalf("expected %d presets, got %d: %v", len(expected), len(result), result)
+	}
+	for i, v := range expected {
+		if result[i] != v {
+			t.Errorf("expected result[%d]=%q, got %q", i, v, result[i])
+		}
+	}
+}
+
 func TestMood_MKeyWorksInReviewView(t *testing.T) {
 	model := New(nil)
 	model.width = 80

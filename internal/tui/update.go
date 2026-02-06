@@ -1168,9 +1168,12 @@ func (m Model) loadMoodsCmd() tea.Cmd {
 		seen := make(map[string]bool)
 		var moods []string
 		for _, dayCtx := range history {
-			if dayCtx.Mood != nil && *dayCtx.Mood != "" && !seen[*dayCtx.Mood] {
-				seen[*dayCtx.Mood] = true
-				moods = append(moods, *dayCtx.Mood)
+			if dayCtx.Mood != nil && *dayCtx.Mood != "" {
+				lower := strings.ToLower(*dayCtx.Mood)
+				if !seen[lower] {
+					seen[lower] = true
+					moods = append(moods, *dayCtx.Mood)
+				}
 			}
 		}
 		return moodsLoadedMsg{moods: moods}
@@ -1192,9 +1195,12 @@ func (m Model) loadWeathersCmd() tea.Cmd {
 		seen := make(map[string]bool)
 		var weathers []string
 		for _, dayCtx := range history {
-			if dayCtx.Weather != nil && *dayCtx.Weather != "" && !seen[*dayCtx.Weather] {
-				seen[*dayCtx.Weather] = true
-				weathers = append(weathers, *dayCtx.Weather)
+			if dayCtx.Weather != nil && *dayCtx.Weather != "" {
+				lower := strings.ToLower(*dayCtx.Weather)
+				if !seen[lower] {
+					seen[lower] = true
+					weathers = append(weathers, *dayCtx.Weather)
+				}
 			}
 		}
 		return weathersLoadedMsg{weathers: weathers}
@@ -1226,11 +1232,12 @@ func mergePresets(defaults []string, history []string) []string {
 	result := make([]string, len(defaults))
 	copy(result, defaults)
 	for _, d := range defaults {
-		seen[d] = true
+		seen[strings.ToLower(d)] = true
 	}
 	for _, h := range history {
-		if !seen[h] {
-			seen[h] = true
+		lower := strings.ToLower(h)
+		if !seen[lower] {
+			seen[lower] = true
 			result = append(result, h)
 		}
 	}
