@@ -22,39 +22,44 @@ func TestMood_MKeyActivatesMoodMode(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if !m.setMoodMode.active {
-		t.Error("expected setMoodMode to be active after pressing 'm'")
+	if !m.presetPicker.active {
+		t.Error("expected preset picker to be active after pressing 'm'")
 	}
-	if !m.setMoodMode.pickerMode {
+	if m.presetPicker.kind != pickerMood {
+		t.Error("expected picker kind to be pickerMood")
+	}
+	if !m.presetPicker.pickerMode {
 		t.Error("expected pickerMode to be true")
 	}
 }
 
 func TestMood_EscCancelsMoodMode(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:     true,
 		pickerMode: true,
+		kind:       pickerMood,
 		input:      textinput.New(),
-		presets:    moodPresets,
+		items:      moodPresets,
 	}
 
 	msg := tea.KeyMsg{Type: tea.KeyEsc}
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.active {
-		t.Error("expected setMoodMode to be inactive after Esc")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Esc")
 	}
 }
 
 func TestMood_UpDownNavigatesPresets(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       textinput.New(),
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: 0,
 	}
 
@@ -62,26 +67,27 @@ func TestMood_UpDownNavigatesPresets(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.selectedIdx != 1 {
-		t.Errorf("expected selectedIdx=1 after Down, got %d", m.setMoodMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx=1 after Down, got %d", m.presetPicker.selectedIdx)
 	}
 
 	msg = tea.KeyMsg{Type: tea.KeyUp}
 	updated, _ = m.Update(msg)
 	m = updated.(Model)
 
-	if m.setMoodMode.selectedIdx != 0 {
-		t.Errorf("expected selectedIdx=0 after Up, got %d", m.setMoodMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx=0 after Up, got %d", m.presetPicker.selectedIdx)
 	}
 }
 
 func TestMood_UpDoesNotGoBelowZero(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       textinput.New(),
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: 0,
 	}
 
@@ -89,18 +95,19 @@ func TestMood_UpDoesNotGoBelowZero(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.selectedIdx != 0 {
-		t.Errorf("expected selectedIdx=0, got %d", m.setMoodMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx=0, got %d", m.presetPicker.selectedIdx)
 	}
 }
 
 func TestMood_DownDoesNotExceedPresets(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       textinput.New(),
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: len(moodPresets) - 1,
 	}
 
@@ -108,18 +115,19 @@ func TestMood_DownDoesNotExceedPresets(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.selectedIdx != len(moodPresets)-1 {
-		t.Errorf("expected selectedIdx=%d, got %d", len(moodPresets)-1, m.setMoodMode.selectedIdx)
+	if m.presetPicker.selectedIdx != len(moodPresets)-1 {
+		t.Errorf("expected selectedIdx=%d, got %d", len(moodPresets)-1, m.presetPicker.selectedIdx)
 	}
 }
 
 func TestMood_EnterSubmitsSelectedPreset(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       textinput.New(),
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: 2,
 	}
 
@@ -127,8 +135,8 @@ func TestMood_EnterSubmitsSelectedPreset(t *testing.T) {
 	updated, cmd := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.active {
-		t.Error("expected setMoodMode to be inactive after Enter")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Enter")
 	}
 	if cmd == nil {
 		t.Error("expected a command to be returned")
@@ -139,11 +147,12 @@ func TestMood_EnterSubmitsCustomInput(t *testing.T) {
 	model := newJournalModel()
 	input := textinput.New()
 	input.SetValue("energetic")
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       input,
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: 0,
 	}
 
@@ -151,8 +160,8 @@ func TestMood_EnterSubmitsCustomInput(t *testing.T) {
 	updated, cmd := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.active {
-		t.Error("expected setMoodMode to be inactive after Enter")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Enter")
 	}
 	if cmd == nil {
 		t.Error("expected a command to be returned")
@@ -161,19 +170,20 @@ func TestMood_EnterSubmitsCustomInput(t *testing.T) {
 
 func TestMood_EnterNoOpOnEmptyInput(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:     true,
 		pickerMode: false,
+		kind:       pickerMood,
 		input:      textinput.New(),
-		presets:    nil,
+		items:      nil,
 	}
 
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
 	updated, cmd := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.active {
-		t.Error("expected setMoodMode to be inactive after Enter")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Enter")
 	}
 	if cmd != nil {
 		t.Error("expected no command when input is empty and no presets")
@@ -194,15 +204,18 @@ func TestMood_PresetsContainExpectedValues(t *testing.T) {
 
 func TestMood_RenderShowsPresets(t *testing.T) {
 	model := newJournalModel()
-	model.setMoodMode = setMoodState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerMood,
 		input:       textinput.New(),
-		presets:     moodPresets,
+		items:       moodPresets,
 		selectedIdx: 0,
+		title:       "Set mood:",
+		pickerLabel: "Mood presets:",
 	}
 
-	output := model.renderSetMoodInput()
+	output := model.renderPresetPicker()
 	if output == "" {
 		t.Error("expected non-empty render output")
 	}
@@ -217,39 +230,44 @@ func TestWeather_WKeyActivatesWeatherMode(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if !m.setWeatherMode.active {
-		t.Error("expected setWeatherMode to be active after pressing 'W'")
+	if !m.presetPicker.active {
+		t.Error("expected preset picker to be active after pressing 'W'")
 	}
-	if !m.setWeatherMode.pickerMode {
+	if m.presetPicker.kind != pickerWeather {
+		t.Error("expected picker kind to be pickerWeather")
+	}
+	if !m.presetPicker.pickerMode {
 		t.Error("expected pickerMode to be true")
 	}
 }
 
 func TestWeather_EscCancelsWeatherMode(t *testing.T) {
 	model := newJournalModel()
-	model.setWeatherMode = setWeatherState{
+	model.presetPicker = presetPickerState{
 		active:     true,
 		pickerMode: true,
+		kind:       pickerWeather,
 		input:      textinput.New(),
-		presets:    weatherPresets,
+		items:      weatherPresets,
 	}
 
 	msg := tea.KeyMsg{Type: tea.KeyEsc}
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setWeatherMode.active {
-		t.Error("expected setWeatherMode to be inactive after Esc")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Esc")
 	}
 }
 
 func TestWeather_UpDownNavigatesPresets(t *testing.T) {
 	model := newJournalModel()
-	model.setWeatherMode = setWeatherState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerWeather,
 		input:       textinput.New(),
-		presets:     weatherPresets,
+		items:       weatherPresets,
 		selectedIdx: 0,
 	}
 
@@ -257,26 +275,27 @@ func TestWeather_UpDownNavigatesPresets(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setWeatherMode.selectedIdx != 1 {
-		t.Errorf("expected selectedIdx=1 after Down, got %d", m.setWeatherMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx=1 after Down, got %d", m.presetPicker.selectedIdx)
 	}
 
 	msg = tea.KeyMsg{Type: tea.KeyUp}
 	updated, _ = m.Update(msg)
 	m = updated.(Model)
 
-	if m.setWeatherMode.selectedIdx != 0 {
-		t.Errorf("expected selectedIdx=0 after Up, got %d", m.setWeatherMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 0 {
+		t.Errorf("expected selectedIdx=0 after Up, got %d", m.presetPicker.selectedIdx)
 	}
 }
 
 func TestWeather_EnterSubmitsSelectedPreset(t *testing.T) {
 	model := newJournalModel()
-	model.setWeatherMode = setWeatherState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerWeather,
 		input:       textinput.New(),
-		presets:     weatherPresets,
+		items:       weatherPresets,
 		selectedIdx: 1,
 	}
 
@@ -284,8 +303,8 @@ func TestWeather_EnterSubmitsSelectedPreset(t *testing.T) {
 	updated, cmd := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setWeatherMode.active {
-		t.Error("expected setWeatherMode to be inactive after Enter")
+	if m.presetPicker.active {
+		t.Error("expected preset picker to be inactive after Enter")
 	}
 	if cmd == nil {
 		t.Error("expected a command to be returned")
@@ -306,15 +325,18 @@ func TestWeather_PresetsContainExpectedValues(t *testing.T) {
 
 func TestWeather_RenderShowsPresets(t *testing.T) {
 	model := newJournalModel()
-	model.setWeatherMode = setWeatherState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerWeather,
 		input:       textinput.New(),
-		presets:     weatherPresets,
+		items:       weatherPresets,
 		selectedIdx: 0,
+		title:       "Set weather:",
+		pickerLabel: "Weather presets:",
 	}
 
-	output := model.renderSetWeatherInput()
+	output := model.renderPresetPicker()
 	if output == "" {
 		t.Error("expected non-empty render output")
 	}
@@ -335,8 +357,8 @@ func TestMood_MKeyNoOpInSearchView(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setMoodMode.active {
-		t.Error("expected setMoodMode NOT to activate in search view")
+	if m.presetPicker.active {
+		t.Error("expected preset picker NOT to activate in search view")
 	}
 }
 
@@ -355,8 +377,8 @@ func TestWeather_WKeyNoOpInSearchView(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if m.setWeatherMode.active {
-		t.Error("expected setWeatherMode NOT to activate in search view")
+	if m.presetPicker.active {
+		t.Error("expected preset picker NOT to activate in search view")
 	}
 }
 
@@ -370,7 +392,7 @@ func TestMood_MKeyWorksInReviewView(t *testing.T) {
 	updated, _ := model.Update(msg)
 	m := updated.(Model)
 
-	if !m.setMoodMode.active {
-		t.Error("expected setMoodMode to be active in review view")
+	if !m.presetPicker.active {
+		t.Error("expected preset picker to be active in review view")
 	}
 }

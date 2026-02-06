@@ -194,11 +194,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.insightsState.loading = false
 		m.insightsState.weekSummary = msg.summary
 		m.insightsState.weekTopics = msg.topics
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
 		return m, nil
 
 	case insightsActionsLoadedMsg:
 		m.insightsState.loading = false
 		m.insightsState.weekActions = msg.actions
+		if msg.err != nil {
+			m.err = fmt.Errorf("insights: %w", msg.err)
+		}
 		return m, nil
 
 	case searchResultsMsg:
@@ -231,15 +237,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case locationsLoadedMsg:
-		m.setLocationMode.locations = msg.locations
+		m.presetPicker.items = msg.locations
 		return m, nil
 
 	case moodsLoadedMsg:
-		m.setMoodMode.presets = mergePresets(moodPresets, msg.moods)
+		m.presetPicker.items = mergePresets(m.presetPicker.defaultItems, msg.moods)
 		return m, nil
 
 	case weathersLoadedMsg:
-		m.setWeatherMode.presets = mergePresets(weatherPresets, msg.weathers)
+		m.presetPicker.items = mergePresets(m.presetPicker.defaultItems, msg.weathers)
 		return m, nil
 
 	case editorFinishedMsg:
@@ -293,14 +299,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.searchMode.active {
 			return m.handleSearchMode(msg)
 		}
-		if m.setLocationMode.active {
-			return m.handleSetLocationMode(msg)
-		}
-		if m.setMoodMode.active {
-			return m.handleSetMoodMode(msg)
-		}
-		if m.setWeatherMode.active {
-			return m.handleSetWeatherMode(msg)
+		if m.presetPicker.active {
+			return m.handlePresetPicker(msg)
 		}
 		if m.commandPalette.active {
 			return m.handleCommandPaletteMode(msg)
@@ -722,45 +722,15 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keyMap.SetLocation):
-		input := textinput.New()
-		input.Placeholder = "Enter location..."
-		input.Focus()
-		m.setLocationMode = setLocationState{
-			active:      true,
-			pickerMode:  true,
-			date:        m.viewDate,
-			input:       input,
-			locations:   nil,
-			selectedIdx: 0,
-		}
+		m.presetPicker = newPresetPicker(pickerLocation, m.viewDate, "Enter location...", "Set location:", "Previous locations:", nil)
 		return m, m.loadLocationsCmd()
 
 	case key.Matches(msg, m.keyMap.SetMood):
-		input := textinput.New()
-		input.Placeholder = "Enter mood..."
-		input.Focus()
-		m.setMoodMode = setMoodState{
-			active:      true,
-			pickerMode:  true,
-			date:        m.viewDate,
-			input:       input,
-			presets:     moodPresets,
-			selectedIdx: 0,
-		}
+		m.presetPicker = newPresetPicker(pickerMood, m.viewDate, "Enter mood...", "Set mood:", "Mood presets:", moodPresets)
 		return m, m.loadMoodsCmd()
 
 	case key.Matches(msg, m.keyMap.SetWeather):
-		input := textinput.New()
-		input.Placeholder = "Enter weather..."
-		input.Focus()
-		m.setWeatherMode = setWeatherState{
-			active:      true,
-			pickerMode:  true,
-			date:        m.viewDate,
-			input:       input,
-			presets:     weatherPresets,
-			selectedIdx: 0,
-		}
+		m.presetPicker = newPresetPicker(pickerWeather, m.viewDate, "Enter weather...", "Set weather:", "Weather presets:", weatherPresets)
 		return m, m.loadWeathersCmd()
 
 	case key.Matches(msg, m.keyMap.Capture):
@@ -1119,164 +1089,63 @@ func (m Model) gotoDateCmd(dateStr string) tea.Cmd {
 	}
 }
 
-func (m Model) handleSetLocationMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m Model) handlePresetPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		m.setLocationMode.active = false
+		m.presetPicker.active = false
 		return m, nil
 
 	case tea.KeyUp:
-		if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
-			if m.setLocationMode.selectedIdx > 0 {
-				m.setLocationMode.selectedIdx--
+		if m.presetPicker.pickerMode && len(m.presetPicker.items) > 0 {
+			if m.presetPicker.selectedIdx > 0 {
+				m.presetPicker.selectedIdx--
 			}
 			return m, nil
 		}
 
 	case tea.KeyDown:
-		if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
-			if m.setLocationMode.selectedIdx < len(m.setLocationMode.locations)-1 {
-				m.setLocationMode.selectedIdx++
+		if m.presetPicker.pickerMode && len(m.presetPicker.items) > 0 {
+			if m.presetPicker.selectedIdx < len(m.presetPicker.items)-1 {
+				m.presetPicker.selectedIdx++
 			}
 			return m, nil
 		}
 
 	case tea.KeyEnter:
-		var location string
-		inputValue := m.setLocationMode.input.Value()
+		var value string
+		inputValue := m.presetPicker.input.Value()
 		if inputValue != "" {
-			location = inputValue
-		} else if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
-			location = m.setLocationMode.locations[m.setLocationMode.selectedIdx]
+			value = inputValue
+		} else if m.presetPicker.pickerMode && len(m.presetPicker.items) > 0 {
+			value = m.presetPicker.items[m.presetPicker.selectedIdx]
 		}
-		m.setLocationMode.active = false
-		if location == "" {
+		m.presetPicker.active = false
+		if value == "" {
 			return m, nil
 		}
-		return m, m.setLocationCmd(m.setLocationMode.date, location)
+		return m, m.submitPresetPickerCmd(m.presetPicker.kind, m.presetPicker.date, value)
 	}
 
 	var cmd tea.Cmd
-	m.setLocationMode.input, cmd = m.setLocationMode.input.Update(msg)
+	m.presetPicker.input, cmd = m.presetPicker.input.Update(msg)
 	return m, cmd
 }
 
-func (m Model) setLocationCmd(date time.Time, location string) tea.Cmd {
-	return func() tea.Msg {
-		ctx := context.Background()
-		err := m.bujoService.SetLocation(ctx, date, location)
-		if err != nil {
-			return errMsg{err}
-		}
-		return agendaReloadNeededMsg{}
-	}
-}
-
-func (m Model) handleSetMoodMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.setMoodMode.active = false
-		return m, nil
-
-	case tea.KeyUp:
-		if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
-			if m.setMoodMode.selectedIdx > 0 {
-				m.setMoodMode.selectedIdx--
-			}
-			return m, nil
-		}
-
-	case tea.KeyDown:
-		if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
-			if m.setMoodMode.selectedIdx < len(m.setMoodMode.presets)-1 {
-				m.setMoodMode.selectedIdx++
-			}
-			return m, nil
-		}
-
-	case tea.KeyEnter:
-		var mood string
-		inputValue := m.setMoodMode.input.Value()
-		if inputValue != "" {
-			mood = inputValue
-		} else if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
-			mood = m.setMoodMode.presets[m.setMoodMode.selectedIdx]
-		}
-		m.setMoodMode.active = false
-		if mood == "" {
-			return m, nil
-		}
-		return m, m.setMoodCmd(m.setMoodMode.date, mood)
-	}
-
-	var cmd tea.Cmd
-	m.setMoodMode.input, cmd = m.setMoodMode.input.Update(msg)
-	return m, cmd
-}
-
-func (m Model) setMoodCmd(date time.Time, mood string) tea.Cmd {
+func (m Model) submitPresetPickerCmd(kind presetPickerKind, date time.Time, value string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 		if m.bujoService == nil {
 			return nil
 		}
-		err := m.bujoService.SetMood(ctx, date, mood)
-		if err != nil {
-			return errMsg{err}
+		var err error
+		switch kind {
+		case pickerLocation:
+			err = m.bujoService.SetLocation(ctx, date, value)
+		case pickerMood:
+			err = m.bujoService.SetMood(ctx, date, value)
+		case pickerWeather:
+			err = m.bujoService.SetWeather(ctx, date, value)
 		}
-		return agendaReloadNeededMsg{}
-	}
-}
-
-func (m Model) handleSetWeatherMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyEsc:
-		m.setWeatherMode.active = false
-		return m, nil
-
-	case tea.KeyUp:
-		if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
-			if m.setWeatherMode.selectedIdx > 0 {
-				m.setWeatherMode.selectedIdx--
-			}
-			return m, nil
-		}
-
-	case tea.KeyDown:
-		if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
-			if m.setWeatherMode.selectedIdx < len(m.setWeatherMode.presets)-1 {
-				m.setWeatherMode.selectedIdx++
-			}
-			return m, nil
-		}
-
-	case tea.KeyEnter:
-		var weather string
-		inputValue := m.setWeatherMode.input.Value()
-		if inputValue != "" {
-			weather = inputValue
-		} else if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
-			weather = m.setWeatherMode.presets[m.setWeatherMode.selectedIdx]
-		}
-		m.setWeatherMode.active = false
-		if weather == "" {
-			return m, nil
-		}
-		return m, m.setWeatherCmd(m.setWeatherMode.date, weather)
-	}
-
-	var cmd tea.Cmd
-	m.setWeatherMode.input, cmd = m.setWeatherMode.input.Update(msg)
-	return m, cmd
-}
-
-func (m Model) setWeatherCmd(date time.Time, weather string) tea.Cmd {
-	return func() tea.Msg {
-		ctx := context.Background()
-		if m.bujoService == nil {
-			return nil
-		}
-		err := m.bujoService.SetWeather(ctx, date, weather)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -1329,6 +1198,26 @@ func (m Model) loadWeathersCmd() tea.Cmd {
 			}
 		}
 		return weathersLoadedMsg{weathers: weathers}
+	}
+}
+
+func newPresetPicker(kind presetPickerKind, date time.Time, placeholder, title, pickerLabel string, defaults []string) presetPickerState {
+	input := textinput.New()
+	input.Placeholder = placeholder
+	input.Focus()
+	items := make([]string, len(defaults))
+	copy(items, defaults)
+	return presetPickerState{
+		active:       true,
+		pickerMode:   true,
+		kind:         kind,
+		date:         date,
+		input:        input,
+		items:        items,
+		defaultItems: defaults,
+		selectedIdx:  0,
+		title:        title,
+		pickerLabel:  pickerLabel,
 	}
 }
 
@@ -1637,6 +1526,76 @@ func (m Model) handleHabitsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m Model) handleEntryActions(entry domain.Entry, msg tea.KeyMsg) (Model, tea.Cmd, bool) {
+	switch {
+	case key.Matches(msg, m.keyMap.Done):
+		return m, m.toggleDoneForEntryCmd(entry), true
+
+	case key.Matches(msg, m.keyMap.CancelEntry):
+		if !entry.CanCancel() {
+			return m, nil, true
+		}
+		return m, m.cancelForEntryCmd(entry), true
+
+	case key.Matches(msg, m.keyMap.UncancelEntry):
+		if !entry.CanUncancel() {
+			return m, nil, true
+		}
+		return m, m.uncancelForEntryCmd(entry), true
+
+	case key.Matches(msg, m.keyMap.Edit):
+		ti := textinput.New()
+		ti.SetValue(entry.Content)
+		ti.Focus()
+		ti.CharLimit = 256
+		ti.Width = m.width - 10
+		m.editMode = editState{
+			active:  true,
+			entryID: entry.ID,
+			input:   ti,
+		}
+		return m, nil, true
+
+	case key.Matches(msg, m.keyMap.Delete):
+		m.confirmMode.active = true
+		m.confirmMode.entryID = entry.ID
+		return m, nil, true
+
+	case key.Matches(msg, m.keyMap.Priority):
+		newPriority := entry.Priority.Cycle()
+		return m, m.cyclePriorityCmd(entry.ID, newPriority), true
+
+	case key.Matches(msg, m.keyMap.Retype):
+		if !entry.CanCycleType() {
+			return m, nil, true
+		}
+		m.retypeMode = retypeState{
+			active:      true,
+			entryID:     entry.ID,
+			selectedIdx: 0,
+		}
+		return m, nil, true
+
+	case key.Matches(msg, m.keyMap.Answer):
+		if entry.Type != domain.EntryTypeQuestion {
+			return m, nil, true
+		}
+		ti := textinput.New()
+		ti.Placeholder = "Enter your answer..."
+		ti.Focus()
+		ti.CharLimit = 512
+		ti.Width = m.width - 10
+		m.answerMode = answerState{
+			active:     true,
+			questionID: entry.ID,
+			input:      ti,
+		}
+		return m, nil, true
+	}
+
+	return m, nil, false
+}
+
 func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
 		return newModel, cmd
@@ -1689,137 +1648,43 @@ func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+	}
 
-	case key.Matches(msg, m.keyMap.Done):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
+	if len(m.pendingTasksState.entries) > 0 {
 		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		return m, m.toggleDoneForEntryCmd(entry)
 
-	case key.Matches(msg, m.keyMap.CancelEntry):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
+		if newM, cmd, handled := m.handleEntryActions(entry, msg); handled {
+			return newM, cmd
 		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if !entry.CanCancel() {
-			return m, nil
-		}
-		return m, m.cancelForEntryCmd(entry)
 
-	case key.Matches(msg, m.keyMap.UncancelEntry):
-		if len(m.pendingTasksState.entries) == 0 {
+		switch {
+		case key.Matches(msg, m.keyMap.Migrate):
+			if entry.Type != domain.EntryTypeTask {
+				return m, nil
+			}
+			ti := textinput.New()
+			ti.Placeholder = "tomorrow, next monday, 2026-01-15"
+			ti.Focus()
+			ti.CharLimit = 64
+			ti.Width = m.width - 10
+			fromDate := m.viewDate
+			if entry.ScheduledDate != nil {
+				fromDate = *entry.ScheduledDate
+			}
+			m.migrateMode = migrateState{
+				active:   true,
+				entryID:  entry.ID,
+				fromDate: fromDate,
+				input:    ti,
+			}
 			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if !entry.CanUncancel() {
-			return m, nil
-		}
-		return m, m.uncancelForEntryCmd(entry)
 
-	case key.Matches(msg, m.keyMap.Edit):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
+		case key.Matches(msg, m.keyMap.MoveToList):
+			if !entry.CanMoveToList() {
+				return m, nil
+			}
+			return m, m.loadListsForMoveCmd(entry.ID)
 		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		ti := textinput.New()
-		ti.SetValue(entry.Content)
-		ti.Focus()
-		ti.CharLimit = 256
-		ti.Width = m.width - 10
-		m.editMode = editState{
-			active:  true,
-			entryID: entry.ID,
-			input:   ti,
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Delete):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		m.confirmMode.active = true
-		m.confirmMode.entryID = entry.ID
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Migrate):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if entry.Type != domain.EntryTypeTask {
-			return m, nil
-		}
-		ti := textinput.New()
-		ti.Placeholder = "tomorrow, next monday, 2026-01-15"
-		ti.Focus()
-		ti.CharLimit = 64
-		ti.Width = m.width - 10
-		fromDate := m.viewDate
-		if entry.ScheduledDate != nil {
-			fromDate = *entry.ScheduledDate
-		}
-		m.migrateMode = migrateState{
-			active:   true,
-			entryID:  entry.ID,
-			fromDate: fromDate,
-			input:    ti,
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Retype):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if !entry.CanCycleType() {
-			return m, nil
-		}
-		m.retypeMode = retypeState{
-			active:      true,
-			entryID:     entry.ID,
-			selectedIdx: 0,
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Priority):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		newPriority := entry.Priority.Cycle()
-		return m, m.cyclePriorityCmd(entry.ID, newPriority)
-
-	case key.Matches(msg, m.keyMap.Answer):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if entry.Type != domain.EntryTypeQuestion {
-			return m, nil
-		}
-		ti := textinput.New()
-		ti.Placeholder = "Enter your answer..."
-		ti.Focus()
-		ti.CharLimit = 512
-		ti.Width = m.width - 10
-		m.answerMode = answerState{
-			active:     true,
-			questionID: entry.ID,
-			input:      ti,
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.MoveToList):
-		if len(m.pendingTasksState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.pendingTasksState.entries[m.pendingTasksState.selectedIdx]
-		if !entry.CanMoveToList() {
-			return m, nil
-		}
-		return m, m.loadListsForMoveCmd(entry.ID)
 	}
 
 	return m, nil
@@ -1874,78 +1739,13 @@ func (m Model) handleQuestionsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case key.Matches(msg, m.keyMap.Done):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		return m, m.toggleDoneForEntryCmd(entry)
+	}
 
-	case key.Matches(msg, m.keyMap.CancelEntry):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
+	if len(m.questionsState.entries) > 0 {
 		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		if !entry.CanCancel() {
-			return m, nil
+		if newM, cmd, handled := m.handleEntryActions(entry, msg); handled {
+			return newM, cmd
 		}
-		return m, m.cancelForEntryCmd(entry)
-
-	case key.Matches(msg, m.keyMap.UncancelEntry):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		if !entry.CanUncancel() {
-			return m, nil
-		}
-		return m, m.uncancelForEntryCmd(entry)
-
-	case key.Matches(msg, m.keyMap.Edit):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		ti := textinput.New()
-		ti.SetValue(entry.Content)
-		ti.Focus()
-		ti.CharLimit = 256
-		ti.Width = m.width - 10
-		m.editMode = editState{
-			active:  true,
-			entryID: entry.ID,
-			input:   ti,
-		}
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Delete):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		m.confirmMode.active = true
-		m.confirmMode.entryID = entry.ID
-		return m, nil
-
-	case key.Matches(msg, m.keyMap.Answer):
-		if len(m.questionsState.entries) == 0 {
-			return m, nil
-		}
-		entry := m.questionsState.entries[m.questionsState.selectedIdx]
-		if entry.Type != domain.EntryTypeQuestion {
-			return m, nil
-		}
-		ti := textinput.New()
-		ti.Placeholder = "Enter your answer..."
-		ti.Focus()
-		ti.CharLimit = 512
-		ti.Width = m.width - 10
-		m.answerMode = answerState{
-			active:     true,
-			questionID: entry.ID,
-			input:      ti,
-		}
-		return m, nil
 	}
 
 	return m, nil
@@ -2544,16 +2344,16 @@ func (m Model) handleStatsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 func (m Model) handleInsightsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
 	switch {
 	case key.Matches(msg, m.keyMap.Quit):
 		return m.handleQuit()
 
 	case key.Matches(msg, m.keyMap.Back):
 		return m.handleBack()
-	}
-
-	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
-		return newModel, cmd
 	}
 
 	switch msg.Type {
@@ -2645,71 +2445,8 @@ func (m Model) handleSearchViewMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	if len(m.searchView.results) > 0 && m.searchView.selectedIdx < len(m.searchView.results) {
 		entry := m.searchView.results[m.searchView.selectedIdx]
-
-		switch {
-		case key.Matches(msg, m.keyMap.Done):
-			return m, m.toggleDoneForEntryCmd(entry)
-
-		case key.Matches(msg, m.keyMap.CancelEntry):
-			if !entry.CanCancel() {
-				return m, nil
-			}
-			return m, m.cancelForEntryCmd(entry)
-
-		case key.Matches(msg, m.keyMap.UncancelEntry):
-			if !entry.CanUncancel() {
-				return m, nil
-			}
-			return m, m.uncancelForEntryCmd(entry)
-
-		case key.Matches(msg, m.keyMap.Edit):
-			ti := textinput.New()
-			ti.SetValue(entry.Content)
-			ti.Focus()
-			ti.CharLimit = 256
-			ti.Width = m.width - 10
-			m.editMode = editState{
-				active:  true,
-				entryID: entry.ID,
-				input:   ti,
-			}
-			return m, nil
-
-		case key.Matches(msg, m.keyMap.Delete):
-			m.confirmMode.active = true
-			m.confirmMode.entryID = entry.ID
-			return m, nil
-
-		case key.Matches(msg, m.keyMap.Priority):
-			newPriority := entry.Priority.Cycle()
-			return m, m.cyclePriorityCmd(entry.ID, newPriority)
-
-		case key.Matches(msg, m.keyMap.Retype):
-			if !entry.CanCycleType() {
-				return m, nil
-			}
-			m.retypeMode = retypeState{
-				active:      true,
-				entryID:     entry.ID,
-				selectedIdx: 0,
-			}
-			return m, nil
-
-		case key.Matches(msg, m.keyMap.Answer):
-			if entry.Type != domain.EntryTypeQuestion {
-				return m, nil
-			}
-			ti := textinput.New()
-			ti.Placeholder = "Enter your answer..."
-			ti.Focus()
-			ti.CharLimit = 512
-			ti.Width = m.width - 10
-			m.answerMode = answerState{
-				active:     true,
-				questionID: entry.ID,
-				input:      ti,
-			}
-			return m, nil
+		if newM, cmd, handled := m.handleEntryActions(entry, msg); handled {
+			return newM, cmd
 		}
 	}
 

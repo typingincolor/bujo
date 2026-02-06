@@ -73,17 +73,9 @@ func (m Model) View() string {
 		sb.WriteString("\n")
 		sb.WriteString(m.renderGotoInput())
 		sb.WriteString("\n")
-	} else if m.setLocationMode.active {
+	} else if m.presetPicker.active {
 		sb.WriteString("\n")
-		sb.WriteString(m.renderSetLocationInput())
-		sb.WriteString("\n")
-	} else if m.setMoodMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderSetMoodInput())
-		sb.WriteString("\n")
-	} else if m.setWeatherMode.active {
-		sb.WriteString("\n")
-		sb.WriteString(m.renderSetWeatherInput())
+		sb.WriteString(m.renderPresetPicker())
 		sb.WriteString("\n")
 	} else if m.searchMode.active {
 		sb.WriteString("\n")
@@ -624,62 +616,18 @@ func (m Model) renderGotoInput() string {
 	return ConfirmStyle.Render(sb.String())
 }
 
-func (m Model) renderSetLocationInput() string {
+func (m Model) renderPresetPicker() string {
 	var sb strings.Builder
-	sb.WriteString("Set location:\n")
-	sb.WriteString(m.setLocationMode.input.View())
+	sb.WriteString(m.presetPicker.title + "\n")
+	sb.WriteString(m.presetPicker.input.View())
 
-	if m.setLocationMode.pickerMode && len(m.setLocationMode.locations) > 0 {
-		sb.WriteString("\n\nPrevious locations:\n")
-		for i, loc := range m.setLocationMode.locations {
-			if i == m.setLocationMode.selectedIdx {
-				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", loc)))
+	if m.presetPicker.pickerMode && len(m.presetPicker.items) > 0 {
+		sb.WriteString("\n\n" + m.presetPicker.pickerLabel + "\n")
+		for i, item := range m.presetPicker.items {
+			if i == m.presetPicker.selectedIdx {
+				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", item)))
 			} else {
-				sb.WriteString(fmt.Sprintf("    %s", loc))
-			}
-			sb.WriteString("\n")
-		}
-		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
-	} else {
-		sb.WriteString("\n\nEnter to save, Esc to cancel")
-	}
-	return ConfirmStyle.Render(sb.String())
-}
-
-func (m Model) renderSetMoodInput() string {
-	var sb strings.Builder
-	sb.WriteString("Set mood:\n")
-	sb.WriteString(m.setMoodMode.input.View())
-
-	if m.setMoodMode.pickerMode && len(m.setMoodMode.presets) > 0 {
-		sb.WriteString("\n\nMood presets:\n")
-		for i, preset := range m.setMoodMode.presets {
-			if i == m.setMoodMode.selectedIdx {
-				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", preset)))
-			} else {
-				sb.WriteString(fmt.Sprintf("    %s", preset))
-			}
-			sb.WriteString("\n")
-		}
-		sb.WriteString("\n↑/↓ to select, Enter to pick, Esc to cancel")
-	} else {
-		sb.WriteString("\n\nEnter to save, Esc to cancel")
-	}
-	return ConfirmStyle.Render(sb.String())
-}
-
-func (m Model) renderSetWeatherInput() string {
-	var sb strings.Builder
-	sb.WriteString("Set weather:\n")
-	sb.WriteString(m.setWeatherMode.input.View())
-
-	if m.setWeatherMode.pickerMode && len(m.setWeatherMode.presets) > 0 {
-		sb.WriteString("\n\nWeather presets:\n")
-		for i, preset := range m.setWeatherMode.presets {
-			if i == m.setWeatherMode.selectedIdx {
-				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", preset)))
-			} else {
-				sb.WriteString(fmt.Sprintf("    %s", preset))
+				sb.WriteString(fmt.Sprintf("    %s", item))
 			}
 			sb.WriteString("\n")
 		}

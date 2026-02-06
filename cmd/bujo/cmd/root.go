@@ -3,6 +3,7 @@ package cmd
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -102,7 +103,10 @@ var rootCmd = &cobra.Command{
 			listRepo, listItemRepo, goalRepo,
 		)
 
-		insightsDB, _ = app.OpenInsightsDB(app.DefaultInsightsDBPath())
+		insightsDB, err = app.OpenInsightsDB(app.DefaultInsightsDBPath())
+		if err != nil {
+			log.Printf("warning: could not open insights database: %v", err)
+		}
 		insightsRepo = sqlite.NewInsightsRepository(insightsDB)
 
 		return nil

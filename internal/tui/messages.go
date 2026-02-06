@@ -168,10 +168,12 @@ type insightsDashboardLoadedMsg struct {
 type insightsSummaryLoadedMsg struct {
 	summary *domain.InsightsSummary
 	topics  []domain.InsightsTopic
+	err     error
 }
 
 type insightsActionsLoadedMsg struct {
 	actions []domain.InsightsAction
+	err     error
 }
 
 type editorFinishedMsg struct {

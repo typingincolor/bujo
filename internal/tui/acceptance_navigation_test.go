@@ -240,10 +240,13 @@ func TestUAT_JournalView_LocationPicker_OpensWithAt(t *testing.T) {
 	newModel, _ := model.Update(msgAt)
 	m := newModel.(Model)
 
-	if !m.setLocationMode.active {
+	if !m.presetPicker.active {
 		t.Error("pressing @ should open location picker")
 	}
-	if !m.setLocationMode.pickerMode {
+	if m.presetPicker.kind != pickerLocation {
+		t.Error("expected picker kind to be pickerLocation")
+	}
+	if !m.presetPicker.pickerMode {
 		t.Error("location mode should be in picker mode")
 	}
 }
@@ -262,11 +265,12 @@ func TestUAT_JournalView_LocationPicker_SelectsPreviousLocation(t *testing.T) {
 	model.days = []service.DayEntries{}
 
 	// Simulate having previous locations loaded
-	model.setLocationMode = setLocationState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerLocation,
 		date:        model.viewDate,
-		locations:   []string{"Home", "Office", "Coffee Shop"},
+		items:       []string{"Home", "Office", "Coffee Shop"},
 		selectedIdx: 0,
 	}
 
@@ -275,8 +279,8 @@ func TestUAT_JournalView_LocationPicker_SelectsPreviousLocation(t *testing.T) {
 	newModel, _ := model.Update(msgDown)
 	m := newModel.(Model)
 
-	if m.setLocationMode.selectedIdx != 1 {
-		t.Errorf("expected selectedIdx 1, got %d", m.setLocationMode.selectedIdx)
+	if m.presetPicker.selectedIdx != 1 {
+		t.Errorf("expected selectedIdx 1, got %d", m.presetPicker.selectedIdx)
 	}
 }
 
@@ -294,11 +298,12 @@ func TestUAT_JournalView_LocationPicker_ClosesOnEsc(t *testing.T) {
 	model.days = []service.DayEntries{}
 
 	// Open location picker
-	model.setLocationMode = setLocationState{
+	model.presetPicker = presetPickerState{
 		active:     true,
 		pickerMode: true,
+		kind:       pickerLocation,
 		date:       model.viewDate,
-		locations:  []string{"Home", "Office"},
+		items:      []string{"Home", "Office"},
 	}
 
 	// Press ESC to close
@@ -306,7 +311,7 @@ func TestUAT_JournalView_LocationPicker_ClosesOnEsc(t *testing.T) {
 	newModel, _ := model.Update(msgEsc)
 	m := newModel.(Model)
 
-	if m.setLocationMode.active {
+	if m.presetPicker.active {
 		t.Error("ESC should close the location picker")
 	}
 }
@@ -326,12 +331,13 @@ func TestUAT_JournalView_LocationPicker_EnterSelectsFromList(t *testing.T) {
 
 	// Open location picker with locations
 	ti := textinput.New()
-	model.setLocationMode = setLocationState{
+	model.presetPicker = presetPickerState{
 		active:      true,
 		pickerMode:  true,
+		kind:        pickerLocation,
 		date:        model.viewDate,
 		input:       ti,
-		locations:   []string{"Home", "Office", "Coffee Shop"},
+		items:       []string{"Home", "Office", "Coffee Shop"},
 		selectedIdx: 1, // "Office" selected
 	}
 
@@ -340,7 +346,7 @@ func TestUAT_JournalView_LocationPicker_EnterSelectsFromList(t *testing.T) {
 	newModel, cmd := model.Update(msgEnter)
 	m := newModel.(Model)
 
-	if m.setLocationMode.active {
+	if m.presetPicker.active {
 		t.Error("Enter should close the location picker")
 	}
 	if cmd == nil {

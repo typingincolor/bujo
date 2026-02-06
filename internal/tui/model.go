@@ -101,9 +101,7 @@ type Model struct {
 	insightsReader           InsightsReader
 	statsViewState           statsState
 	insightsState            insightsState
-	setLocationMode          setLocationState
-	setMoodMode              setMoodState
-	setWeatherMode           setWeatherState
+	presetPicker             presetPickerState
 	commandPalette           commandPaletteState
 	commandRegistry          *CommandRegistry
 	pendingTasksState        pendingTasksState
@@ -176,31 +174,25 @@ type gotoState struct {
 	input  textinput.Model
 }
 
-type setLocationState struct {
-	active      bool
-	pickerMode  bool
-	date        time.Time
-	input       textinput.Model
-	locations   []string
-	selectedIdx int
-}
+type presetPickerKind int
 
-type setMoodState struct {
-	active      bool
-	pickerMode  bool
-	date        time.Time
-	input       textinput.Model
-	presets     []string
-	selectedIdx int
-}
+const (
+	pickerLocation presetPickerKind = iota
+	pickerMood
+	pickerWeather
+)
 
-type setWeatherState struct {
-	active      bool
-	pickerMode  bool
-	date        time.Time
-	input       textinput.Model
-	presets     []string
-	selectedIdx int
+type presetPickerState struct {
+	active       bool
+	pickerMode   bool
+	kind         presetPickerKind
+	date         time.Time
+	input        textinput.Model
+	items        []string
+	defaultItems []string
+	selectedIdx  int
+	title        string
+	pickerLabel  string
 }
 
 var moodPresets = []string{"happy", "neutral", "sad", "frustrated", "tired", "sick", "anxious", "grateful"}
@@ -1087,17 +1079,38 @@ func (m Model) loadInsightsDashboardCmd() tea.Cmd {
 			return insightsDashboardLoadedMsg{dashboard: domain.InsightsDashboard{Status: "unavailable"}}
 		}
 		ctx := context.Background()
-		summary, _ := m.insightsReader.GetLatestSummary(ctx)
-		initiatives, _ := m.insightsReader.GetActiveInitiatives(ctx, 5)
-		actions, _ := m.insightsReader.GetPendingActions(ctx)
-		decisions, _ := m.insightsReader.GetRecentDecisions(ctx, 5)
-		daysSince, _ := m.insightsReader.GetDaysSinceLastSummary(ctx)
+		var errs []error
+		summary, err := m.insightsReader.GetLatestSummary(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		initiatives, err := m.insightsReader.GetActiveInitiatives(ctx, 5)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		actions, err := m.insightsReader.GetPendingActions(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		decisions, err := m.insightsReader.GetRecentDecisions(ctx, 5)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		daysSince, err := m.insightsReader.GetDaysSinceLastSummary(ctx)
+		if err != nil {
+			errs = append(errs, err)
+		}
 
 		var highPriority []domain.InsightsAction
 		for _, a := range actions {
 			if a.Priority == "high" {
 				highPriority = append(highPriority, a)
 			}
+		}
+
+		status := "ok"
+		if len(errs) > 0 {
+			status = "error"
 		}
 
 		return insightsDashboardLoadedMsg{
@@ -1107,7 +1120,7 @@ func (m Model) loadInsightsDashboardCmd() tea.Cmd {
 				HighPriorityActions:  highPriority,
 				RecentDecisions:      decisions,
 				DaysSinceLastSummary: daysSince,
-				Status:               "ok",
+				Status:               status,
 			},
 		}
 	}
@@ -1133,16 +1146,22 @@ func (m Model) loadInsightsTabDataCmd() tea.Cmd {
 
 		switch tab {
 		case InsightsTabSummaries:
-			summary, _ := m.insightsReader.GetSummaryForWeek(ctx, weekStart, nextWeek)
+			summary, err := m.insightsReader.GetSummaryForWeek(ctx, weekStart, nextWeek)
+			if err != nil {
+				return insightsSummaryLoadedMsg{err: err}
+			}
 			var topics []domain.InsightsTopic
 			if summary != nil {
-				topics, _ = m.insightsReader.GetTopicsForSummary(ctx, summary.ID)
+				topics, err = m.insightsReader.GetTopicsForSummary(ctx, summary.ID)
+				if err != nil {
+					return insightsSummaryLoadedMsg{summary: summary, err: err}
+				}
 			}
 			return insightsSummaryLoadedMsg{summary: summary, topics: topics}
 
 		case InsightsTabActions:
-			actions, _ := m.insightsReader.GetActionsForWeek(ctx, weekStart, nextWeek)
-			return insightsActionsLoadedMsg{actions: actions}
+			actions, err := m.insightsReader.GetActionsForWeek(ctx, weekStart, nextWeek)
+			return insightsActionsLoadedMsg{actions: actions, err: err}
 
 		default:
 			return nil

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -237,13 +238,13 @@ func TestInsights_RenderDashboard(t *testing.T) {
 	if output == "" {
 		t.Error("expected non-empty render output")
 	}
-	if !containsStr(output, "Dashboard") {
+	if !strings.Contains(output, "Dashboard") {
 		t.Error("expected output to contain Dashboard tab indicator")
 	}
-	if !containsStr(output, "Great week") {
+	if !strings.Contains(output, "Great week") {
 		t.Error("expected output to contain summary text")
 	}
-	if !containsStr(output, "Project Alpha") {
+	if !strings.Contains(output, "Project Alpha") {
 		t.Error("expected output to contain initiative name")
 	}
 }
@@ -262,13 +263,13 @@ func TestInsights_RenderSummaries(t *testing.T) {
 
 	output := model.renderInsightsContent()
 
-	if !containsStr(output, "Summaries") {
+	if !strings.Contains(output, "Summaries") {
 		t.Error("expected output to contain Summaries tab indicator")
 	}
-	if !containsStr(output, "Summary for week") {
+	if !strings.Contains(output, "Summary for week") {
 		t.Error("expected output to contain summary text")
 	}
-	if !containsStr(output, "TDD") {
+	if !strings.Contains(output, "TDD") {
 		t.Error("expected output to contain topic name")
 	}
 }
@@ -283,13 +284,13 @@ func TestInsights_RenderActions(t *testing.T) {
 
 	output := model.renderInsightsContent()
 
-	if !containsStr(output, "Actions") {
+	if !strings.Contains(output, "Actions") {
 		t.Error("expected output to contain Actions tab indicator")
 	}
-	if !containsStr(output, "Write tests") {
+	if !strings.Contains(output, "Write tests") {
 		t.Error("expected output to contain action text")
 	}
-	if !containsStr(output, "Deploy app") {
+	if !strings.Contains(output, "Deploy app") {
 		t.Error("expected output to contain second action text")
 	}
 }
@@ -311,7 +312,7 @@ func TestInsights_RenderLoading(t *testing.T) {
 
 	output := model.renderInsightsContent()
 
-	if !containsStr(output, "Loading") {
+	if !strings.Contains(output, "Loading") {
 		t.Error("expected loading indicator")
 	}
 }
@@ -329,10 +330,10 @@ func TestInsights_HelpText(t *testing.T) {
 	model := newInsightsModel()
 	help := model.renderContextHelp()
 
-	if !containsStr(help, "tab") {
+	if !strings.Contains(help, "tab") {
 		t.Error("expected help text to mention tab key")
 	}
-	if !containsStr(help, "h/l") {
+	if !strings.Contains(help, "h/l") {
 		t.Error("expected help text to mention h/l for week nav")
 	}
 }
@@ -341,20 +342,8 @@ func TestInsights_ViewTypeDisplayName(t *testing.T) {
 	model := newInsightsModel()
 	view := model.View()
 
-	if !containsStr(view, "Insights") {
+	if !strings.Contains(view, "Insights") {
 		t.Error("expected view to contain 'Insights' display name")
 	}
 }
 
-func containsStr(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && contains(s, substr)
-}
-
-func contains(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
