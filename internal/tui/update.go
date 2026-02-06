@@ -327,6 +327,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleSearchViewMode(msg)
 		case ViewTypePendingTasks:
 			return m.handlePendingTasksMode(msg)
+		case ViewTypeQuestions:
+			return m.handleQuestionsMode(msg)
 		default:
 			return m.handleNormalMode(msg)
 		}
@@ -1582,6 +1584,132 @@ func (m Model) handlePendingTasksMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.loadListsForMoveCmd(entry.ID)
+	}
+
+	return m, nil
+}
+
+func (m Model) handleQuestionsMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if handled, newModel, cmd := m.handleViewSwitch(msg); handled {
+		return newModel, cmd
+	}
+
+	switch {
+	case key.Matches(msg, m.keyMap.Quit):
+		return m.handleQuit()
+
+	case key.Matches(msg, m.keyMap.Back):
+		return m.handleBack()
+
+	case key.Matches(msg, m.keyMap.Down):
+		if m.questionsState.selectedIdx < len(m.questionsState.entries)-1 {
+			m.questionsState.selectedIdx++
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Up):
+		if m.questionsState.selectedIdx > 0 {
+			m.questionsState.selectedIdx--
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Top):
+		m.questionsState.selectedIdx = 0
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Bottom):
+		if len(m.questionsState.entries) > 0 {
+			m.questionsState.selectedIdx = len(m.questionsState.entries) - 1
+		}
+		return m, nil
+
+	case msg.Type == tea.KeyEnter:
+		if len(m.questionsState.entries) > 0 &&
+			m.questionsState.selectedIdx < len(m.questionsState.entries) {
+			entry := m.questionsState.entries[m.questionsState.selectedIdx]
+			if entry.ScheduledDate != nil {
+				m.viewStack = append(m.viewStack, m.currentView)
+				m.currentView = ViewTypeJournal
+				m.viewDate = *entry.ScheduledDate
+				m.viewMode = ViewModeDay
+				m.selectedIdx = 0
+				return m, m.loadDaysCmd()
+			}
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Done):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		return m, m.toggleDoneForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.CancelEntry):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		if !entry.CanCancel() {
+			return m, nil
+		}
+		return m, m.cancelForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.UncancelEntry):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		if !entry.CanUncancel() {
+			return m, nil
+		}
+		return m, m.uncancelForEntryCmd(entry)
+
+	case key.Matches(msg, m.keyMap.Edit):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		ti := textinput.New()
+		ti.SetValue(entry.Content)
+		ti.Focus()
+		ti.CharLimit = 256
+		ti.Width = m.width - 10
+		m.editMode = editState{
+			active:  true,
+			entryID: entry.ID,
+			input:   ti,
+		}
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Delete):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		m.confirmMode.active = true
+		m.confirmMode.entryID = entry.ID
+		return m, nil
+
+	case key.Matches(msg, m.keyMap.Answer):
+		if len(m.questionsState.entries) == 0 {
+			return m, nil
+		}
+		entry := m.questionsState.entries[m.questionsState.selectedIdx]
+		if entry.Type != domain.EntryTypeQuestion {
+			return m, nil
+		}
+		ti := textinput.New()
+		ti.Placeholder = "Enter your answer..."
+		ti.Focus()
+		ti.CharLimit = 512
+		ti.Width = m.width - 10
+		m.answerMode = answerState{
+			active:     true,
+			questionID: entry.ID,
+			input:      ti,
+		}
+		return m, nil
 	}
 
 	return m, nil
