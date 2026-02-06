@@ -574,23 +574,24 @@ function App() {
     })
   }, [])
 
-  const handleNavigateToEntry = useCallback((entry: Entry) => {
+  const navigateToJournal = useCallback((date: string, content: string) => {
     pushHistory({
       view: view,
       scrollPosition: window.scrollY,
     })
-    const entryDate = new Date(entry.loggedDate)
-    setCurrentDate(startOfDay(entryDate))
-    setHighlightText(entry.content)
+    setCurrentDate(startOfDay(new Date(date)))
+    setHighlightText(content)
     setView('today')
     setSelectedIndex(0)
   }, [view, pushHistory])
 
+  const handleNavigateToEntry = useCallback((entry: Entry) => {
+    navigateToJournal(entry.loggedDate, entry.content)
+  }, [navigateToJournal])
+
   const handleSearchNavigate = useCallback((result: SearchResult) => {
-    const entryDate = new Date(result.date)
-    setReviewAnchorDate(startOfDay(entryDate))
-    setView('week')
-  }, [])
+    navigateToJournal(result.date, result.content)
+  }, [navigateToJournal])
 
   const handleSearchSelectEntry = useCallback((result: SearchResult) => {
     setSelectedEntry({
@@ -670,7 +671,7 @@ function App() {
           onMoodChanged={loadData}
           onWeatherChanged={loadData}
           onLocationChanged={loadData}
-          canGoBack={canGoBack}
+          canGoBack={canGoBack && view === 'today'}
           onBack={handleBack}
         />
 
