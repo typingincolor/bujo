@@ -587,10 +587,16 @@ function App() {
   }, [view, pushHistory])
 
   const handleSearchNavigate = useCallback((result: SearchResult) => {
+    pushHistory({
+      view: view,
+      scrollPosition: window.scrollY,
+    })
     const entryDate = new Date(result.date)
-    setReviewAnchorDate(startOfDay(entryDate))
-    setView('week')
-  }, [])
+    setCurrentDate(startOfDay(entryDate))
+    setHighlightText(result.content)
+    setView('today')
+    setSelectedIndex(0)
+  }, [view, pushHistory])
 
   const handleSearchSelectEntry = useCallback((result: SearchResult) => {
     setSelectedEntry({
