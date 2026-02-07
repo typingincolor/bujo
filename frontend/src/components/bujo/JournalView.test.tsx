@@ -8,6 +8,12 @@ vi.mock('@/hooks/useEditableDocument', () => ({
   useEditableDocument: (...args: unknown[]) => mockUseEditableDocument(...args),
 }))
 
+const mockGetAllTags = vi.fn().mockResolvedValue([])
+
+vi.mock('@/wailsjs/go/wails/App', () => ({
+  GetAllTags: (...args: unknown[]) => mockGetAllTags(...args),
+}))
+
 const createMockState = (overrides = {}) => ({
   document: '. Buy groceries\n- Meeting notes',
   originalDocument: '. Buy groceries\n- Meeting notes',
@@ -336,6 +342,29 @@ describe('JournalView', () => {
       expect(screen.getByText(/Indent/)).toBeInTheDocument()
       expect(screen.getByText(/Esc/)).toBeInTheDocument()
       expect(screen.getByText(/Unfocus/)).toBeInTheDocument()
+    })
+  })
+
+  describe('tag autocomplete', () => {
+    it('fetches tags on mount', async () => {
+      mockGetAllTags.mockResolvedValue(['work', 'personal'])
+
+      render(<JournalView date={testDate} />)
+
+      await waitFor(() => {
+        expect(mockGetAllTags).toHaveBeenCalled()
+      })
+    })
+
+    it('renders without error when GetAllTags fails', async () => {
+      mockGetAllTags.mockRejectedValue(new Error('network error'))
+
+      render(<JournalView date={testDate} />)
+
+      await waitFor(() => {
+        expect(mockGetAllTags).toHaveBeenCalled()
+      })
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
     })
   })
 

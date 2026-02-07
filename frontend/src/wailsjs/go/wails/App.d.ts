@@ -58,6 +58,8 @@ export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;
 
 export function GetEntryContext(arg1:number):Promise<Array<domain.Entry>>;
 
+export function GetAllTags():Promise<Array<string>>;
+
 export function GetGoals(arg1:time.Time):Promise<Array<domain.Goal>>;
 
 export function GetHabits(arg1:number):Promise<service.TrackerStatus>;
@@ -141,6 +143,8 @@ export function ResolveDate(arg1:string):Promise<wails.ResolvedDate>;
 export function RetypeEntry(arg1:number,arg2:string):Promise<void>;
 
 export function Search(arg1:string):Promise<Array<domain.Entry>>;
+
+export function SearchByTags(arg1:Array<string>):Promise<Array<domain.Entry>>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
 

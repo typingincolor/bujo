@@ -13,6 +13,7 @@ export interface Entry {
   loggedDate: string;
   scheduledDate?: string;
   migrationCount?: number;
+  tags?: string[];
   children?: Entry[];
   collapsed?: boolean;
 }

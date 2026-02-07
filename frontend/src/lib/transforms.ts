@@ -18,6 +18,7 @@ export function transformEntry(e: domain.Entry): Entry {
     loggedDate,
     scheduledDate,
     migrationCount: e.MigrationCount,
+    tags: e.Tags || [],
   }
 }
 

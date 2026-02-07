@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useEditableDocument } from '@/hooks/useEditableDocument'
+import { GetAllTags } from '@/wailsjs/go/wails/App'
 import { BujoEditor } from '@/lib/codemirror/BujoEditor'
 import { scanForNewSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDialogs'
 import { MigrateBatchModal } from '@/components/bujo/MigrateBatchModal'
@@ -29,8 +30,13 @@ export function JournalView({ date, highlightText, onHighlightDone }: JournalVie
     discardDraft,
   } = useEditableDocument(date)
 
+  const [tags, setTags] = useState<string[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    GetAllTags().then(t => setTags(t || [])).catch(() => {})
+  }, [])
 
   const [pendingSpecial, setPendingSpecial] = useState<SpecialEntries | null>(null)
   const [migrateDate, setMigrateDate] = useState<Date | null>(null)
@@ -180,6 +186,7 @@ export function JournalView({ date, highlightText, onHighlightDone }: JournalVie
             onEscape={handleEscape}
             highlightText={highlightText}
             onHighlightDone={onHighlightDone}
+            tags={tags}
           />
         </div>
       </div>

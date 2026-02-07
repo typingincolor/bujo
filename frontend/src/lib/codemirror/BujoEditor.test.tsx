@@ -123,6 +123,43 @@ describe('BujoEditor', () => {
     })
   })
 
+  describe('tag autocomplete', () => {
+    it('accepts tags prop without crashing', () => {
+      expect(() => {
+        render(
+          <BujoEditor
+            value=". Task with #wo"
+            onChange={() => {}}
+            tags={['work', 'workout']}
+          />
+        )
+      }).not.toThrow()
+    })
+
+    it('renders normally when tags is empty', () => {
+      render(
+        <BujoEditor
+          value=". Task"
+          onChange={() => {}}
+          tags={[]}
+        />
+      )
+
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+
+    it('renders normally when tags is undefined', () => {
+      render(
+        <BujoEditor
+          value=". Task"
+          onChange={() => {}}
+        />
+      )
+
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+  })
+
   describe('visual extensions', () => {
     it('displays priority badges for priority markers', () => {
       render(

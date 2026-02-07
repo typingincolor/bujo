@@ -5,6 +5,8 @@ import { SearchView } from './SearchView'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({
   Search: vi.fn().mockResolvedValue([]),
+  SearchByTags: vi.fn().mockResolvedValue([]),
+  GetAllTags: vi.fn().mockResolvedValue([]),
   GetEntry: vi.fn().mockResolvedValue(null),
   MarkEntryDone: vi.fn().mockResolvedValue(undefined),
   MarkEntryUndone: vi.fn().mockResolvedValue(undefined),

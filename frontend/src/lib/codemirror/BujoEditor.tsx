@@ -18,6 +18,9 @@ import { bujoFoldExtension } from './bujoFolding'
 import { entryTypeStyleExtension } from './entryTypeStyles'
 import { highlightLineExtension, setHighlight } from './highlightLine'
 import { findEntryLine } from './findEntryLine'
+import { tagCompletionSource } from './tagAutocomplete'
+import { autocompletion } from '@codemirror/autocomplete'
+import { Compartment } from '@codemirror/state'
 import type { DocumentError } from './errorMarkers'
 
 const HIGHLIGHT_DURATION_MS = 2000
@@ -31,10 +34,12 @@ interface BujoEditorProps {
   errors?: DocumentError[]
   highlightText?: string | null
   onHighlightDone?: () => void
+  tags?: string[]
 }
 
-export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors = [], highlightText, onHighlightDone }: BujoEditorProps) {
+export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors = [], highlightText, onHighlightDone, tags = [] }: BujoEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null)
+  const tagCompartment = useRef(new Compartment())
 
   const onChangeRef = useRef(onChange)
   const onSaveRef = useRef(onSave)
@@ -121,6 +126,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       bujoFoldExtension(),
       entryTypeStyleExtension(),
       highlightLineExtension(),
+      tagCompartment.current.of([]),
     ]
   })
 
@@ -132,6 +138,18 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       })
     }
   }, [errors])
+
+  useEffect(() => {
+    const view = editorRef.current?.view
+    if (view) {
+      const ext = tags.length > 0
+        ? autocompletion({ override: [tagCompletionSource(tags)] })
+        : []
+      view.dispatch({
+        effects: tagCompartment.current.reconfigure(ext),
+      })
+    }
+  }, [tags])
 
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const highlightTextRef = useRef(highlightText)

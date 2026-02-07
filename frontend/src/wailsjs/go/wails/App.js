@@ -106,6 +106,10 @@ export function GetEntryContext(arg1) {
   return window['go']['wails']['App']['GetEntryContext'](arg1);
 }
 
+export function GetAllTags() {
+  return window['go']['wails']['App']['GetAllTags']();
+}
+
 export function GetGoals(arg1) {
   return window['go']['wails']['App']['GetGoals'](arg1);
 }
@@ -272,6 +276,10 @@ export function RetypeEntry(arg1, arg2) {
 
 export function Search(arg1) {
   return window['go']['wails']['App']['Search'](arg1);
+}
+
+export function SearchByTags(arg1) {
+  return window['go']['wails']['App']['SearchByTags'](arg1);
 }
 
 export function SetHabitGoal(arg1, arg2) {

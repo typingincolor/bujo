@@ -69,6 +69,7 @@ function App() {
   const [editModalEntry, setEditModalEntry] = useState<Entry | null>(null)
   const [deleteDialogEntry, setDeleteDialogEntry] = useState<Entry | null>(null)
   const [deleteHasChildren, setDeleteHasChildren] = useState(false)
+  const [searchTagFilter, setSearchTagFilter] = useState<string | null>(null)
   const [migrateModalEntry, setMigrateModalEntry] = useState<Entry | null>(null)
   const [moveToListEntry, setMoveToListEntry] = useState<Entry | null>(null)
   const [answerModalEntry, setAnswerModalEntry] = useState<Entry | null>(null)
@@ -264,6 +265,7 @@ function App() {
       })
     }
     setHighlightText(null)
+    if (newView !== 'search') setSearchTagFilter(null)
     setView(newView)
     setSelectedIndex(0)
   }, [view, clearHistory, pushHistory])
@@ -604,6 +606,11 @@ function App() {
     })
   }, [])
 
+  const handleTagClick = useCallback((tag: string) => {
+    setSearchTagFilter(tag)
+    handleViewChange('search')
+  }, [handleViewChange])
+
   const handleBack = useCallback(() => {
     const previousState = goBack()
     if (previousState && isValidView(previousState.view)) {
@@ -788,9 +795,11 @@ function App() {
           {view === 'search' && (
             <div className="max-w-3xl mx-auto">
               <SearchView
+                initialTagFilter={searchTagFilter ?? undefined}
                 onMigrate={handleSearchMigrate}
                 onNavigateToEntry={handleSearchNavigate}
                 onSelectEntry={handleSearchSelectEntry}
+                onTagClick={handleTagClick}
               />
             </div>
           )}
