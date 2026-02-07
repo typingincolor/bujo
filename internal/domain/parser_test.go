@@ -400,6 +400,57 @@ func TestParseEntryType_EdgeCases(t *testing.T) {
 	}
 }
 
+func TestTreeParser_Parse_ExtractsTags(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Buy groceries #shopping #errands"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "Buy groceries #shopping #errands", entries[0].Content)
+	assert.Equal(t, []string{"errands", "shopping"}, entries[0].Tags)
+}
+
+func TestTreeParser_Parse_NoTags(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Buy groceries"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Nil(t, entries[0].Tags)
+}
+
+func TestTreeParser_Parse_NestedEntriesWithTags(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Project planning #work
+  . Review docs #review
+  - Meeting notes`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	assert.Equal(t, []string{"work"}, entries[0].Tags)
+	assert.Equal(t, []string{"review"}, entries[1].Tags)
+	assert.Nil(t, entries[2].Tags)
+}
+
+func TestTreeParser_Parse_TagsWithPriority(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". !! Fix build #urgent #ci"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "Fix build #urgent #ci", entries[0].Content)
+	assert.Equal(t, PriorityMedium, entries[0].Priority)
+	assert.Equal(t, []string{"ci", "urgent"}, entries[0].Tags)
+}
+
 func TestTreeParser_Parse_QuestionWithPriority(t *testing.T) {
 	tests := []struct {
 		name             string

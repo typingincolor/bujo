@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
@@ -321,33 +322,43 @@ func (r *EntryRepository) GetLastModified(ctx context.Context) (time.Time, error
 }
 
 func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
-	if opts.Query == "" && opts.Type == nil {
+	if opts.Query == "" && opts.Type == nil && len(opts.Tags) == 0 {
 		return []domain.Entry{}, nil
 	}
 
 	query := `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
-		FROM entries
-		WHERE 1=1
+		SELECT DISTINCT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count
+		FROM entries e
 	`
 	var args []any
 
+	if len(opts.Tags) > 0 {
+		placeholders := make([]string, len(opts.Tags))
+		for i, tag := range opts.Tags {
+			placeholders[i] = "?"
+			args = append(args, tag)
+		}
+		query += fmt.Sprintf(` JOIN entry_tags et ON e.id = et.entry_id AND et.tag IN (%s)`, strings.Join(placeholders, ","))
+	}
+
+	query += ` WHERE 1=1`
+
 	if opts.Query != "" {
-		query += ` AND content LIKE '%' || ? || '%' COLLATE NOCASE`
+		query += ` AND e.content LIKE '%' || ? || '%' COLLATE NOCASE`
 		args = append(args, opts.Query)
 	}
 
 	if opts.Type != nil {
-		query += ` AND type = ?`
+		query += ` AND e.type = ?`
 		args = append(args, string(*opts.Type))
 	}
 
 	if opts.DateFrom != nil && opts.DateTo != nil {
-		query += ` AND scheduled_date >= ? AND scheduled_date <= ?`
+		query += ` AND e.scheduled_date >= ? AND e.scheduled_date <= ?`
 		args = append(args, opts.DateFrom.Format("2006-01-02"), opts.DateTo.Format("2006-01-02"))
 	}
 
-	query += ` ORDER BY scheduled_date DESC, created_at DESC, id DESC`
+	query += ` ORDER BY e.scheduled_date DESC, e.created_at DESC, e.id DESC`
 
 	limit := opts.Limit
 	if limit <= 0 {

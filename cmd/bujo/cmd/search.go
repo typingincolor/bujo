@@ -15,24 +15,34 @@ var (
 	searchTo    string
 	searchType  string
 	searchLimit int
+	searchTags  string
 )
 
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search through entries",
-	Long: `Search through entries by content.
+	Long: `Search through entries by content, tags, or both.
 
-Supports optional filters for date range and entry type.
+Supports optional filters for date range, entry type, and tags.
 
 Examples:
   bujo search "groceries"                    # Search all entries
   bujo search "meeting" --from "last month"  # With date range
   bujo search "project" --type task          # Filter by type
   bujo search "call" -f "last week" -t today # Date range filter
-  bujo search "report" -n 10                 # Limit results`,
-	Args: cobra.ExactArgs(1),
+  bujo search "report" -n 10                 # Limit results
+  bujo search --tag shopping,errands         # Search by tags
+  bujo search "milk" --tag shopping          # Combined search`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		query := args[0]
+		var query string
+		if len(args) > 0 {
+			query = args[0]
+		}
+
+		if query == "" && searchTags == "" && searchType == "" {
+			return fmt.Errorf("provide a search query, --tag filter, or --type filter")
+		}
 
 		opts := domain.NewSearchOptions(query)
 
@@ -42,6 +52,14 @@ Examples:
 				return fmt.Errorf("invalid entry type: %s (valid types: task, note, event, done, migrated, cancelled, question, answered, answer)", searchType)
 			}
 			opts = opts.WithType(entryType)
+		}
+
+		if searchTags != "" {
+			tags := strings.Split(searchTags, ",")
+			for i := range tags {
+				tags[i] = strings.TrimSpace(tags[i])
+			}
+			opts = opts.WithTags(tags)
 		}
 
 		if searchFrom != "" || searchTo != "" {
@@ -77,7 +95,11 @@ Examples:
 		}
 
 		if len(results) == 0 {
-			fmt.Printf("No results found for %q\n", query)
+			if query != "" {
+				fmt.Printf("No results found for %q\n", query)
+			} else {
+				fmt.Println("No results found")
+			}
 			return nil
 		}
 
@@ -94,7 +116,11 @@ Examples:
 			ancestors := ancestorsMap[entry.ID]
 			fmt.Println(formatSearchResultWithContext(entry, ancestors, query))
 		}
-		fmt.Printf("\nFound %d result(s) for %q\n", len(results), query)
+		if query != "" {
+			fmt.Printf("\nFound %d result(s) for %q\n", len(results), query)
+		} else {
+			fmt.Printf("\nFound %d result(s)\n", len(results))
+		}
 
 		return nil
 	},
@@ -105,6 +131,7 @@ func init() {
 	searchCmd.Flags().StringVarP(&searchTo, "to", "t", "", "End date for search (natural language supported)")
 	searchCmd.Flags().StringVar(&searchType, "type", "", "Filter by entry type (task, note, event, done, migrated, cancelled)")
 	searchCmd.Flags().IntVarP(&searchLimit, "limit", "n", 50, "Maximum number of results")
+	searchCmd.Flags().StringVar(&searchTags, "tag", "", "Filter by tags (comma-separated, e.g. shopping,errands)")
 	rootCmd.AddCommand(searchCmd)
 }
 

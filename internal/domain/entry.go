@@ -105,6 +105,7 @@ type Entry struct {
 	CreatedAt      time.Time
 	SortOrder      int
 	MigrationCount int
+	Tags           []string
 }
 
 func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Entry {

@@ -7,6 +7,7 @@ type SearchOptions struct {
 	Type     *EntryType
 	DateFrom *time.Time
 	DateTo   *time.Time
+	Tags     []string
 	Limit    int
 }
 
@@ -25,6 +26,11 @@ func (o SearchOptions) WithType(t EntryType) SearchOptions {
 func (o SearchOptions) WithDateRange(from, to time.Time) SearchOptions {
 	o.DateFrom = &from
 	o.DateTo = &to
+	return o
+}
+
+func (o SearchOptions) WithTags(tags []string) SearchOptions {
+	o.Tags = tags
 	return o
 }
 

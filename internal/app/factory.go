@@ -68,7 +68,10 @@ func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Service
 		goalRepo,
 	}
 
+	tagRepo := sqlite.NewTagRepository(db)
+
 	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover)
+	bujoService.SetTagRepo(tagRepo)
 
 	return &Services{
 		DB:              db,
