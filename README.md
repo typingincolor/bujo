@@ -13,6 +13,8 @@
 
 A command-line Bullet Journal for rapid task capture, habit tracking, and AI-powered reflections.
 
+![Journal View](docs/images/journal-view.png)
+
 ## Interfaces
 
 bujo provides three ways to interact with your journal:

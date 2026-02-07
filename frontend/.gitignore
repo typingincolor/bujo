@@ -18,6 +18,9 @@ e2e/test.db
 e2e/test.db-wal
 e2e/test.db-shm
 
+# Playwright
+test-results/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
