@@ -26,9 +26,12 @@ Navigate between views using the sidebar:
 | Goals | Monthly goals |
 | Search | Search through all entries |
 | Stats | Usage statistics and insights |
+| Insights | AI-powered journal analysis |
 | Settings | App configuration |
 
 ## Today View
+
+![Journal View](images/journal-view.png)
 
 The main view for daily journaling:
 
@@ -46,7 +49,21 @@ Click on entries to select, then:
 - **Migrate**: Move task to a future date
 - **Add Child**: Create nested entry
 
+## Weekly Review
+
+![Weekly Review](images/weekly-review-view.png)
+
+Review the past 7 days at a glance with week-by-week navigation.
+
+## Outstanding Tasks
+
+![Pending Tasks](images/pending-tasks-view.png)
+
+View overdue tasks that need attention, organized by date with priority indicators.
+
 ## Habits View
+
+![Habit Tracker](images/habit-tracker-view.png)
 
 Visual habit tracking with multiple time periods:
 
@@ -64,6 +81,8 @@ Visual habit tracking with multiple time periods:
 
 ## Lists View
 
+![Lists View](images/lists-view.png)
+
 Manage collection lists (reading lists, shopping, etc.):
 
 - Click a list to view its items
@@ -73,6 +92,8 @@ Manage collection lists (reading lists, shopping, etc.):
 
 ## Goals View
 
+![Monthly Goals](images/monthly-goals-view.png)
+
 Monthly goals with progress tracking:
 
 - Add goals for the current month
@@ -80,6 +101,8 @@ Monthly goals with progress tracking:
 - Track progress toward monthly objectives
 
 ## Questions View
+
+![Open Questions](images/open-questions-view.png)
 
 Track questions that need answers:
 
@@ -89,11 +112,31 @@ Track questions that need answers:
 
 ## Search
 
+![Search](images/search-view.png)
+
 Full-text search across all entries:
 
 - Type to search
 - Filter by date range and entry type
 - Click results to view context
+
+## Statistics
+
+![Statistics](images/statistics-view.png)
+
+View usage statistics including entry counts, streaks, and activity patterns.
+
+## Insights
+
+![Insights](images/insights-view.png)
+
+AI-powered analysis of your journal with dashboards for summaries, actions, initiatives, topics, and decisions.
+
+## Settings
+
+![Settings](images/settings-view.png)
+
+Configure app preferences and view version information.
 
 ## Keyboard Shortcuts
 
