@@ -17,6 +17,7 @@ type BujoService struct {
 	listRepo         domain.ListRepository
 	listItemRepo     domain.ListItemRepository
 	entryToListMover domain.EntryToListMover
+	tagRepo          domain.TagRepository
 }
 
 func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser) *BujoService {
@@ -27,7 +28,7 @@ func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayConte
 	}
 }
 
-func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover) *BujoService {
+func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover, tagRepo domain.TagRepository) *BujoService {
 	return &BujoService{
 		entryRepo:        entryRepo,
 		dayCtxRepo:       dayCtxRepo,
@@ -35,6 +36,7 @@ func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain
 		listRepo:         listRepo,
 		listItemRepo:     listItemRepo,
 		entryToListMover: entryToListMover,
+		tagRepo:          tagRepo,
 	}
 }
 
@@ -91,6 +93,12 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 		id, err := s.entryRepo.Insert(ctx, entry)
 		if err != nil {
 			return nil, err
+		}
+
+		if s.tagRepo != nil && len(entry.Tags) > 0 {
+			if err := s.tagRepo.InsertEntryTags(ctx, id, entry.Tags); err != nil {
+				return nil, err
+			}
 		}
 
 		ids = append(ids, id)
@@ -511,7 +519,23 @@ func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string
 	}
 
 	entry.Content = newContent
-	return s.entryRepo.Update(ctx, *entry)
+	if err := s.entryRepo.Update(ctx, *entry); err != nil {
+		return err
+	}
+
+	if s.tagRepo != nil {
+		if err := s.tagRepo.DeleteByEntryID(ctx, id); err != nil {
+			return err
+		}
+		tags := domain.ExtractTags(newContent)
+		if len(tags) > 0 {
+			if err := s.tagRepo.InsertEntryTags(ctx, id, tags); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *BujoService) EditEntryPriority(ctx context.Context, id int64, priority domain.Priority) error {
@@ -542,6 +566,12 @@ func (s *BujoService) DeleteEntry(ctx context.Context, id int64) error {
 
 	wasAnswer := entry.Type == domain.EntryTypeAnswer
 	parentID := entry.ParentID
+
+	if s.tagRepo != nil {
+		if err := s.tagRepo.DeleteByEntryID(ctx, id); err != nil {
+			return err
+		}
+	}
 
 	if err := s.entryRepo.DeleteWithChildren(ctx, id); err != nil {
 		return err
@@ -815,7 +845,33 @@ func (s *BujoService) ParseEntries(content string) ([]domain.Entry, error) {
 }
 
 func (s *BujoService) SearchEntries(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
-	return s.entryRepo.Search(ctx, opts)
+	entries, err := s.entryRepo.Search(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.tagRepo != nil && len(entries) > 0 {
+		ids := make([]int64, len(entries))
+		for i, e := range entries {
+			ids[i] = e.ID
+		}
+		tagMap, err := s.tagRepo.GetTagsForEntries(ctx, ids)
+		if err != nil {
+			return nil, err
+		}
+		for i := range entries {
+			entries[i].Tags = tagMap[entries[i].ID]
+		}
+	}
+
+	return entries, nil
+}
+
+func (s *BujoService) GetAllTags(ctx context.Context) ([]string, error) {
+	if s.tagRepo == nil {
+		return nil, nil
+	}
+	return s.tagRepo.GetAllTags(ctx)
 }
 
 func (s *BujoService) GetEntryAncestors(ctx context.Context, id int64) ([]domain.Entry, error) {

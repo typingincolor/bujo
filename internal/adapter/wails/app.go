@@ -199,6 +199,15 @@ func (a *App) Search(query string) ([]domain.Entry, error) {
 	return a.services.Bujo.SearchEntries(a.ctx, opts)
 }
 
+func (a *App) SearchByTags(tags []string) ([]domain.Entry, error) {
+	opts := domain.NewSearchOptions("").WithTags(tags)
+	return a.services.Bujo.SearchEntries(a.ctx, opts)
+}
+
+func (a *App) GetAllTags() ([]string, error) {
+	return a.services.Bujo.GetAllTags(a.ctx)
+}
+
 func (a *App) GetEntry(id int64) (*domain.Entry, error) {
 	return a.services.Bujo.GetEntry(a.ctx, id)
 }

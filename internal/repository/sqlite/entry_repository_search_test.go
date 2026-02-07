@@ -343,6 +343,93 @@ func TestEntryRepository_Update_PreservesOrder(t *testing.T) {
 	_ = id3
 }
 
+func TestEntryRepository_Search_ByTagsOnly(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	tagRepo := NewTagRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Buy groceries #shopping", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	id2, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Fix build #work", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	_, err = entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Read book", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping"}))
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id2, []string{"work"}))
+
+	opts := domain.NewSearchOptions("").WithTags([]string{"shopping"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, id1, results[0].ID)
+}
+
+func TestEntryRepository_Search_ByTagsORSemantics(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	tagRepo := NewTagRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Buy groceries #shopping", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	id2, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Fix build #work", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	_, err = entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeNote, Content: "Personal note", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping"}))
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id2, []string{"work"}))
+
+	opts := domain.NewSearchOptions("").WithTags([]string{"shopping", "work"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+}
+
+func TestEntryRepository_Search_TagsWithContentQuery(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	tagRepo := NewTagRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Buy groceries #shopping", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	id2, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Buy tools #work", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping"}))
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id2, []string{"work"}))
+
+	opts := domain.NewSearchOptions("Buy").WithTags([]string{"shopping"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, id1, results[0].ID)
+}
+
+func TestEntryRepository_Search_TagsNoDuplicates(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	tagRepo := NewTagRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Multi-tag entry #shopping #errands", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping", "errands"}))
+
+	opts := domain.NewSearchOptions("").WithTags([]string{"shopping", "errands"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1, "Entry matching multiple tags should appear only once")
+}
+
 func TestEntryRepository_GetLastModified_ReturnsLatestValidFrom(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)

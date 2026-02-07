@@ -86,6 +86,13 @@ type ListItemRepository interface {
 	DeleteArchivable(ctx context.Context, olderThan time.Time) (int, error)
 }
 
+type TagRepository interface {
+	InsertEntryTags(ctx context.Context, entryID int64, tags []string) error
+	GetTagsForEntries(ctx context.Context, entryIDs []int64) (map[int64][]string, error)
+	GetAllTags(ctx context.Context) ([]string, error)
+	DeleteByEntryID(ctx context.Context, entryID int64) error
+}
+
 type ChangeDetector interface {
 	GetLastModified(ctx context.Context) (time.Time, error)
 }

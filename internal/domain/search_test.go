@@ -66,6 +66,27 @@ func TestSearchOptions_WithLimit(t *testing.T) {
 	}
 }
 
+func TestSearchOptions_WithTags(t *testing.T) {
+	opts := NewSearchOptions("test").WithTags([]string{"shopping", "errands"})
+
+	if opts.Tags == nil {
+		t.Fatal("expected Tags to be set")
+	}
+	if len(opts.Tags) != 2 {
+		t.Fatalf("expected 2 tags, got %d", len(opts.Tags))
+	}
+	if opts.Tags[0] != "shopping" || opts.Tags[1] != "errands" {
+		t.Errorf("expected tags [shopping, errands], got %v", opts.Tags)
+	}
+}
+
+func TestNewSearchOptions_TagsNil(t *testing.T) {
+	opts := NewSearchOptions("test")
+	if opts.Tags != nil {
+		t.Errorf("expected Tags to be nil, got %v", opts.Tags)
+	}
+}
+
 func TestSearchOptions_Chaining(t *testing.T) {
 	from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)
