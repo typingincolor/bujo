@@ -39,6 +39,10 @@ export function transformHabit(h: service.HabitStatus): Habit {
     streak: h.CurrentStreak,
     completionRate: Math.round(h.CompletionPercent),
     goal: h.GoalPerDay,
+    goalPerWeek: h.GoalPerWeek || undefined,
+    goalPerMonth: h.GoalPerMonth || undefined,
+    weeklyProgress: h.WeeklyProgress || undefined,
+    monthlyProgress: h.MonthlyProgress || undefined,
     dayHistory: (h.DayHistory || []).map(d => ({
       date: d.Date ? String(d.Date).split('T')[0] : '',
       completed: d.Completed,

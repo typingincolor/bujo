@@ -37,6 +37,10 @@ export interface Habit {
   streak: number;
   completionRate: number;
   goal?: number;
+  goalPerWeek?: number;
+  goalPerMonth?: number;
+  weeklyProgress?: number;
+  monthlyProgress?: number;
   dayHistory: HabitDayStatus[];
   todayLogged: boolean;
   todayCount: number;

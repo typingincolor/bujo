@@ -222,6 +222,52 @@ describe('transformHabit', () => {
     expect(result.todayLogged).toBe(false)
   })
 
+  it('maps weekly and monthly goal fields', () => {
+    const input = {
+      ID: 1,
+      Name: 'Exercise',
+      GoalPerDay: 1,
+      GoalPerWeek: 5,
+      GoalPerMonth: 20,
+      WeeklyProgress: 60,
+      MonthlyProgress: 45,
+      CurrentStreak: 5,
+      CompletionPercent: 80,
+      TodayCount: 1,
+      DayHistory: [],
+    } as unknown as service.HabitStatus
+
+    const result = transformHabit(input)
+
+    expect(result.goalPerWeek).toBe(5)
+    expect(result.goalPerMonth).toBe(20)
+    expect(result.weeklyProgress).toBe(60)
+    expect(result.monthlyProgress).toBe(45)
+  })
+
+  it('omits weekly/monthly fields when zero', () => {
+    const input = {
+      ID: 1,
+      Name: 'Exercise',
+      GoalPerDay: 1,
+      GoalPerWeek: 0,
+      GoalPerMonth: 0,
+      WeeklyProgress: 0,
+      MonthlyProgress: 0,
+      CurrentStreak: 0,
+      CompletionPercent: 0,
+      TodayCount: 0,
+      DayHistory: [],
+    } as unknown as service.HabitStatus
+
+    const result = transformHabit(input)
+
+    expect(result.goalPerWeek).toBeUndefined()
+    expect(result.goalPerMonth).toBeUndefined()
+    expect(result.weeklyProgress).toBeUndefined()
+    expect(result.monthlyProgress).toBeUndefined()
+  })
+
   it('handles null DayHistory by defaulting to empty array', () => {
     const input = {
       ID: 3,
