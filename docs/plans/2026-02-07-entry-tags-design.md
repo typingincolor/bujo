@@ -51,15 +51,12 @@ Migration creates `entry_tags`:
 
 ```sql
 CREATE TABLE entry_tags (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
     entry_id INTEGER NOT NULL,
     tag TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
-    UNIQUE(entry_id, tag)
+    PRIMARY KEY (entry_id, tag),
+    FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
 );
 CREATE INDEX idx_entry_tags_tag ON entry_tags(tag);
-CREATE INDEX idx_entry_tags_entry_id ON entry_tags(entry_id);
 ```
 
 ## Repository
@@ -68,7 +65,6 @@ CREATE INDEX idx_entry_tags_entry_id ON entry_tags(entry_id);
 type TagRepository interface {
     InsertEntryTags(ctx context.Context, entryID int64, tags []string) error
     GetTagsForEntries(ctx context.Context, entryIDs []int64) (map[int64][]string, error)
-    GetEntriesByTags(ctx context.Context, tags []string) ([]int64, error)
     GetAllTags(ctx context.Context) ([]string, error)
     DeleteByEntryID(ctx context.Context, entryID int64) error
 }

@@ -75,44 +75,6 @@ func TestTagRepository_GetTagsForEntries_Empty(t *testing.T) {
 	assert.Empty(t, tagsMap)
 }
 
-func TestTagRepository_GetEntriesByTags_ORSemantics(t *testing.T) {
-	db := setupTestDB(t)
-	entryRepo := NewEntryRepository(db)
-	tagRepo := NewTagRepository(db)
-	ctx := context.Background()
-
-	id1 := insertTestEntry(t, entryRepo, "Buy groceries")
-	id2 := insertTestEntry(t, entryRepo, "Fix build")
-	id3 := insertTestEntry(t, entryRepo, "Read book")
-
-	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping"}))
-	require.NoError(t, tagRepo.InsertEntryTags(ctx, id2, []string{"work"}))
-	require.NoError(t, tagRepo.InsertEntryTags(ctx, id3, []string{"personal"}))
-
-	entryIDs, err := tagRepo.GetEntriesByTags(ctx, []string{"shopping", "work"})
-
-	require.NoError(t, err)
-	assert.Len(t, entryIDs, 2)
-	assert.Contains(t, entryIDs, id1)
-	assert.Contains(t, entryIDs, id2)
-}
-
-func TestTagRepository_GetEntriesByTags_NoDuplicates(t *testing.T) {
-	db := setupTestDB(t)
-	entryRepo := NewEntryRepository(db)
-	tagRepo := NewTagRepository(db)
-	ctx := context.Background()
-
-	id1 := insertTestEntry(t, entryRepo, "Multi-tag entry")
-	require.NoError(t, tagRepo.InsertEntryTags(ctx, id1, []string{"shopping", "errands"}))
-
-	entryIDs, err := tagRepo.GetEntriesByTags(ctx, []string{"shopping", "errands"})
-
-	require.NoError(t, err)
-	assert.Len(t, entryIDs, 1)
-	assert.Equal(t, id1, entryIDs[0])
-}
-
 func TestTagRepository_GetAllTags(t *testing.T) {
 	db := setupTestDB(t)
 	entryRepo := NewEntryRepository(db)

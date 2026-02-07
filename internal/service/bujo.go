@@ -20,10 +20,6 @@ type BujoService struct {
 	tagRepo          domain.TagRepository
 }
 
-func (s *BujoService) SetTagRepo(tagRepo domain.TagRepository) {
-	s.tagRepo = tagRepo
-}
-
 func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser) *BujoService {
 	return &BujoService{
 		entryRepo:  entryRepo,
@@ -32,7 +28,7 @@ func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayConte
 	}
 }
 
-func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover) *BujoService {
+func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover, tagRepo domain.TagRepository) *BujoService {
 	return &BujoService{
 		entryRepo:        entryRepo,
 		dayCtxRepo:       dayCtxRepo,
@@ -40,6 +36,7 @@ func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain
 		listRepo:         listRepo,
 		listItemRepo:     listItemRepo,
 		entryToListMover: entryToListMover,
+		tagRepo:          tagRepo,
 	}
 }
 

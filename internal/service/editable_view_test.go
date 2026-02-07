@@ -22,7 +22,7 @@ func setupEditableViewService(t *testing.T) (*EditableViewService, *BujoService,
 	parser := domain.NewTreeParser()
 
 	bujoService := NewBujoService(entryRepo, dayCtxRepo, parser)
-	editableViewService := NewEditableViewService(entryRepo, nil, nil)
+	editableViewService := NewEditableViewService(entryRepo, nil, nil, nil)
 	return editableViewService, bujoService, entryRepo
 }
 
@@ -37,7 +37,7 @@ func setupEditableViewServiceWithLists(t *testing.T) (*EditableViewService, *sql
 	listItemRepo := sqlite.NewListItemRepository(db)
 	entryToListMover := sqlite.NewEntryToListMover(db)
 
-	editableViewService := NewEditableViewService(entryRepo, entryToListMover, listRepo)
+	editableViewService := NewEditableViewService(entryRepo, entryToListMover, listRepo, nil)
 	return editableViewService, entryRepo, listRepo, listItemRepo
 }
 
@@ -687,6 +687,58 @@ func TestApplyChangesWithActions_MoveToListWithNoMovedEntries(t *testing.T) {
 	listItems, err := listItemRepo.GetByListEntityID(ctx, list.EntityID)
 	require.NoError(t, err)
 	require.Empty(t, listItems)
+}
+
+func setupEditableViewServiceWithTags(t *testing.T) (*EditableViewService, *sqlite.TagRepository) {
+	t.Helper()
+	db, err := sqlite.OpenAndMigrate(":memory:")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	entryRepo := sqlite.NewEntryRepository(db)
+	tagRepo := sqlite.NewTagRepository(db)
+
+	editableViewService := NewEditableViewService(entryRepo, nil, nil, tagRepo)
+	return editableViewService, tagRepo
+}
+
+func TestApplyChanges_PersistsTags(t *testing.T) {
+	svc, tagRepo := setupEditableViewServiceWithTags(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	result, err := svc.ApplyChanges(ctx, ". Buy groceries #shopping #errands", date)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Inserted)
+
+	entries, err := svc.entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+
+	tags, err := tagRepo.GetTagsForEntries(ctx, []int64{entries[0].ID})
+	require.NoError(t, err)
+	require.Equal(t, []string{"errands", "shopping"}, tags[entries[0].ID])
+}
+
+func TestApplyChanges_ReplacesTagsOnReapply(t *testing.T) {
+	svc, tagRepo := setupEditableViewServiceWithTags(t)
+	ctx := context.Background()
+	date := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChanges(ctx, ". Buy groceries #shopping", date)
+	require.NoError(t, err)
+
+	_, err = svc.ApplyChanges(ctx, ". Buy groceries #errands #food", date)
+	require.NoError(t, err)
+
+	entries, err := svc.entryRepo.GetByDate(ctx, date)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+
+	tags, err := tagRepo.GetTagsForEntries(ctx, []int64{entries[0].ID})
+	require.NoError(t, err)
+	require.Equal(t, []string{"errands", "food"}, tags[entries[0].ID])
 }
 
 func splitNonEmpty(s string) []string {

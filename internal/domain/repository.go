@@ -89,7 +89,6 @@ type ListItemRepository interface {
 type TagRepository interface {
 	InsertEntryTags(ctx context.Context, entryID int64, tags []string) error
 	GetTagsForEntries(ctx context.Context, entryIDs []int64) (map[int64][]string, error)
-	GetEntriesByTags(ctx context.Context, tags []string) ([]int64, error)
 	GetAllTags(ctx context.Context) ([]string, error)
 	DeleteByEntryID(ctx context.Context, entryID int64) error
 }

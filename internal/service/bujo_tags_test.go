@@ -22,8 +22,7 @@ func setupBujoServiceWithTags(t *testing.T) (*BujoService, *sqlite.EntryReposito
 	tagRepo := sqlite.NewTagRepository(db)
 	parser := domain.NewTreeParser()
 
-	svc := NewBujoService(entryRepo, dayCtxRepo, parser)
-	svc.SetTagRepo(tagRepo)
+	svc := NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, nil, nil, nil, tagRepo)
 	return svc, entryRepo, tagRepo
 }
 
