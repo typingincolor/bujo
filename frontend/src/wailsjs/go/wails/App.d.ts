@@ -144,6 +144,10 @@ export function Search(arg1:string):Promise<Array<domain.Entry>>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
 
+export function SetHabitMonthlyGoal(arg1:number,arg2:number):Promise<void>;
+
+export function SetHabitWeeklyGoal(arg1:number,arg2:number):Promise<void>;
+
 export function SetLocation(arg1:time.Time,arg2:string):Promise<void>;
 
 export function SetMood(arg1:time.Time,arg2:string):Promise<void>;

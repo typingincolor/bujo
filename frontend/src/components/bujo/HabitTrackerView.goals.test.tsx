@@ -11,10 +11,12 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   UndoHabitLog: vi.fn().mockResolvedValue(undefined),
   UndoHabitLogForDate: vi.fn().mockResolvedValue(undefined),
   SetHabitGoal: vi.fn().mockResolvedValue(undefined),
+  SetHabitWeeklyGoal: vi.fn().mockResolvedValue(undefined),
+  SetHabitMonthlyGoal: vi.fn().mockResolvedValue(undefined),
   LogHabitForDate: vi.fn().mockResolvedValue(undefined),
 }))
 
-import { SetHabitGoal } from '@/wailsjs/go/wails/App'
+import { SetHabitGoal, SetHabitWeeklyGoal, SetHabitMonthlyGoal } from '@/wailsjs/go/wails/App'
 
 const createTestHabit = (overrides: Partial<Habit> = {}): Habit => ({
   id: 1,
@@ -67,21 +69,23 @@ describe('HabitTracker - Set Habit Goal', () => {
     expect(screen.getByTitle('Set goal')).toBeInTheDocument()
   })
 
-  it('shows goal input when goal button is clicked', async () => {
+  it('shows goal input when goal button is clicked and type selected', async () => {
     const user = userEvent.setup()
     render(<HabitTracker habits={[createTestHabit()]} />)
 
     await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/daily/i))
 
     expect(screen.getByPlaceholderText(/daily goal/i)).toBeInTheDocument()
   })
 
-  it('calls SetHabitGoal binding when submitting goal', async () => {
+  it('calls SetHabitGoal binding when submitting daily goal', async () => {
     const user = userEvent.setup()
     const onHabitChanged = vi.fn()
     render(<HabitTracker habits={[createTestHabit({ id: 42 })]} onHabitChanged={onHabitChanged} />)
 
     await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/daily/i))
     const input = screen.getByPlaceholderText(/daily goal/i)
     await user.type(input, '3{Enter}')
 
@@ -96,6 +100,7 @@ describe('HabitTracker - Set Habit Goal', () => {
     render(<HabitTracker habits={[createTestHabit()]} onHabitChanged={onHabitChanged} />)
 
     await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/daily/i))
     const input = screen.getByPlaceholderText(/daily goal/i)
     await user.type(input, '3{Enter}')
 
@@ -233,5 +238,116 @@ describe('HabitTracker - Day Order Display', () => {
     // First circle should be oldest (Jan 1), last should be anchor (Jan 7)
     expect(dayCircles[0]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-01'))
     expect(dayCircles[6]).toHaveAttribute('aria-label', expect.stringContaining('2024-01-07'))
+  })
+})
+
+describe('HabitTracker - Weekly Goal Display', () => {
+  it('shows weekly goal indicator when goalPerWeek is set', () => {
+    const habit = createTestHabit({ goalPerWeek: 5 })
+    render(<HabitTracker habits={[habit]} />)
+
+    const goalIndicator = screen.getByLabelText(/weekly goal.*5/i)
+    expect(goalIndicator).toBeInTheDocument()
+  })
+
+  it('shows weekly progress when available', () => {
+    const habit = createTestHabit({ goalPerWeek: 5, weeklyProgress: 60 })
+    render(<HabitTracker habits={[habit]} />)
+
+    expect(screen.getByText(/60%/)).toBeInTheDocument()
+  })
+
+  it('does not show weekly goal indicator when not set', () => {
+    const habit = createTestHabit({ goalPerWeek: undefined })
+    render(<HabitTracker habits={[habit]} />)
+
+    expect(screen.queryByLabelText(/weekly goal/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('HabitTracker - Monthly Goal Display', () => {
+  it('shows monthly goal indicator when goalPerMonth is set', () => {
+    const habit = createTestHabit({ goalPerMonth: 20 })
+    render(<HabitTracker habits={[habit]} />)
+
+    const goalIndicator = screen.getByLabelText(/monthly goal.*20/i)
+    expect(goalIndicator).toBeInTheDocument()
+  })
+
+  it('does not show monthly goal indicator when not set', () => {
+    const habit = createTestHabit({ goalPerMonth: undefined })
+    render(<HabitTracker habits={[habit]} />)
+
+    expect(screen.queryByLabelText(/monthly goal/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('HabitTracker - Goal Type Selection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows goal type dropdown when goal button is clicked', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+
+    expect(screen.getByText(/daily/i)).toBeInTheDocument()
+    expect(screen.getByText(/weekly/i)).toBeInTheDocument()
+    expect(screen.getByText(/monthly/i)).toBeInTheDocument()
+  })
+
+  it('calls SetHabitWeeklyGoal when submitting weekly goal', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ id: 42 })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/weekly/i))
+    const input = screen.getByPlaceholderText(/weekly goal/i)
+    await user.type(input, '5{Enter}')
+
+    await waitFor(() => {
+      expect(SetHabitWeeklyGoal).toHaveBeenCalledWith(42, 5)
+    })
+  })
+
+  it('calls SetHabitMonthlyGoal when submitting monthly goal', async () => {
+    const user = userEvent.setup()
+    const onHabitChanged = vi.fn()
+    render(<HabitTracker habits={[createTestHabit({ id: 42 })]} onHabitChanged={onHabitChanged} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/monthly/i))
+    const input = screen.getByPlaceholderText(/monthly goal/i)
+    await user.type(input, '20{Enter}')
+
+    await waitFor(() => {
+      expect(SetHabitMonthlyGoal).toHaveBeenCalledWith(42, 20)
+    })
+  })
+
+  it('defaults to daily goal type', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    await user.click(screen.getByText(/daily/i))
+
+    expect(screen.getByPlaceholderText(/daily goal/i)).toBeInTheDocument()
+  })
+
+  it('dismisses type selection when Escape is pressed', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    expect(screen.getByText(/daily/i)).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByText(/daily/i)).not.toBeInTheDocument()
+    expect(screen.getByTitle('Set goal')).toBeInTheDocument()
   })
 })

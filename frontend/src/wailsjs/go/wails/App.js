@@ -278,6 +278,14 @@ export function SetHabitGoal(arg1, arg2) {
   return window['go']['wails']['App']['SetHabitGoal'](arg1, arg2);
 }
 
+export function SetHabitMonthlyGoal(arg1, arg2) {
+  return window['go']['wails']['App']['SetHabitMonthlyGoal'](arg1, arg2);
+}
+
+export function SetHabitWeeklyGoal(arg1, arg2) {
+  return window['go']['wails']['App']['SetHabitWeeklyGoal'](arg1, arg2);
+}
+
 export function SetLocation(arg1, arg2) {
   return window['go']['wails']['App']['SetLocation'](arg1, arg2);
 }

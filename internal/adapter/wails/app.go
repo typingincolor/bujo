@@ -247,6 +247,14 @@ func (a *App) SetHabitGoal(habitID int64, dailyGoal int) error {
 	return a.services.Habit.SetHabitGoalByID(a.ctx, habitID, dailyGoal)
 }
 
+func (a *App) SetHabitWeeklyGoal(habitID int64, weeklyGoal int) error {
+	return a.services.Habit.SetHabitWeeklyGoalByID(a.ctx, habitID, weeklyGoal)
+}
+
+func (a *App) SetHabitMonthlyGoal(habitID int64, monthlyGoal int) error {
+	return a.services.Habit.SetHabitMonthlyGoalByID(a.ctx, habitID, monthlyGoal)
+}
+
 func (a *App) AnswerQuestion(questionID int64, answerText string) error {
 	return a.services.Bujo.MarkAnswered(a.ctx, questionID, answerText)
 }

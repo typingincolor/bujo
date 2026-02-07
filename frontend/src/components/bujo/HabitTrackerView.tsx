@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Habit } from '@/types/bujo';
 import { cn } from '@/lib/utils';
 import { Flame, Plus, X, Trash2, Target, ChevronDown } from 'lucide-react';
-import { CreateHabit, DeleteHabit, UndoHabitLogForDate, SetHabitGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
+import { CreateHabit, DeleteHabit, UndoHabitLogForDate, SetHabitGoal, SetHabitWeeklyGoal, SetHabitMonthlyGoal, LogHabitForDate } from '@/wailsjs/go/wails/App';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CalendarNavigation, CalendarGrid, QuarterGrid } from './calendar';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/lib/calendarUtils';
 
 type PeriodView = 'week' | 'month' | 'quarter';
+type GoalType = 'daily' | 'weekly' | 'monthly';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -34,7 +35,7 @@ interface HabitRowProps {
   onDeleteHabit: (habitId: number) => void;
   onSetGoal: (habitId: number) => void;
   settingGoalFor: number | null;
-  onGoalSubmit: (habitId: number, goal: number) => void;
+  onGoalSubmit: (habitId: number, goal: number, goalType: GoalType) => void;
   onGoalCancel: () => void;
   currentPeriod: PeriodView;
   anchorDate: Date;
@@ -53,6 +54,7 @@ function HabitRow({
   anchorDate,
 }: HabitRowProps) {
   const [goalInput, setGoalInput] = useState('');
+  const [goalType, setGoalType] = useState<GoalType | null>(null);
 
   const dayHistory = useMemo(
     () => mapDayHistoryToCalendar(habit.dayHistory),
@@ -81,14 +83,20 @@ function HabitRow({
   const handleGoalKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const goal = parseInt(goalInput, 10);
-      if (!isNaN(goal) && goal > 0) {
-        onGoalSubmit(habit.id, goal);
+      if (!isNaN(goal) && goal > 0 && goalType) {
+        onGoalSubmit(habit.id, goal, goalType);
         setGoalInput('');
+        setGoalType(null);
       }
     } else if (e.key === 'Escape') {
       onGoalCancel();
       setGoalInput('');
+      setGoalType(null);
     }
+  };
+
+  const handleSelectGoalType = (type: GoalType) => {
+    setGoalType(type);
   };
 
   const renderCalendar = () => {
@@ -156,6 +164,28 @@ function HabitRow({
               • <Target className="w-3 h-3" />{habit.goal}
             </span>
           )}
+          {habit.goalPerWeek && (
+            <span
+              className="flex items-center gap-0.5"
+              aria-label={`Weekly goal: ${habit.goalPerWeek}`}
+            >
+              • <Target className="w-3 h-3" />{habit.goalPerWeek}/wk
+              {habit.weeklyProgress !== undefined && (
+                <span className="text-primary">{habit.weeklyProgress}%</span>
+              )}
+            </span>
+          )}
+          {habit.goalPerMonth && (
+            <span
+              className="flex items-center gap-0.5"
+              aria-label={`Monthly goal: ${habit.goalPerMonth}`}
+            >
+              • <Target className="w-3 h-3" />{habit.goalPerMonth}/mo
+              {habit.monthlyProgress !== undefined && (
+                <span className="text-primary">{habit.monthlyProgress}%</span>
+              )}
+            </span>
+          )}
         </div>
       </div>
 
@@ -166,16 +196,40 @@ function HabitRow({
 
       {/* Goal button or input */}
       {settingGoalFor === habit.id ? (
-        <input
-          type="number"
-          min="1"
-          value={goalInput}
-          onChange={(e) => setGoalInput(e.target.value)}
-          onKeyDown={handleGoalKeyDown}
-          placeholder="Daily goal"
-          autoFocus
-          className="w-20 px-2 py-1 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
+        goalType ? (
+          <input
+            type="number"
+            min="1"
+            value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            onKeyDown={handleGoalKeyDown}
+            placeholder={`${goalType.charAt(0).toUpperCase() + goalType.slice(1)} goal`}
+            autoFocus
+            className="w-24 px-2 py-1 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        ) : (
+          <div className="flex gap-1" onKeyDown={(e) => { if (e.key === 'Escape') onGoalCancel(); }}>
+            <button
+              onClick={() => handleSelectGoalType('daily')}
+              autoFocus
+              className="px-2 py-1 text-xs rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              Daily
+            </button>
+            <button
+              onClick={() => handleSelectGoalType('weekly')}
+              className="px-2 py-1 text-xs rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              Weekly
+            </button>
+            <button
+              onClick={() => handleSelectGoalType('monthly')}
+              className="px-2 py-1 text-xs rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+            >
+              Monthly
+            </button>
+          </div>
+        )
       ) : (
         <button
           onClick={() => onSetGoal(habit.id)}
@@ -315,9 +369,18 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
     }
   };
 
-  const handleSetGoal = async (habitId: number, goal: number) => {
+  const handleSetGoal = async (habitId: number, goal: number, goalType: GoalType = 'daily') => {
     try {
-      await SetHabitGoal(habitId, goal);
+      switch (goalType) {
+        case 'weekly':
+          await SetHabitWeeklyGoal(habitId, goal);
+          break;
+        case 'monthly':
+          await SetHabitMonthlyGoal(habitId, goal);
+          break;
+        default:
+          await SetHabitGoal(habitId, goal);
+      }
       setSettingGoalFor(null);
       onHabitChanged?.();
     } catch (error) {
