@@ -609,12 +609,13 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 	descendants := tree[1:]
 
 	type originalEntry struct {
-		Type     domain.EntryType
-		Priority domain.Priority
+		Type           domain.EntryType
+		Priority       domain.Priority
+		MigrationCount int
 	}
 	originals := make(map[int64]originalEntry, len(tree))
 	for _, e := range tree {
-		originals[e.ID] = originalEntry{Type: e.Type, Priority: e.Priority}
+		originals[e.ID] = originalEntry{Type: e.Type, Priority: e.Priority, MigrationCount: e.MigrationCount}
 	}
 
 	// Mark all original entries as migrated
@@ -627,11 +628,12 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 
 	// Create new parent
 	newEntry := domain.Entry{
-		Type:          domain.EntryTypeTask,
-		Content:       entry.Content,
-		Priority:      entry.Priority,
-		ScheduledDate: &toDate,
-		CreatedAt:     time.Now(),
+		Type:           domain.EntryTypeTask,
+		Content:        entry.Content,
+		Priority:       entry.Priority,
+		MigrationCount: entry.MigrationCount + 1,
+		ScheduledDate:  &toDate,
+		CreatedAt:      time.Now(),
 	}
 
 	newParentID, err := s.entryRepo.Insert(ctx, newEntry)
@@ -649,13 +651,14 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		}
 		orig := originals[child.ID]
 		newChild := domain.Entry{
-			Type:          orig.Type,
-			Content:       child.Content,
-			Priority:      orig.Priority,
-			ParentID:      &newChildParentID,
-			Depth:         child.Depth,
-			ScheduledDate: &toDate,
-			CreatedAt:     time.Now(),
+			Type:           orig.Type,
+			Content:        child.Content,
+			Priority:       orig.Priority,
+			MigrationCount: orig.MigrationCount + 1,
+			ParentID:       &newChildParentID,
+			Depth:          child.Depth,
+			ScheduledDate:  &toDate,
+			CreatedAt:      time.Now(),
 		}
 		newChildID, err := s.entryRepo.Insert(ctx, newChild)
 		if err != nil {

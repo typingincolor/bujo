@@ -390,3 +390,66 @@ func TestEntryRepository_DeleteByDate_IncludesAllVersions(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 0, count)
 }
+
+func TestEntryRepository_MigrationCount_InsertAndRetrieve(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:           domain.EntryTypeTask,
+		Content:        "Migrated task",
+		Depth:          0,
+		CreatedAt:      time.Now(),
+		MigrationCount: 2,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 2, result.MigrationCount)
+}
+
+func TestEntryRepository_MigrationCount_DefaultsToZero(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Regular task",
+		Depth:     0,
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 0, result.MigrationCount)
+}
+
+func TestEntryRepository_MigrationCount_GetByDate(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now()
+	entry := domain.Entry{
+		Type:           domain.EntryTypeTask,
+		Content:        "Migrated task",
+		Depth:          0,
+		CreatedAt:      now,
+		MigrationCount: 3,
+	}
+	_, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	entries, err := repo.GetByDate(ctx, now)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, 3, entries[0].MigrationCount)
+}

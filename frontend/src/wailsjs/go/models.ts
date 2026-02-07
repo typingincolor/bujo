@@ -29,11 +29,12 @@ export namespace domain {
 	    ScheduledDate?: time.Time;
 	    CreatedAt: time.Time;
 	    SortOrder: number;
-	
+	    MigrationCount: number;
+
 	    static createFrom(source: any = {}) {
 	        return new Entry(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ID = source["ID"];
@@ -48,6 +49,7 @@ export namespace domain {
 	        this.ScheduledDate = this.convertValues(source["ScheduledDate"], time.Time);
 	        this.CreatedAt = this.convertValues(source["CreatedAt"], time.Time);
 	        this.SortOrder = source["SortOrder"];
+	        this.MigrationCount = source["MigrationCount"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
