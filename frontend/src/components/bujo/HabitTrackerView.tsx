@@ -208,9 +208,10 @@ function HabitRow({
             className="w-24 px-2 py-1 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         ) : (
-          <div className="flex gap-1">
+          <div className="flex gap-1" onKeyDown={(e) => { if (e.key === 'Escape') onGoalCancel(); }}>
             <button
               onClick={() => handleSelectGoalType('daily')}
+              autoFocus
               className="px-2 py-1 text-xs rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
             >
               Daily

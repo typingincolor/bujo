@@ -337,4 +337,17 @@ describe('HabitTracker - Goal Type Selection', () => {
 
     expect(screen.getByPlaceholderText(/daily goal/i)).toBeInTheDocument()
   })
+
+  it('dismisses type selection when Escape is pressed', async () => {
+    const user = userEvent.setup()
+    render(<HabitTracker habits={[createTestHabit()]} />)
+
+    await user.click(screen.getByTitle('Set goal'))
+    expect(screen.getByText(/daily/i)).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByText(/daily/i)).not.toBeInTheDocument()
+    expect(screen.getByTitle('Set goal')).toBeInTheDocument()
+  })
 })
