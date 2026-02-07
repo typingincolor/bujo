@@ -1,0 +1,1 @@
+ALTER TABLE entries ADD COLUMN migration_count INTEGER NOT NULL DEFAULT 0;

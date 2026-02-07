@@ -382,6 +382,36 @@ func TestBujoService_MigrateEntry_PreservesPriority(t *testing.T) {
 	assert.Equal(t, domain.PriorityMedium, newChildren[0].Priority, "migrated child should preserve priority")
 }
 
+func TestBujoService_MigrateEntry_IncrementsMigrationCount(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	dayAfter := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
+
+	ids, err := service.LogEntries(ctx, ". Call dentist", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	original, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Equal(t, 0, original.MigrationCount, "new entry should have migration count 0")
+
+	newID1, err := service.MigrateEntry(ctx, ids[0], tomorrow)
+	require.NoError(t, err)
+
+	migrated1, err := entryRepo.GetByID(ctx, newID1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, migrated1.MigrationCount, "first migration should have count 1")
+
+	newID2, err := service.MigrateEntry(ctx, newID1, dayAfter)
+	require.NoError(t, err)
+
+	migrated2, err := entryRepo.GetByID(ctx, newID2)
+	require.NoError(t, err)
+	assert.Equal(t, 2, migrated2.MigrationCount, "second migration should have count 2")
+}
+
 func TestBujoService_MoveEntry_ChangeParent(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

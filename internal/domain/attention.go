@@ -29,6 +29,7 @@ const (
 	attentionScoreUrgentKeyword = 20
 	attentionScoreQuestion      = 10
 	attentionScoreParentEvent   = 5
+	attentionScoreMigration     = 15
 	attentionAgingThresholdOld  = 7
 	attentionAgingThresholdNew  = 3
 )
@@ -72,6 +73,11 @@ func CalculateAttentionScore(entry Entry, now time.Time, parentType EntryType) A
 
 	if entry.Type == EntryTypeQuestion {
 		score += attentionScoreQuestion
+	}
+
+	if entry.MigrationCount > 0 {
+		score += entry.MigrationCount * attentionScoreMigration
+		indicators = append(indicators, AttentionMigrated)
 	}
 
 	if entry.ParentID != nil && parentType == EntryTypeEvent {

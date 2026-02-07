@@ -17,7 +17,7 @@ export function transformEntry(e: domain.Entry): Entry {
     parentId: e.ParentID ?? null,
     loggedDate,
     scheduledDate,
-    migrationCount: (e as { MigrationCount?: number }).MigrationCount,
+    migrationCount: e.MigrationCount,
   }
 }
 

@@ -184,6 +184,31 @@ func TestCalculateAttentionScore(t *testing.T) {
 		}
 	})
 
+	t.Run("adds 15 points per migration", func(t *testing.T) {
+		entry := newEntry()
+		entry.MigrationCount = 1
+		result := CalculateAttentionScore(entry, now, "")
+		if result.Score != 15 {
+			t.Errorf("expected score 15, got %d", result.Score)
+		}
+		assertContainsIndicator(t, result.Indicators, AttentionMigrated)
+	})
+
+	t.Run("adds 30 points for two migrations", func(t *testing.T) {
+		entry := newEntry()
+		entry.MigrationCount = 2
+		result := CalculateAttentionScore(entry, now, "")
+		if result.Score != 30 {
+			t.Errorf("expected score 30, got %d", result.Score)
+		}
+		assertContainsIndicator(t, result.Indicators, AttentionMigrated)
+	})
+
+	t.Run("no migration points for zero count", func(t *testing.T) {
+		result := CalculateAttentionScore(newEntry(), now, "")
+		assertNotContainsIndicator(t, result.Indicators, AttentionMigrated)
+	})
+
 	t.Run("combines multiple conditions", func(t *testing.T) {
 		fourDaysAgo := now.AddDate(0, 0, -4)
 		result := CalculateAttentionScore(
