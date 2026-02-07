@@ -41,6 +41,7 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   SetWeather: vi.fn().mockResolvedValue(undefined),
   SetLocation: vi.fn().mockResolvedValue(undefined),
   GetLocationHistory: vi.fn().mockResolvedValue(['Home', 'Office']),
+  GetAllTags: vi.fn().mockResolvedValue([]),
   OpenFileDialog: vi.fn().mockResolvedValue(''),
   ReadFile: vi.fn().mockResolvedValue(''),
   GetEditableDocument: vi.fn().mockResolvedValue(''),

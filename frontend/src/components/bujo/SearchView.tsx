@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Search as SearchIcon } from 'lucide-react';
-import { Search, GetEntry, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { Search as SearchIcon, X } from 'lucide-react';
+import { Search, SearchByTags, GetAllTags, GetEntry, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { TagContent } from './TagContent';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ENTRY_SYMBOLS, EntryType, Priority, PRIORITY_SYMBOLS } from '@/types/bujo';
@@ -16,18 +17,54 @@ export interface SearchResult {
 }
 
 interface SearchViewProps {
+  initialTagFilter?: string;
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
   onSelectEntry?: (entry: SearchResult) => void;
+  onTagClick?: (tag: string) => void;
 }
 
-export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: SearchViewProps) {
+export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onSelectEntry, onTagClick }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [answerModalOpen, setAnswerModalOpen] = useState(false);
   const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
+  const [tagFilter, setTagFilter] = useState<string | null>(initialTagFilter ?? null);
+  const [allTags, setAllTags] = useState<string[]>([]);
+
+  useEffect(() => {
+    GetAllTags().then(tags => setAllTags(tags || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (tagFilter) {
+      SearchByTags([tagFilter]).then(searchResults => {
+        const mapped = (searchResults || []).map(entry => ({
+          id: entry.ID,
+          content: entry.Content,
+          type: (entry.Type as string).toLowerCase() as EntryType,
+          priority: ((entry.Priority as string)?.toLowerCase() || 'none') as Priority,
+          date: (entry.CreatedAt as unknown as string) || '',
+          parentId: entry.ParentID ?? null,
+        }));
+        setResults(mapped);
+        setHasSearched(true);
+      }).catch(() => {});
+    }
+  }, [tagFilter]);
+
+  const handleTagPillClick = useCallback((tag: string) => {
+    setTagFilter(tag);
+    setQuery('');
+  }, []);
+
+  const handleClearFilter = useCallback(() => {
+    setTagFilter(null);
+    setResults([]);
+    setHasSearched(false);
+  }, []);
 
   const handleSearch = useCallback(async (searchQuery: string) => {
     setQuery(searchQuery);
@@ -246,6 +283,35 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
         />
       </div>
 
+      {/* Tag Filter Indicator */}
+      {tagFilter && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Filtering by #{tagFilter}</span>
+          <button
+            onClick={handleClearFilter}
+            aria-label="Clear tag filter"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Tag Panel */}
+      {allTags.length > 0 && (
+        <div data-testid="tag-panel" className="flex flex-wrap gap-2">
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => handleTagPillClick(tag)}
+              className="tag px-2 py-0.5 text-sm rounded-full cursor-pointer hover:opacity-80"
+            >
+              #{tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Results */}
       <div className="space-y-2">
         {!hasSearched && (
@@ -335,7 +401,7 @@ export function SearchView({ onMigrate, onNavigateToEntry, onSelectEntry }: Sear
                     result.type === 'done' && 'text-bujo-done',
                     result.type === 'cancelled' && 'line-through text-muted-foreground'
                   )}>
-                    {result.content}
+                    <TagContent content={result.content} onTagClick={onTagClick} />
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {formatDate(result.date)}

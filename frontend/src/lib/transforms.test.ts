@@ -30,6 +30,7 @@ describe('transformEntry', () => {
       priority: 'high',
       parentId: null,
       loggedDate: '2026-01-15T10:00:00Z',
+      tags: [],
     })
   })
 
@@ -110,6 +111,54 @@ describe('transformEntry', () => {
     const result = transformEntry(input)
 
     expect(result.loggedDate).toBe('2026-01-18T10:00:00Z')
+  })
+
+  it('maps Tags field from backend entry', () => {
+    const input = {
+      ID: 7,
+      Type: 'Task',
+      Content: 'Buy groceries #shopping #errands',
+      Priority: 'None',
+      ParentID: undefined,
+      CreatedAt: '2026-01-15T10:00:00Z',
+      Tags: ['shopping', 'errands'],
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.tags).toEqual(['shopping', 'errands'])
+  })
+
+  it('defaults to empty array when Tags is undefined', () => {
+    const input = {
+      ID: 8,
+      Type: 'Note',
+      Content: 'No tags here',
+      Priority: '',
+      ParentID: undefined,
+      CreatedAt: '2026-01-15T10:00:00Z',
+      Tags: undefined,
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.tags).toEqual([])
+  })
+
+  it('defaults to empty array when Tags is null', () => {
+    const input = {
+      ID: 9,
+      Type: 'Note',
+      Content: 'Null tags',
+      Priority: '',
+      ParentID: undefined,
+      CreatedAt: '2026-01-15T10:00:00Z',
+      Tags: null,
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.tags).toEqual([])
   })
 })
 

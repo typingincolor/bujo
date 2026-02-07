@@ -226,7 +226,7 @@ describe('EntryItem', () => {
 
     it('renders cancelled entry with strikethrough style', () => {
       render(<EntryItem entry={createTestEntry({ type: 'cancelled', content: 'Cancelled task' })} />)
-      const content = screen.getByText('Cancelled task')
+      const content = screen.getByText('Cancelled task').closest('.flex-1')
       expect(content).toHaveClass('line-through')
     })
 
@@ -474,9 +474,30 @@ describe('EntryItem', () => {
   describe('visual styling', () => {
     it('renders done entries with success color (not strikethrough)', () => {
       render(<EntryItem entry={createTestEntry({ type: 'done', content: 'Done task' })} />)
-      const content = screen.getByText('Done task')
+      const content = screen.getByText('Done task').closest('.flex-1')
       expect(content).toHaveClass('text-bujo-done')
       expect(content).not.toHaveClass('line-through')
+    })
+  })
+
+  describe('tag rendering', () => {
+    it('renders tags in content as styled spans', () => {
+      render(<EntryItem entry={createTestEntry({ content: 'Task #work' })} />)
+      const tag = screen.getByText('#work')
+      expect(tag).toHaveClass('tag')
+    })
+
+    it('calls onTagClick when a tag is clicked', () => {
+      const onTagClick = vi.fn()
+      render(
+        <EntryItem
+          entry={createTestEntry({ content: 'Task #work' })}
+          onTagClick={onTagClick}
+        />
+      )
+
+      fireEvent.click(screen.getByText('#work'))
+      expect(onTagClick).toHaveBeenCalledWith('work')
     })
   })
 

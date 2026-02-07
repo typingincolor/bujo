@@ -4,6 +4,7 @@ import { EntrySymbol } from './EntrySymbol';
 import { EntryActionBar } from './EntryActions';
 import { cn } from '@/lib/utils';
 import { calculateMenuPosition } from '@/lib/menuPosition';
+import { TagContent } from './TagContent';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 
 interface EntryItemProps {
@@ -30,6 +31,7 @@ interface EntryItemProps {
   onCycleType?: () => void;
   onMoveToRoot?: () => void;
   onMoveToList?: () => void;
+  onTagClick?: (tag: string) => void;
 }
 
 const CONTEXT_MENU_ESTIMATED_SIZE = { width: 150, height: 300 };
@@ -71,6 +73,7 @@ export function EntryItem({
   onCycleType,
   onMoveToRoot,
   onMoveToList,
+  onTagClick,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
@@ -202,7 +205,7 @@ export function EntryItem({
 
       {/* Content */}
       <span className={cn('flex-1 text-sm', contentStyles[entry.type])}>
-        {entry.content}
+        <TagContent content={entry.content} onTagClick={onTagClick} />
       </span>
 
       {/* Hidden child count when collapsed */}
