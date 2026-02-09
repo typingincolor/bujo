@@ -8,6 +8,7 @@ type SearchOptions struct {
 	DateFrom *time.Time
 	DateTo   *time.Time
 	Tags     []string
+	Mentions []string
 	Limit    int
 }
 
@@ -31,6 +32,11 @@ func (o SearchOptions) WithDateRange(from, to time.Time) SearchOptions {
 
 func (o SearchOptions) WithTags(tags []string) SearchOptions {
 	o.Tags = tags
+	return o
+}
+
+func (o SearchOptions) WithMentions(mentions []string) SearchOptions {
+	o.Mentions = mentions
 	return o
 }
 

@@ -104,9 +104,10 @@ func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Service
 	}
 
 	tagRepo := sqlite.NewTagRepository(db)
+	mentionRepo := sqlite.NewMentionRepository(db)
 	backupRepo := sqlite.NewBackupRepository(db)
 
-	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover, tagRepo)
+	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover, tagRepo, mentionRepo)
 
 	return &Services{
 		DB:              db,
@@ -116,7 +117,7 @@ func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Service
 		Goal:            service.NewGoalService(goalRepo),
 		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
 		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
-		EditableView:    service.NewEditableViewService(entryRepo, entryToListMover, listRepo, tagRepo),
+		EditableView:    service.NewEditableViewService(entryRepo, entryToListMover, listRepo, tagRepo, mentionRepo),
 		Backup:          service.NewBackupService(backupRepo),
 		InsightsRepo:    sqlite.NewInsightsRepository(insightsDB),
 	}

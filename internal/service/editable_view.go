@@ -14,14 +14,16 @@ type EditableViewService struct {
 	entryToListMover domain.EntryToListMover
 	listRepo         domain.ListRepository
 	tagRepo          domain.TagRepository
+	mentionRepo      domain.MentionRepository
 }
 
-func NewEditableViewService(entryRepo domain.EntryRepository, entryToListMover domain.EntryToListMover, listRepo domain.ListRepository, tagRepo domain.TagRepository) *EditableViewService {
+func NewEditableViewService(entryRepo domain.EntryRepository, entryToListMover domain.EntryToListMover, listRepo domain.ListRepository, tagRepo domain.TagRepository, mentionRepo domain.MentionRepository) *EditableViewService {
 	return &EditableViewService{
 		entryRepo:        entryRepo,
 		entryToListMover: entryToListMover,
 		listRepo:         listRepo,
 		tagRepo:          tagRepo,
+		mentionRepo:      mentionRepo,
 	}
 }
 
@@ -161,6 +163,15 @@ func (s *EditableViewService) ApplyChanges(ctx context.Context, doc string, date
 			tags := domain.ExtractTags(line.Content)
 			if len(tags) > 0 {
 				if err := s.tagRepo.InsertEntryTags(ctx, rowID, tags); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		if s.mentionRepo != nil {
+			mentions := domain.ExtractMentions(line.Content)
+			if len(mentions) > 0 {
+				if err := s.mentionRepo.InsertEntryMentions(ctx, rowID, mentions); err != nil {
 					return nil, err
 				}
 			}

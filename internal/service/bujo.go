@@ -18,6 +18,7 @@ type BujoService struct {
 	listItemRepo     domain.ListItemRepository
 	entryToListMover domain.EntryToListMover
 	tagRepo          domain.TagRepository
+	mentionRepo      domain.MentionRepository
 }
 
 func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser) *BujoService {
@@ -28,7 +29,7 @@ func NewBujoService(entryRepo domain.EntryRepository, dayCtxRepo domain.DayConte
 	}
 }
 
-func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover, tagRepo domain.TagRepository) *BujoService {
+func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain.DayContextRepository, parser *domain.TreeParser, listRepo domain.ListRepository, listItemRepo domain.ListItemRepository, entryToListMover domain.EntryToListMover, tagRepo domain.TagRepository, mentionRepo domain.MentionRepository) *BujoService {
 	return &BujoService{
 		entryRepo:        entryRepo,
 		dayCtxRepo:       dayCtxRepo,
@@ -37,6 +38,7 @@ func NewBujoServiceWithLists(entryRepo domain.EntryRepository, dayCtxRepo domain
 		listItemRepo:     listItemRepo,
 		entryToListMover: entryToListMover,
 		tagRepo:          tagRepo,
+		mentionRepo:      mentionRepo,
 	}
 }
 
@@ -97,6 +99,12 @@ func (s *BujoService) LogEntries(ctx context.Context, input string, opts LogEntr
 
 		if s.tagRepo != nil && len(entry.Tags) > 0 {
 			if err := s.tagRepo.InsertEntryTags(ctx, id, entry.Tags); err != nil {
+				return nil, err
+			}
+		}
+
+		if s.mentionRepo != nil && len(entry.Mentions) > 0 {
+			if err := s.mentionRepo.InsertEntryMentions(ctx, id, entry.Mentions); err != nil {
 				return nil, err
 			}
 		}
@@ -535,6 +543,18 @@ func (s *BujoService) EditEntry(ctx context.Context, id int64, newContent string
 		}
 	}
 
+	if s.mentionRepo != nil {
+		if err := s.mentionRepo.DeleteByEntryID(ctx, id); err != nil {
+			return err
+		}
+		mentions := domain.ExtractMentions(newContent)
+		if len(mentions) > 0 {
+			if err := s.mentionRepo.InsertEntryMentions(ctx, id, mentions); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -569,6 +589,12 @@ func (s *BujoService) DeleteEntry(ctx context.Context, id int64) error {
 
 	if s.tagRepo != nil {
 		if err := s.tagRepo.DeleteByEntryID(ctx, id); err != nil {
+			return err
+		}
+	}
+
+	if s.mentionRepo != nil {
+		if err := s.mentionRepo.DeleteByEntryID(ctx, id); err != nil {
 			return err
 		}
 	}
@@ -850,17 +876,30 @@ func (s *BujoService) SearchEntries(ctx context.Context, opts domain.SearchOptio
 		return nil, err
 	}
 
-	if s.tagRepo != nil && len(entries) > 0 {
+	if len(entries) > 0 {
 		ids := make([]int64, len(entries))
 		for i, e := range entries {
 			ids[i] = e.ID
 		}
-		tagMap, err := s.tagRepo.GetTagsForEntries(ctx, ids)
-		if err != nil {
-			return nil, err
+
+		if s.tagRepo != nil {
+			tagMap, err := s.tagRepo.GetTagsForEntries(ctx, ids)
+			if err != nil {
+				return nil, err
+			}
+			for i := range entries {
+				entries[i].Tags = tagMap[entries[i].ID]
+			}
 		}
-		for i := range entries {
-			entries[i].Tags = tagMap[entries[i].ID]
+
+		if s.mentionRepo != nil {
+			mentionMap, err := s.mentionRepo.GetMentionsForEntries(ctx, ids)
+			if err != nil {
+				return nil, err
+			}
+			for i := range entries {
+				entries[i].Mentions = mentionMap[entries[i].ID]
+			}
 		}
 	}
 
@@ -872,6 +911,13 @@ func (s *BujoService) GetAllTags(ctx context.Context) ([]string, error) {
 		return nil, nil
 	}
 	return s.tagRepo.GetAllTags(ctx)
+}
+
+func (s *BujoService) GetAllMentions(ctx context.Context) ([]string, error) {
+	if s.mentionRepo == nil {
+		return nil, nil
+	}
+	return s.mentionRepo.GetAllMentions(ctx)
 }
 
 func (s *BujoService) GetEntryAncestors(ctx context.Context, id int64) ([]domain.Entry, error) {
