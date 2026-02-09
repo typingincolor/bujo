@@ -55,7 +55,7 @@ var rootCmd = &cobra.Command{
 			return fmt.Errorf("failed to open database: %w", err)
 		}
 
-		backupDir := getDefaultBackupDir()
+		backupDir := app.DefaultBackupDir()
 		backupRepo := sqlite.NewBackupRepository(db)
 		backupService = service.NewBackupService(backupRepo)
 		created, path, err := backupService.EnsureRecentBackup(cmd.Context(), backupDir, 7)
