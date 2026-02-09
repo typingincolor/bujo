@@ -181,6 +181,8 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   }, [])
 
   const handleCreateEditor = useCallback((view: EditorView) => {
+    view.contentDOM.spellcheck = true
+
     const effects = computeFoldAllEffects(view.state)
     if (effects.length > 0) {
       view.dispatch({ effects })

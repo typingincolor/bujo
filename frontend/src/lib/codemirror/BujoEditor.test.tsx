@@ -211,6 +211,21 @@ describe('BujoEditor', () => {
     })
   })
 
+  describe('spellcheck', () => {
+    it('enables spellcheck on the editor content element', () => {
+      render(
+        <BujoEditor
+          value=". Task"
+          onChange={() => {}}
+        />
+      )
+
+      const contentEl = document.querySelector('.cm-content') as HTMLElement
+      expect(contentEl).not.toBeNull()
+      expect(contentEl.spellcheck).toBe(true)
+    })
+  })
+
   describe('visual extensions', () => {
     it('displays priority badges for priority markers', () => {
       render(
