@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Search as SearchIcon, X } from 'lucide-react';
-import { Search, SearchByTags, GetAllTags, GetEntry, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
+import { Search, SearchByTags, SearchByMentions, GetAllTags, GetAllMentions, GetEntry, MarkEntryDone, MarkEntryUndone, CancelEntry, UncancelEntry, CyclePriority, RetypeEntry } from '@/wailsjs/go/wails/App';
 import { TagContent } from './TagContent';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -18,13 +18,15 @@ export interface SearchResult {
 
 interface SearchViewProps {
   initialTagFilter?: string;
+  initialMentionFilter?: string;
   onMigrate?: (entry: SearchResult) => void;
   onNavigateToEntry?: (entry: SearchResult) => void;
   onSelectEntry?: (entry: SearchResult) => void;
   onTagClick?: (tag: string) => void;
+  onMentionClick?: (mention: string) => void;
 }
 
-export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onSelectEntry, onTagClick }: SearchViewProps) {
+export function SearchView({ initialTagFilter, initialMentionFilter, onMigrate, onNavigateToEntry, onSelectEntry, onTagClick, onMentionClick }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -33,9 +35,12 @@ export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onS
   const [questionToAnswer, setQuestionToAnswer] = useState<SearchResult | null>(null);
   const [tagFilter, setTagFilter] = useState<string | null>(initialTagFilter ?? null);
   const [allTags, setAllTags] = useState<string[]>([]);
+  const [mentionFilter, setMentionFilter] = useState<string | null>(initialMentionFilter ?? null);
+  const [allMentions, setAllMentions] = useState<string[]>([]);
 
   useEffect(() => {
     GetAllTags().then(tags => setAllTags(tags || [])).catch(() => {});
+    GetAllMentions().then(mentions => setAllMentions(mentions || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -54,6 +59,34 @@ export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onS
       }).catch(() => {});
     }
   }, [tagFilter]);
+
+  useEffect(() => {
+    if (mentionFilter) {
+      SearchByMentions([mentionFilter]).then(searchResults => {
+        const mapped = (searchResults || []).map(entry => ({
+          id: entry.ID,
+          content: entry.Content,
+          type: (entry.Type as string).toLowerCase() as EntryType,
+          priority: ((entry.Priority as string)?.toLowerCase() || 'none') as Priority,
+          date: (entry.CreatedAt as unknown as string) || '',
+          parentId: entry.ParentID ?? null,
+        }));
+        setResults(mapped);
+        setHasSearched(true);
+      }).catch(() => {});
+    }
+  }, [mentionFilter]);
+
+  const handleMentionPillClick = useCallback((mention: string) => {
+    setMentionFilter(mention);
+    setQuery('');
+  }, []);
+
+  const handleClearMentionFilter = useCallback(() => {
+    setMentionFilter(null);
+    setResults([]);
+    setHasSearched(false);
+  }, []);
 
   const handleTagPillClick = useCallback((tag: string) => {
     setTagFilter(tag);
@@ -297,6 +330,20 @@ export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onS
         </div>
       )}
 
+      {/* Mention Filter Indicator */}
+      {mentionFilter && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Filtering by @{mentionFilter}</span>
+          <button
+            onClick={handleClearMentionFilter}
+            aria-label="Clear mention filter"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
       {/* Tag Panel */}
       {allTags.length > 0 && (
         <div data-testid="tag-panel" className="flex flex-wrap gap-2">
@@ -307,6 +354,21 @@ export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onS
               className="tag px-2 py-0.5 text-sm rounded-full cursor-pointer hover:opacity-80"
             >
               #{tag}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Mention Panel */}
+      {allMentions.length > 0 && (
+        <div data-testid="mention-panel" className="flex flex-wrap gap-2">
+          {allMentions.map(mention => (
+            <button
+              key={mention}
+              onClick={() => handleMentionPillClick(mention)}
+              className="mention px-2 py-0.5 text-sm rounded-full cursor-pointer hover:opacity-80"
+            >
+              @{mention}
             </button>
           ))}
         </div>
@@ -401,7 +463,7 @@ export function SearchView({ initialTagFilter, onMigrate, onNavigateToEntry, onS
                     result.type === 'done' && 'text-bujo-done',
                     result.type === 'cancelled' && 'line-through text-muted-foreground'
                   )}>
-                    <TagContent content={result.content} onTagClick={onTagClick} />
+                    <TagContent content={result.content} onTagClick={onTagClick} onMentionClick={onMentionClick} />
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {formatDate(result.date)}

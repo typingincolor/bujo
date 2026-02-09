@@ -59,6 +59,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetInsightsDashboard: vi.fn().mockResolvedValue({ Status: 'not_initialized', LatestSummary: null, ActiveInitiatives: [], HighPriorityActions: [], RecentDecisions: [], DaysSinceLastSummary: 0 }),
   GetInsightsSummaryForWeek: vi.fn().mockResolvedValue({ Summary: null, Topics: [] }),
   GetInsightsActionsForWeek: vi.fn().mockResolvedValue([]),
+  GetAllMentions: vi.fn().mockResolvedValue([]),
+  SearchByMentions: vi.fn().mockResolvedValue([]),
 }));
 
 import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App';

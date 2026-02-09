@@ -32,6 +32,7 @@ interface EntryItemProps {
   onMoveToRoot?: () => void;
   onMoveToList?: () => void;
   onTagClick?: (tag: string) => void;
+  onMentionClick?: (mention: string) => void;
 }
 
 const CONTEXT_MENU_ESTIMATED_SIZE = { width: 150, height: 300 };
@@ -74,6 +75,7 @@ export function EntryItem({
   onMoveToRoot,
   onMoveToList,
   onTagClick,
+  onMentionClick,
 }: EntryItemProps) {
   const isToggleable = entry.type === 'task' || entry.type === 'done';
   const canChangeType = entry.type === 'task' || entry.type === 'note' || entry.type === 'event' || entry.type === 'question';
@@ -205,7 +207,7 @@ export function EntryItem({
 
       {/* Content */}
       <span className={cn('flex-1 text-sm', contentStyles[entry.type])}>
-        <TagContent content={entry.content} onTagClick={onTagClick} />
+        <TagContent content={entry.content} onTagClick={onTagClick} onMentionClick={onMentionClick} />
       </span>
 
       {/* Hidden child count when collapsed */}

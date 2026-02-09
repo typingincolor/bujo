@@ -55,6 +55,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
     CurrentStreak: 0,
   }),
   GetVersion: vi.fn().mockResolvedValue('1.0.0'),
+  GetAllMentions: vi.fn().mockResolvedValue([]),
+  SearchByMentions: vi.fn().mockResolvedValue([]),
 }))
 
 import { Search, GetDayEntries } from './wailsjs/go/wails/App'
