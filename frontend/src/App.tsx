@@ -793,7 +793,7 @@ function App() {
           )}
 
           {view === 'search' && (
-            <div className="max-w-3xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <SearchView
                 initialTagFilter={searchTagFilter ?? undefined}
                 onMigrate={handleSearchMigrate}
@@ -817,7 +817,7 @@ function App() {
           )}
 
           {view === 'settings' && (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-4xl mx-auto">
               <SettingsView />
             </div>
           )}

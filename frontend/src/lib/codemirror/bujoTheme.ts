@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view'
 
-export const bujoTheme = EditorView.theme({
+export const bujoThemeStyles: Record<string, Record<string, string>> = {
   '&': {
     backgroundColor: 'hsl(var(--background))',
     color: 'hsl(var(--foreground))',
@@ -160,16 +160,17 @@ export const bujoTheme = EditorView.theme({
     boxShadow: '0 0 0 1px hsl(var(--primary) / 0.3)',
   },
   '& .cm-search button': {
-    backgroundColor: 'hsl(var(--secondary))',
-    color: 'hsl(var(--secondary-foreground))',
-    border: '1px solid hsl(var(--border))',
+    backgroundColor: 'hsl(var(--primary))',
+    color: 'hsl(var(--primary-foreground))',
+    border: '1px solid hsl(var(--primary))',
     borderRadius: '4px',
-    padding: '2px 8px',
+    padding: '4px 12px',
     fontSize: '12px',
+    fontWeight: '500',
     cursor: 'pointer',
   },
   '& .cm-search button:hover': {
-    backgroundColor: 'hsl(var(--secondary) / 0.8)',
+    backgroundColor: 'hsl(var(--primary) / 0.85)',
   },
   '& .cm-search label': {
     fontSize: '12px',
@@ -182,4 +183,6 @@ export const bujoTheme = EditorView.theme({
   '& .cm-searchMatch-selected': {
     backgroundColor: 'hsl(var(--primary) / 0.4)',
   },
-})
+}
+
+export const bujoTheme = EditorView.theme(bujoThemeStyles)

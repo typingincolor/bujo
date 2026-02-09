@@ -175,6 +175,29 @@ describe('SettingsView', () => {
     expect(parsed.defaultView).toBe('search')
   })
 
+  it('setting rows wrap content to prevent overlap', () => {
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const themeRow = screen.getByText('Theme').closest('div[class*="flex"]')
+    expect(themeRow?.className).toContain('flex-wrap')
+    expect(themeRow?.className).toContain('gap-')
+  })
+
+  it('setting rows have minimum width for labels', () => {
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const themeLabel = screen.getByText('Theme').parentElement
+    expect(themeLabel?.className).toContain('min-w-')
+  })
+
   it('displays backend version from API', async () => {
     vi.mocked(WailsApp.GetVersion).mockResolvedValue('v0.1.0-nightly+85d8787')
 
