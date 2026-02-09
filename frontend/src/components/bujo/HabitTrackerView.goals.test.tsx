@@ -282,6 +282,49 @@ describe('HabitTracker - Monthly Goal Display', () => {
   })
 })
 
+describe('HabitTracker - Stats Overflow Containment', () => {
+  it('contains habit name column with overflow-hidden to prevent label overlap', () => {
+    const habit = createTestHabit({
+      name: 'Exercise',
+      goal: 3,
+      goalPerWeek: 5,
+      weeklyProgress: 60,
+      goalPerMonth: 20,
+      monthlyProgress: 45,
+    })
+    render(<HabitTracker habits={[habit]} />)
+
+    const nameElement = screen.getByText('Exercise')
+    const nameColumn = nameElement.closest('.flex-shrink-0')
+    expect(nameColumn).toHaveClass('overflow-hidden')
+  })
+
+  it('wraps stats row when multiple goals are displayed', () => {
+    const habit = createTestHabit({
+      name: 'Exercise',
+      goal: 3,
+      goalPerWeek: 5,
+      weeklyProgress: 60,
+      goalPerMonth: 20,
+      monthlyProgress: 45,
+    })
+    render(<HabitTracker habits={[habit]} />)
+
+    const completionText = screen.getByText(/45%/)
+    const statsRow = completionText.closest('.flex.items-center.gap-1\\.5')
+    expect(statsRow).toHaveClass('flex-wrap')
+  })
+
+  it('uses wider name column to prevent overlap with calendar', () => {
+    const habit = createTestHabit({ name: 'Exercise' })
+    render(<HabitTracker habits={[habit]} />)
+
+    const nameElement = screen.getByText('Exercise')
+    const nameColumn = nameElement.closest('.flex-shrink-0')
+    expect(nameColumn).toHaveClass('w-40')
+  })
+})
+
 describe('HabitTracker - Goal Type Selection', () => {
   beforeEach(() => {
     vi.clearAllMocks()

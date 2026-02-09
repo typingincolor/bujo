@@ -141,7 +141,7 @@ function HabitRow({
   return (
     <div className="flex items-center gap-4 py-3 px-4 rounded-lg bg-card hover:bg-secondary/30 transition-colors group">
       {/* Habit name and streak */}
-      <div className="flex-shrink-0 min-w-0 w-32">
+      <div className="flex-shrink-0 min-w-0 w-40 overflow-hidden">
         <div className="flex items-center gap-2">
           <span className="font-medium text-sm truncate">{habit.name}</span>
           {habit.streak > 0 && (
@@ -154,7 +154,7 @@ function HabitRow({
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+        <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground mt-0.5">
           <span>{habit.completionRate}% completion</span>
           {habit.goal && (
             <span
@@ -506,7 +506,7 @@ export function HabitTracker({ habits, onHabitChanged, period, onPeriodChange, a
       {/* Shared day header for week view */}
       {currentPeriod === 'week' && habits.length > 0 && (
         <div className="flex items-center gap-4 px-4">
-          <div className="flex-shrink-0 w-32" />
+          <div className="flex-shrink-0 w-40" />
           <div className="flex-1">
             <div className="grid grid-cols-7 gap-px mb-1">
               {getWeekDates(effectiveAnchor).map((day, i) => (
