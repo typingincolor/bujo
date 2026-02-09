@@ -2,22 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/typingincolor/bujo/internal/app"
 )
 
 var backupDir string
-
-func getDefaultBackupDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "backups"
-	}
-	return filepath.Join(home, ".bujo", "backups")
-}
 
 var backupCmd = &cobra.Command{
 	Use:   "backup",
@@ -31,7 +22,7 @@ Backups are stored in ~/.bujo/backups/ by default.`,
 		if err := rootCmd.PersistentPreRunE(cmd, args); err != nil {
 			return err
 		}
-		backupDir = getDefaultBackupDir()
+		backupDir = app.DefaultBackupDir()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {

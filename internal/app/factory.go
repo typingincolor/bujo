@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/repository/sqlite"
@@ -19,7 +21,28 @@ type Services struct {
 	Stats           *service.StatsService
 	ChangeDetection *service.ChangeDetectionService
 	EditableView    *service.EditableViewService
+	Backup          *service.BackupService
 	InsightsRepo    *sqlite.InsightsRepository
+}
+
+func DefaultBackupDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "backups"
+	}
+	return filepath.Join(home, ".bujo", "backups")
+}
+
+type CreateOption func(*createOptions)
+
+type createOptions struct {
+	backupDir string
+}
+
+func WithBackupDir(dir string) CreateOption {
+	return func(o *createOptions) {
+		o.backupDir = dir
+	}
 }
 
 type ServiceFactory struct{}
@@ -28,7 +51,14 @@ func NewServiceFactory() *ServiceFactory {
 	return &ServiceFactory{}
 }
 
-func (f *ServiceFactory) Create(ctx context.Context, dbPath string) (*Services, func(), error) {
+func (f *ServiceFactory) Create(ctx context.Context, dbPath string, opts ...CreateOption) (*Services, func(), error) {
+	options := createOptions{
+		backupDir: DefaultBackupDir(),
+	}
+	for _, opt := range opts {
+		opt(&options)
+	}
+
 	db, err := sqlite.OpenAndMigrate(dbPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to open database: %w", err)
@@ -44,6 +74,11 @@ func (f *ServiceFactory) Create(ctx context.Context, dbPath string) (*Services, 
 	}
 
 	services := f.createServices(db, insightsDB)
+
+	if options.backupDir != "" {
+		_, _, _ = services.Backup.EnsureRecentBackup(ctx, options.backupDir, 7)
+	}
+
 	return services, cleanup, nil
 }
 
@@ -69,6 +104,7 @@ func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Service
 	}
 
 	tagRepo := sqlite.NewTagRepository(db)
+	backupRepo := sqlite.NewBackupRepository(db)
 
 	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover, tagRepo)
 
@@ -81,6 +117,7 @@ func (f *ServiceFactory) createServices(db *sql.DB, insightsDB *sql.DB) *Service
 		Stats:           service.NewStatsService(entryRepo, habitRepo, habitLogRepo),
 		ChangeDetection: service.NewChangeDetectionService(changeDetectors),
 		EditableView:    service.NewEditableViewService(entryRepo, entryToListMover, listRepo, tagRepo),
+		Backup:          service.NewBackupService(backupRepo),
 		InsightsRepo:    sqlite.NewInsightsRepository(insightsDB),
 	}
 }
