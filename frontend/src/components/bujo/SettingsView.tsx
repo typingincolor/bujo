@@ -3,6 +3,7 @@ import { Settings, Palette, Database, Info } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import type { Theme, DefaultView } from '../../types/settings';
 import { GetVersion } from '@/wailsjs/go/wails/App';
+import { BrowserOpenURL } from '@/wailsjs/runtime/runtime';
 
 export function SettingsView() {
   const { theme, setTheme, defaultView, setDefaultView } = useSettings();
@@ -82,14 +83,23 @@ export function SettingsView() {
             label="bujo"
             description="Your digital bullet journal"
           >
-            <a
-              href="https://github.com/typingincolor/bujo"
+            <button
+              onClick={() => BrowserOpenURL('https://github.com/typingincolor/bujo')}
               className="text-sm text-primary hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               GitHub
-            </a>
+            </button>
+          </SettingRow>
+          <SettingRow
+            label="Support"
+            description="Report bugs or request features"
+          >
+            <button
+              onClick={() => BrowserOpenURL('https://github.com/typingincolor/bujo/issues')}
+              className="text-sm text-primary hover:underline"
+            >
+              GitHub Issues
+            </button>
           </SettingRow>
         </div>
       </section>

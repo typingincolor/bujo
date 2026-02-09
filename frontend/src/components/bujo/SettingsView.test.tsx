@@ -4,9 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { SettingsView } from './SettingsView'
 import { SettingsProvider } from '../../contexts/SettingsContext'
 import * as WailsApp from '@/wailsjs/go/wails/App'
+import * as WailsRuntime from '@/wailsjs/runtime/runtime'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({
   GetVersion: vi.fn(() => Promise.resolve('1.0.0')),
+}))
+
+vi.mock('@/wailsjs/runtime/runtime', () => ({
+  BrowserOpenURL: vi.fn(),
 }))
 
 describe('SettingsView', () => {
@@ -196,6 +201,38 @@ describe('SettingsView', () => {
 
     const themeLabel = screen.getByText('Theme').parentElement
     expect(themeLabel?.className).toContain('min-w-')
+  })
+
+  it('opens GitHub repo in system browser when GitHub link is clicked', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const githubLink = screen.getByRole('button', { name: 'GitHub' })
+    await user.click(githubLink)
+
+    expect(WailsRuntime.BrowserOpenURL).toHaveBeenCalledWith(
+      'https://github.com/typingincolor/bujo'
+    )
+  })
+
+  it('opens GitHub issues page in system browser when Support link is clicked', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const supportLink = screen.getByRole('button', { name: 'GitHub Issues' })
+    await user.click(supportLink)
+
+    expect(WailsRuntime.BrowserOpenURL).toHaveBeenCalledWith(
+      'https://github.com/typingincolor/bujo/issues'
+    )
   })
 
   it('displays backend version from API', async () => {
