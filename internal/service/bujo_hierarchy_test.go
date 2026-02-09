@@ -460,7 +460,7 @@ func setupBujoServiceWithLists(t *testing.T) (*BujoService, *sqlite.EntryReposit
 	entryToListMover := sqlite.NewEntryToListMover(db)
 	parser := domain.NewTreeParser()
 
-	service := NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover, nil)
+	service := NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, listRepo, listItemRepo, entryToListMover, nil, nil)
 	return service, entryRepo, listRepo, listItemRepo
 }
 

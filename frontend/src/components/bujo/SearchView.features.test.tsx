@@ -18,6 +18,8 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   MigrateEntry: vi.fn().mockResolvedValue(1),
   CyclePriority: vi.fn().mockResolvedValue(undefined),
   RetypeEntry: vi.fn().mockResolvedValue(undefined),
+  GetAllMentions: vi.fn().mockResolvedValue([]),
+  SearchByMentions: vi.fn().mockResolvedValue([]),
 }))
 
 import { Search, MarkEntryDone, MarkEntryUndone } from '@/wailsjs/go/wails/App'

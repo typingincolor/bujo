@@ -11,11 +11,12 @@ import (
 )
 
 var (
-	searchFrom  string
-	searchTo    string
-	searchType  string
-	searchLimit int
-	searchTags  string
+	searchFrom     string
+	searchTo       string
+	searchType     string
+	searchLimit    int
+	searchTags     string
+	searchMentions string
 )
 
 var searchCmd = &cobra.Command{
@@ -32,7 +33,9 @@ Examples:
   bujo search "call" -f "last week" -t today # Date range filter
   bujo search "report" -n 10                 # Limit results
   bujo search --tag shopping,errands         # Search by tags
-  bujo search "milk" --tag shopping          # Combined search`,
+  bujo search "milk" --tag shopping          # Combined search
+  bujo search --mention john                 # Search by @mention
+  bujo search "meeting" --mention john.smith # Combined with mention`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var query string
@@ -40,8 +43,8 @@ Examples:
 			query = args[0]
 		}
 
-		if query == "" && searchTags == "" && searchType == "" {
-			return fmt.Errorf("provide a search query, --tag filter, or --type filter")
+		if query == "" && searchTags == "" && searchType == "" && searchMentions == "" {
+			return fmt.Errorf("provide a search query, --tag filter, --type filter, or --mention filter")
 		}
 
 		opts := domain.NewSearchOptions(query)
@@ -60,6 +63,14 @@ Examples:
 				tags[i] = strings.TrimSpace(tags[i])
 			}
 			opts = opts.WithTags(tags)
+		}
+
+		if searchMentions != "" {
+			mentions := strings.Split(searchMentions, ",")
+			for i := range mentions {
+				mentions[i] = strings.TrimSpace(mentions[i])
+			}
+			opts = opts.WithMentions(mentions)
 		}
 
 		if searchFrom != "" || searchTo != "" {
@@ -132,6 +143,7 @@ func init() {
 	searchCmd.Flags().StringVar(&searchType, "type", "", "Filter by entry type (task, note, event, done, migrated, cancelled)")
 	searchCmd.Flags().IntVarP(&searchLimit, "limit", "n", 50, "Maximum number of results")
 	searchCmd.Flags().StringVar(&searchTags, "tag", "", "Filter by tags (comma-separated, e.g. shopping,errands)")
+	searchCmd.Flags().StringVar(&searchMentions, "mention", "", "Filter by @mentions (comma-separated, e.g. john,alice.smith)")
 	rootCmd.AddCommand(searchCmd)
 }
 

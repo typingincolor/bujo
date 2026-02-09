@@ -322,7 +322,7 @@ func (r *EntryRepository) GetLastModified(ctx context.Context) (time.Time, error
 }
 
 func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions) ([]domain.Entry, error) {
-	if opts.Query == "" && opts.Type == nil && len(opts.Tags) == 0 {
+	if opts.Query == "" && opts.Type == nil && len(opts.Tags) == 0 && len(opts.Mentions) == 0 {
 		return []domain.Entry{}, nil
 	}
 
@@ -339,6 +339,15 @@ func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions)
 			args = append(args, tag)
 		}
 		query += fmt.Sprintf(` JOIN entry_tags et ON e.id = et.entry_id AND et.tag IN (%s)`, strings.Join(placeholders, ","))
+	}
+
+	if len(opts.Mentions) > 0 {
+		placeholders := make([]string, len(opts.Mentions))
+		for i, mention := range opts.Mentions {
+			placeholders[i] = "?"
+			args = append(args, mention)
+		}
+		query += fmt.Sprintf(` JOIN entry_mentions em ON e.id = em.entry_id AND em.mention IN (%s)`, strings.Join(placeholders, ","))
 	}
 
 	query += ` WHERE 1=1`

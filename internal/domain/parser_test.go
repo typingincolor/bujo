@@ -451,6 +451,56 @@ func TestTreeParser_Parse_TagsWithPriority(t *testing.T) {
 	assert.Equal(t, []string{"ci", "urgent"}, entries[0].Tags)
 }
 
+func TestTreeParser_Parse_ExtractsMentions(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Call @john.smith about the project"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, "Call @john.smith about the project", entries[0].Content)
+	assert.Equal(t, []string{"john.smith"}, entries[0].Mentions)
+}
+
+func TestTreeParser_Parse_NoMentions(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Buy groceries"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Nil(t, entries[0].Mentions)
+}
+
+func TestTreeParser_Parse_MentionsAndTags(t *testing.T) {
+	parser := NewTreeParser()
+	input := ". Call @alice about #project"
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, []string{"project"}, entries[0].Tags)
+	assert.Equal(t, []string{"alice"}, entries[0].Mentions)
+}
+
+func TestTreeParser_Parse_NestedEntriesWithMentions(t *testing.T) {
+	parser := NewTreeParser()
+	input := `. Meeting with @alice
+  . @bob to follow up
+  - Notes from discussion`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 3)
+	assert.Equal(t, []string{"alice"}, entries[0].Mentions)
+	assert.Equal(t, []string{"bob"}, entries[1].Mentions)
+	assert.Nil(t, entries[2].Mentions)
+}
+
 func TestTreeParser_Parse_QuestionWithPriority(t *testing.T) {
 	tests := []struct {
 		name             string

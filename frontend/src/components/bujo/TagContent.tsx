@@ -1,19 +1,33 @@
 const TAG_REGEX = /#([a-zA-Z][a-zA-Z0-9-]*)/g
+const MENTION_REGEX = /@([a-zA-Z][a-zA-Z0-9.]*)/g
+
+type Part = string | { tag: string } | { mention: string }
 
 interface TagContentProps {
   content: string
   onTagClick?: (tag: string) => void
+  onMentionClick?: (mention: string) => void
 }
 
-export function TagContent({ content, onTagClick }: TagContentProps) {
-  const parts: (string | { tag: string })[] = []
-  let lastIndex = 0
+export function TagContent({ content, onTagClick, onMentionClick }: TagContentProps) {
+  const parts: Part[] = []
+  const matches: { index: number; length: number; part: { tag: string } | { mention: string } }[] = []
 
   for (const match of content.matchAll(TAG_REGEX)) {
-    const before = content.slice(lastIndex, match.index)
+    matches.push({ index: match.index, length: match[0].length, part: { tag: match[1] } })
+  }
+  for (const match of content.matchAll(MENTION_REGEX)) {
+    matches.push({ index: match.index, length: match[0].length, part: { mention: match[1] } })
+  }
+
+  matches.sort((a, b) => a.index - b.index)
+
+  let lastIndex = 0
+  for (const m of matches) {
+    const before = content.slice(lastIndex, m.index)
     if (before) parts.push(before)
-    parts.push({ tag: match[1] })
-    lastIndex = match.index + match[0].length
+    parts.push(m.part)
+    lastIndex = m.index + m.length
   }
 
   const after = content.slice(lastIndex)
@@ -25,19 +39,31 @@ export function TagContent({ content, onTagClick }: TagContentProps) {
 
   return (
     <span>
-      {parts.map((part, i) =>
-        typeof part === 'string' ? (
-          <span key={i}>{part}</span>
-        ) : (
+      {parts.map((part, i) => {
+        if (typeof part === 'string') {
+          return <span key={i}>{part}</span>
+        }
+        if ('tag' in part) {
+          return (
+            <span
+              key={i}
+              className={`tag${onTagClick ? ' cursor-pointer' : ''}`}
+              onClick={onTagClick ? () => onTagClick(part.tag) : undefined}
+            >
+              #{part.tag}
+            </span>
+          )
+        }
+        return (
           <span
             key={i}
-            className={`tag${onTagClick ? ' cursor-pointer' : ''}`}
-            onClick={onTagClick ? () => onTagClick(part.tag) : undefined}
+            className={`mention${onMentionClick ? ' cursor-pointer' : ''}`}
+            onClick={onMentionClick ? () => onMentionClick(part.mention) : undefined}
           >
-            #{part.tag}
+            @{part.mention}
           </span>
-        ),
-      )}
+        )
+      })}
     </span>
   )
 }

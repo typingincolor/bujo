@@ -93,6 +93,13 @@ type TagRepository interface {
 	DeleteByEntryID(ctx context.Context, entryID int64) error
 }
 
+type MentionRepository interface {
+	InsertEntryMentions(ctx context.Context, entryID int64, mentions []string) error
+	GetMentionsForEntries(ctx context.Context, entryIDs []int64) (map[int64][]string, error)
+	GetAllMentions(ctx context.Context) ([]string, error)
+	DeleteByEntryID(ctx context.Context, entryID int64) error
+}
+
 type ChangeDetector interface {
 	GetLastModified(ctx context.Context) (time.Time, error)
 }

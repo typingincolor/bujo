@@ -157,6 +157,7 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 			Priority: priority,
 			Depth:    depth,
 			Tags:     ExtractTags(content),
+			Mentions: ExtractMentions(content),
 		}
 
 		if depth == 0 {

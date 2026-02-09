@@ -430,6 +430,90 @@ func TestEntryRepository_Search_TagsNoDuplicates(t *testing.T) {
 	assert.Len(t, results, 1, "Entry matching multiple tags should appear only once")
 }
 
+func TestEntryRepository_Search_ByMentionsOnly(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	mentionRepo := NewMentionRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Meeting with @john", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	_, err = entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Solo work", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id1, []string{"john"}))
+
+	opts := domain.NewSearchOptions("").WithMentions([]string{"john"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, id1, results[0].ID)
+}
+
+func TestEntryRepository_Search_ByMentionsORSemantics(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	mentionRepo := NewMentionRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Meeting with @john", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	id2, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Call @alice.smith", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	_, err = entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeNote, Content: "Personal note", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id1, []string{"john"}))
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id2, []string{"alice.smith"}))
+
+	opts := domain.NewSearchOptions("").WithMentions([]string{"john", "alice.smith"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 2)
+}
+
+func TestEntryRepository_Search_MentionsWithContentQuery(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	mentionRepo := NewMentionRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Meeting with @john about budget", CreatedAt: time.Now()})
+	require.NoError(t, err)
+	id2, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Call @john about project", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id1, []string{"john"}))
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id2, []string{"john"}))
+
+	opts := domain.NewSearchOptions("budget").WithMentions([]string{"john"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1)
+	assert.Equal(t, id1, results[0].ID)
+}
+
+func TestEntryRepository_Search_MentionsNoDuplicates(t *testing.T) {
+	db := setupTestDB(t)
+	entryRepo := NewEntryRepository(db)
+	mentionRepo := NewMentionRepository(db)
+	ctx := context.Background()
+
+	id1, err := entryRepo.Insert(ctx, domain.Entry{Type: domain.EntryTypeTask, Content: "Meeting @john and @alice", CreatedAt: time.Now()})
+	require.NoError(t, err)
+
+	require.NoError(t, mentionRepo.InsertEntryMentions(ctx, id1, []string{"john", "alice"}))
+
+	opts := domain.NewSearchOptions("").WithMentions([]string{"john", "alice"})
+	results, err := entryRepo.Search(ctx, opts)
+
+	require.NoError(t, err)
+	assert.Len(t, results, 1, "Entry matching multiple mentions should appear only once")
+}
+
 func TestEntryRepository_GetLastModified_ReturnsLatestValidFrom(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)

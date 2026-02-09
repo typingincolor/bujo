@@ -208,6 +208,15 @@ func (a *App) GetAllTags() ([]string, error) {
 	return a.services.Bujo.GetAllTags(a.ctx)
 }
 
+func (a *App) SearchByMentions(mentions []string) ([]domain.Entry, error) {
+	opts := domain.NewSearchOptions("").WithMentions(mentions)
+	return a.services.Bujo.SearchEntries(a.ctx, opts)
+}
+
+func (a *App) GetAllMentions() ([]string, error) {
+	return a.services.Bujo.GetAllMentions(a.ctx)
+}
+
 func (a *App) GetEntry(id int64) (*domain.Entry, error) {
 	return a.services.Bujo.GetEntry(a.ctx, id)
 }

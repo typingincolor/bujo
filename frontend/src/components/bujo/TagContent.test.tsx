@@ -95,4 +95,60 @@ describe('TagContent', () => {
       expect(tag).toHaveClass('cursor-pointer')
     })
   })
+
+  describe('rendering mentions', () => {
+    it('renders @mention as styled span', () => {
+      render(<TagContent content="Met with @john today" />)
+      expect(screen.getByText('@john')).toBeInTheDocument()
+      expect(screen.getByText('@john')).toHaveClass('mention')
+    })
+
+    it('renders multiple mentions', () => {
+      render(<TagContent content="Call @alice and @bob" />)
+      expect(screen.getByText('@alice')).toBeInTheDocument()
+      expect(screen.getByText('@bob')).toBeInTheDocument()
+    })
+
+    it('handles mentions with dots', () => {
+      render(<TagContent content="Email @alice.smith" />)
+      expect(screen.getByText('@alice.smith')).toBeInTheDocument()
+    })
+
+    it('does not match @ followed by nothing', () => {
+      render(<TagContent content="Send email @ noon" />)
+      expect(screen.getByText('Send email @ noon')).toBeInTheDocument()
+    })
+
+    it('handles mixed tags and mentions', () => {
+      render(<TagContent content="Meeting with @john about #project" />)
+      expect(screen.getByText('@john')).toBeInTheDocument()
+      expect(screen.getByText('#project')).toBeInTheDocument()
+    })
+  })
+
+  describe('mention click handling', () => {
+    it('calls onMentionClick with mention name on click', async () => {
+      const user = userEvent.setup()
+      const onMentionClick = vi.fn()
+      render(<TagContent content="Met @john" onMentionClick={onMentionClick} />)
+
+      await user.click(screen.getByText('@john'))
+
+      expect(onMentionClick).toHaveBeenCalledWith('john')
+      expect(onMentionClick).toHaveBeenCalledTimes(1)
+    })
+
+    it('applies cursor-pointer class when onMentionClick is provided', () => {
+      const onMentionClick = vi.fn()
+      render(<TagContent content="Met @john" onMentionClick={onMentionClick} />)
+      const mention = screen.getByText('@john')
+      expect(mention).toHaveClass('cursor-pointer')
+    })
+
+    it('does not apply cursor-pointer when onMentionClick is not provided', () => {
+      render(<TagContent content="Met @john" />)
+      const mention = screen.getByText('@john')
+      expect(mention).not.toHaveClass('cursor-pointer')
+    })
+  })
 })

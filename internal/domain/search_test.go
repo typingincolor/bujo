@@ -87,6 +87,27 @@ func TestNewSearchOptions_TagsNil(t *testing.T) {
 	}
 }
 
+func TestSearchOptions_WithMentions(t *testing.T) {
+	opts := NewSearchOptions("test").WithMentions([]string{"john", "alice.smith"})
+
+	if opts.Mentions == nil {
+		t.Fatal("expected Mentions to be set")
+	}
+	if len(opts.Mentions) != 2 {
+		t.Fatalf("expected 2 mentions, got %d", len(opts.Mentions))
+	}
+	if opts.Mentions[0] != "john" || opts.Mentions[1] != "alice.smith" {
+		t.Errorf("expected mentions [john, alice.smith], got %v", opts.Mentions)
+	}
+}
+
+func TestNewSearchOptions_MentionsNil(t *testing.T) {
+	opts := NewSearchOptions("test")
+	if opts.Mentions != nil {
+		t.Errorf("expected Mentions to be nil, got %v", opts.Mentions)
+	}
+}
+
 func TestSearchOptions_Chaining(t *testing.T) {
 	from := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2025, 12, 31, 23, 59, 59, 0, time.UTC)

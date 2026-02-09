@@ -31,6 +31,7 @@ export namespace domain {
 	    SortOrder: number;
 	    MigrationCount: number;
 	    Tags: string[];
+	    Mentions: string[];
 
 	    static createFrom(source: any = {}) {
 	        return new Entry(source);
@@ -52,6 +53,7 @@ export namespace domain {
 	        this.SortOrder = source["SortOrder"];
 	        this.MigrationCount = source["MigrationCount"];
 	        this.Tags = source["Tags"];
+	        this.Mentions = source["Mentions"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
