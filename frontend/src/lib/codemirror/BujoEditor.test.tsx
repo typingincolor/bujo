@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BujoEditor } from './BujoEditor'
 import type { DocumentError } from './errorMarkers'
+import * as bujoFolding from './bujoFolding'
 
 describe('BujoEditor', () => {
   it('renders with initial value', () => {
@@ -157,6 +158,56 @@ describe('BujoEditor', () => {
       )
 
       expect(screen.getByRole('textbox')).toBeInTheDocument()
+    })
+  })
+
+  describe('auto-fold on creation', () => {
+    it('calls computeFoldAllEffects when editor is created with foldable content', () => {
+      const spy = vi.spyOn(bujoFolding, 'computeFoldAllEffects')
+
+      render(
+        <BujoEditor
+          value={'. Parent\n  . Child 1\n  . Child 2'}
+          onChange={() => {}}
+        />
+      )
+
+      expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
+    })
+
+    it('re-folds when value changes', () => {
+      const spy = vi.spyOn(bujoFolding, 'computeFoldAllEffects')
+
+      const { rerender } = render(
+        <BujoEditor
+          value={'. Parent\n  . Child 1'}
+          onChange={() => {}}
+        />
+      )
+
+      spy.mockClear()
+
+      rerender(
+        <BujoEditor
+          value={'. New Parent\n  . New Child'}
+          onChange={() => {}}
+        />
+      )
+
+      expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
+    })
+
+    it('does not error when there are no foldable lines', () => {
+      expect(() => {
+        render(
+          <BujoEditor
+            value={'. Task 1\n. Task 2'}
+            onChange={() => {}}
+          />
+        )
+      }).not.toThrow()
     })
   })
 

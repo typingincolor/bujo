@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { EditorState } from '@codemirror/state'
 import { foldService, foldEffect } from '@codemirror/language'
-import { getFoldRange, bujoFoldExtension, expandRangeForFolds } from './bujoFolding'
+import { getFoldRange, bujoFoldExtension, expandRangeForFolds, computeFoldAllEffects } from './bujoFolding'
 
 describe('getFoldRange', () => {
   it('returns null for entry without children', () => {
@@ -182,5 +182,47 @@ describe('expandRangeForFolds', () => {
 
     expect(result.from).toBe(line1.from)
     expect(result.to).toBe(foldedState.doc.line(4).to)
+  })
+})
+
+describe('computeFoldAllEffects', () => {
+  it('returns fold effects for all foldable lines', () => {
+    const state = createState('. Parent\n  . Child 1\n  . Child 2')
+    const effects = computeFoldAllEffects(state)
+
+    expect(effects).toHaveLength(1)
+  })
+
+  it('returns empty array when no lines are foldable', () => {
+    const state = createState('. Task 1\n. Task 2\n. Task 3')
+    const effects = computeFoldAllEffects(state)
+
+    expect(effects).toHaveLength(0)
+  })
+
+  it('returns effects for multiple foldable parents', () => {
+    const state = createState('. A\n  . A1\n. B\n  . B1')
+    const effects = computeFoldAllEffects(state)
+
+    expect(effects).toHaveLength(2)
+  })
+
+  it('returns effects for nested foldable lines', () => {
+    const state = createState('. Root\n  . Mid\n    . Leaf')
+    const effects = computeFoldAllEffects(state)
+
+    // Both Root and Mid are foldable
+    expect(effects).toHaveLength(2)
+  })
+
+  it('effects can be applied to fold the document', () => {
+    const state = createState('. Parent\n  . Child 1\n  . Child 2')
+    const effects = computeFoldAllEffects(state)
+
+    const foldedState = state.update({ effects }).state
+
+    // After folding, the fold range should exist
+    const expandedRange = expandRangeForFolds(foldedState, 0, state.doc.line(1).to)
+    expect(expandedRange.to).toBe(state.doc.line(3).to)
   })
 })
