@@ -587,9 +587,9 @@ func (r *InsightsRepository) GetDecisionsWithInitiatives(ctx context.Context) ([
 		SELECT
 			d.id,
 			d.decision_text,
-			d.rationale,
-			d.participants,
-			d.expected_outcomes,
+			COALESCE(d.rationale, ''),
+			COALESCE(d.participants, ''),
+			COALESCE(d.expected_outcomes, ''),
 			d.decision_date,
 			d.summary_id,
 			d.created_at,

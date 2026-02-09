@@ -512,6 +512,27 @@ func TestInsightsRepository_GetDecisionsWithInitiatives(t *testing.T) {
 		assert.Equal(t, "GenAI Integration", decisions[1].Initiatives)
 	})
 
+	t.Run("handles decisions with NULL nullable fields", func(t *testing.T) {
+		db := setupInsightsTestDB(t)
+		repo := NewInsightsRepository(db)
+
+		_, err := db.Exec(`
+			INSERT INTO decisions (decision_text, rationale, participants, expected_outcomes, decision_date, summary_id, created_at)
+			VALUES ('Minimal decision', NULL, NULL, NULL, '2026-02-01', NULL, '2026-02-01 09:00:00')
+		`)
+		require.NoError(t, err)
+
+		decisions, err := repo.GetDecisionsWithInitiatives(ctx)
+		require.NoError(t, err)
+		require.Len(t, decisions, 3)
+
+		assert.Equal(t, "Minimal decision", decisions[0].DecisionText)
+		assert.Empty(t, decisions[0].Rationale)
+		assert.Empty(t, decisions[0].Participants)
+		assert.Empty(t, decisions[0].ExpectedOutcomes)
+		assert.Empty(t, decisions[0].Initiatives)
+	})
+
 	t.Run("returns empty slice when db is nil", func(t *testing.T) {
 		repo := NewInsightsRepository(nil)
 
