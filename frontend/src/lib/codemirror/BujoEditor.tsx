@@ -14,7 +14,7 @@ import { bujoTheme } from './bujoTheme'
 import { priorityBadgeExtension } from './priorityBadges'
 import { indentGuidesExtension } from './indentGuides'
 import { errorHighlightExtension, setErrors } from './errorMarkers'
-import { bujoFoldExtension } from './bujoFolding'
+import { bujoFoldExtension, computeFoldAllEffects } from './bujoFolding'
 import { entryTypeStyleExtension } from './entryTypeStyles'
 import { highlightLineExtension, setHighlight } from './highlightLine'
 import { findEntryLine } from './findEntryLine'
@@ -181,10 +181,25 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   }, [])
 
   const handleCreateEditor = useCallback((view: EditorView) => {
+    const effects = computeFoldAllEffects(view.state)
+    if (effects.length > 0) {
+      view.dispatch({ effects })
+    }
+
     if (highlightTextRef.current) {
       applyHighlight(view)
     }
   }, [applyHighlight])
+
+  useEffect(() => {
+    const view = editorRef.current?.view
+    if (!view) return
+
+    const effects = computeFoldAllEffects(view.state)
+    if (effects.length > 0) {
+      view.dispatch({ effects })
+    }
+  }, [value])
 
   useEffect(() => {
     if (!highlightText) return

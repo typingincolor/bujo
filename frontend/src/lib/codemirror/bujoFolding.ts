@@ -1,5 +1,5 @@
-import { EditorState, Extension } from '@codemirror/state'
-import { foldService, foldedRanges } from '@codemirror/language'
+import { EditorState, Extension, StateEffect } from '@codemirror/state'
+import { foldService, foldedRanges, foldEffect } from '@codemirror/language'
 import { codeFolding, foldGutter, foldKeymap } from '@codemirror/language'
 import { keymap } from '@codemirror/view'
 
@@ -77,6 +77,24 @@ export function expandRangeForFolds(state: EditorState, from: number, to: number
   }
 
   return { from: expandedFrom, to: expandedTo }
+}
+
+export function computeFoldAllEffects(state: EditorState): StateEffect<{ from: number; to: number }>[] {
+  const effects: StateEffect<{ from: number; to: number }>[] = []
+  const services = state.facet(foldService)
+
+  for (let i = 1; i <= state.doc.lines; i++) {
+    const line = state.doc.line(i)
+    for (const service of services) {
+      const range = service(state, line.from, line.to)
+      if (range) {
+        effects.push(foldEffect.of({ from: range.from, to: range.to }))
+        break
+      }
+    }
+  }
+
+  return effects
 }
 
 export function bujoFoldExtension(): Extension {
