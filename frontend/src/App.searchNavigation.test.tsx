@@ -74,6 +74,36 @@ const createMockSearchResult = (overrides: Partial<{ ID: number; Content: string
   ...overrides,
 })
 
+describe('App - Search Layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('search view container uses full width', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <App />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('Loading your journal...')).not.toBeInTheDocument()
+    })
+
+    const searchButton = screen.getByRole('button', { name: /search/i })
+    await user.click(searchButton)
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/search entries/i)).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByPlaceholderText(/search entries/i)
+    const searchContainer = searchInput.closest('.max-w-full')
+    expect(searchContainer).toBeInTheDocument()
+  })
+})
+
 describe('App - Search Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
