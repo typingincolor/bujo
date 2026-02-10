@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
+import { useState } from 'react'
+import { EditorView } from '@codemirror/view'
 import { BujoEditor } from './BujoEditor'
 import type { DocumentError } from './errorMarkers'
 import * as bujoFolding from './bujoFolding'
@@ -176,7 +178,7 @@ describe('BujoEditor', () => {
       spy.mockRestore()
     })
 
-    it('re-folds when value changes', () => {
+    it('re-folds when value changes externally', () => {
       const spy = vi.spyOn(bujoFolding, 'computeFoldAllEffects')
 
       const { rerender } = render(
@@ -196,6 +198,35 @@ describe('BujoEditor', () => {
       )
 
       expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
+    })
+
+    it('does not re-fold when content changes from user editing', () => {
+      const spy = vi.spyOn(bujoFolding, 'computeFoldAllEffects')
+
+      function TestWrapper() {
+        const [val, setVal] = useState('. Parent\n  . Child 1\n  . Child 2')
+        return <BujoEditor value={val} onChange={setVal} />
+      }
+
+      render(<TestWrapper />)
+
+      // Get the EditorView via CodeMirror's static lookup
+      const cmEl = document.querySelector('.cm-editor') as HTMLElement
+      const view = EditorView.findFromDOM(cmEl)!
+      expect(view).toBeTruthy()
+
+      spy.mockClear()
+
+      // Simulate user typing - dispatching a change triggers onChange -> setValue -> re-render
+      act(() => {
+        view.dispatch({
+          changes: { from: view.state.doc.length, insert: ' extra' },
+        })
+      })
+
+      // Should NOT re-fold when the change came from user editing
+      expect(spy).not.toHaveBeenCalled()
       spy.mockRestore()
     })
 

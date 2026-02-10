@@ -41,6 +41,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   const editorRef = useRef<ReactCodeMirrorRef>(null)
   const tagCompartment = useRef(new Compartment())
 
+  const isInternalChangeRef = useRef(false)
   const onChangeRef = useRef(onChange)
   const onSaveRef = useRef(onSave)
   const onImportRef = useRef(onImport)
@@ -53,6 +54,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   })
 
   const stableOnChange = useCallback((val: string) => {
+    isInternalChangeRef.current = true
     onChangeRef.current(val)
   }, [])
 
@@ -194,6 +196,11 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
   }, [applyHighlight])
 
   useEffect(() => {
+    if (isInternalChangeRef.current) {
+      isInternalChangeRef.current = false
+      return
+    }
+
     const view = editorRef.current?.view
     if (!view) return
 
