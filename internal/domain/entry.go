@@ -92,17 +92,17 @@ func (et EntryType) Symbol() string {
 }
 
 type Entry struct {
-	ID             int64
-	EntityID       EntityID
-	Type           EntryType
-	Content        string
-	Priority       Priority
-	ParentID       *int64
-	ParentEntityID *EntityID
-	Depth          int
-	Location       *string
-	ScheduledDate  *time.Time
-	CreatedAt      time.Time
+	ID                int64
+	EntityID          EntityID
+	Type              EntryType
+	Content           string
+	Priority          Priority
+	ParentID          *int64
+	ParentEntityID    *EntityID
+	Depth             int
+	Location          *string
+	ScheduledDate     *time.Time
+	CreatedAt         time.Time
 	SortOrder         int
 	MigrationCount    int
 	CompletedAt       *time.Time

@@ -172,10 +172,16 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		completedAtStr = &s
 	}
 
+	var originalCreatedAtStr *string
+	if entry.OriginalCreatedAt != nil {
+		s := entry.OriginalCreatedAt.Format(time.RFC3339)
+		originalCreatedAtStr = &s
+	}
+
 	result, err := r.db.ExecContext(ctx, `
-		UPDATE entries SET type = ?, content = ?, priority = ?, parent_id = ?, depth = ?, location = ?, scheduled_date = ?, sort_order = ?, migration_count = ?, completed_at = ?
+		UPDATE entries SET type = ?, content = ?, priority = ?, parent_id = ?, depth = ?, location = ?, scheduled_date = ?, sort_order = ?, migration_count = ?, completed_at = ?, original_created_at = ?
 		WHERE id = ?
-	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.SortOrder, entry.MigrationCount, completedAtStr, entry.ID)
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.SortOrder, entry.MigrationCount, completedAtStr, originalCreatedAtStr, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -257,21 +263,34 @@ func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 		entry.Location = &location.String
 	}
 	if scheduledDate.Valid {
-		t, _ := time.Parse("2006-01-02", scheduledDate.String)
+		t, err := time.Parse("2006-01-02", scheduledDate.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse scheduled_date %q: %w", scheduledDate.String, err)
+		}
 		entry.ScheduledDate = &t
 	}
 	if createdAt.Valid {
-		entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+		t, err := time.Parse(time.RFC3339, createdAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse created_at %q: %w", createdAt.String, err)
+		}
+		entry.CreatedAt = t
 	}
 	if entityID.Valid {
 		entry.EntityID = domain.EntityID(entityID.String)
 	}
 	if completedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, completedAt.String)
+		t, err := time.Parse(time.RFC3339, completedAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse completed_at %q: %w", completedAt.String, err)
+		}
 		entry.CompletedAt = &t
 	}
 	if originalCreatedAt.Valid {
-		t, _ := time.Parse(time.RFC3339, originalCreatedAt.String)
+		t, err := time.Parse(time.RFC3339, originalCreatedAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse original_created_at %q: %w", originalCreatedAt.String, err)
+		}
 		entry.OriginalCreatedAt = &t
 	}
 
@@ -302,21 +321,34 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 			entry.Location = &location.String
 		}
 		if scheduledDate.Valid {
-			t, _ := time.Parse("2006-01-02", scheduledDate.String)
+			t, err := time.Parse("2006-01-02", scheduledDate.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse scheduled_date %q: %w", scheduledDate.String, err)
+			}
 			entry.ScheduledDate = &t
 		}
 		if createdAt.Valid {
-			entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+			t, err := time.Parse(time.RFC3339, createdAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse created_at %q: %w", createdAt.String, err)
+			}
+			entry.CreatedAt = t
 		}
 		if entityID.Valid {
 			entry.EntityID = domain.EntityID(entityID.String)
 		}
 		if completedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, completedAt.String)
+			t, err := time.Parse(time.RFC3339, completedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse completed_at %q: %w", completedAt.String, err)
+			}
 			entry.CompletedAt = &t
 		}
 		if originalCreatedAt.Valid {
-			t, _ := time.Parse(time.RFC3339, originalCreatedAt.String)
+			t, err := time.Parse(time.RFC3339, originalCreatedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse original_created_at %q: %w", originalCreatedAt.String, err)
+			}
 			entry.OriginalCreatedAt = &t
 		}
 

@@ -60,7 +60,7 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
     return map
   }, [days])
 
-  const { grid, startDate, monthLabels, maxCount } = useMemo(() => {
+  const { grid, monthLabels, maxCount } = useMemo(() => {
     const now = new Date()
     const { grid, startDate } = buildDateGrid(now)
     const monthLabels = getMonthLabels(startDate)
@@ -69,7 +69,7 @@ export function ActivityHeatmap({ days }: ActivityHeatmapProps) {
       const count = entryCountByDate.get(cell.date) || 0
       if (count > maxCount) maxCount = count
     }
-    return { grid, startDate, monthLabels, maxCount }
+    return { grid, monthLabels, maxCount }
   }, [entryCountByDate])
 
   const svgWidth = LABEL_WIDTH + WEEKS * CELL_STEP

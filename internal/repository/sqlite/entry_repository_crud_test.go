@@ -528,6 +528,34 @@ func TestEntryRepository_Update_SetsCompletedAt(t *testing.T) {
 	assert.Equal(t, completedAt.Format(time.RFC3339), result.CompletedAt.Format(time.RFC3339))
 }
 
+func TestEntryRepository_Update_SetsOriginalCreatedAt(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now().Truncate(time.Second)
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Task to migrate",
+		CreatedAt: now,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	originalCreatedAt := now.Add(-10 * 24 * time.Hour).Truncate(time.Second)
+	entry.ID = id
+	entry.Type = domain.EntryTypeMigrated
+	entry.OriginalCreatedAt = &originalCreatedAt
+	err = repo.Update(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result.OriginalCreatedAt, "original_created_at should be set via Update")
+	assert.Equal(t, originalCreatedAt.Format(time.RFC3339), result.OriginalCreatedAt.Format(time.RFC3339))
+}
+
 func TestEntryRepository_NilCompletedAt_RoundTrips(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewEntryRepository(db)

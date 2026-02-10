@@ -607,8 +607,8 @@ func TestEntry_DurationDays(t *testing.T) {
 		{
 			name: "completed task without migration",
 			entry: Entry{
-				Type:      EntryTypeDone,
-				CreatedAt: threeDaysAgo,
+				Type:        EntryTypeDone,
+				CreatedAt:   threeDaysAgo,
 				CompletedAt: &now,
 			},
 			expected: 3,
