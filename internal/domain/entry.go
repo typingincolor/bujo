@@ -103,10 +103,12 @@ type Entry struct {
 	Location       *string
 	ScheduledDate  *time.Time
 	CreatedAt      time.Time
-	SortOrder      int
-	MigrationCount int
-	Tags           []string
-	Mentions       []string
+	SortOrder         int
+	MigrationCount    int
+	CompletedAt       *time.Time
+	OriginalCreatedAt *time.Time
+	Tags              []string
+	Mentions          []string
 }
 
 func NewEntry(entryType EntryType, content string, scheduledDate *time.Time) Entry {
@@ -125,6 +127,17 @@ func (e Entry) IsComplete() bool {
 
 func (e Entry) HasParent() bool {
 	return e.ParentEntityID != nil && !e.ParentEntityID.IsEmpty()
+}
+
+func (e Entry) DurationDays() (float64, bool) {
+	if e.CompletedAt == nil {
+		return 0, false
+	}
+	start := e.CreatedAt
+	if e.OriginalCreatedAt != nil {
+		start = *e.OriginalCreatedAt
+	}
+	return e.CompletedAt.Sub(start).Hours() / 24, true
 }
 
 func (e Entry) IsOverdue(today time.Time) bool {

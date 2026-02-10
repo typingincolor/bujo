@@ -592,3 +592,57 @@ func TestEntry_CanDelete(t *testing.T) {
 		})
 	}
 }
+
+func TestEntry_DurationDays(t *testing.T) {
+	now := time.Now()
+	threeDaysAgo := now.Add(-3 * 24 * time.Hour)
+	fiveDaysAgo := now.Add(-5 * 24 * time.Hour)
+
+	tests := []struct {
+		name     string
+		entry    Entry
+		expected float64
+		hasValue bool
+	}{
+		{
+			name: "completed task without migration",
+			entry: Entry{
+				Type:      EntryTypeDone,
+				CreatedAt: threeDaysAgo,
+				CompletedAt: &now,
+			},
+			expected: 3,
+			hasValue: true,
+		},
+		{
+			name: "completed task with migration uses original_created_at",
+			entry: Entry{
+				Type:              EntryTypeDone,
+				CreatedAt:         threeDaysAgo,
+				CompletedAt:       &now,
+				OriginalCreatedAt: &fiveDaysAgo,
+			},
+			expected: 5,
+			hasValue: true,
+		},
+		{
+			name: "incomplete task returns no duration",
+			entry: Entry{
+				Type:      EntryTypeTask,
+				CreatedAt: threeDaysAgo,
+			},
+			expected: 0,
+			hasValue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			days, ok := tt.entry.DurationDays()
+			assert.Equal(t, tt.hasValue, ok)
+			if ok {
+				assert.InDelta(t, tt.expected, days, 0.1)
+			}
+		})
+	}
+}

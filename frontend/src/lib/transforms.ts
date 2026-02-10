@@ -19,6 +19,8 @@ export function transformEntry(e: domain.Entry): Entry {
     scheduledDate,
     migrationCount: e.MigrationCount,
     tags: e.Tags || [],
+    completedAt: e.CompletedAt ? String(e.CompletedAt) : undefined,
+    originalCreatedAt: e.OriginalCreatedAt ? String(e.OriginalCreatedAt) : undefined,
   }
 }
 

@@ -302,6 +302,45 @@ func TestBujoService_Undo(t *testing.T) {
 	assert.Equal(t, domain.EntryTypeTask, entry.Type)
 }
 
+func TestBujoService_MarkDone_SetsCompletedAt(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	beforeMark := time.Now()
+	err = service.MarkDone(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	require.NotNil(t, entry.CompletedAt)
+	assert.WithinDuration(t, beforeMark, *entry.CompletedAt, 2*time.Second)
+}
+
+func TestBujoService_Undo_ClearsCompletedAt(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+
+	ids, err := service.LogEntries(ctx, ". Buy groceries", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	err = service.MarkDone(ctx, ids[0])
+	require.NoError(t, err)
+
+	err = service.Undo(ctx, ids[0])
+	require.NoError(t, err)
+
+	entry, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	assert.Nil(t, entry.CompletedAt)
+}
+
 func TestBujoService_Undo_NotFound(t *testing.T) {
 	service, _, _ := setupBujoService(t)
 	ctx := context.Background()

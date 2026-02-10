@@ -32,6 +32,8 @@ export namespace domain {
 	    MigrationCount: number;
 	    Tags: string[];
 	    Mentions: string[];
+	    CompletedAt?: time.Time;
+	    OriginalCreatedAt?: time.Time;
 
 	    static createFrom(source: any = {}) {
 	        return new Entry(source);
@@ -54,6 +56,8 @@ export namespace domain {
 	        this.MigrationCount = source["MigrationCount"];
 	        this.Tags = source["Tags"];
 	        this.Mentions = source["Mentions"];
+	        this.CompletedAt = this.convertValues(source["CompletedAt"], time.Time);
+	        this.OriginalCreatedAt = this.convertValues(source["OriginalCreatedAt"], time.Time);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
