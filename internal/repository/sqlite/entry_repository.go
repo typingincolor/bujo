@@ -37,11 +37,22 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 		priority = domain.PriorityNone
 	}
 
+	var completedAtStr *string
+	if entry.CompletedAt != nil {
+		s := entry.CompletedAt.Format(time.RFC3339)
+		completedAtStr = &s
+	}
+	var originalCreatedAtStr *string
+	if entry.OriginalCreatedAt != nil {
+		s := entry.OriginalCreatedAt.Format(time.RFC3339)
+		originalCreatedAtStr = &s
+	}
+
 	result, err := r.db.ExecContext(ctx, `
-		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type, sort_order, migration_count)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'INSERT', ?, ?)
+		INSERT INTO entries (type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, version, valid_from, op_type, sort_order, migration_count, completed_at, original_created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 'INSERT', ?, ?, ?, ?)
 	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.CreatedAt.Format(time.RFC3339),
-		entityID.String(), now, entry.SortOrder, entry.MigrationCount)
+		entityID.String(), now, entry.SortOrder, entry.MigrationCount, completedAtStr, originalCreatedAtStr)
 
 	if err != nil {
 		return 0, err
@@ -52,7 +63,7 @@ func (r *EntryRepository) Insert(ctx context.Context, entry domain.Entry) (int64
 
 func (r *EntryRepository) GetByID(ctx context.Context, id int64) (*domain.Entry, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM entries WHERE id = ?
 	`, id)
 
@@ -63,7 +74,7 @@ func (r *EntryRepository) GetByDate(ctx context.Context, date time.Time) ([]doma
 	dateStr := date.Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM entries WHERE scheduled_date = ?
 		ORDER BY created_at, id
 	`, dateStr)
@@ -80,7 +91,7 @@ func (r *EntryRepository) GetByDateRange(ctx context.Context, from, to time.Time
 	toStr := to.Format("2006-01-02")
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM entries WHERE scheduled_date >= ? AND scheduled_date <= ?
 		ORDER BY scheduled_date, created_at, id
 	`, fromStr, toStr)
@@ -98,19 +109,19 @@ func (r *EntryRepository) GetOverdue(ctx context.Context) ([]domain.Entry, error
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE
 		overdue_tasks AS (
-			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 			FROM entries
 			WHERE scheduled_date < ? AND type = 'task'
 		),
 		parent_chain AS (
-			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 			FROM overdue_tasks
 			UNION
-			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count
+			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count, e.completed_at, e.original_created_at
 			FROM entries e
 			INNER JOIN parent_chain pc ON e.id = pc.parent_id
 		)
-		SELECT DISTINCT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT DISTINCT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM parent_chain
 		ORDER BY scheduled_date, depth, created_at, id
 	`, dateStr)
@@ -125,14 +136,14 @@ func (r *EntryRepository) GetOverdue(ctx context.Context) ([]domain.Entry, error
 func (r *EntryRepository) GetWithChildren(ctx context.Context, id int64) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		WITH RECURSIVE tree AS (
-			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+			SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 			FROM entries WHERE id = ?
 			UNION ALL
-			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count
+			SELECT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count, e.completed_at, e.original_created_at
 			FROM entries e
 			JOIN tree t ON e.parent_id = t.id
 		)
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count FROM tree ORDER BY depth, id
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at FROM tree ORDER BY depth, id
 	`, id)
 	if err != nil {
 		return nil, err
@@ -155,10 +166,22 @@ func (r *EntryRepository) Update(ctx context.Context, entry domain.Entry) error 
 		priority = domain.PriorityNone
 	}
 
+	var completedAtStr *string
+	if entry.CompletedAt != nil {
+		s := entry.CompletedAt.Format(time.RFC3339)
+		completedAtStr = &s
+	}
+
+	var originalCreatedAtStr *string
+	if entry.OriginalCreatedAt != nil {
+		s := entry.OriginalCreatedAt.Format(time.RFC3339)
+		originalCreatedAtStr = &s
+	}
+
 	result, err := r.db.ExecContext(ctx, `
-		UPDATE entries SET type = ?, content = ?, priority = ?, parent_id = ?, depth = ?, location = ?, scheduled_date = ?, sort_order = ?, migration_count = ?
+		UPDATE entries SET type = ?, content = ?, priority = ?, parent_id = ?, depth = ?, location = ?, scheduled_date = ?, sort_order = ?, migration_count = ?, completed_at = ?, original_created_at = ?
 		WHERE id = ?
-	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.SortOrder, entry.MigrationCount, entry.ID)
+	`, entry.Type, entry.Content, priority, entry.ParentID, entry.Depth, entry.Location, scheduledDateStr, entry.SortOrder, entry.MigrationCount, completedAtStr, originalCreatedAtStr, entry.ID)
 	if err != nil {
 		return err
 	}
@@ -192,7 +215,7 @@ func (r *EntryRepository) DeleteAll(ctx context.Context) error {
 
 func (r *EntryRepository) GetChildren(ctx context.Context, parentID int64) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM entries WHERE parent_id = ?
 		ORDER BY id
 	`, parentID)
@@ -219,10 +242,10 @@ func (r *EntryRepository) DeleteWithChildren(ctx context.Context, id int64) erro
 func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 	var entry domain.Entry
 	var typeStr, priorityStr string
-	var scheduledDate, location, createdAt, entityID sql.NullString
+	var scheduledDate, location, createdAt, entityID, completedAt, originalCreatedAt sql.NullString
 	var parentID sql.NullInt64
 
-	err := row.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID, &entry.SortOrder, &entry.MigrationCount)
+	err := row.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID, &entry.SortOrder, &entry.MigrationCount, &completedAt, &originalCreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -240,14 +263,35 @@ func (r *EntryRepository) scanEntry(row *sql.Row) (*domain.Entry, error) {
 		entry.Location = &location.String
 	}
 	if scheduledDate.Valid {
-		t, _ := time.Parse("2006-01-02", scheduledDate.String)
+		t, err := time.Parse("2006-01-02", scheduledDate.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse scheduled_date %q: %w", scheduledDate.String, err)
+		}
 		entry.ScheduledDate = &t
 	}
 	if createdAt.Valid {
-		entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+		t, err := time.Parse(time.RFC3339, createdAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse created_at %q: %w", createdAt.String, err)
+		}
+		entry.CreatedAt = t
 	}
 	if entityID.Valid {
 		entry.EntityID = domain.EntityID(entityID.String)
+	}
+	if completedAt.Valid {
+		t, err := time.Parse(time.RFC3339, completedAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse completed_at %q: %w", completedAt.String, err)
+		}
+		entry.CompletedAt = &t
+	}
+	if originalCreatedAt.Valid {
+		t, err := time.Parse(time.RFC3339, originalCreatedAt.String)
+		if err != nil {
+			return nil, fmt.Errorf("parse original_created_at %q: %w", originalCreatedAt.String, err)
+		}
+		entry.OriginalCreatedAt = &t
 	}
 
 	return &entry, nil
@@ -259,10 +303,10 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 	for rows.Next() {
 		var entry domain.Entry
 		var typeStr, priorityStr string
-		var scheduledDate, location, createdAt, entityID sql.NullString
+		var scheduledDate, location, createdAt, entityID, completedAt, originalCreatedAt sql.NullString
 		var parentID sql.NullInt64
 
-		err := rows.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID, &entry.SortOrder, &entry.MigrationCount)
+		err := rows.Scan(&entry.ID, &typeStr, &entry.Content, &priorityStr, &parentID, &entry.Depth, &location, &scheduledDate, &createdAt, &entityID, &entry.SortOrder, &entry.MigrationCount, &completedAt, &originalCreatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -277,14 +321,35 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 			entry.Location = &location.String
 		}
 		if scheduledDate.Valid {
-			t, _ := time.Parse("2006-01-02", scheduledDate.String)
+			t, err := time.Parse("2006-01-02", scheduledDate.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse scheduled_date %q: %w", scheduledDate.String, err)
+			}
 			entry.ScheduledDate = &t
 		}
 		if createdAt.Valid {
-			entry.CreatedAt, _ = time.Parse(time.RFC3339, createdAt.String)
+			t, err := time.Parse(time.RFC3339, createdAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse created_at %q: %w", createdAt.String, err)
+			}
+			entry.CreatedAt = t
 		}
 		if entityID.Valid {
 			entry.EntityID = domain.EntityID(entityID.String)
+		}
+		if completedAt.Valid {
+			t, err := time.Parse(time.RFC3339, completedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse completed_at %q: %w", completedAt.String, err)
+			}
+			entry.CompletedAt = &t
+		}
+		if originalCreatedAt.Valid {
+			t, err := time.Parse(time.RFC3339, originalCreatedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("parse original_created_at %q: %w", originalCreatedAt.String, err)
+			}
+			entry.OriginalCreatedAt = &t
 		}
 
 		entries = append(entries, entry)
@@ -295,7 +360,7 @@ func (r *EntryRepository) scanEntries(rows *sql.Rows) ([]domain.Entry, error) {
 
 func (r *EntryRepository) GetAll(ctx context.Context) ([]domain.Entry, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count
+		SELECT id, type, content, priority, parent_id, depth, location, scheduled_date, created_at, entity_id, sort_order, migration_count, completed_at, original_created_at
 		FROM entries
 		ORDER BY scheduled_date, created_at, id
 	`)
@@ -327,7 +392,7 @@ func (r *EntryRepository) Search(ctx context.Context, opts domain.SearchOptions)
 	}
 
 	query := `
-		SELECT DISTINCT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count
+		SELECT DISTINCT e.id, e.type, e.content, e.priority, e.parent_id, e.depth, e.location, e.scheduled_date, e.created_at, e.entity_id, e.sort_order, e.migration_count, e.completed_at, e.original_created_at
 		FROM entries e
 	`
 	var args []any

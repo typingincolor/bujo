@@ -2,6 +2,9 @@ import { BarChart3, CheckCircle2, Circle, FileText, Calendar, Flame, Target } fr
 import { cn } from '@/lib/utils';
 import { DayEntries, Habit, Goal, Entry } from '@/types/bujo';
 import { format } from 'date-fns';
+import { ActivityHeatmap } from './ActivityHeatmap';
+import { TrendsChart } from './TrendsChart';
+import { TaskDurationChart } from './TaskDurationChart';
 
 interface StatsViewProps {
   days: DayEntries[];
@@ -128,6 +131,15 @@ export function StatsView({ days, habits, goals }: StatsViewProps) {
             color="text-primary"
           />
         </div>
+      </div>
+
+      {/* Activity Heatmap */}
+      <ActivityHeatmap days={days} />
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TrendsChart days={days} />
+        <TaskDurationChart days={days} />
       </div>
     </div>
   );

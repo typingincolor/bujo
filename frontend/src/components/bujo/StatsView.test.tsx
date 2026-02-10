@@ -1,8 +1,20 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { StatsView } from './StatsView'
 import { DayEntries, Habit, Goal } from '@/types/bujo'
 import { format } from 'date-fns'
+
+vi.mock('./ActivityHeatmap', () => ({
+  ActivityHeatmap: () => <div data-testid="activity-heatmap" />,
+}))
+
+vi.mock('./TrendsChart', () => ({
+  TrendsChart: () => <div data-testid="trends-chart" />,
+}))
+
+vi.mock('./TaskDurationChart', () => ({
+  TaskDurationChart: () => <div data-testid="task-duration-chart" />,
+}))
 
 const currentMonth = format(new Date(), 'yyyy-MM')
 
@@ -120,5 +132,20 @@ describe('StatsView', () => {
     ])]
     render(<StatsView days={days} habits={[]} goals={[]} />)
     expect(screen.getByText(/events/i)).toBeInTheDocument()
+  })
+
+  it('renders ActivityHeatmap', () => {
+    render(<StatsView days={[]} habits={[]} goals={[]} />)
+    expect(screen.getByTestId('activity-heatmap')).toBeInTheDocument()
+  })
+
+  it('renders TrendsChart', () => {
+    render(<StatsView days={[]} habits={[]} goals={[]} />)
+    expect(screen.getByTestId('trends-chart')).toBeInTheDocument()
+  })
+
+  it('renders TaskDurationChart', () => {
+    render(<StatsView days={[]} habits={[]} goals={[]} />)
+    expect(screen.getByTestId('task-duration-chart')).toBeInTheDocument()
   })
 })

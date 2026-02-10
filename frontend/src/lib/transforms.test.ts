@@ -160,6 +160,53 @@ describe('transformEntry', () => {
 
     expect(result.tags).toEqual([])
   })
+
+  it('maps CompletedAt to completedAt string', () => {
+    const input = {
+      ID: 10,
+      Type: 'Done',
+      Content: 'Completed task',
+      Priority: 'None',
+      ParentID: undefined,
+      CreatedAt: '2026-01-15T10:00:00Z',
+      CompletedAt: '2026-01-16T14:30:00Z',
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.completedAt).toBe('2026-01-16T14:30:00Z')
+  })
+
+  it('maps OriginalCreatedAt to originalCreatedAt string', () => {
+    const input = {
+      ID: 11,
+      Type: 'Task',
+      Content: 'Migrated task',
+      Priority: 'None',
+      ParentID: undefined,
+      CreatedAt: '2026-01-17T10:00:00Z',
+      OriginalCreatedAt: '2026-01-10T08:00:00Z',
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.originalCreatedAt).toBe('2026-01-10T08:00:00Z')
+  })
+
+  it('leaves completedAt undefined when CompletedAt is missing', () => {
+    const input = {
+      ID: 12,
+      Type: 'Task',
+      Content: 'Open task',
+      Priority: 'None',
+      ParentID: undefined,
+      CreatedAt: '2026-01-15T10:00:00Z',
+    } as unknown as domain.Entry
+
+    const result = transformEntry(input)
+
+    expect(result.completedAt).toBeUndefined()
+  })
 })
 
 describe('transformDayEntries', () => {

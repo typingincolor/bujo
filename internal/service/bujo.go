@@ -427,6 +427,8 @@ func (s *BujoService) MarkDone(ctx context.Context, id int64) error {
 	}
 
 	entry.Type = domain.EntryTypeDone
+	now := time.Now()
+	entry.CompletedAt = &now
 	return s.entryRepo.Update(ctx, *entry)
 }
 
@@ -437,6 +439,7 @@ func (s *BujoService) Undo(ctx context.Context, id int64) error {
 	}
 
 	entry.Type = domain.EntryTypeTask
+	entry.CompletedAt = nil
 	return s.entryRepo.Update(ctx, *entry)
 }
 
@@ -682,14 +685,21 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 		}
 	}
 
+	originalCreatedAt := entry.OriginalCreatedAt
+	if originalCreatedAt == nil {
+		createdAt := entry.CreatedAt
+		originalCreatedAt = &createdAt
+	}
+
 	// Create new parent
 	newEntry := domain.Entry{
-		Type:           domain.EntryTypeTask,
-		Content:        entry.Content,
-		Priority:       entry.Priority,
-		MigrationCount: entry.MigrationCount + 1,
-		ScheduledDate:  &toDate,
-		CreatedAt:      time.Now(),
+		Type:              domain.EntryTypeTask,
+		Content:           entry.Content,
+		Priority:          entry.Priority,
+		MigrationCount:    entry.MigrationCount + 1,
+		ScheduledDate:     &toDate,
+		CreatedAt:         time.Now(),
+		OriginalCreatedAt: originalCreatedAt,
 	}
 
 	newParentID, err := s.entryRepo.Insert(ctx, newEntry)
@@ -706,15 +716,21 @@ func (s *BujoService) MigrateEntry(ctx context.Context, id int64, toDate time.Ti
 			newChildParentID = idMap[*child.ParentID]
 		}
 		orig := originals[child.ID]
+		childOrigCreatedAt := child.OriginalCreatedAt
+		if childOrigCreatedAt == nil {
+			childCreatedAt := child.CreatedAt
+			childOrigCreatedAt = &childCreatedAt
+		}
 		newChild := domain.Entry{
-			Type:           orig.Type,
-			Content:        child.Content,
-			Priority:       orig.Priority,
-			MigrationCount: orig.MigrationCount + 1,
-			ParentID:       &newChildParentID,
-			Depth:          child.Depth,
-			ScheduledDate:  &toDate,
-			CreatedAt:      time.Now(),
+			Type:              orig.Type,
+			Content:           child.Content,
+			Priority:          orig.Priority,
+			MigrationCount:    orig.MigrationCount + 1,
+			ParentID:          &newChildParentID,
+			Depth:             child.Depth,
+			ScheduledDate:     &toDate,
+			CreatedAt:         time.Now(),
+			OriginalCreatedAt: childOrigCreatedAt,
 		}
 		newChildID, err := s.entryRepo.Insert(ctx, newChild)
 		if err != nil {

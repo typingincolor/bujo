@@ -14,6 +14,8 @@ export interface Entry {
   scheduledDate?: string;
   migrationCount?: number;
   tags?: string[];
+  completedAt?: string;
+  originalCreatedAt?: string;
   children?: Entry[];
   collapsed?: boolean;
 }

@@ -412,6 +412,38 @@ func TestBujoService_MigrateEntry_IncrementsMigrationCount(t *testing.T) {
 	assert.Equal(t, 2, migrated2.MigrationCount, "second migration should have count 2")
 }
 
+func TestBujoService_MigrateEntry_PropagatesOriginalCreatedAt(t *testing.T) {
+	service, entryRepo, _ := setupBujoService(t)
+	ctx := context.Background()
+
+	today := time.Date(2026, 1, 6, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 7, 0, 0, 0, 0, time.UTC)
+	dayAfter := time.Date(2026, 1, 8, 0, 0, 0, 0, time.UTC)
+
+	ids, err := service.LogEntries(ctx, ". Call dentist", LogEntriesOptions{Date: today})
+	require.NoError(t, err)
+
+	original, err := entryRepo.GetByID(ctx, ids[0])
+	require.NoError(t, err)
+	originalCreatedAt := original.CreatedAt
+
+	newID1, err := service.MigrateEntry(ctx, ids[0], tomorrow)
+	require.NoError(t, err)
+
+	migrated1, err := entryRepo.GetByID(ctx, newID1)
+	require.NoError(t, err)
+	require.NotNil(t, migrated1.OriginalCreatedAt)
+	assert.WithinDuration(t, originalCreatedAt, *migrated1.OriginalCreatedAt, time.Second)
+
+	newID2, err := service.MigrateEntry(ctx, newID1, dayAfter)
+	require.NoError(t, err)
+
+	migrated2, err := entryRepo.GetByID(ctx, newID2)
+	require.NoError(t, err)
+	require.NotNil(t, migrated2.OriginalCreatedAt)
+	assert.WithinDuration(t, originalCreatedAt, *migrated2.OriginalCreatedAt, time.Second)
+}
+
 func TestBujoService_MoveEntry_ChangeParent(t *testing.T) {
 	service, entryRepo, _ := setupBujoService(t)
 	ctx := context.Background()

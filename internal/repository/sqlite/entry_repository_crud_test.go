@@ -453,3 +453,124 @@ func TestEntryRepository_MigrationCount_GetByDate(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, 3, entries[0].MigrationCount)
 }
+
+func TestEntryRepository_CompletedAt_RoundTrips(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now().Truncate(time.Second)
+	completedAt := now.Add(3 * 24 * time.Hour).Truncate(time.Second)
+
+	entry := domain.Entry{
+		Type:        domain.EntryTypeTask,
+		Content:     "Task to complete",
+		CreatedAt:   now,
+		CompletedAt: &completedAt,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result.CompletedAt)
+	assert.Equal(t, completedAt.Format(time.RFC3339), result.CompletedAt.Format(time.RFC3339))
+}
+
+func TestEntryRepository_OriginalCreatedAt_RoundTrips(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now().Truncate(time.Second)
+	originalCreatedAt := now.Add(-5 * 24 * time.Hour).Truncate(time.Second)
+
+	entry := domain.Entry{
+		Type:              domain.EntryTypeTask,
+		Content:           "Migrated task",
+		CreatedAt:         now,
+		OriginalCreatedAt: &originalCreatedAt,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result.OriginalCreatedAt)
+	assert.Equal(t, originalCreatedAt.Format(time.RFC3339), result.OriginalCreatedAt.Format(time.RFC3339))
+}
+
+func TestEntryRepository_Update_SetsCompletedAt(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now().Truncate(time.Second)
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Task",
+		CreatedAt: now,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	completedAt := now.Add(2 * 24 * time.Hour).Truncate(time.Second)
+	entry.ID = id
+	entry.Type = domain.EntryTypeDone
+	entry.CompletedAt = &completedAt
+	err = repo.Update(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, domain.EntryTypeDone, result.Type)
+	require.NotNil(t, result.CompletedAt)
+	assert.Equal(t, completedAt.Format(time.RFC3339), result.CompletedAt.Format(time.RFC3339))
+}
+
+func TestEntryRepository_Update_SetsOriginalCreatedAt(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	now := time.Now().Truncate(time.Second)
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Task to migrate",
+		CreatedAt: now,
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	originalCreatedAt := now.Add(-10 * 24 * time.Hour).Truncate(time.Second)
+	entry.ID = id
+	entry.Type = domain.EntryTypeMigrated
+	entry.OriginalCreatedAt = &originalCreatedAt
+	err = repo.Update(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, result.OriginalCreatedAt, "original_created_at should be set via Update")
+	assert.Equal(t, originalCreatedAt.Format(time.RFC3339), result.OriginalCreatedAt.Format(time.RFC3339))
+}
+
+func TestEntryRepository_NilCompletedAt_RoundTrips(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewEntryRepository(db)
+	ctx := context.Background()
+
+	entry := domain.Entry{
+		Type:      domain.EntryTypeTask,
+		Content:   "Incomplete task",
+		CreatedAt: time.Now(),
+	}
+	id, err := repo.Insert(ctx, entry)
+	require.NoError(t, err)
+
+	result, err := repo.GetByID(ctx, id)
+	require.NoError(t, err)
+	assert.Nil(t, result.CompletedAt)
+	assert.Nil(t, result.OriginalCreatedAt)
+}
