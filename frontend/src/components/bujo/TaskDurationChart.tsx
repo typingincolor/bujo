@@ -33,8 +33,8 @@ function getWeekKey(date: string): string {
   return `${monday.getFullYear()}-${mm}-${dd}`
 }
 
-function formatWeekLabel(week: string): string {
-  const d = new Date(week + 'T00:00:00')
+function formatWeekLabel(week: unknown): string {
+  const d = new Date(String(week) + 'T00:00:00')
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return `${months[d.getMonth()]} ${d.getDate()}`
 }

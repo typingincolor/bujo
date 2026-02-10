@@ -52,8 +52,8 @@ describe('ActivityHeatmap', () => {
     const lowRect = container.querySelector('rect[data-date="2026-02-09"]')
     expect(highRect).toBeInTheDocument()
     expect(lowRect).toBeInTheDocument()
-    const highOpacity = Number(highRect?.getAttribute('opacity') || highRect?.style.opacity)
-    const lowOpacity = Number(lowRect?.getAttribute('opacity') || lowRect?.style.opacity)
+    const highOpacity = Number(highRect?.getAttribute('opacity') || (highRect as HTMLElement)?.style.opacity)
+    const lowOpacity = Number(lowRect?.getAttribute('opacity') || (lowRect as HTMLElement)?.style.opacity)
     expect(highOpacity).toBeGreaterThan(lowOpacity)
   })
 
