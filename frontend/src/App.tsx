@@ -802,7 +802,7 @@ function App() {
           )}
 
           {view === 'search' && (
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-full mx-auto">
               <SearchView
                 initialTagFilter={searchTagFilter ?? undefined}
                 initialMentionFilter={searchMentionFilter ?? undefined}
