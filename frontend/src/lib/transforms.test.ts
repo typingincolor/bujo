@@ -317,6 +317,62 @@ describe('transformHabit', () => {
     expect(result.monthlyProgress).toBeUndefined()
   })
 
+  it('rounds completionRate to 1 decimal place', () => {
+    const input = {
+      ID: 1,
+      Name: 'Exercise',
+      GoalPerDay: 1,
+      CurrentStreak: 0,
+      CompletionPercent: 66.66666666666667,
+      TodayCount: 0,
+      DayHistory: [],
+    } as unknown as service.HabitStatus
+
+    const result = transformHabit(input)
+
+    expect(result.completionRate).toBe(66.7)
+  })
+
+  it('rounds weeklyProgress to 1 decimal place', () => {
+    const input = {
+      ID: 1,
+      Name: 'Exercise',
+      GoalPerDay: 1,
+      GoalPerWeek: 5,
+      GoalPerMonth: 0,
+      WeeklyProgress: 33.33333333333333,
+      MonthlyProgress: 0,
+      CurrentStreak: 0,
+      CompletionPercent: 50,
+      TodayCount: 0,
+      DayHistory: [],
+    } as unknown as service.HabitStatus
+
+    const result = transformHabit(input)
+
+    expect(result.weeklyProgress).toBe(33.3)
+  })
+
+  it('rounds monthlyProgress to 1 decimal place', () => {
+    const input = {
+      ID: 1,
+      Name: 'Exercise',
+      GoalPerDay: 1,
+      GoalPerWeek: 0,
+      GoalPerMonth: 20,
+      WeeklyProgress: 0,
+      MonthlyProgress: 66.66666666666667,
+      CurrentStreak: 0,
+      CompletionPercent: 50,
+      TodayCount: 0,
+      DayHistory: [],
+    } as unknown as service.HabitStatus
+
+    const result = transformHabit(input)
+
+    expect(result.monthlyProgress).toBe(66.7)
+  })
+
   it('handles null DayHistory by defaulting to empty array', () => {
     const input = {
       ID: 3,
