@@ -1,13 +1,18 @@
+import { useState, useEffect, useCallback } from 'react';
 import { BarChart3, CheckCircle2, Circle, FileText, Calendar, Flame, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DayEntries, Habit, Goal, Entry } from '@/types/bujo';
+import { Habit, Goal, Entry, DayEntries } from '@/types/bujo';
 import { format } from 'date-fns';
 import { ActivityHeatmap } from './ActivityHeatmap';
 import { TrendsChart } from './TrendsChart';
 import { TaskDurationChart } from './TaskDurationChart';
+import { GetDayEntries } from '@/wailsjs/go/wails/App';
+import { toWailsTime } from '@/lib/wailsTime';
+import { transformDayEntries } from '@/lib/transforms';
+
+const STATS_DAYS = 91;
 
 interface StatsViewProps {
-  days: DayEntries[];
   habits: Habit[];
   goals: Goal[];
 }
@@ -26,8 +31,23 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result;
 }
 
-export function StatsView({ days, habits, goals }: StatsViewProps) {
-  const allEntries = days.flatMap(day => flattenEntries(day.entries));
+export function StatsView({ habits, goals }: StatsViewProps) {
+  const [statsDays, setStatsDays] = useState<DayEntries[]>([]);
+
+  const loadStatsDays = useCallback(async () => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - STATS_DAYS);
+    const data = await GetDayEntries(toWailsTime(start), toWailsTime(now));
+    setStatsDays((data || []).map(transformDayEntries));
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadStatsDays();
+  }, [loadStatsDays]);
+
+  const allEntries = statsDays.flatMap(day => flattenEntries(day.entries));
 
   const totalEntries = allEntries.length;
   const taskCount = allEntries.filter(e => e.type === 'task' || e.type === 'done').length;
@@ -134,12 +154,12 @@ export function StatsView({ days, habits, goals }: StatsViewProps) {
       </div>
 
       {/* Activity Heatmap */}
-      <ActivityHeatmap days={days} />
+      <ActivityHeatmap days={statsDays} />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TrendsChart days={days} />
-        <TaskDurationChart days={days} />
+        <TrendsChart days={statsDays} />
+        <TaskDurationChart days={statsDays} />
       </div>
     </div>
   );
