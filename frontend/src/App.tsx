@@ -816,8 +816,10 @@ function App() {
           )}
 
           {view === 'stats' && (
-            <div className="max-w-4xl mx-auto">
-              <StatsView days={days} habits={habits} goals={goals} />
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="max-w-4xl mx-auto">
+                <StatsView habits={habits} goals={goals} />
+              </div>
             </div>
           )}
 
@@ -828,8 +830,10 @@ function App() {
           )}
 
           {view === 'settings' && (
-            <div className="max-w-4xl mx-auto">
-              <SettingsView />
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="max-w-4xl mx-auto">
+                <SettingsView />
+              </div>
             </div>
           )}
         </main>
