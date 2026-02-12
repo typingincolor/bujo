@@ -561,13 +561,69 @@ func TestApplyChangesWithActions_MigrationWithChildren(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, todayEntries, 3)
 	require.Equal(t, domain.EntryTypeMigrated, todayEntries[0].Type)
-	require.Equal(t, domain.EntryTypeTask, todayEntries[1].Type)
-	require.Equal(t, domain.EntryTypeNote, todayEntries[2].Type)
+	require.Equal(t, domain.EntryTypeMigrated, todayEntries[1].Type, "children of migrated parent should also be marked migrated")
+	require.Equal(t, domain.EntryTypeMigrated, todayEntries[2].Type, "children of migrated parent should also be marked migrated")
 
 	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
 	require.NoError(t, err)
-	require.Len(t, tomorrowEntries, 1)
-	require.Equal(t, "Migrate parent", tomorrowEntries[0].Content)
+	require.Len(t, tomorrowEntries, 3, "parent and children should all be migrated to tomorrow")
+
+	byContent := make(map[string]domain.Entry)
+	for _, e := range tomorrowEntries {
+		byContent[e.Content] = e
+	}
+	require.Equal(t, domain.EntryTypeTask, byContent["Migrate parent"].Type)
+	require.Equal(t, domain.EntryTypeTask, byContent["Child task"].Type)
+	require.Equal(t, domain.EntryTypeNote, byContent["Child note"].Type)
+
+	newParent := byContent["Migrate parent"]
+	require.Nil(t, newParent.ParentID, "migrated parent should be a root entry")
+	require.NotNil(t, byContent["Child task"].ParentID)
+	require.Equal(t, newParent.ID, *byContent["Child task"].ParentID)
+	require.NotNil(t, byContent["Child note"].ParentID)
+	require.Equal(t, newParent.ID, *byContent["Child note"].ParentID)
+}
+
+func TestApplyChangesWithActions_MigrationWithGrandchildren(t *testing.T) {
+	svc, entryRepo, _, _ := setupEditableViewServiceWithLists(t)
+	ctx := context.Background()
+	today := time.Date(2026, 1, 28, 0, 0, 0, 0, time.UTC)
+	tomorrow := time.Date(2026, 1, 29, 0, 0, 0, 0, time.UTC)
+
+	_, err := svc.ApplyChangesWithActions(ctx, "> Migrate parent\n  - Child note\n    - Grandchild note", today, ApplyActions{
+		MigrateDate: &tomorrow,
+	})
+	require.NoError(t, err)
+
+	todayEntries, err := entryRepo.GetByDate(ctx, today)
+	require.NoError(t, err)
+	require.Len(t, todayEntries, 3)
+	for _, e := range todayEntries {
+		require.Equal(t, domain.EntryTypeMigrated, e.Type, "all original entries should be marked migrated")
+	}
+
+	tomorrowEntries, err := entryRepo.GetByDate(ctx, tomorrow)
+	require.NoError(t, err)
+	require.Len(t, tomorrowEntries, 3, "parent, child, and grandchild should all migrate")
+
+	byContent := make(map[string]domain.Entry)
+	for _, e := range tomorrowEntries {
+		byContent[e.Content] = e
+	}
+
+	newParent := byContent["Migrate parent"]
+	newChild := byContent["Child note"]
+	newGrandchild := byContent["Grandchild note"]
+
+	require.Nil(t, newParent.ParentID)
+	require.NotNil(t, newChild.ParentID)
+	require.Equal(t, newParent.ID, *newChild.ParentID)
+	require.NotNil(t, newGrandchild.ParentID)
+	require.Equal(t, newChild.ID, *newGrandchild.ParentID, "grandchild should be parented to new child")
+
+	require.Equal(t, 0, newParent.Depth)
+	require.Equal(t, 1, newChild.Depth)
+	require.Equal(t, 2, newGrandchild.Depth)
 }
 
 func TestApplyChangesWithActions_MultipleMigratedEntries(t *testing.T) {
