@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gmail → Bujo | Install Bookmarklet</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #1a1a2e; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { max-width: 520px; padding: 2rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #fff; }
+        .bookmarklet { display: inline-block; padding: 0.75rem 1.5rem; background: #e94560; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: grab; margin: 1.5rem 0; }
+        .bookmarklet:hover { background: #c73650; }
+        .steps { list-style: none; counter-reset: step; }
+        .steps li { counter-increment: step; padding: 0.5rem 0; padding-left: 2rem; position: relative; }
+        .steps li::before { content: counter(step); position: absolute; left: 0; background: #16213e; color: #e94560; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; }
+        .note { margin-top: 1.5rem; padding: 1rem; background: #16213e; border-radius: 8px; font-size: 0.9rem; color: #a0a0a0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gmail → Bujo</h1>
+        <p>Drag this button to your bookmarks bar:</p>
+        <a class="bookmarklet" href="javascript:void(function(){try{var s=document.querySelector('h2.hP'),e=document.querySelector('span.gD[email]'),b=document.querySelector('div.a3s.aiL');if(!s){alert('Open an email first');return}var subject=s.innerText.trim(),sender=e?e.getAttribute('email'):'unknown',body=b?b.innerText.trim().substring(0,200):'',url=window.location.href;fetch('http://127.0.0.1:8743/api/entries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entries:[{type:'task',content:'Follow up: '+subject+' @'+sender.split('@')[0]+' #email',children:[{type:'note',content:'Context: '+body},{type:'note',content:'Email: '+url}]}]})}).then(function(r){return r.json()}).then(function(d){if(d.success){var t=document.createElement('div');t.style.cssText='position:fixed;top:20px;right:20px;background:#1a1a2e;color:#e94560;padding:12px 20px;border-radius:8px;z-index:99999;font-family:sans-serif;font-size:14px';t.textContent='Saved to Bujo';document.body.appendChild(t);setTimeout(function(){t.remove()},3000)}else{alert('Error: '+(d.error||'Unknown'))}}).catch(function(){alert('Bujo not running. Start the app first.')})}catch(err){alert('Error: '+err.message)}})()">Gmail → Bujo</a>
+        <ol class="steps">
+            <li>Drag the button above to your bookmarks bar</li>
+            <li>Open an email in Gmail</li>
+            <li>Click the bookmarklet</li>
+            <li>The email becomes a task in Bujo</li>
+        </ol>
+        <div class="note">
+            <strong>Note:</strong> Bujo must be running for the bookmarklet to work. The bookmarklet sends data directly to your local Bujo app — nothing leaves your machine.
+        </div>
+    </div>
+</body>
+</html>

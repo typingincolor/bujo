@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	bujohttp "github.com/typingincolor/bujo/internal/adapter/http"
 	"github.com/typingincolor/bujo/cmd/bujo/cmd"
 	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/dateutil"
@@ -30,6 +31,7 @@ type App struct {
 	services     *app.Services
 	lastModified time.Time
 	stopPolling  chan struct{}
+	httpServer   *bujohttp.Server
 }
 
 func NewApp(services *app.Services) *App {
@@ -46,6 +48,11 @@ func (a *App) Startup(ctx context.Context) {
 		lastMod, _ := a.services.ChangeDetection.GetLastModified(ctx)
 		a.lastModified = lastMod
 		go a.pollForChanges()
+	}
+
+	a.httpServer = bujohttp.NewServer(a.services.Bujo, 0)
+	if _, err := a.httpServer.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to start HTTP API: %v\n", err)
 	}
 }
 
@@ -82,6 +89,9 @@ func (a *App) checkForChanges() {
 func (a *App) Shutdown(_ context.Context) {
 	if a.stopPolling != nil {
 		close(a.stopPolling)
+	}
+	if a.httpServer != nil {
+		a.httpServer.Stop()
 	}
 }
 
