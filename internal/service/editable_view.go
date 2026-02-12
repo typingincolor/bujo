@@ -251,17 +251,59 @@ func (s *EditableViewService) ApplyChangesWithActions(ctx context.Context, doc s
 
 	if actions.MigrateDate != nil {
 		for _, entry := range entries {
-			if entry.Type == domain.EntryTypeMigrated {
-				newEntry := domain.Entry{
-					Type:          domain.EntryTypeTask,
-					Content:       entry.Content,
-					Priority:      entry.Priority,
-					ScheduledDate: actions.MigrateDate,
-					CreatedAt:     time.Now(),
-				}
-				if _, err := s.entryRepo.Insert(ctx, newEntry); err != nil {
+			if entry.Type != domain.EntryTypeMigrated {
+				continue
+			}
+
+			tree, err := s.entryRepo.GetWithChildren(ctx, entry.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			descendants := tree[1:]
+
+			origTypes := make(map[int64]domain.EntryType, len(descendants))
+			for _, d := range descendants {
+				origTypes[d.ID] = d.Type
+			}
+
+			for _, d := range descendants {
+				d.Type = domain.EntryTypeMigrated
+				if err := s.entryRepo.Update(ctx, d); err != nil {
 					return nil, err
 				}
+			}
+
+			newParentID, err := s.entryRepo.Insert(ctx, domain.Entry{
+				Type:          domain.EntryTypeTask,
+				Content:       entry.Content,
+				Priority:      entry.Priority,
+				ScheduledDate: actions.MigrateDate,
+				CreatedAt:     time.Now(),
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			idMap := map[int64]int64{entry.ID: newParentID}
+			for _, d := range descendants {
+				var newParent int64
+				if d.ParentID != nil {
+					newParent = idMap[*d.ParentID]
+				}
+				newChildID, err := s.entryRepo.Insert(ctx, domain.Entry{
+					Type:          origTypes[d.ID],
+					Content:       d.Content,
+					Priority:      d.Priority,
+					Depth:         d.Depth,
+					ParentID:      &newParent,
+					ScheduledDate: actions.MigrateDate,
+					CreatedAt:     time.Now(),
+				})
+				if err != nil {
+					return nil, err
+				}
+				idMap[d.ID] = newChildID
 			}
 		}
 	}
