@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Integrations
+- **Gmail Bookmarklet**: Capture emails as bujo tasks directly from Gmail. Embedded HTTP API starts automatically on port 8743 with a drag-and-drop bookmarklet installer at `/install`. Each email creates a task with subject, sender mention, `#email` tag, body context, and link (#492)
+
 #### Features
 - **Quarterly Habit View**: Added 90-day quarterly view for habit tracker. Press `w` in habit view to cycle between Week (7 days) → Month (30 days) → Quarter (90 days) views (#151)
 - **Search Context**: Search results now display ancestry chains showing parent hierarchy (e.g., "↳ Project A > Phase 1") for better context. Long chains are automatically truncated (#138)

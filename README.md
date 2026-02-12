@@ -102,6 +102,14 @@ bujo habit
 | `?` | Question | An open question to be answered |
 | `★` | Answered | A question that has been answered |
 
+## Integrations
+
+### Gmail Bookmarklet
+
+Capture emails as bujo tasks directly from Gmail. With bujo running, visit http://127.0.0.1:8743/install to install the bookmarklet, then click it on any open email to create a task with subject, sender, and context.
+
+See [integrations/gmail/README.md](integrations/gmail/README.md) for details.
+
 ## Documentation
 
 **Getting Started:**
@@ -112,6 +120,9 @@ bujo habit
 - [CLI Reference](docs/CLI.md) - Complete command documentation
 - [TUI Guide](docs/TUI.md) - Interactive terminal UI shortcuts
 - [Desktop App](docs/FRONTEND.md) - Native application guide
+
+**Integrations:**
+- [Gmail Bookmarklet](integrations/gmail/README.md) - Capture emails as tasks
 
 **Reference:**
 - [Data Management](docs/DATA.md) - Backup, export, and storage
