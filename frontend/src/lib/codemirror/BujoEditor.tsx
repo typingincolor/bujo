@@ -21,7 +21,29 @@ import { findEntryLine } from './findEntryLine'
 import { tagCompletionSource } from './tagAutocomplete'
 import { autocompletion } from '@codemirror/autocomplete'
 import { Compartment } from '@codemirror/state'
+import { BrowserOpenURL } from '@/wailsjs/runtime/runtime'
 import type { DocumentError } from './errorMarkers'
+
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g
+
+const urlClickHandler = EditorView.domEventHandlers({
+  click(event: MouseEvent, view: EditorView) {
+    if (!event.metaKey) return false
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY })
+    if (pos === null) return false
+    const line = view.state.doc.lineAt(pos)
+    for (const match of line.text.matchAll(URL_REGEX)) {
+      const start = line.from + match.index!
+      const end = start + match[0].length
+      if (pos >= start && pos <= end) {
+        BrowserOpenURL(match[0])
+        event.preventDefault()
+        return true
+      }
+    }
+    return false
+  },
+})
 
 const HIGHLIGHT_DURATION_MS = 2000
 
@@ -119,6 +141,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
 
     return [
       bujoTheme,
+      EditorView.lineWrapping,
       keybindings,
       search(),
       keymap.of(searchKeymap),
@@ -128,6 +151,7 @@ export function BujoEditor({ value, onChange, onSave, onImport, onEscape, errors
       bujoFoldExtension(),
       entryTypeStyleExtension(),
       highlightLineExtension(),
+      urlClickHandler,
       tagCompartment.current.of([]),
     ]
   })
