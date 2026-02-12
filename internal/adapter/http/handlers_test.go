@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -213,6 +214,26 @@ func TestCORSRejectsUnknownOrigin(t *testing.T) {
 	defer resp.Body.Close()
 
 	assert.Empty(t, resp.Header.Get("Access-Control-Allow-Origin"))
+}
+
+func TestBuildInputStripsNewlines(t *testing.T) {
+	entries := []entryInput{
+		{
+			Type:    "task",
+			Content: "Follow up: Payment receipt @service #email",
+			Children: []entryInput{
+				{Type: "note", Content: "Context: Hi Andrew,\nYou paid £29.99\nMerchant: LinkedIn"},
+				{Type: "note", Content: "Email: https://mail.google.com/mail/u/0/#inbox/123"},
+			},
+		},
+	}
+
+	input, childCounts, err := buildInput(entries)
+	require.NoError(t, err)
+
+	lines := strings.Split(input, "\n")
+	assert.Equal(t, 3, len(lines), "should produce exactly 3 lines (1 parent + 2 children), got: %v", lines)
+	assert.Equal(t, []int{2}, childCounts)
 }
 
 func TestInstallPage(t *testing.T) {

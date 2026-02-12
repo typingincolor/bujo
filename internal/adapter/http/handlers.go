@@ -136,7 +136,7 @@ func buildInput(entries []entryInput) (string, []int, error) {
 		}
 
 		symbol := symbolForType(entryType)
-		lines = append(lines, symbol+" "+e.Content)
+		lines = append(lines, symbol+" "+sanitizeContent(e.Content))
 		childCounts = append(childCounts, len(e.Children))
 
 		for _, child := range e.Children {
@@ -150,7 +150,7 @@ func buildInput(entries []entryInput) (string, []int, error) {
 			}
 
 			childSymbol := symbolForType(childType)
-			lines = append(lines, "  "+childSymbol+" "+child.Content)
+			lines = append(lines, "  "+childSymbol+" "+sanitizeContent(child.Content))
 		}
 	}
 
@@ -178,6 +178,12 @@ func buildResults(ids []int64, childCounts []int) []entryResult {
 	}
 
 	return results
+}
+
+func sanitizeContent(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return s
 }
 
 func symbolForType(et domain.EntryType) string {
