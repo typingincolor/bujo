@@ -78,6 +78,14 @@ export function EditListItem(arg1, arg2) {
   return window['go']['wails']['App']['EditListItem'](arg1, arg2);
 }
 
+export function GetAllMentions() {
+  return window['go']['wails']['App']['GetAllMentions']();
+}
+
+export function GetAllTags() {
+  return window['go']['wails']['App']['GetAllTags']();
+}
+
 export function GetAttentionResultType() {
   return window['go']['wails']['App']['GetAttentionResultType']();
 }
@@ -104,14 +112,6 @@ export function GetEntryAncestors(arg1) {
 
 export function GetEntryContext(arg1) {
   return window['go']['wails']['App']['GetEntryContext'](arg1);
-}
-
-export function GetAllTags() {
-  return window['go']['wails']['App']['GetAllTags']();
-}
-
-export function GetAllMentions() {
-  return window['go']['wails']['App']['GetAllMentions']();
 }
 
 export function GetGoals(arg1) {
@@ -282,12 +282,12 @@ export function Search(arg1) {
   return window['go']['wails']['App']['Search'](arg1);
 }
 
-export function SearchByTags(arg1) {
-  return window['go']['wails']['App']['SearchByTags'](arg1);
-}
-
 export function SearchByMentions(arg1) {
   return window['go']['wails']['App']['SearchByMentions'](arg1);
+}
+
+export function SearchByTags(arg1) {
+  return window['go']['wails']['App']['SearchByTags'](arg1);
 }
 
 export function SetHabitGoal(arg1, arg2) {

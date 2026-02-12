@@ -44,6 +44,10 @@ export function EditEntry(arg1:number,arg2:string):Promise<void>;
 
 export function EditListItem(arg1:number,arg2:string):Promise<void>;
 
+export function GetAllMentions():Promise<Array<string>>;
+
+export function GetAllTags():Promise<Array<string>>;
+
 export function GetAttentionResultType():Promise<domain.AttentionResult>;
 
 export function GetAttentionScores(arg1:Array<number>):Promise<Record<number, domain.AttentionResult>>;
@@ -57,10 +61,6 @@ export function GetEntry(arg1:number):Promise<domain.Entry>;
 export function GetEntryAncestors(arg1:number):Promise<Array<domain.Entry>>;
 
 export function GetEntryContext(arg1:number):Promise<Array<domain.Entry>>;
-
-export function GetAllTags():Promise<Array<string>>;
-
-export function GetAllMentions():Promise<Array<string>>;
 
 export function GetGoals(arg1:time.Time):Promise<Array<domain.Goal>>;
 
@@ -146,9 +146,9 @@ export function RetypeEntry(arg1:number,arg2:string):Promise<void>;
 
 export function Search(arg1:string):Promise<Array<domain.Entry>>;
 
-export function SearchByTags(arg1:Array<string>):Promise<Array<domain.Entry>>;
-
 export function SearchByMentions(arg1:Array<string>):Promise<Array<domain.Entry>>;
+
+export function SearchByTags(arg1:Array<string>):Promise<Array<domain.Entry>>;
 
 export function SetHabitGoal(arg1:number,arg2:number):Promise<void>;
 

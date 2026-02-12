@@ -30,15 +30,15 @@ export namespace domain {
 	    CreatedAt: time.Time;
 	    SortOrder: number;
 	    MigrationCount: number;
-	    Tags: string[];
-	    Mentions: string[];
 	    CompletedAt?: time.Time;
 	    OriginalCreatedAt?: time.Time;
-
+	    Tags: string[];
+	    Mentions: string[];
+	
 	    static createFrom(source: any = {}) {
 	        return new Entry(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ID = source["ID"];
@@ -54,10 +54,10 @@ export namespace domain {
 	        this.CreatedAt = this.convertValues(source["CreatedAt"], time.Time);
 	        this.SortOrder = source["SortOrder"];
 	        this.MigrationCount = source["MigrationCount"];
-	        this.Tags = source["Tags"];
-	        this.Mentions = source["Mentions"];
 	        this.CompletedAt = this.convertValues(source["CompletedAt"], time.Time);
 	        this.OriginalCreatedAt = this.convertValues(source["OriginalCreatedAt"], time.Time);
+	        this.Tags = source["Tags"];
+	        this.Mentions = source["Mentions"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
