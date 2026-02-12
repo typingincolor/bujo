@@ -48,7 +48,7 @@ func (s *Server) Start() (string, error) {
 	}
 	s.listener = ln
 
-	go s.httpServer.Serve(ln)
+	go func() { _ = s.httpServer.Serve(ln) }()
 
 	return ln.Addr().String(), nil
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	bujohttp "github.com/typingincolor/bujo/internal/adapter/http"
 	"github.com/typingincolor/bujo/cmd/bujo/cmd"
+	bujohttp "github.com/typingincolor/bujo/internal/adapter/http"
 	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/dateutil"
 	"github.com/typingincolor/bujo/internal/domain"
@@ -91,7 +91,7 @@ func (a *App) Shutdown(_ context.Context) {
 		close(a.stopPolling)
 	}
 	if a.httpServer != nil {
-		a.httpServer.Stop()
+		_ = a.httpServer.Stop()
 	}
 }
 

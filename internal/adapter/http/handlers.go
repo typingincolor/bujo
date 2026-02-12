@@ -37,7 +37,7 @@ func (h *Handler) Routes() http.Handler {
 
 func (h *Handler) handleInstall(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(installPage)
+	_, _ = w.Write(installPage)
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -60,7 +60,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 type entryInput struct {
@@ -115,7 +115,7 @@ func (h *Handler) handleCreateEntries(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createEntriesResponse{
+	_ = json.NewEncoder(w).Encode(createEntriesResponse{
 		Success: true,
 		Entries: results,
 	})
@@ -204,7 +204,7 @@ func symbolForType(et domain.EntryType) string {
 func writeError(w http.ResponseWriter, status int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(createEntriesResponse{
+	_ = json.NewEncoder(w).Encode(createEntriesResponse{
 		Success: false,
 		Error:   message,
 	})
