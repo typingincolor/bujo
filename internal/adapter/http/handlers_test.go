@@ -236,6 +236,19 @@ func TestBuildInputStripsNewlines(t *testing.T) {
 	assert.Equal(t, []int{2}, childCounts)
 }
 
+func TestCreateEntriesBodyTooLarge(t *testing.T) {
+	server := setupTestServer(t)
+
+	large := strings.Repeat("x", 2<<20)
+	payload := `{"entries":[{"type":"task","content":"` + large + `"}]}`
+
+	resp, err := http.Post(server.URL+"/api/entries", "application/json", strings.NewReader(payload))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
 func TestInstallPage(t *testing.T) {
 	server := setupTestServer(t)
 

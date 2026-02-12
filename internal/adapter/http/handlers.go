@@ -84,15 +84,19 @@ type createEntriesResponse struct {
 	Error   string        `json:"error,omitempty"`
 }
 
+const maxRequestBodySize = 1 << 20
+
 func (h *Handler) handleCreateEntries(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+
 	var req createEntriesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		writeError(w, http.StatusBadRequest, "invalid JSON")
 		return
 	}
 
 	if len(req.Entries) == 0 {
-		writeError(w, http.StatusBadRequest, "No entries provided")
+		writeError(w, http.StatusBadRequest, "no entries provided")
 		return
 	}
 
@@ -107,7 +111,7 @@ func (h *Handler) handleCreateEntries(w http.ResponseWriter, r *http.Request) {
 		Date: today,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Failed to create entries")
+		writeError(w, http.StatusInternalServerError, "failed to create entries")
 		return
 	}
 
@@ -127,12 +131,12 @@ func buildInput(entries []entryInput) (string, []int, error) {
 
 	for _, e := range entries {
 		if e.Content == "" {
-			return "", nil, fmt.Errorf("Missing required field: content")
+			return "", nil, fmt.Errorf("missing required field: content")
 		}
 
 		entryType, err := domain.ParseEntryTypeFromString(e.Type)
 		if err != nil {
-			return "", nil, fmt.Errorf("Invalid entry type: %s", e.Type)
+			return "", nil, fmt.Errorf("invalid entry type: %s", e.Type)
 		}
 
 		symbol := symbolForType(entryType)
@@ -141,12 +145,12 @@ func buildInput(entries []entryInput) (string, []int, error) {
 
 		for _, child := range e.Children {
 			if child.Content == "" {
-				return "", nil, fmt.Errorf("Missing required field: content")
+				return "", nil, fmt.Errorf("missing required field: content")
 			}
 
 			childType, err := domain.ParseEntryTypeFromString(child.Type)
 			if err != nil {
-				return "", nil, fmt.Errorf("Invalid entry type: %s", child.Type)
+				return "", nil, fmt.Errorf("invalid entry type: %s", child.Type)
 			}
 
 			childSymbol := symbolForType(childType)

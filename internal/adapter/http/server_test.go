@@ -24,7 +24,7 @@ func TestServerStartStop(t *testing.T) {
 	parser := domain.NewTreeParser()
 	bujoService := service.NewBujoServiceWithLists(entryRepo, dayCtxRepo, parser, nil, nil, nil, tagRepo, mentionRepo)
 
-	srv := NewServer(bujoService, -1)
+	srv := NewServer(bujoService, EphemeralPort)
 	addr, err := srv.Start()
 	require.NoError(t, err)
 	require.NotEmpty(t, addr)

@@ -2,15 +2,20 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/service"
 )
 
-const DefaultPort = 8743
+const (
+	DefaultPort   = 8743
+	EphemeralPort = -1
+)
 
 type Server struct {
 	httpServer *http.Server
@@ -30,14 +35,13 @@ func NewServer(bujo *service.BujoService, port int) *Server {
 }
 
 func (s *Server) listenAddr() string {
-	if s.port < 0 {
+	if s.port == EphemeralPort {
 		return "127.0.0.1:0"
 	}
-	port := s.port
-	if port == 0 {
-		port = DefaultPort
+	if s.port > 0 {
+		return fmt.Sprintf("127.0.0.1:%d", s.port)
 	}
-	return fmt.Sprintf("127.0.0.1:%d", port)
+	return fmt.Sprintf("127.0.0.1:%d", DefaultPort)
 }
 
 func (s *Server) Start() (string, error) {
@@ -48,7 +52,11 @@ func (s *Server) Start() (string, error) {
 	}
 	s.listener = ln
 
-	go func() { _ = s.httpServer.Serve(ln) }()
+	go func() {
+		if err := s.httpServer.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Fprintf(os.Stderr, "HTTP server error: %v\n", err)
+		}
+	}()
 
 	return ln.Addr().String(), nil
 }

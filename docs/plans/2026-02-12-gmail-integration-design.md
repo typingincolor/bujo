@@ -89,6 +89,8 @@ Serves an embedded HTML page where the user drags a link to their bookmarks bar.
 - **CORS:** Allows `https://mail.google.com` origin so the bookmarklet's `fetch()` works.
 - **Port 8743:** Uncommon port, avoids conflicts with common dev servers.
 - **Entries created for today's date.** Rescheduling happens in bujo.
+- **Single-level nesting:** Children are limited to one level of depth. The API schema uses `children` arrays but only processes direct children, not nested grandchildren.
+- **Request body limit:** 1MB max to prevent abuse.
 
 ## Entry Structure
 
