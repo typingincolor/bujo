@@ -37,6 +37,7 @@ export interface EditableDocumentState {
   error: string | null
   isDirty: boolean
   validationErrors: ValidationError[]
+  reload: () => Promise<void>
   save: () => Promise<SaveResult>
   saveWithActions: (actions: SaveActions) => Promise<SaveResult>
   discardChanges: () => void
@@ -133,6 +134,23 @@ export function useEditableDocument(date: Date): EditableDocumentState {
         clearTimeout(debounceTimerRef.current)
         debounceTimerRef.current = null
       }
+    }
+  }, [date, checkForDraft])
+
+  const reload = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    setValidationErrors([])
+
+    try {
+      const result = await GetEditableDocument(toWailsTime(date))
+      setDocumentState(result)
+      setOriginalDocument(result)
+      setIsLoading(false)
+      checkForDraft(result)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setIsLoading(false)
     }
   }, [date, checkForDraft])
 
@@ -271,6 +289,7 @@ export function useEditableDocument(date: Date): EditableDocumentState {
     error,
     isDirty,
     validationErrors,
+    reload,
     save,
     saveWithActions,
     discardChanges,

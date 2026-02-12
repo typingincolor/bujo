@@ -5,6 +5,7 @@ import { BujoEditor } from '@/lib/codemirror/BujoEditor'
 import { scanForNewSpecialEntries, SpecialEntries } from '@/hooks/useSaveWithDialogs'
 import { MigrateBatchModal } from '@/components/bujo/MigrateBatchModal'
 import { ListPickerModal } from '@/components/bujo/ListPickerModal'
+import { RefreshCw } from 'lucide-react'
 
 interface JournalViewProps {
   date: Date
@@ -21,6 +22,7 @@ export function JournalView({ date, highlightText, onHighlightDone }: JournalVie
     error,
     isDirty,
     validationErrors,
+    reload,
     save,
     saveWithActions,
     discardChanges,
@@ -226,6 +228,7 @@ export function JournalView({ date, highlightText, onHighlightDone }: JournalVie
         <span><kbd>⌥↓</kbd> Move down</span>
         <span><kbd>⌃A</kbd> Line start</span>
         <span><kbd>⌃E</kbd> Line end</span>
+        <span><kbd>⌘Click</kbd> Open link</span>
       </div>
 
       {validationErrors.length > 0 && (
@@ -277,6 +280,13 @@ export function JournalView({ date, highlightText, onHighlightDone }: JournalVie
               Discard
             </button>
           )}
+          <button
+            onClick={reload}
+            title="Reload entries"
+            className="p-1.5 hover:bg-secondary rounded-md transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
       </div>
 

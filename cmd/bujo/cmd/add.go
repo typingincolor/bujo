@@ -3,12 +3,19 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/typingincolor/bujo/internal/service"
 )
+
+func writeEntryIDs(w io.Writer, ids []int64) {
+	for _, id := range ids {
+		fmt.Fprintln(w, id)
+	}
+}
 
 var addCmd = &cobra.Command{
 	Use:   "add [entries...]",
@@ -101,6 +108,7 @@ Examples:
 			return fmt.Errorf("failed to add entries: %w", err)
 		}
 
+		writeEntryIDs(os.Stdout, ids)
 		fmt.Fprintf(os.Stderr, "Added %d entry(s)\n", len(ids))
 		return nil
 	},
