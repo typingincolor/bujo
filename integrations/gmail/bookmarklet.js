@@ -5,7 +5,9 @@
 void (function () {
   try {
     var s = document.querySelector("h2.hP");
-    var e = document.querySelector("span.gD[email]");
+    var e =
+      document.querySelector("span.go span.gD[email]") ||
+      document.querySelector("span.gD[email]");
     var b = document.querySelector("div.a3s.aiL");
 
     if (!s) {
@@ -15,7 +17,21 @@ void (function () {
 
     var subject = s.innerText.trim();
     var sender = e ? e.getAttribute("email") : "unknown";
-    var body = b ? b.innerText.trim().substring(0, 200) : "";
+    var body = b
+      ? b.innerText
+          .trim()
+          .replace(
+            /^This Message Is From an External Sender\.?\s*(This message came from outside your organization\.?\s*)?/i,
+            ""
+          )
+          .replace(
+            /^(CAUTION:?\s*)?This (email|message) (originated|came) from outside[^.]*\.\s*/i,
+            ""
+          )
+          .replace(/^\[?EXTERNAL\]?:?\s*/i, "")
+          .trim()
+          .substring(0, 200)
+      : "";
     var url = window.location.href;
 
     fetch("http://127.0.0.1:8743/api/entries", {
