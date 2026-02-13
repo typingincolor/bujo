@@ -1,5 +1,0 @@
-# Issues Staging Area
-# Quick-entry issues to sync to GitHub
-# Format: #ID . DESCRIPTION (ID is local, temporary)
-# Run /issue-sync to create GitHub issues from staged entries
-

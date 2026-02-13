@@ -1,0 +1,32 @@
+[    6064ms] TypeError: Cannot read properties of undefined (reading 'EventsOnMultiple')
+    at EventsOnMultiple (http://localhost:5173/src/wailsjs/runtime/runtime.js:40:27)
+    at EventsOn (http://localhost:5173/src/wailsjs/runtime/runtime.js:44:12)
+    at http://localhost:5173/src/App.tsx:134:25
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:18567:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:997:72)
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:9465:60)
+    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11040:29)
+    at recursivelyTraversePassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11010:13)
+    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11201:13)
+[    6063ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:6965
+[    6066ms] TypeError: Cannot read properties of undefined (reading 'EventsOnMultiple')
+    at EventsOnMultiple (http://localhost:5173/src/wailsjs/runtime/runtime.js:40:27)
+    at EventsOn (http://localhost:5173/src/wailsjs/runtime/runtime.js:44:12)
+    at http://localhost:5173/src/App.tsx:134:25
+    at Object.react_stack_bottom_frame (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:18567:20)
+    at runWithFiberInDEV (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:997:72)
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:9411:163)
+    at commitHookPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:9465:60)
+    at reconnectPassiveEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11273:13)
+    at recursivelyTraverseReconnectPassiveEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11240:11)
+    at reconnectPassiveEffects (http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:11317:13)
+[    6063ms] [WARNING] %s
+
+%s
+ An error occurred in the <App> component. Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries. @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=9d0faa6f:6965
