@@ -253,6 +253,16 @@
     );
   }
 
+  /* Inline links */
+  .link {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .link:hover {
+    opacity: 0.8;
+  }
+
   /* Ink effect on hover */
   .ink-hover {
     @apply transition-all duration-200;

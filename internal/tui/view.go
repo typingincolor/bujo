@@ -2,12 +2,15 @@ package tui
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/typingincolor/bujo/internal/domain"
 	"github.com/typingincolor/bujo/internal/service"
 )
+
+var linkRegex = regexp.MustCompile(`https?://[^\s\)\]]+`)
 
 func (m Model) View() string {
 	if m.quitConfirmMode.active {
@@ -221,6 +224,7 @@ func (m Model) renderJournalContent() string {
 			}
 
 			line := m.renderEntry(item, i == m.selectedIdx)
+			line = highlightURLs(line)
 			if m.searchMode.active && m.searchMode.query != "" {
 				line = m.highlightSearchTerm(line)
 			}
@@ -701,6 +705,24 @@ func (m Model) highlightSearchTerm(line string) string {
 		remaining = remaining[idx+len(query):]
 		lowerRemaining = lowerRemaining[idx+len(query):]
 	}
+
+	return result.String()
+}
+
+func highlightURLs(content string) string {
+	matches := linkRegex.FindAllStringIndex(content, -1)
+	if len(matches) == 0 {
+		return content
+	}
+
+	var result strings.Builder
+	lastIndex := 0
+	for _, match := range matches {
+		result.WriteString(content[lastIndex:match[0]])
+		result.WriteString(LinkStyle.Render(content[match[0]:match[1]]))
+		lastIndex = match[1]
+	}
+	result.WriteString(content[lastIndex:])
 
 	return result.String()
 }

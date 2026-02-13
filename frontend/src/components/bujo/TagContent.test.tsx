@@ -126,6 +126,53 @@ describe('TagContent', () => {
     })
   })
 
+  describe('rendering URLs', () => {
+    it('renders URL as a link element', () => {
+      render(<TagContent content="check https://example.com now" />)
+      const link = screen.getByText('https://example.com')
+      expect(link.tagName).toBe('A')
+      expect(link).toHaveAttribute('href', 'https://example.com')
+    })
+
+    it('renders multiple URLs as links', () => {
+      render(<TagContent content="see https://one.com and https://two.com" />)
+      expect(screen.getByText('https://one.com').tagName).toBe('A')
+      expect(screen.getByText('https://two.com').tagName).toBe('A')
+    })
+
+    it('renders http URL as a link', () => {
+      render(<TagContent content="old http://example.com here" />)
+      const link = screen.getByText('http://example.com')
+      expect(link.tagName).toBe('A')
+    })
+
+    it('applies link styling class', () => {
+      render(<TagContent content="visit https://example.com" />)
+      const link = screen.getByText('https://example.com')
+      expect(link).toHaveClass('link')
+    })
+
+    it('sets target _blank and rel noopener', () => {
+      render(<TagContent content="visit https://example.com" />)
+      const link = screen.getByText('https://example.com')
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    })
+
+    it('preserves surrounding text', () => {
+      render(<TagContent content="check https://example.com now" />)
+      expect(screen.getByText('check')).toBeInTheDocument()
+      expect(screen.getByText('now')).toBeInTheDocument()
+    })
+
+    it('handles mixed tags mentions and URLs', () => {
+      render(<TagContent content="See https://example.com #work @john" />)
+      expect(screen.getByText('https://example.com').tagName).toBe('A')
+      expect(screen.getByText('#work')).toHaveClass('tag')
+      expect(screen.getByText('@john')).toHaveClass('mention')
+    })
+  })
+
   describe('mention click handling', () => {
     it('calls onMentionClick with mention name on click', async () => {
       const user = userEvent.setup()
