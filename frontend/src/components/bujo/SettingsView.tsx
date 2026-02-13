@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings, Palette, Database, Info } from 'lucide-react';
+import { Settings, Palette, Database, Info, Mail } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 import type { Theme, DefaultView } from '../../types/settings';
 import { GetVersion } from '@/wailsjs/go/wails/App';
@@ -60,6 +60,29 @@ export function SettingsView() {
             <span className="text-xs text-muted-foreground">
               ~/.bujo/bujo.db
             </span>
+          </SettingRow>
+        </div>
+      </section>
+
+      {/* Integrations Section */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Mail className="w-4 h-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Integrations
+          </h3>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+          <SettingRow
+            label="Gmail Bookmarklet"
+            description="Capture emails as tasks directly from Gmail"
+          >
+            <button
+              onClick={() => BrowserOpenURL('http://127.0.0.1:8743/install')}
+              className="text-sm text-primary hover:underline"
+            >
+              Install
+            </button>
           </SettingRow>
         </div>
       </section>

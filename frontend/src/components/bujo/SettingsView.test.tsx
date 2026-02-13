@@ -235,6 +235,41 @@ describe('SettingsView', () => {
     )
   })
 
+  it('displays integrations section', () => {
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+    expect(screen.getByText('Integrations')).toBeInTheDocument()
+  })
+
+  it('displays Gmail bookmarklet link in integrations section', () => {
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+    expect(screen.getByText('Gmail Bookmarklet')).toBeInTheDocument()
+    expect(screen.getByText('Capture emails as tasks directly from Gmail')).toBeInTheDocument()
+  })
+
+  it('opens bookmarklet install page when Install link is clicked', async () => {
+    const user = userEvent.setup()
+    render(
+      <SettingsProvider>
+        <SettingsView />
+      </SettingsProvider>
+    )
+
+    const installLink = screen.getByRole('button', { name: 'Install' })
+    await user.click(installLink)
+
+    expect(WailsRuntime.BrowserOpenURL).toHaveBeenCalledWith(
+      'http://127.0.0.1:8743/install'
+    )
+  })
+
   it('displays backend version from API', async () => {
     vi.mocked(WailsApp.GetVersion).mockResolvedValue('v0.1.0-nightly+85d8787')
 
