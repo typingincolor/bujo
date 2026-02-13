@@ -1,7 +1,8 @@
 const TAG_REGEX = /#([a-zA-Z][a-zA-Z0-9-]*)/g
 const MENTION_REGEX = /@([a-zA-Z][a-zA-Z0-9.]*)/g
+const URL_REGEX = /https?:\/\/[^\s)\]]+/g
 
-type Part = string | { tag: string } | { mention: string }
+type Part = string | { tag: string } | { mention: string } | { url: string }
 
 interface TagContentProps {
   content: string
@@ -11,7 +12,7 @@ interface TagContentProps {
 
 export function TagContent({ content, onTagClick, onMentionClick }: TagContentProps) {
   const parts: Part[] = []
-  const matches: { index: number; length: number; part: { tag: string } | { mention: string } }[] = []
+  const matches: { index: number; length: number; part: { tag: string } | { mention: string } | { url: string } }[] = []
 
   for (const match of content.matchAll(TAG_REGEX)) {
     matches.push({ index: match.index, length: match[0].length, part: { tag: match[1] } })
@@ -19,11 +20,15 @@ export function TagContent({ content, onTagClick, onMentionClick }: TagContentPr
   for (const match of content.matchAll(MENTION_REGEX)) {
     matches.push({ index: match.index, length: match[0].length, part: { mention: match[1] } })
   }
+  for (const match of content.matchAll(URL_REGEX)) {
+    matches.push({ index: match.index, length: match[0].length, part: { url: match[0] } })
+  }
 
   matches.sort((a, b) => a.index - b.index)
 
   let lastIndex = 0
   for (const m of matches) {
+    if (m.index < lastIndex) continue
     const before = content.slice(lastIndex, m.index)
     if (before) parts.push(before)
     parts.push(m.part)
@@ -52,6 +57,19 @@ export function TagContent({ content, onTagClick, onMentionClick }: TagContentPr
             >
               #{part.tag}
             </span>
+          )
+        }
+        if ('url' in part) {
+          return (
+            <a
+              key={i}
+              href={part.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="link"
+            >
+              {part.url}
+            </a>
           )
         }
         return (

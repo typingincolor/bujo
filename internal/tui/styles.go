@@ -71,4 +71,8 @@ var (
 
 	HabitSelectedStyle = lipgloss.NewStyle().
 				Reverse(true)
+
+	LinkStyle = lipgloss.NewStyle().
+			Foreground(CyanColor).
+			Underline(true)
 )
