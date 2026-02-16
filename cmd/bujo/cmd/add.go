@@ -13,7 +13,7 @@ import (
 
 func writeEntryIDs(w io.Writer, ids []int64) {
 	for _, id := range ids {
-		fmt.Fprintln(w, id)
+		_, _ = fmt.Fprintln(w, id)
 	}
 }
 

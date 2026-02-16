@@ -42,7 +42,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 	resp, err := http.Get(server.URL + "/api/health")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -65,7 +65,7 @@ func TestCreateEntries(t *testing.T) {
 
 	resp, err := http.Post(server.URL+"/api/entries", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -98,7 +98,7 @@ func TestCreateEntriesWithChildren(t *testing.T) {
 
 	resp, err := http.Post(server.URL+"/api/entries", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -133,7 +133,7 @@ func TestCreateEntriesMissingContent(t *testing.T) {
 
 	resp, err := http.Post(server.URL+"/api/entries", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -158,7 +158,7 @@ func TestCreateEntriesInvalidType(t *testing.T) {
 
 	resp, err := http.Post(server.URL+"/api/entries", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -180,7 +180,7 @@ func TestCORSPreflight(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	assert.Equal(t, "https://mail.google.com", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -197,7 +197,7 @@ func TestCORSHeadersOnResponse(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, "https://mail.google.com", resp.Header.Get("Access-Control-Allow-Origin"))
 }
@@ -211,7 +211,7 @@ func TestCORSRejectsUnknownOrigin(t *testing.T) {
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Empty(t, resp.Header.Get("Access-Control-Allow-Origin"))
 }
@@ -244,7 +244,7 @@ func TestCreateEntriesBodyTooLarge(t *testing.T) {
 
 	resp, err := http.Post(server.URL+"/api/entries", "application/json", strings.NewReader(payload))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -254,7 +254,7 @@ func TestInstallPage(t *testing.T) {
 
 	resp, err := http.Get(server.URL + "/install")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, resp.Header.Get("Content-Type"), "text/html")
