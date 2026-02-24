@@ -1,6 +1,6 @@
 module github.com/typingincolor/bujo
 
-go 1.24.11
+go 1.24.7
 
 require (
 	github.com/charmbracelet/bubbles v1.0.0
