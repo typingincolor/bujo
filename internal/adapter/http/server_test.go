@@ -31,7 +31,7 @@ func TestServerStartStop(t *testing.T) {
 
 	resp, err := http.Get("http://" + addr + "/api/health")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var body map[string]string
 	err = json.NewDecoder(resp.Body).Decode(&body)
