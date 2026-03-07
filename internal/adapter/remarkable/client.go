@@ -311,3 +311,83 @@ func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, err
 
 	return nil, fmt.Errorf("document %s not found", docID)
 }
+
+func (c *Client) DownloadPages(deviceToken string, docID string) ([]PageData, error) {
+	userToken, err := c.RefreshUserToken(deviceToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	req, err := http.NewRequest("GET", c.syncHost+"/sync/v4/root", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+userToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var root RootHashResponse
+	if err := json.NewDecoder(resp.Body).Decode(&root); err != nil {
+		return nil, err
+	}
+
+	rootEntries, err := c.GetEntries(userToken, root.Hash)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range rootEntries {
+		if entry.ID != docID {
+			continue
+		}
+
+		subEntries, err := c.GetEntries(userToken, entry.Hash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get document entries: %w", err)
+		}
+
+		var pageOrder []string
+		for _, sub := range subEntries {
+			if strings.HasSuffix(sub.ID, ".content") {
+				data, err := c.GetFileContent(userToken, sub.Hash)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get content file: %w", err)
+				}
+				pageOrder, err = ParsePageOrder(data)
+				if err != nil {
+					return nil, fmt.Errorf("failed to parse page order: %w", err)
+				}
+				break
+			}
+		}
+
+		rmHashes := make(map[string]string)
+		for _, sub := range subEntries {
+			if strings.HasSuffix(sub.ID, ".rm") {
+				rmHashes[sub.ID] = sub.Hash
+			}
+		}
+
+		var pages []PageData
+		for _, pageID := range pageOrder {
+			rmKey := docID + "/" + pageID + ".rm"
+			hash, ok := rmHashes[rmKey]
+			if !ok {
+				continue
+			}
+			data, err := c.GetFileContent(userToken, hash)
+			if err != nil {
+				return nil, fmt.Errorf("failed to download page %s: %w", pageID, err)
+			}
+			pages = append(pages, PageData{PageID: pageID, Data: data})
+		}
+
+		return pages, nil
+	}
+
+	return nil, fmt.Errorf("document %s not found", docID)
+}

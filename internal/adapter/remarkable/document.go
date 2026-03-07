@@ -40,6 +40,11 @@ type DocumentContent struct {
 	FileType string `json:"fileType"`
 }
 
+type PageData struct {
+	PageID string
+	Data   []byte
+}
+
 func ExtractTextFromZIP(data []byte) ([]string, error) {
 	r, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {

@@ -2,6 +2,7 @@ package remarkable
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -196,4 +197,53 @@ func TestListDocuments(t *testing.T) {
 	assert.Equal(t, "Journal", docs[1].VisibleName)
 	assert.Equal(t, "folder-1", docs[1].Parent)
 	assert.Equal(t, "pdf", docs[1].FileType)
+}
+
+func TestDownloadPages(t *testing.T) {
+	page1Content := []byte("rm-page-1-binary")
+	page2Content := []byte("rm-page-2-binary")
+	docID := "doc-uuid-1"
+
+	contentJSON := `{"cPages":{"pages":[{"id":"page-a"},{"id":"page-b"}]},"fileType":"notebook"}`
+
+	rootEntries := fmt.Sprintf("3\ndocHash:%s:%s:5:1024\n", "80000000", docID)
+	docEntries := fmt.Sprintf("3\ncontentHash:0:%s.content:0:100\nmetaHash:0:%s.metadata:0:50\npageAHash:0:%s/page-a.rm:0:200\npageBHash:0:%s/page-b.rm:0:300\n",
+		docID, docID, docID, docID)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		switch r.URL.Path {
+		case "/sync/v4/root":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
+			})
+		case "/sync/v3/files/rootHash":
+			w.Write([]byte(rootEntries))
+		case "/sync/v3/files/docHash":
+			w.Write([]byte(docEntries))
+		case "/sync/v3/files/contentHash":
+			w.Write([]byte(contentJSON))
+		case "/sync/v3/files/pageAHash":
+			w.Write(page1Content)
+		case "/sync/v3/files/pageBHash":
+			w.Write(page2Content)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.SetSyncHost(server.URL)
+
+	pages, err := client.DownloadPages("fake-device-token", docID)
+	require.NoError(t, err)
+	require.Len(t, pages, 2)
+	assert.Equal(t, "page-a", pages[0].PageID)
+	assert.Equal(t, page1Content, pages[0].Data)
+	assert.Equal(t, "page-b", pages[1].PageID)
+	assert.Equal(t, page2Content, pages[1].Data)
 }
