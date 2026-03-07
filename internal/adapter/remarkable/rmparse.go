@@ -10,6 +10,11 @@ const rmHeaderV6 = "reMarkable .lines file, version=6          "
 
 const (
 	blockTypeSceneLineItem = 0x05
+	fieldIndexValue        = 6
+	fieldIndexPoints       = 5
+	itemTypeLine           = 0x03
+	pointSizeV1            = 24
+	pointSizeV2            = 14
 )
 
 type rmPoint struct {
@@ -214,7 +219,7 @@ func (r *rmReader) parseLineItemContent(blockVersion uint8, content []byte) (rmS
 			return stroke, err
 		}
 
-		if index == 6 && tagType == tagLength4 {
+		if index == fieldIndexValue && tagType == tagLength4 {
 			length, err := cr.readUint32()
 			if err != nil {
 				return stroke, err
@@ -225,7 +230,7 @@ func (r *rmReader) parseLineItemContent(blockVersion uint8, content []byte) (rmS
 			if err != nil {
 				return stroke, err
 			}
-			if itemType != 0x03 {
+			if itemType != itemTypeLine {
 				cr.pos = subEnd
 				continue
 			}
@@ -235,7 +240,7 @@ func (r *rmReader) parseLineItemContent(blockVersion uint8, content []byte) (rmS
 				if err != nil {
 					break
 				}
-				if fi == 5 && ft == tagLength4 {
+				if fi == fieldIndexPoints && ft == tagLength4 {
 					pointsLen, err := cr.readUint32()
 					if err != nil {
 						return stroke, err
@@ -265,19 +270,33 @@ func (r *rmReader) parsePoints(blockVersion uint8, dataLen int) ([]rmPoint, erro
 	var points []rmPoint
 
 	if blockVersion >= 2 {
-		pointSize := 14
-		for r.pos+pointSize <= end {
-			x, _ := r.readFloat32()
-			y, _ := r.readFloat32()
-			_ = r.skip(2 + 2 + 1 + 1) // speed, width, direction, pressure
+		for r.pos+pointSizeV2 <= end {
+			x, err := r.readFloat32()
+			if err != nil {
+				return points, err
+			}
+			y, err := r.readFloat32()
+			if err != nil {
+				return points, err
+			}
+			if err := r.skip(2 + 2 + 1 + 1); err != nil { // speed, width, direction, pressure
+				return points, err
+			}
 			points = append(points, rmPoint{X: x, Y: y})
 		}
 	} else {
-		pointSize := 24
-		for r.pos+pointSize <= end {
-			x, _ := r.readFloat32()
-			y, _ := r.readFloat32()
-			_ = r.skip(4 * 4) // speed, direction, width, pressure
+		for r.pos+pointSizeV1 <= end {
+			x, err := r.readFloat32()
+			if err != nil {
+				return points, err
+			}
+			y, err := r.readFloat32()
+			if err != nil {
+				return points, err
+			}
+			if err := r.skip(4 * 4); err != nil { // speed, direction, width, pressure
+				return points, err
+			}
 			points = append(points, rmPoint{X: x, Y: y})
 		}
 	}
@@ -295,7 +314,7 @@ func ParseRM(data []byte) ([]rmStroke, error) {
 	for r.remaining() > 0 {
 		blockType, version, content, err := r.readBlock()
 		if err != nil {
-			return strokes, nil
+			return strokes, err
 		}
 
 		if blockType == blockTypeSceneLineItem {
