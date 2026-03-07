@@ -1,6 +1,7 @@
 package remarkable
 
 import (
+	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,37 +10,28 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuildRmcCommand(t *testing.T) {
-	cmd := BuildRmcCommand("/tmp/page.rm", "/tmp/page.svg")
-	assert.Equal(t, "rmc", cmd.Args[0])
-	assert.Contains(t, cmd.Args, "-o")
-	assert.Contains(t, cmd.Args, "/tmp/page.svg")
-	assert.Contains(t, cmd.Args, "/tmp/page.rm")
-}
-
-func TestBuildCairoSVGCommand(t *testing.T) {
-	cmd := BuildCairoSVGCommand("/tmp/page.svg", "/tmp/page.png")
-	assert.Equal(t, "python3", cmd.Args[0])
-	assert.Contains(t, cmd.Args, "-c")
-
-	script := cmd.Args[2]
-	assert.Contains(t, script, "cairosvg")
-	assert.Contains(t, script, "sys.argv[1]")
-	assert.Contains(t, script, "sys.argv[2]")
-	assert.Contains(t, script, "output_width=1404")
-	assert.Equal(t, "/tmp/page.svg", cmd.Args[3])
-	assert.Equal(t, "/tmp/page.png", cmd.Args[4])
-}
-
-func TestSavePageToFile(t *testing.T) {
+func TestRenderPageToPNG_WritesFile(t *testing.T) {
 	dir := t.TempDir()
-	data := []byte("fake-rm-data")
+	rmData := []byte("reMarkable .lines file, version=6          ")
 
-	path, err := SavePageToFile(dir, "page-uuid-1", data)
+	path, err := RenderPageToPNG(dir, "test-page", rmData)
 	require.NoError(t, err)
-	assert.Equal(t, filepath.Join(dir, "page-uuid-1.rm"), path)
+	assert.Equal(t, filepath.Join(dir, "test-page.png"), path)
 
-	content, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	require.NoError(t, err)
-	assert.Equal(t, data, content)
+	defer f.Close()
+
+	img, err := png.Decode(f)
+	require.NoError(t, err)
+	bounds := img.Bounds()
+	assert.Equal(t, remarkableScreenWidth, bounds.Max.X)
+	assert.Equal(t, remarkableScreenHeight, bounds.Max.Y)
+}
+
+func TestRenderPageToPNG_InvalidRM(t *testing.T) {
+	dir := t.TempDir()
+	_, err := RenderPageToPNG(dir, "bad-page", []byte("not a valid rm file"))
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid .rm header")
 }
