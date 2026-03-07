@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -161,9 +162,63 @@ var remarkableImportCmd = &cobra.Command{
 	},
 }
 
+var remarkableRenderCmd = &cobra.Command{
+	Use:   "render <doc-id>",
+	Short: "Download notebook pages and render to PNG",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		docID := args[0]
+		outDir, _ := cmd.Flags().GetString("out-dir")
+
+		configPath, err := remarkable.DefaultConfigPath()
+		if err != nil {
+			return err
+		}
+		cfg, err := remarkable.LoadConfig(configPath)
+		if err != nil {
+			return fmt.Errorf("not registered — run 'bujo remarkable register <code>' first: %w", err)
+		}
+
+		client := remarkable.NewClient(remarkable.DefaultAuthHost)
+		client.SetSyncHost(remarkable.DefaultSyncHost)
+
+		fmt.Printf("Downloading pages for %s...\n", docID)
+		pages, err := client.DownloadPages(cfg.DeviceToken, docID)
+		if err != nil {
+			return fmt.Errorf("failed to download pages: %w", err)
+		}
+		fmt.Printf("Downloaded %d pages\n", len(pages))
+
+		if outDir == "" {
+			outDir, err = os.MkdirTemp("", "remarkable-render-*")
+			if err != nil {
+				return err
+			}
+		} else {
+			if err := os.MkdirAll(outDir, 0755); err != nil {
+				return err
+			}
+		}
+
+		for i, page := range pages {
+			fmt.Printf("Rendering page %d/%d (%s)...\n", i+1, len(pages), page.PageID)
+			pngPath, err := remarkable.RenderPageToPNG(outDir, page.PageID, page.Data)
+			if err != nil {
+				return fmt.Errorf("failed to render page %s: %w", page.PageID, err)
+			}
+			fmt.Printf("  → %s\n", pngPath)
+		}
+
+		fmt.Printf("\nPNGs saved to: %s\n", outDir)
+		return nil
+	},
+}
+
 func init() {
+	remarkableRenderCmd.Flags().String("out-dir", "", "Output directory for PNGs (default: temp dir)")
 	remarkableCmd.AddCommand(remarkableRegisterCmd)
 	remarkableCmd.AddCommand(remarkableListCmd)
 	remarkableCmd.AddCommand(remarkableImportCmd)
+	remarkableCmd.AddCommand(remarkableRenderCmd)
 	rootCmd.AddCommand(remarkableCmd)
 }
