@@ -113,3 +113,49 @@ func (c *Client) ListDocuments(deviceToken string) ([]Document, error) {
 	}
 	return docs, nil
 }
+
+func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, error) {
+	userToken, err := c.RefreshUserToken(deviceToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh token: %w", err)
+	}
+
+	req, err := http.NewRequest("GET", c.syncHost+"/doc/v2/files", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+userToken)
+	q := req.URL.Query()
+	q.Set("doc", docID)
+	q.Set("withBlob", "true")
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch document failed: status %d", resp.StatusCode)
+	}
+
+	var docs []Document
+	if err := json.NewDecoder(resp.Body).Decode(&docs); err != nil {
+		return nil, err
+	}
+	if len(docs) == 0 {
+		return nil, fmt.Errorf("document %s not found", docID)
+	}
+	if docs[0].BlobURLGet == "" {
+		return nil, fmt.Errorf("no blob URL for document %s", docID)
+	}
+
+	blobResp, err := c.httpClient.Get(docs[0].BlobURLGet)
+	if err != nil {
+		return nil, err
+	}
+	defer blobResp.Body.Close()
+
+	return io.ReadAll(blobResp.Body)
+}

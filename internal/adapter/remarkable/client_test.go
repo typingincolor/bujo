@@ -53,6 +53,40 @@ func TestRegisterDeviceFailure(t *testing.T) {
 	assert.Contains(t, err.Error(), "403")
 }
 
+func TestDownloadDocument(t *testing.T) {
+	blobContent := []byte("fake-zip-content")
+
+	blobServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(blobContent)
+	}))
+	defer blobServer.Close()
+
+	doc := Document{
+		ID:         "doc-1",
+		BlobURLGet: blobServer.URL + "/blob",
+	}
+
+	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		assert.Equal(t, "/doc/v2/files", r.URL.Path)
+		assert.Equal(t, "doc-1", r.URL.Query().Get("doc"))
+		assert.Equal(t, "true", r.URL.Query().Get("withBlob"))
+		docs, _ := json.Marshal([]Document{doc})
+		w.Write(docs)
+	}))
+	defer apiServer.Close()
+
+	client := NewClient(apiServer.URL)
+	client.syncHost = apiServer.URL
+
+	data, err := client.DownloadDocument("fake-device-token", "doc-1")
+	require.NoError(t, err)
+	assert.Equal(t, blobContent, data)
+}
+
 func TestListDocuments(t *testing.T) {
 	docs := []Document{
 		{ID: "doc-1", VisibleName: "Meeting Notes", Type: "DocumentType", ModifiedAt: "2026-03-01"},
