@@ -26,6 +26,7 @@ func TestBuildCairoSVGCommand(t *testing.T) {
 	assert.Contains(t, script, "cairosvg")
 	assert.Contains(t, script, "/tmp/page.svg")
 	assert.Contains(t, script, "/tmp/page.png")
+	assert.Contains(t, script, "output_width=1404")
 }
 
 func TestSavePageToFile(t *testing.T) {

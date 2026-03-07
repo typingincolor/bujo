@@ -228,7 +228,12 @@ func getToolsDir() string {
 	if err != nil {
 		return "tools"
 	}
-	return filepath.Join(filepath.Dir(exe), "..", "tools")
+	dir := filepath.Dir(exe)
+	toolsDir := filepath.Join(dir, "tools")
+	if _, err := os.Stat(toolsDir); err == nil {
+		return toolsDir
+	}
+	return filepath.Join(dir, "..", "tools")
 }
 
 var remarkableOcrCmd = &cobra.Command{

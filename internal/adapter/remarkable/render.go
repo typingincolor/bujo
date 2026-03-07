@@ -19,9 +19,18 @@ func BuildRmcCommand(rmPath string, svgPath string) *exec.Cmd {
 	return exec.Command("rmc", "-o", svgPath, rmPath)
 }
 
+const remarkableScreenWidth = 1404
+
 func BuildCairoSVGCommand(svgPath string, pngPath string) *exec.Cmd {
-	return exec.Command("python3", "-c",
-		fmt.Sprintf("import cairosvg; cairosvg.svg2png(url='%s', write_to='%s')", svgPath, pngPath))
+	script := fmt.Sprintf(
+		"import cairosvg, io; from PIL import Image; "+
+			"png = cairosvg.svg2png(url='%s', output_width=%d); "+
+			"img = Image.open(io.BytesIO(png)); "+
+			"bg = Image.new('RGB', img.size, (255,255,255)); "+
+			"bg.paste(img, mask=img.split()[3] if img.mode=='RGBA' else None); "+
+			"bg.save('%s')",
+		svgPath, remarkableScreenWidth, pngPath)
+	return exec.Command("python3", "-c", script)
 }
 
 func RenderPageToPNG(dir string, pageID string, rmData []byte) (string, error) {
