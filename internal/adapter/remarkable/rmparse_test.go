@@ -49,6 +49,37 @@ func TestReadVaruint(t *testing.T) {
 	}
 }
 
+func TestReadVaruint_EOF(t *testing.T) {
+	r := newRMReader([]byte{0x80})
+	_, err := r.readVaruint()
+	assert.ErrorContains(t, err, "unexpected EOF in varuint")
+}
+
+func TestReadVaruint_Overflow(t *testing.T) {
+	data := make([]byte, 11)
+	for i := range data {
+		data[i] = 0x80
+	}
+	r := newRMReader(data)
+	_, err := r.readVaruint()
+	assert.ErrorContains(t, err, "varuint overflow")
+}
+
+func TestReadBlock_TruncatedData(t *testing.T) {
+	r := newRMReader([]byte{0x01, 0x02})
+	_, _, _, err := r.readBlock()
+	assert.ErrorContains(t, err, "reading block length")
+}
+
+func TestReadBlock_LengthLessThanFour(t *testing.T) {
+	block := make([]byte, 0, 8)
+	block = binary.LittleEndian.AppendUint32(block, 3)
+	block = append(block, 0x00, 0x01, 0x01, 0x05)
+	r := newRMReader(block)
+	_, _, _, err := r.readBlock()
+	assert.ErrorContains(t, err, "invalid block length")
+}
+
 func TestReadBlock(t *testing.T) {
 	content := []byte{0xAA, 0xBB}
 	block := make([]byte, 0, 8+len(content))

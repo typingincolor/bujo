@@ -97,6 +97,9 @@ func (r *rmReader) readVaruint() (uint64, error) {
 	var result uint64
 	var shift uint
 	for {
+		if shift >= 64 {
+			return 0, fmt.Errorf("varuint overflow at offset %d", r.pos)
+		}
 		if r.remaining() < 1 {
 			return 0, fmt.Errorf("unexpected EOF in varuint at offset %d", r.pos)
 		}
