@@ -149,10 +149,164 @@ func (r *rmReader) readBlock() (blockType uint8, version uint8, content []byte, 
 	return blockType, version, content, nil
 }
 
+const (
+	tagByte1   = 0x1
+	tagByte4   = 0x4
+	tagByte8   = 0x8
+	tagLength4 = 0xC
+	tagID      = 0xF
+)
+
+func (r *rmReader) readTag() (index uint64, tagType uint8, err error) {
+	v, err := r.readVaruint()
+	if err != nil {
+		return 0, 0, err
+	}
+	return v >> 4, uint8(v & 0xF), nil
+}
+
+func (r *rmReader) skipCrdtID() error {
+	if _, err := r.readUint8(); err != nil {
+		return err
+	}
+	if _, err := r.readVaruint(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *rmReader) skipTaggedValue(tagType uint8) error {
+	switch tagType {
+	case tagByte1:
+		return r.skip(1)
+	case tagByte4:
+		return r.skip(4)
+	case tagByte8:
+		return r.skip(8)
+	case tagLength4:
+		length, err := r.readUint32()
+		if err != nil {
+			return err
+		}
+		return r.skip(int(length))
+	case tagID:
+		return r.skipCrdtID()
+	default:
+		return fmt.Errorf("unknown tag type 0x%x at offset %d", tagType, r.pos)
+	}
+}
+
 func (r *rmReader) skip(n int) error {
 	if r.remaining() < n {
 		return fmt.Errorf("unexpected EOF: cannot skip %d bytes at offset %d", n, r.pos)
 	}
 	r.pos += n
 	return nil
+}
+
+func (r *rmReader) parseLineItemContent(blockVersion uint8, content []byte) (rmStroke, error) {
+	cr := newRMReader(content)
+	var stroke rmStroke
+
+	for cr.remaining() > 0 {
+		index, tagType, err := cr.readTag()
+		if err != nil {
+			return stroke, err
+		}
+
+		if index == 6 && tagType == tagLength4 {
+			length, err := cr.readUint32()
+			if err != nil {
+				return stroke, err
+			}
+			subEnd := cr.pos + int(length)
+
+			itemType, err := cr.readUint8()
+			if err != nil {
+				return stroke, err
+			}
+			if itemType != 0x03 {
+				cr.pos = subEnd
+				continue
+			}
+
+			for cr.pos < subEnd {
+				fi, ft, err := cr.readTag()
+				if err != nil {
+					break
+				}
+				if fi == 5 && ft == tagLength4 {
+					pointsLen, err := cr.readUint32()
+					if err != nil {
+						return stroke, err
+					}
+					stroke.Points, err = cr.parsePoints(blockVersion, int(pointsLen))
+					if err != nil {
+						return stroke, err
+					}
+				} else {
+					if err := cr.skipTaggedValue(ft); err != nil {
+						return stroke, err
+					}
+				}
+			}
+			cr.pos = subEnd
+		} else {
+			if err := cr.skipTaggedValue(tagType); err != nil {
+				return stroke, err
+			}
+		}
+	}
+	return stroke, nil
+}
+
+func (r *rmReader) parsePoints(blockVersion uint8, dataLen int) ([]rmPoint, error) {
+	end := r.pos + dataLen
+	var points []rmPoint
+
+	if blockVersion >= 2 {
+		pointSize := 14
+		for r.pos+pointSize <= end {
+			x, _ := r.readFloat32()
+			y, _ := r.readFloat32()
+			_ = r.skip(2 + 2 + 1 + 1) // speed, width, direction, pressure
+			points = append(points, rmPoint{X: x, Y: y})
+		}
+	} else {
+		pointSize := 24
+		for r.pos+pointSize <= end {
+			x, _ := r.readFloat32()
+			y, _ := r.readFloat32()
+			_ = r.skip(4 * 4) // speed, direction, width, pressure
+			points = append(points, rmPoint{X: x, Y: y})
+		}
+	}
+	r.pos = end
+	return points, nil
+}
+
+func ParseRM(data []byte) ([]rmStroke, error) {
+	r := newRMReader(data)
+	if err := r.parseHeader(); err != nil {
+		return nil, err
+	}
+
+	var strokes []rmStroke
+	for r.remaining() > 0 {
+		blockType, version, content, err := r.readBlock()
+		if err != nil {
+			return strokes, nil
+		}
+
+		if blockType == blockTypeSceneLineItem {
+			stroke, err := r.parseLineItemContent(version, content)
+			if err != nil {
+				continue
+			}
+			if len(stroke.Points) > 0 {
+				strokes = append(strokes, stroke)
+			}
+		}
+	}
+	return strokes, nil
 }
