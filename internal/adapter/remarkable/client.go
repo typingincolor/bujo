@@ -60,3 +60,27 @@ func (c *Client) RegisterDevice(code string) (string, error) {
 	}
 	return string(token), nil
 }
+
+func (c *Client) RefreshUserToken(deviceToken string) (string, error) {
+	req, err := http.NewRequest("POST", c.authHost+"/token/json/2/user/new", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+deviceToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token refresh failed: status %d", resp.StatusCode)
+	}
+
+	token, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(token), nil
+}
