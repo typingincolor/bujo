@@ -23,14 +23,14 @@ const remarkableScreenWidth = 1404
 
 func BuildCairoSVGCommand(svgPath string, pngPath string) *exec.Cmd {
 	script := fmt.Sprintf(
-		"import cairosvg, io; from PIL import Image; "+
-			"png = cairosvg.svg2png(url='%s', output_width=%d); "+
+		"import sys, cairosvg, io; from PIL import Image; "+
+			"png = cairosvg.svg2png(url=sys.argv[1], output_width=%d); "+
 			"img = Image.open(io.BytesIO(png)); "+
 			"bg = Image.new('RGB', img.size, (255,255,255)); "+
 			"bg.paste(img, mask=img.split()[3] if img.mode=='RGBA' else None); "+
-			"bg.save('%s')",
-		svgPath, remarkableScreenWidth, pngPath)
-	return exec.Command("python3", "-c", script)
+			"bg.save(sys.argv[2])",
+		remarkableScreenWidth)
+	return exec.Command("python3", "-c", script, svgPath, pngPath)
 }
 
 func RenderPageToPNG(dir string, pageID string, rmData []byte) (string, error) {
