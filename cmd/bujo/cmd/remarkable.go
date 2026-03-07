@@ -91,7 +91,7 @@ var remarkableListCmd = &cobra.Command{
 
 var remarkableImportCmd = &cobra.Command{
 	Use:   "import <doc-id>",
-	Short: "Download document, extract text, parse entries, print to stdout",
+	Short: "Download notebook, OCR pages, parse bujo entries, print to stdout",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		docID := args[0]
@@ -105,40 +105,48 @@ var remarkableImportCmd = &cobra.Command{
 			return fmt.Errorf("not registered — run 'bujo remarkable register <code>' first: %w", err)
 		}
 
+		ocrTool := filepath.Join(getToolsDir(), "remarkable-ocr", "remarkable-ocr")
+		if _, err := os.Stat(ocrTool); os.IsNotExist(err) {
+			return fmt.Errorf("OCR tool not found — build with: swiftc -o %s tools/remarkable-ocr/main.swift -framework Vision -framework AppKit", ocrTool)
+		}
+
 		client := remarkable.NewClient(remarkable.DefaultAuthHost)
 		client.SetSyncHost(remarkable.DefaultSyncHost)
 
-		fmt.Printf("Downloading document %s...\n", docID)
-		data, err := client.DownloadDocument(cfg.DeviceToken, docID)
+		fmt.Fprintf(os.Stderr, "Downloading pages for %s...\n", docID)
+		pages, err := client.DownloadPages(cfg.DeviceToken, docID)
 		if err != nil {
-			return fmt.Errorf("failed to download: %w", err)
+			return fmt.Errorf("failed to download pages: %w", err)
 		}
-		fmt.Printf("Downloaded %d bytes\n", len(data))
+		fmt.Fprintf(os.Stderr, "Downloaded %d pages\n", len(pages))
 
-		manifest, err := remarkable.ListZIPContents(data)
+		tmpDir, err := os.MkdirTemp("", "remarkable-import-*")
 		if err != nil {
-			return fmt.Errorf("failed to read ZIP: %w", err)
+			return err
 		}
-		fmt.Println("\nZIP contents:")
-		for _, entry := range manifest {
-			fmt.Printf("  %s\n", entry)
-		}
-
-		texts, err := remarkable.ExtractTextFromZIP(data)
-		if err != nil {
-			return fmt.Errorf("failed to extract text: %w", err)
-		}
-
-		if len(texts) == 0 {
-			fmt.Println("\nNo text files found in ZIP. The document may not have been converted to text.")
-			fmt.Println("On your reMarkable, select the page → Convert to text, then sync.")
-			return nil
-		}
+		defer os.RemoveAll(tmpDir)
 
 		parser := domain.NewTreeParser()
-		for i, text := range texts {
+
+		for i, page := range pages {
+			fmt.Fprintf(os.Stderr, "Rendering page %d/%d...\n", i+1, len(pages))
+			pngPath, err := remarkable.RenderPageToPNG(tmpDir, page.PageID, page.Data)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: render failed for page %s: %v\n", page.PageID, err)
+				continue
+			}
+
+			fmt.Fprintf(os.Stderr, "OCR page %d/%d...\n", i+1, len(pages))
+			results, err := remarkable.RunOCR(ocrTool, pngPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: OCR failed for page %s: %v\n", page.PageID, err)
+				continue
+			}
+
+			text := remarkable.ReconstructText(results)
+
 			fmt.Printf("\n--- Page %d ---\n", i+1)
-			fmt.Printf("Raw text:\n%s\n", text)
+			fmt.Printf("Reconstructed text:\n%s\n", text)
 
 			entries, err := parser.Parse(text)
 			if err != nil {
