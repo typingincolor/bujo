@@ -34,7 +34,10 @@ func LoadConfig(path string) (Config, error) {
 	return cfg, nil
 }
 
-func DefaultConfigPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "bujo", "remarkable.json")
+func DefaultConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".config", "bujo", "remarkable.json"), nil
 }

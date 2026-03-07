@@ -46,3 +46,12 @@ func TestLoadConfigNotFound(t *testing.T) {
 	_, err := LoadConfig("/nonexistent/path/remarkable.json")
 	assert.Error(t, err)
 }
+
+func TestLoadConfigInvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "remarkable.json")
+	require.NoError(t, os.WriteFile(path, []byte("not json"), 0600))
+
+	_, err := LoadConfig(path)
+	assert.Error(t, err)
+}
