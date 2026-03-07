@@ -1,6 +1,7 @@
 package remarkable
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -50,4 +51,32 @@ func TestRegisterDeviceFailure(t *testing.T) {
 	_, err := client.RegisterDevice("badcode1")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "403")
+}
+
+func TestListDocuments(t *testing.T) {
+	docs := []Document{
+		{ID: "doc-1", VisibleName: "Meeting Notes", Type: "DocumentType", ModifiedAt: "2026-03-01"},
+		{ID: "doc-2", VisibleName: "Journal", Type: "DocumentType", ModifiedAt: "2026-03-02"},
+	}
+	docsJSON, _ := json.Marshal(docs)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		assert.Equal(t, "/doc/v2/files", r.URL.Path)
+		assert.Equal(t, "Bearer user-token", r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(docsJSON)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.syncHost = server.URL
+
+	result, err := client.ListDocuments("fake-device-token")
+	require.NoError(t, err)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "Meeting Notes", result[0].VisibleName)
 }
