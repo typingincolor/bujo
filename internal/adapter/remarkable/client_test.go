@@ -54,63 +54,146 @@ func TestRegisterDeviceFailure(t *testing.T) {
 }
 
 func TestDownloadDocument(t *testing.T) {
-	blobContent := []byte("fake-zip-content")
-
-	blobServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(blobContent)
-	}))
-	defer blobServer.Close()
-
-	doc := Document{
-		ID:         "doc-1",
-		BlobURLGet: blobServer.URL + "/blob",
-	}
-
-	apiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
-			return
-		}
-		assert.Equal(t, "/doc/v2/files", r.URL.Path)
-		assert.Equal(t, "doc-1", r.URL.Query().Get("doc"))
-		assert.Equal(t, "true", r.URL.Query().Get("withBlob"))
-		docs, _ := json.Marshal([]Document{doc})
-		w.Write(docs)
-	}))
-	defer apiServer.Close()
-
-	client := NewClient(apiServer.URL)
-	client.syncHost = apiServer.URL
-
-	data, err := client.DownloadDocument("fake-device-token", "doc-1")
-	require.NoError(t, err)
-	assert.Equal(t, blobContent, data)
-}
-
-func TestListDocuments(t *testing.T) {
-	docs := []Document{
-		{ID: "doc-1", VisibleName: "Meeting Notes", Type: "DocumentType", ModifiedAt: "2026-03-01"},
-		{ID: "doc-2", VisibleName: "Journal", Type: "DocumentType", ModifiedAt: "2026-03-02"},
-	}
-	docsJSON, _ := json.Marshal(docs)
+	rootEntries := "3\ndocHash1:80000000:doc-id-1:3:1024\n"
+	docEntries := "3\nmetaHash:0:doc-id-1.metadata:0:100\ncontentHash:0:doc-id-1.content:0:50\npdfHash:0:doc-id-1.pdf:0:500\n"
+	meta := `{"visibleName":"Test Doc","lastModified":"1709251200000","parent":"","pinned":false}`
+	pdfContent := []byte("fake-pdf-content")
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
 			w.Write([]byte("user-token"))
 			return
 		}
-		assert.Equal(t, "/doc/v2/files", r.URL.Path)
-		assert.Equal(t, "Bearer user-token", r.Header.Get("Authorization"))
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(docsJSON)
+		switch r.URL.Path {
+		case "/sync/v4/root":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
+			})
+		case "/sync/v3/files/rootHash":
+			w.Write([]byte(rootEntries))
+		case "/sync/v3/files/docHash1":
+			w.Write([]byte(docEntries))
+		case "/sync/v3/files/metaHash":
+			w.Write([]byte(meta))
+		case "/sync/v3/files/pdfHash":
+			w.Write(pdfContent)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	client.syncHost = server.URL
+	client.SetSyncHost(server.URL)
 
-	result, err := client.ListDocuments("fake-device-token")
+	data, err := client.DownloadDocument("fake-device-token", "doc-id-1")
 	require.NoError(t, err)
-	assert.Len(t, result, 2)
-	assert.Equal(t, "Meeting Notes", result[0].VisibleName)
+	assert.Equal(t, pdfContent, data)
+}
+
+func TestGetRootHash(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		assert.Equal(t, "/sync/v4/root", r.URL.Path)
+		assert.Equal(t, "GET", r.Method)
+		assert.Equal(t, "Bearer user-token", r.Header.Get("Authorization"))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"hash":          "abc123def456",
+			"generation":    42,
+			"schemaVersion": 3,
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.SetSyncHost(server.URL)
+
+	hash, gen, err := client.GetRootHash("fake-device-token")
+	require.NoError(t, err)
+	assert.Equal(t, "abc123def456", hash)
+	assert.Equal(t, 42, gen)
+}
+
+func TestGetEntries(t *testing.T) {
+	entriesContent := "3\nhashA:80000000:doc-id-1:5:1024\nhashB:80000000:doc-id-2:3:512\n"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		assert.Equal(t, "/sync/v3/files/root-hash-abc", r.URL.Path)
+		assert.Equal(t, "GET", r.Method)
+		w.Write([]byte(entriesContent))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.SetSyncHost(server.URL)
+
+	entries, err := client.GetEntries("user-token", "root-hash-abc")
+	require.NoError(t, err)
+	assert.Len(t, entries, 2)
+	assert.Equal(t, "doc-id-1", entries[0].ID)
+	assert.Equal(t, "hashA", entries[0].Hash)
+	assert.Equal(t, "doc-id-2", entries[1].ID)
+	assert.Equal(t, "hashB", entries[1].Hash)
+}
+
+func TestListDocuments(t *testing.T) {
+	rootEntries := "3\ndocHash1:80000000:doc-id-1:5:1024\ndocHash2:80000000:doc-id-2:3:512\n"
+	doc1Entries := "3\nmetaHash1:0:doc-id-1.metadata:0:100\ncontentHash1:0:doc-id-1.content:0:50\n"
+	doc2Entries := "3\nmetaHash2:0:doc-id-2.metadata:0:100\ncontentHash2:0:doc-id-2.content:0:50\n"
+	meta1 := `{"visibleName":"Meeting Notes","lastModified":"1709251200000","parent":"","pinned":false}`
+	meta2 := `{"visibleName":"Journal","lastModified":"1709337600000","parent":"folder-1","pinned":false}`
+	content1 := `{"fileType":"notebook"}`
+	content2 := `{"fileType":"pdf"}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/token/json/2/user/new" {
+			w.Write([]byte("user-token"))
+			return
+		}
+		switch r.URL.Path {
+		case "/sync/v4/root":
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
+			})
+		case "/sync/v3/files/rootHash":
+			w.Write([]byte(rootEntries))
+		case "/sync/v3/files/docHash1":
+			w.Write([]byte(doc1Entries))
+		case "/sync/v3/files/docHash2":
+			w.Write([]byte(doc2Entries))
+		case "/sync/v3/files/metaHash1":
+			w.Write([]byte(meta1))
+		case "/sync/v3/files/metaHash2":
+			w.Write([]byte(meta2))
+		case "/sync/v3/files/contentHash1":
+			w.Write([]byte(content1))
+		case "/sync/v3/files/contentHash2":
+			w.Write([]byte(content2))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	client.SetSyncHost(server.URL)
+
+	docs, err := client.ListDocuments("fake-device-token")
+	require.NoError(t, err)
+	assert.Len(t, docs, 2)
+	assert.Equal(t, "doc-id-1", docs[0].ID)
+	assert.Equal(t, "Meeting Notes", docs[0].VisibleName)
+	assert.Equal(t, "notebook", docs[0].FileType)
+	assert.Equal(t, "doc-id-2", docs[1].ID)
+	assert.Equal(t, "Journal", docs[1].VisibleName)
+	assert.Equal(t, "folder-1", docs[1].Parent)
+	assert.Equal(t, "pdf", docs[1].FileType)
 }

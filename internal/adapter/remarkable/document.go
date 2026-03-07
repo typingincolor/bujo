@@ -10,13 +10,34 @@ import (
 )
 
 type Document struct {
-	ID          string `json:"ID"`
-	Version     int    `json:"Version"`
-	VisibleName string `json:"VissibleName"`
-	Type        string `json:"Type"`
-	Parent      string `json:"Parent"`
-	ModifiedAt  string `json:"ModifiedClient"`
-	BlobURLGet  string `json:"BlobURLGet"`
+	ID           string
+	Hash         string
+	VisibleName  string
+	LastModified string
+	Parent       string
+	FileType     string
+}
+
+type SyncEntry struct {
+	ID   string
+	Hash string
+}
+
+type RootHashResponse struct {
+	Hash          string `json:"hash"`
+	Generation    int    `json:"generation"`
+	SchemaVersion int    `json:"schemaVersion"`
+}
+
+type DocumentMetadata struct {
+	VisibleName  string `json:"visibleName"`
+	LastModified string `json:"lastModified"`
+	Parent       string `json:"parent"`
+	Pinned       bool   `json:"pinned"`
+}
+
+type DocumentContent struct {
+	FileType string `json:"fileType"`
 }
 
 func ExtractTextFromZIP(data []byte) ([]string, error) {

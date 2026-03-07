@@ -23,7 +23,7 @@ var remarkableRegisterCmd = &cobra.Command{
 	Short: "Register device with reMarkable cloud using one-time code",
 	Long: `Register this device with the reMarkable cloud API.
 
-Get a code from: my.remarkable.com/connect/desktop
+Get a code from: my.remarkable.com/device/browser/connect
 Then run: bujo remarkable register <8-char-code>`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -79,12 +79,9 @@ var remarkableListCmd = &cobra.Command{
 			return nil
 		}
 
-		fmt.Printf("%-40s %-20s %s\n", "NAME", "MODIFIED", "ID")
+		fmt.Printf("%-40s %-10s %-20s %s\n", "NAME", "TYPE", "MODIFIED", "ID")
 		for _, doc := range docs {
-			if doc.Type != "DocumentType" {
-				continue
-			}
-			fmt.Printf("%-40s %-20s %s\n", doc.VisibleName, doc.ModifiedAt, doc.ID)
+			fmt.Printf("%-40s %-10s %-20s %s\n", doc.VisibleName, doc.FileType, doc.LastModified, doc.ID)
 		}
 		return nil
 	},
