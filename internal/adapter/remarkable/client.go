@@ -29,6 +29,10 @@ func NewClient(authHost string) *Client {
 	}
 }
 
+func (c *Client) SetSyncHost(host string) {
+	c.syncHost = host
+}
+
 func (c *Client) RegisterDevice(code string) (string, error) {
 	body := map[string]string{
 		"code":       code,
