@@ -63,15 +63,6 @@ func (r *rmReader) readUint8() (uint8, error) {
 	return v, nil
 }
 
-func (r *rmReader) readUint16() (uint16, error) {
-	if r.remaining() < 2 {
-		return 0, fmt.Errorf("unexpected EOF at offset %d", r.pos)
-	}
-	v := binary.LittleEndian.Uint16(r.data[r.pos:])
-	r.pos += 2
-	return v, nil
-}
-
 func (r *rmReader) readUint32() (uint32, error) {
 	if r.remaining() < 4 {
 		return 0, fmt.Errorf("unexpected EOF at offset %d", r.pos)
@@ -87,15 +78,6 @@ func (r *rmReader) readFloat32() (float32, error) {
 		return 0, err
 	}
 	return math.Float32frombits(bits), nil
-}
-
-func (r *rmReader) readFloat64() (float64, error) {
-	if r.remaining() < 8 {
-		return 0, fmt.Errorf("unexpected EOF at offset %d", r.pos)
-	}
-	bits := binary.LittleEndian.Uint64(r.data[r.pos:])
-	r.pos += 8
-	return math.Float64frombits(bits), nil
 }
 
 func (r *rmReader) readVaruint() (uint64, error) {

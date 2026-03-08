@@ -16,7 +16,7 @@ func TestRegisterDevice(t *testing.T) {
 		assert.Equal(t, "/token/json/2/device/new", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("fake-device-token-jwt"))
+		_, _ = w.Write([]byte("fake-device-token-jwt"))
 	}))
 	defer server.Close()
 
@@ -32,7 +32,7 @@ func TestRefreshUserToken(t *testing.T) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "Bearer fake-device-token", r.Header.Get("Authorization"))
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte("fake-user-token-jwt"))
+		_, _ = w.Write([]byte("fake-user-token-jwt"))
 	}))
 	defer server.Close()
 
@@ -62,22 +62,22 @@ func TestDownloadDocument(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
+			_, _ = w.Write([]byte("user-token"))
 			return
 		}
 		switch r.URL.Path {
 		case "/sync/v4/root":
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
 			})
 		case "/sync/v3/files/rootHash":
-			w.Write([]byte(rootEntries))
+			_, _ = w.Write([]byte(rootEntries))
 		case "/sync/v3/files/docHash1":
-			w.Write([]byte(docEntries))
+			_, _ = w.Write([]byte(docEntries))
 		case "/sync/v3/files/metaHash":
-			w.Write([]byte(meta))
+			_, _ = w.Write([]byte(meta))
 		case "/sync/v3/files/pdfHash":
-			w.Write(pdfContent)
+			_, _ = w.Write(pdfContent)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -95,14 +95,14 @@ func TestDownloadDocument(t *testing.T) {
 func TestGetRootHash(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
+			_, _ = w.Write([]byte("user-token"))
 			return
 		}
 		assert.Equal(t, "/sync/v4/root", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 		assert.Equal(t, "Bearer user-token", r.Header.Get("Authorization"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"hash":          "abc123def456",
 			"generation":    42,
 			"schemaVersion": 3,
@@ -124,12 +124,12 @@ func TestGetEntries(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
+			_, _ = w.Write([]byte("user-token"))
 			return
 		}
 		assert.Equal(t, "/sync/v3/files/root-hash-abc", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
-		w.Write([]byte(entriesContent))
+		_, _ = w.Write([]byte(entriesContent))
 	}))
 	defer server.Close()
 
@@ -156,28 +156,28 @@ func TestListDocuments(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
+			_, _ = w.Write([]byte("user-token"))
 			return
 		}
 		switch r.URL.Path {
 		case "/sync/v4/root":
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
 			})
 		case "/sync/v3/files/rootHash":
-			w.Write([]byte(rootEntries))
+			_, _ = w.Write([]byte(rootEntries))
 		case "/sync/v3/files/docHash1":
-			w.Write([]byte(doc1Entries))
+			_, _ = w.Write([]byte(doc1Entries))
 		case "/sync/v3/files/docHash2":
-			w.Write([]byte(doc2Entries))
+			_, _ = w.Write([]byte(doc2Entries))
 		case "/sync/v3/files/metaHash1":
-			w.Write([]byte(meta1))
+			_, _ = w.Write([]byte(meta1))
 		case "/sync/v3/files/metaHash2":
-			w.Write([]byte(meta2))
+			_, _ = w.Write([]byte(meta2))
 		case "/sync/v3/files/contentHash1":
-			w.Write([]byte(content1))
+			_, _ = w.Write([]byte(content1))
 		case "/sync/v3/files/contentHash2":
-			w.Write([]byte(content2))
+			_, _ = w.Write([]byte(content2))
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -212,24 +212,24 @@ func TestDownloadPages(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token/json/2/user/new" {
-			w.Write([]byte("user-token"))
+			_, _ = w.Write([]byte("user-token"))
 			return
 		}
 		switch r.URL.Path {
 		case "/sync/v4/root":
-			json.NewEncoder(w).Encode(map[string]interface{}{
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"hash": "rootHash", "generation": 1, "schemaVersion": 3,
 			})
 		case "/sync/v3/files/rootHash":
-			w.Write([]byte(rootEntries))
+			_, _ = w.Write([]byte(rootEntries))
 		case "/sync/v3/files/docHash":
-			w.Write([]byte(docEntries))
+			_, _ = w.Write([]byte(docEntries))
 		case "/sync/v3/files/contentHash":
-			w.Write([]byte(contentJSON))
+			_, _ = w.Write([]byte(contentJSON))
 		case "/sync/v3/files/pageAHash":
-			w.Write(page1Content)
+			_, _ = w.Write(page1Content)
 		case "/sync/v3/files/pageBHash":
-			w.Write(page2Content)
+			_, _ = w.Write(page2Content)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

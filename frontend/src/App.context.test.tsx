@@ -49,6 +49,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetEditableDocument: vi.fn().mockResolvedValue(''),
   ValidateEditableDocument: vi.fn().mockResolvedValue({ isValid: true, errors: [] }),
   ApplyEditableDocument: vi.fn().mockResolvedValue({ inserted: 0, deleted: 0 }),
+  GetPlatformCapabilities: vi.fn().mockResolvedValue({ hasOCR: false, platform: 'darwin' }),
+  IsRemarkableRegistered: vi.fn().mockResolvedValue(false),
 }))
 
 import { GetDayEntries, GetOverdue, GetHabits, SetMood, SetWeather, SetLocation } from './wailsjs/go/wails/App'

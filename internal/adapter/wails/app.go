@@ -775,10 +775,10 @@ func (a *App) ListRemarkableDocuments() ([]remarkable.Document, error) {
 }
 
 type ImportedPage struct {
-	PageID     string                `json:"pageID"`
-	PNG        string                `json:"png"`
+	PageID     string                 `json:"pageID"`
+	PNG        string                 `json:"png"`
 	OCRResults []remarkable.OCRResult `json:"ocrResults"`
-	Error      string                `json:"error,omitempty"`
+	Error      string                 `json:"error,omitempty"`
 }
 
 type ImportRemarkableResult struct {

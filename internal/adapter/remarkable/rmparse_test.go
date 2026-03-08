@@ -85,10 +85,10 @@ func TestReadBlock(t *testing.T) {
 	content := []byte{0xAA, 0xBB}
 	block := make([]byte, 0, 8+len(content))
 	block = binary.LittleEndian.AppendUint32(block, uint32(len(content)))
-	block = append(block, 0x00)       // unknown
-	block = append(block, 0x01)       // min_version
-	block = append(block, 0x01)       // current_version
-	block = append(block, 0x05)       // block_type = SceneLineItem
+	block = append(block, 0x00) // unknown
+	block = append(block, 0x01) // min_version
+	block = append(block, 0x01) // current_version
+	block = append(block, 0x05) // block_type = SceneLineItem
 	block = append(block, content...)
 
 	r := newRMReader(block)
