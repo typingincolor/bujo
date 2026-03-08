@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -33,7 +34,7 @@ Then run: bujo remarkable register <8-char-code>`,
 		client := remarkable.NewClient(remarkable.DefaultAuthHost)
 
 		fmt.Println("Registering with reMarkable cloud...")
-		deviceToken, err := client.RegisterDevice(code)
+		deviceToken, err := client.RegisterDevice(context.Background(), code)
 		if err != nil {
 			return fmt.Errorf("registration failed: %w", err)
 		}
@@ -71,7 +72,7 @@ var remarkableListCmd = &cobra.Command{
 		client := remarkable.NewClient(remarkable.DefaultAuthHost)
 		client.SetSyncHost(remarkable.DefaultSyncHost)
 
-		docs, err := client.ListDocuments(cfg.DeviceToken)
+		docs, err := client.ListDocuments(context.Background(), cfg.DeviceToken)
 		if err != nil {
 			return fmt.Errorf("failed to list documents: %w", err)
 		}
@@ -105,16 +106,16 @@ var remarkableImportCmd = &cobra.Command{
 			return fmt.Errorf("not registered — run 'bujo remarkable register <code>' first: %w", err)
 		}
 
-		ocrTool := filepath.Join(getToolsDir(), "remarkable-ocr", "remarkable-ocr")
-		if _, err := os.Stat(ocrTool); os.IsNotExist(err) {
-			return fmt.Errorf("OCR tool not found — build with: swiftc -o %s tools/remarkable-ocr/main.swift -framework Vision -framework AppKit", ocrTool)
+		ocrTool := findOCRTool()
+		if ocrTool == "" {
+			return fmt.Errorf("OCR tool not found — build with: make ocr")
 		}
 
 		client := remarkable.NewClient(remarkable.DefaultAuthHost)
 		client.SetSyncHost(remarkable.DefaultSyncHost)
 
 		fmt.Fprintf(os.Stderr, "Downloading pages for %s...\n", docID)
-		pages, err := client.DownloadPages(cfg.DeviceToken, docID)
+		pages, err := client.DownloadPages(context.Background(), cfg.DeviceToken, docID)
 		if err != nil {
 			return fmt.Errorf("failed to download pages: %w", err)
 		}
@@ -192,7 +193,7 @@ var remarkableRenderCmd = &cobra.Command{
 		client.SetSyncHost(remarkable.DefaultSyncHost)
 
 		fmt.Printf("Downloading pages for %s...\n", docID)
-		pages, err := client.DownloadPages(cfg.DeviceToken, docID)
+		pages, err := client.DownloadPages(context.Background(), cfg.DeviceToken, docID)
 		if err != nil {
 			return fmt.Errorf("failed to download pages: %w", err)
 		}
@@ -223,17 +224,34 @@ var remarkableRenderCmd = &cobra.Command{
 	},
 }
 
-func getToolsDir() string {
+func findOCRTool() string {
 	exe, err := os.Executable()
-	if err != nil {
-		return "tools"
+	if err == nil {
+		dir := filepath.Dir(exe)
+		// Check next to executable (Homebrew: bin/remarkable-ocr)
+		if p := filepath.Join(dir, "remarkable-ocr"); fileExists(p) {
+			return p
+		}
+		// Check tools subdirectory
+		if p := filepath.Join(dir, "tools", "remarkable-ocr", "remarkable-ocr"); fileExists(p) {
+			return p
+		}
+		if p := filepath.Join(dir, "..", "tools", "remarkable-ocr", "remarkable-ocr"); fileExists(p) {
+			return p
+		}
 	}
-	dir := filepath.Dir(exe)
-	toolsDir := filepath.Join(dir, "tools")
-	if _, err := os.Stat(toolsDir); err == nil {
-		return toolsDir
+	// Check dev mode: relative to working directory
+	if cwd, err := os.Getwd(); err == nil {
+		if p := filepath.Join(cwd, "tools", "remarkable-ocr", "remarkable-ocr"); fileExists(p) {
+			return p
+		}
 	}
-	return filepath.Join(dir, "..", "tools")
+	return ""
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 var remarkableOcrCmd = &cobra.Command{
@@ -243,9 +261,9 @@ var remarkableOcrCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := args[0]
 
-		ocrTool := filepath.Join(getToolsDir(), "remarkable-ocr", "remarkable-ocr")
-		if _, err := os.Stat(ocrTool); os.IsNotExist(err) {
-			return fmt.Errorf("OCR tool not found at %s — build with: swiftc -o %s tools/remarkable-ocr/main.swift -framework Vision -framework AppKit", ocrTool, ocrTool)
+		ocrTool := findOCRTool()
+		if ocrTool == "" {
+			return fmt.Errorf("OCR tool not found — build with: make ocr")
 		}
 
 		info, err := os.Stat(target)

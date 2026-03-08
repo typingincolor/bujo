@@ -746,6 +746,8 @@ export namespace wails {
 	    pageID: string;
 	    png: string;
 	    ocrResults: remarkable.OCRResult[];
+	    text: string;
+	    lowConfidenceCount: number;
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -757,6 +759,8 @@ export namespace wails {
 	        this.pageID = source["pageID"];
 	        this.png = source["png"];
 	        this.ocrResults = this.convertValues(source["ocrResults"], remarkable.OCRResult);
+	        this.text = source["text"];
+	        this.lowConfidenceCount = source["lowConfidenceCount"];
 	        this.error = source["error"];
 	    }
 	

@@ -4,6 +4,7 @@ before:
   hooks:
     - go mod tidy
     - go generate ./...
+    - make ocr
 
 builds:
   - id: bujo
@@ -37,6 +38,10 @@ archives:
     files:
       - LICENSE*
       - README*
+      - src: tools/remarkable-ocr/remarkable-ocr
+        dst: .
+        info:
+          mode: 0755
 
 checksum:
   name_template: 'checksums.txt'
@@ -71,6 +76,7 @@ brews:
     license: "MIT"
     install: |
       bin.install "bujo"
+      bin.install "remarkable-ocr" if File.exist? "remarkable-ocr"
     post_install: |
       (zsh_completion/"_bujo").write `#{bin}/bujo completion zsh`
     test: |

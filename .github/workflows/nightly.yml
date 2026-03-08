@@ -148,6 +148,10 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+      - name: Build OCR tool (macOS only)
+        if: matrix.platform.os == 'macos-latest'
+        run: make ocr
+
       - name: Build Wails app
         shell: bash
         run: |
@@ -158,6 +162,12 @@ jobs:
           LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.commit=${COMMIT}"
           LDFLAGS="${LDFLAGS} -X github.com/typingincolor/bujo/cmd/bujo/cmd.date=${DATE}"
           wails build -platform ${{ matrix.platform.build-platform }} -ldflags "${LDFLAGS}"
+
+      - name: Bundle OCR tool into app (macOS only)
+        if: matrix.platform.os == 'macos-latest'
+        run: |
+          cp tools/remarkable-ocr/remarkable-ocr \
+            build/bin/bujoapp.app/Contents/MacOS/remarkable-ocr
 
       - name: Create release archive (macOS)
         if: matrix.platform.os == 'macos-latest'

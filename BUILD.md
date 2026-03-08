@@ -23,17 +23,42 @@ go install github.com/wailsapp/wails/v2/cmd/wails@latest
 wails doctor
 ```
 
+## Using the Makefile
+
+The Makefile provides convenient targets for common builds:
+
+```bash
+make all       # Build CLI + OCR tool
+make cli       # Build CLI only
+make ocr       # Build OCR tool (macOS only)
+make desktop   # Build desktop app with OCR bundled
+make dev       # Run desktop app in dev mode
+make test      # Run all tests (Go + frontend)
+make clean     # Remove build artifacts
+```
+
 ## Building the CLI
 
 ```bash
 git clone https://github.com/typingincolor/bujo.git
 cd bujo
-go build -o bujo ./cmd/bujo
+make cli
+# or: go build -o bujo ./cmd/bujo
 ```
 
 The binary includes both CLI and TUI modes:
 - `./bujo` - CLI commands
 - `./bujo tui` - Terminal UI
+
+## Building the OCR Tool (macOS only)
+
+The reMarkable import feature requires a Swift OCR tool that uses Apple's Vision framework:
+
+```bash
+make ocr
+```
+
+This compiles `tools/remarkable-ocr/main.swift` into a binary at `tools/remarkable-ocr/remarkable-ocr`. The CLI and desktop app automatically detect this binary at runtime.
 
 ## Building the Desktop Application
 
@@ -45,17 +70,17 @@ The desktop app uses [Wails](https://wails.io/) with a React frontend.
 # Install frontend dependencies
 cd frontend && npm install && cd ..
 
-# Run in development mode (hot reload)
-wails dev
+# Build OCR tool + run in dev mode (hot reload)
+make dev
 ```
 
 ### Production Build
 
 ```bash
-# Build optimized application
-wails build
+# Build desktop app with OCR tool bundled into .app
+make desktop
 
-# Output: build/bin/bujoapp (macOS) or build/bin/bujoapp.exe (Windows)
+# Output: build/bin/bujoapp.app (macOS) with remarkable-ocr in Contents/MacOS/
 ```
 
 ### Frontend Only

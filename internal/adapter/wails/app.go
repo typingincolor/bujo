@@ -767,7 +767,7 @@ func (a *App) ListRemarkableDocuments() ([]remarkable.Document, error) {
 	client := remarkable.NewClient(remarkable.DefaultAuthHost)
 	client.SetSyncHost(remarkable.DefaultSyncHost)
 
-	docs, err := client.ListDocuments(cfg.DeviceToken)
+	docs, err := client.ListDocuments(a.ctx, cfg.DeviceToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list documents: %w", err)
 	}
@@ -775,10 +775,12 @@ func (a *App) ListRemarkableDocuments() ([]remarkable.Document, error) {
 }
 
 type ImportedPage struct {
-	PageID     string                 `json:"pageID"`
-	PNG        string                 `json:"png"`
-	OCRResults []remarkable.OCRResult `json:"ocrResults"`
-	Error      string                 `json:"error,omitempty"`
+	PageID             string                 `json:"pageID"`
+	PNG                string                 `json:"png"`
+	OCRResults         []remarkable.OCRResult `json:"ocrResults"`
+	Text               string                 `json:"text"`
+	LowConfidenceCount int                    `json:"lowConfidenceCount"`
+	Error              string                 `json:"error,omitempty"`
 }
 
 type ImportRemarkableResult struct {
@@ -807,7 +809,7 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 	client := remarkable.NewClient(remarkable.DefaultAuthHost)
 	client.SetSyncHost(remarkable.DefaultSyncHost)
 
-	pages, err := client.DownloadPages(cfg.DeviceToken, docID)
+	pages, err := client.DownloadPages(a.ctx, cfg.DeviceToken, docID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download pages: %w", err)
 	}
@@ -844,51 +846,13 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 			continue
 		}
 		imported.OCRResults = ocrResults
+		reconstructed := remarkable.ReconstructTextWithConfidence(ocrResults, 0.8)
+		imported.Text = reconstructed.Text
+		imported.LowConfidenceCount = reconstructed.LowConfidenceCount
 		result.Pages = append(result.Pages, imported)
 	}
 
 	return &result, nil
-}
-
-func normalizeOCRIndentation(text string) string {
-	lines := strings.Split(text, "\n")
-	result := make([]string, 0, len(lines))
-	maxDepth := 0
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-
-		spaces := 0
-		for _, ch := range line {
-			if ch == ' ' {
-				spaces++
-			} else if ch == '\t' {
-				spaces += 2
-			} else {
-				break
-			}
-		}
-		depth := spaces / 2
-
-		if depth > maxDepth+1 {
-			depth = maxDepth + 1
-		}
-		if depth > 0 {
-			maxDepth = depth
-		} else {
-			maxDepth = 0
-		}
-
-		prefix := strings.Repeat("  ", depth)
-		if !domain.ParseEntryType(trimmed).IsValid() {
-			trimmed = "- " + trimmed
-		}
-		result = append(result, prefix+trimmed)
-	}
-	return strings.Join(result, "\n")
 }
 
 func (a *App) ImportEntries(text string, date string) error {
@@ -901,7 +865,7 @@ func (a *App) ImportEntries(text string, date string) error {
 		return fmt.Errorf("invalid date format (expected YYYY-MM-DD): %w", err)
 	}
 
-	normalized := normalizeOCRIndentation(text)
+	normalized := remarkable.NormalizeOCRIndentation(text)
 	_, err = a.services.Bujo.LogEntries(a.ctx, normalized, service.LogEntriesOptions{Date: parsedDate})
 	if err != nil {
 		return fmt.Errorf("failed to import entries: %w", err)
@@ -918,7 +882,7 @@ func (a *App) RegisterRemarkableDevice(code string) error {
 
 	client := remarkable.NewClient(remarkable.DefaultAuthHost)
 
-	deviceToken, err := client.RegisterDevice(code)
+	deviceToken, err := client.RegisterDevice(a.ctx, code)
 	if err != nil {
 		return fmt.Errorf("registration failed: %w", err)
 	}

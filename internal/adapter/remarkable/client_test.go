@@ -1,6 +1,7 @@
 package remarkable
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -21,7 +22,7 @@ func TestRegisterDevice(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	token, err := client.RegisterDevice("abcd1234")
+	token, err := client.RegisterDevice(context.Background(), "abcd1234")
 	require.NoError(t, err)
 	assert.Equal(t, "fake-device-token-jwt", token)
 }
@@ -37,7 +38,7 @@ func TestRefreshUserToken(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	token, err := client.RefreshUserToken("fake-device-token")
+	token, err := client.RefreshUserToken(context.Background(), "fake-device-token")
 	require.NoError(t, err)
 	assert.Equal(t, "fake-user-token-jwt", token)
 }
@@ -49,7 +50,7 @@ func TestRegisterDeviceFailure(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL)
-	_, err := client.RegisterDevice("badcode1")
+	_, err := client.RegisterDevice(context.Background(), "badcode1")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "403")
 }
@@ -87,7 +88,7 @@ func TestDownloadDocument(t *testing.T) {
 	client := NewClient(server.URL)
 	client.SetSyncHost(server.URL)
 
-	data, err := client.DownloadDocument("fake-device-token", "doc-id-1")
+	data, err := client.DownloadDocument(context.Background(), "fake-device-token", "doc-id-1")
 	require.NoError(t, err)
 	assert.Equal(t, pdfContent, data)
 }
@@ -113,7 +114,7 @@ func TestGetRootHash(t *testing.T) {
 	client := NewClient(server.URL)
 	client.SetSyncHost(server.URL)
 
-	hash, gen, err := client.GetRootHash("fake-device-token")
+	hash, gen, err := client.GetRootHash(context.Background(), "fake-device-token")
 	require.NoError(t, err)
 	assert.Equal(t, "abc123def456", hash)
 	assert.Equal(t, 42, gen)
@@ -136,7 +137,7 @@ func TestGetEntries(t *testing.T) {
 	client := NewClient(server.URL)
 	client.SetSyncHost(server.URL)
 
-	entries, err := client.GetEntries("user-token", "root-hash-abc")
+	entries, err := client.GetEntries(context.Background(), "user-token", "root-hash-abc")
 	require.NoError(t, err)
 	assert.Len(t, entries, 2)
 	assert.Equal(t, "doc-id-1", entries[0].ID)
@@ -187,7 +188,7 @@ func TestListDocuments(t *testing.T) {
 	client := NewClient(server.URL)
 	client.SetSyncHost(server.URL)
 
-	docs, err := client.ListDocuments("fake-device-token")
+	docs, err := client.ListDocuments(context.Background(), "fake-device-token")
 	require.NoError(t, err)
 	assert.Len(t, docs, 2)
 	assert.Equal(t, "doc-id-1", docs[0].ID)
@@ -239,11 +240,28 @@ func TestDownloadPages(t *testing.T) {
 	client := NewClient(server.URL)
 	client.SetSyncHost(server.URL)
 
-	pages, err := client.DownloadPages("fake-device-token", docID)
+	pages, err := client.DownloadPages(context.Background(), "fake-device-token", docID)
 	require.NoError(t, err)
 	require.Len(t, pages, 2)
 	assert.Equal(t, "page-a", pages[0].PageID)
 	assert.Equal(t, page1Content, pages[0].Data)
 	assert.Equal(t, "page-b", pages[1].PageID)
 	assert.Equal(t, page2Content, pages[1].Data)
+}
+
+func TestContextCancellation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("should-not-reach"))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := client.RegisterDevice(ctx, "code")
+	assert.Error(t, err)
+
+	_, err = client.RefreshUserToken(ctx, "token")
+	assert.Error(t, err)
 }

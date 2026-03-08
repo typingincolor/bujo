@@ -41,3 +41,37 @@ func TestReconstructTextUnordered(t *testing.T) {
 	text := ReconstructText(results)
 	assert.Equal(t, ". first line\n- second line", text)
 }
+
+func TestReconstructTextWithConfidence_DepthNormalization(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". root", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.95},
+		{Text: ". skipped deep", X: 200, Y: 200, Width: 200, Height: 30, Confidence: 0.90},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, ". root\n  . skipped deep", result.Text)
+	assert.Equal(t, 0, result.LowConfidenceCount)
+}
+
+func TestReconstructTextWithConfidence_CountsLowConfidence(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". clear", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.95},
+		{Text: ". fuzzy", X: 50, Y: 200, Width: 200, Height: 30, Confidence: 0.5},
+		{Text: ". also fuzzy", X: 50, Y: 300, Width: 200, Height: 30, Confidence: 0.7},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, 2, result.LowConfidenceCount)
+}
+
+func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". a", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},
+		{Text: ". b", X: 100, Y: 200, Width: 200, Height: 30, Confidence: 0.9},
+		{Text: ". c", X: 50, Y: 300, Width: 200, Height: 30, Confidence: 0.9},
+		{Text: ". d", X: 200, Y: 400, Width: 200, Height: 30, Confidence: 0.9},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, ". a\n  . b\n. c\n  . d", result.Text)
+}

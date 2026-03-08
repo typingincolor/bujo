@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { ImportEntries } from '../../wailsjs/go/wails/App'
-import { remarkable, wails } from '../../wailsjs/go/models'
+import { wails } from '../../wailsjs/go/models'
 
 interface OCRReviewPanelProps {
   pages: wails.ImportedPage[]
@@ -9,46 +9,17 @@ interface OCRReviewPanelProps {
   onBack: () => void
 }
 
-function reconstructTextWithConfidence(results: remarkable.OCRResult[], threshold = 0.8): { text: string, lowConfidenceCount: number } {
-  if (!results || results.length === 0) return { text: '', lowConfidenceCount: 0 }
-
-  const sorted = [...results].sort((a, b) => a.y - b.y)
-  const minX = Math.min(...sorted.map(r => r.x))
-  const indentWidth = 50
-
-  let lowConfidenceCount = 0
-  let maxDepth = 0
-  const text = sorted.map((r) => {
-    let depth = Math.round((r.x - minX) / indentWidth)
-    if (depth > maxDepth + 1) depth = maxDepth + 1
-    if (depth === 0) {
-      maxDepth = 0
-    } else {
-      maxDepth = depth
-    }
-    const indent = '  '.repeat(depth)
-    if (r.confidence < threshold) lowConfidenceCount++
-    return indent + r.text
-  }).join('\n')
-
-  return { text, lowConfidenceCount }
-}
-
 export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRReviewPanelProps) {
   const [currentPage, setCurrentPage] = useState(0)
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const pageData = useMemo(() => {
-    return pages.map(p => reconstructTextWithConfidence(p.ocrResults))
-  }, [pages])
-
-  const [editedTexts, setEditedTexts] = useState<string[]>(() => pageData.map(d => d.text))
+  const [editedTexts, setEditedTexts] = useState<string[]>(() => pages.map(p => p.text ?? ''))
 
   const page = pages[currentPage]
   const hasError = page?.error
-  const { lowConfidenceCount } = pageData[currentPage] ?? { lowConfidenceCount: 0 }
+  const lowConfidenceCount = page?.lowConfidenceCount ?? 0
 
   function updateText(index: number, text: string) {
     setEditedTexts(prev => {

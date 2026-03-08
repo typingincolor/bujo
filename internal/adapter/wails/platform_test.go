@@ -57,12 +57,16 @@ func TestImportResult_JSONSerialization(t *testing.T) {
 				OCRResults: []remarkable.OCRResult{
 					{Text: "hello", X: 10, Y: 20, Width: 100, Height: 30, Confidence: 0.95},
 				},
+				Text:               "hello",
+				LowConfidenceCount: 0,
 			},
 		},
 	}
 	assert.Equal(t, 1, len(result.Pages))
 	assert.Equal(t, "page-1", result.Pages[0].PageID)
 	assert.Equal(t, float32(0.95), result.Pages[0].OCRResults[0].Confidence)
+	assert.Equal(t, "hello", result.Pages[0].Text)
+	assert.Equal(t, 0, result.Pages[0].LowConfidenceCount)
 }
 
 func TestImportEntries_EmptyText(t *testing.T) {
@@ -77,24 +81,6 @@ func TestImportEntries_InvalidDate(t *testing.T) {
 	err := app.ImportEntries(". buy milk", "not-a-date")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "date")
-}
-
-func TestNormalizeOCRIndentation_FlattensSkippedDepths(t *testing.T) {
-	input := "heading\n    deeply indented"
-	result := normalizeOCRIndentation(input)
-	assert.Equal(t, "- heading\n  - deeply indented", result)
-}
-
-func TestNormalizeOCRIndentation_PreservesBujoMarkers(t *testing.T) {
-	input := ". buy milk\n  - organic"
-	result := normalizeOCRIndentation(input)
-	assert.Equal(t, ". buy milk\n  - organic", result)
-}
-
-func TestNormalizeOCRIndentation_AddsNotePrefix(t *testing.T) {
-	input := "plain text"
-	result := normalizeOCRIndentation(input)
-	assert.Equal(t, "- plain text", result)
 }
 
 func TestRegisterRemarkableDevice_EmptyCode(t *testing.T) {

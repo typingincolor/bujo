@@ -3,5 +3,20 @@
     "github@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(go test*)",
+      "Bash(go build*)",
+      "Bash(cd frontend*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(wails*)",
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep"
+    ]
   }
 }

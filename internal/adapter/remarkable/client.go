@@ -2,9 +2,11 @@ package remarkable
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
@@ -14,6 +16,12 @@ import (
 const (
 	DefaultAuthHost = "https://webapp-prod.cloud.remarkable.engineering"
 	DefaultSyncHost = "https://eu.tectonic.remarkable.com"
+)
+
+const (
+	maxTokenSize   = 10 * 1024        // 10KB for JWT tokens
+	maxMetaSize    = 1024 * 1024       // 1MB for metadata/entries
+	maxFileSize    = 50 * 1024 * 1024  // 50MB for file content (.rm, pdf)
 )
 
 type Client struct {
@@ -34,7 +42,7 @@ func (c *Client) SetSyncHost(host string) {
 	c.syncHost = host
 }
 
-func (c *Client) RegisterDevice(code string) (string, error) {
+func (c *Client) RegisterDevice(ctx context.Context, code string) (string, error) {
 	body := map[string]string{
 		"code":       code,
 		"deviceDesc": "browser-chrome",
@@ -45,7 +53,7 @@ func (c *Client) RegisterDevice(code string) (string, error) {
 		return "", err
 	}
 
-	req, err := http.NewRequest("POST", c.authHost+"/token/json/2/device/new", bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, "POST", c.authHost+"/token/json/2/device/new", bytes.NewReader(data))
 	if err != nil {
 		return "", err
 	}
@@ -62,15 +70,15 @@ func (c *Client) RegisterDevice(code string) (string, error) {
 		return "", fmt.Errorf("registration failed: status %d", resp.StatusCode)
 	}
 
-	token, err := io.ReadAll(resp.Body)
+	token, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenSize))
 	if err != nil {
 		return "", err
 	}
 	return string(token), nil
 }
 
-func (c *Client) RefreshUserToken(deviceToken string) (string, error) {
-	req, err := http.NewRequest("POST", c.authHost+"/token/json/2/user/new", nil)
+func (c *Client) RefreshUserToken(ctx context.Context, deviceToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", c.authHost+"/token/json/2/user/new", nil)
 	if err != nil {
 		return "", err
 	}
@@ -86,20 +94,20 @@ func (c *Client) RefreshUserToken(deviceToken string) (string, error) {
 		return "", fmt.Errorf("token refresh failed: status %d", resp.StatusCode)
 	}
 
-	token, err := io.ReadAll(resp.Body)
+	token, err := io.ReadAll(io.LimitReader(resp.Body, maxTokenSize))
 	if err != nil {
 		return "", err
 	}
 	return string(token), nil
 }
 
-func (c *Client) GetRootHash(deviceToken string) (string, int, error) {
-	userToken, err := c.RefreshUserToken(deviceToken)
+func (c *Client) GetRootHash(ctx context.Context, deviceToken string) (string, int, error) {
+	userToken, err := c.RefreshUserToken(ctx, deviceToken)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v4/root", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.syncHost+"/sync/v4/root", nil)
 	if err != nil {
 		return "", 0, err
 	}
@@ -116,14 +124,14 @@ func (c *Client) GetRootHash(deviceToken string) (string, int, error) {
 	}
 
 	var root RootHashResponse
-	if err := json.NewDecoder(resp.Body).Decode(&root); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxMetaSize)).Decode(&root); err != nil {
 		return "", 0, err
 	}
 	return root.Hash, root.Generation, nil
 }
 
-func (c *Client) GetEntries(userToken string, hash string) ([]SyncEntry, error) {
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v3/files/"+hash, nil)
+func (c *Client) GetEntries(ctx context.Context, userToken string, hash string) ([]SyncEntry, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.syncHost+"/sync/v3/files/"+hash, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +147,7 @@ func (c *Client) GetEntries(userToken string, hash string) ([]SyncEntry, error) 
 		return nil, fmt.Errorf("get entries failed: status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMetaSize))
 	if err != nil {
 		return nil, err
 	}
@@ -157,6 +165,7 @@ func ParseEntries(content string) ([]SyncEntry, error) {
 	for _, line := range lines[1:] {
 		parts := strings.SplitN(line, ":", 5)
 		if len(parts) < 3 {
+			log.Printf("remarkable: skipping malformed entry line: %q", line)
 			continue
 		}
 		entries = append(entries, SyncEntry{
@@ -167,8 +176,8 @@ func ParseEntries(content string) ([]SyncEntry, error) {
 	return entries, nil
 }
 
-func (c *Client) GetFileContent(userToken string, hash string) ([]byte, error) {
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v3/files/"+hash, nil)
+func (c *Client) GetFileContent(ctx context.Context, userToken string, hash string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", c.syncHost+"/sync/v3/files/"+hash, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -184,41 +193,51 @@ func (c *Client) GetFileContent(userToken string, hash string) ([]byte, error) {
 		return nil, fmt.Errorf("get file failed: status %d", resp.StatusCode)
 	}
 
-	return io.ReadAll(resp.Body)
+	return io.ReadAll(io.LimitReader(resp.Body, maxFileSize))
 }
 
-func (c *Client) ListDocuments(deviceToken string) ([]Document, error) {
-	userToken, err := c.RefreshUserToken(deviceToken)
+func (c *Client) getRootEntries(ctx context.Context, deviceToken string) (string, []SyncEntry, error) {
+	userToken, err := c.RefreshUserToken(ctx, deviceToken)
 	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %w", err)
+		return "", nil, fmt.Errorf("failed to refresh token: %w", err)
 	}
 
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v4/root", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.syncHost+"/sync/v4/root", nil)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+userToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	defer resp.Body.Close()
 
 	var root RootHashResponse
-	if err := json.NewDecoder(resp.Body).Decode(&root); err != nil {
-		return nil, err
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxMetaSize)).Decode(&root); err != nil {
+		return "", nil, err
 	}
 
-	rootEntries, err := c.GetEntries(userToken, root.Hash)
+	entries, err := c.GetEntries(ctx, userToken, root.Hash)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return userToken, entries, nil
+}
+
+func (c *Client) ListDocuments(ctx context.Context, deviceToken string) ([]Document, error) {
+	userToken, rootEntries, err := c.getRootEntries(ctx, deviceToken)
 	if err != nil {
 		return nil, err
 	}
 
 	var docs []Document
 	for _, entry := range rootEntries {
-		subEntries, err := c.GetEntries(userToken, entry.Hash)
+		subEntries, err := c.GetEntries(ctx, userToken, entry.Hash)
 		if err != nil {
+			log.Printf("remarkable: skipping document %s: failed to get entries: %v", entry.ID, err)
 			continue
 		}
 
@@ -229,12 +248,14 @@ func (c *Client) ListDocuments(deviceToken string) ([]Document, error) {
 
 		for _, sub := range subEntries {
 			if strings.HasSuffix(sub.ID, ".metadata") {
-				data, err := c.GetFileContent(userToken, sub.Hash)
+				data, err := c.GetFileContent(ctx, userToken, sub.Hash)
 				if err != nil {
+					log.Printf("remarkable: skipping metadata for %s: %v", entry.ID, err)
 					continue
 				}
 				var meta DocumentMetadata
 				if err := json.Unmarshal(data, &meta); err != nil {
+					log.Printf("remarkable: skipping metadata for %s: parse error: %v", entry.ID, err)
 					continue
 				}
 				doc.VisibleName = meta.VisibleName
@@ -242,12 +263,14 @@ func (c *Client) ListDocuments(deviceToken string) ([]Document, error) {
 				doc.Parent = meta.Parent
 			}
 			if strings.HasSuffix(sub.ID, ".content") {
-				data, err := c.GetFileContent(userToken, sub.Hash)
+				data, err := c.GetFileContent(ctx, userToken, sub.Hash)
 				if err != nil {
+					log.Printf("remarkable: skipping content for %s: %v", entry.ID, err)
 					continue
 				}
 				var content DocumentContent
 				if err := json.Unmarshal(data, &content); err != nil {
+					log.Printf("remarkable: skipping content for %s: parse error: %v", entry.ID, err)
 					continue
 				}
 				doc.FileType = content.FileType
@@ -260,30 +283,8 @@ func (c *Client) ListDocuments(deviceToken string) ([]Document, error) {
 	return docs, nil
 }
 
-func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, error) {
-	userToken, err := c.RefreshUserToken(deviceToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v4/root", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+userToken)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var root RootHashResponse
-	if err := json.NewDecoder(resp.Body).Decode(&root); err != nil {
-		return nil, err
-	}
-
-	rootEntries, err := c.GetEntries(userToken, root.Hash)
+func (c *Client) DownloadDocument(ctx context.Context, deviceToken string, docID string) ([]byte, error) {
+	userToken, rootEntries, err := c.getRootEntries(ctx, deviceToken)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +294,7 @@ func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, err
 			continue
 		}
 
-		subEntries, err := c.GetEntries(userToken, entry.Hash)
+		subEntries, err := c.GetEntries(ctx, userToken, entry.Hash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get document entries: %w", err)
 		}
@@ -302,7 +303,7 @@ func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, err
 			ext := sub.ID[strings.LastIndex(sub.ID, ".")+1:]
 			switch ext {
 			case "pdf", "epub", "zip", "rm":
-				return c.GetFileContent(userToken, sub.Hash)
+				return c.GetFileContent(ctx, userToken, sub.Hash)
 			}
 		}
 
@@ -312,30 +313,8 @@ func (c *Client) DownloadDocument(deviceToken string, docID string) ([]byte, err
 	return nil, fmt.Errorf("document %s not found", docID)
 }
 
-func (c *Client) DownloadPages(deviceToken string, docID string) ([]PageData, error) {
-	userToken, err := c.RefreshUserToken(deviceToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to refresh token: %w", err)
-	}
-
-	req, err := http.NewRequest("GET", c.syncHost+"/sync/v4/root", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+userToken)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var root RootHashResponse
-	if err := json.NewDecoder(resp.Body).Decode(&root); err != nil {
-		return nil, err
-	}
-
-	rootEntries, err := c.GetEntries(userToken, root.Hash)
+func (c *Client) DownloadPages(ctx context.Context, deviceToken string, docID string) ([]PageData, error) {
+	userToken, rootEntries, err := c.getRootEntries(ctx, deviceToken)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +324,7 @@ func (c *Client) DownloadPages(deviceToken string, docID string) ([]PageData, er
 			continue
 		}
 
-		subEntries, err := c.GetEntries(userToken, entry.Hash)
+		subEntries, err := c.GetEntries(ctx, userToken, entry.Hash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get document entries: %w", err)
 		}
@@ -353,7 +332,7 @@ func (c *Client) DownloadPages(deviceToken string, docID string) ([]PageData, er
 		var pageOrder []string
 		for _, sub := range subEntries {
 			if strings.HasSuffix(sub.ID, ".content") {
-				data, err := c.GetFileContent(userToken, sub.Hash)
+				data, err := c.GetFileContent(ctx, userToken, sub.Hash)
 				if err != nil {
 					return nil, fmt.Errorf("failed to get content file: %w", err)
 				}
@@ -379,7 +358,7 @@ func (c *Client) DownloadPages(deviceToken string, docID string) ([]PageData, er
 			if !ok {
 				continue
 			}
-			data, err := c.GetFileContent(userToken, hash)
+			data, err := c.GetFileContent(ctx, userToken, hash)
 			if err != nil {
 				return nil, fmt.Errorf("failed to download page %s: %w", pageID, err)
 			}
