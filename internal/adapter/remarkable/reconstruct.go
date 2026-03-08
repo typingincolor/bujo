@@ -80,6 +80,6 @@ var bujoSymbols = map[rune]bool{
 }
 
 func hasBujoPrefix(text string) bool {
-	r, _ := utf8.DecodeRuneInString(text)
-	return bujoSymbols[r]
+	r, size := utf8.DecodeRuneInString(text)
+	return bujoSymbols[r] && len(text) > size && text[size] == ' '
 }

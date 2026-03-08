@@ -16,7 +16,7 @@ func detectXOffset(strokes []rmStroke) float64 {
 		return halfWidth
 	}
 
-	minX, maxX := float64(math.MaxFloat64), float64(-math.MaxFloat64)
+	minX, maxX := math.MaxFloat64, -math.MaxFloat64
 	for _, s := range strokes {
 		for _, p := range s.Points {
 			x := float64(p.X)
