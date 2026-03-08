@@ -762,7 +762,7 @@ export namespace wails {
 	        this.ocrResults = this.convertValues(source["ocrResults"], remarkable.OCRResult);
 	        this.text = source["text"];
 	        this.lowConfidenceCount = source["lowConfidenceCount"];
-	        this.lowConfidenceLines = source["lowConfidenceLines"] || [];
+	        this.lowConfidenceLines = source["lowConfidenceLines"];
 	        this.error = source["error"];
 	    }
 	
