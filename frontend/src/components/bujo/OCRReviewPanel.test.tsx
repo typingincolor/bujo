@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { OCRReviewPanel } from './OCRReviewPanel'
+import { wails } from '../../wailsjs/go/models'
 
 vi.mock('../../wailsjs/go/wails/App', () => ({
   ImportEntries: vi.fn(),
@@ -15,21 +16,22 @@ vi.mock('../../wailsjs/go/models', () => ({
   },
 }))
 
-const makePage = (overrides: Record<string, unknown> = {}) => ({
+const makePage = (overrides: Partial<wails.ImportedPage> = {}): wails.ImportedPage => ({
   pageID: 'p1',
   png: 'base64png',
   ocrResults: [],
   text: '. line one\n. line two\n. line three',
   lowConfidenceCount: 1,
   lowConfidenceLines: [1],
+  error: '',
   ...overrides,
-})
+} as wails.ImportedPage)
 
 describe('OCRReviewPanel', () => {
   it('renders amber dots for low-confidence lines', () => {
     const { container } = render(
       <OCRReviewPanel
-        pages={[makePage() as any]}
+        pages={[makePage()]}
         documentName="Test"
         onDone={() => {}}
         onBack={() => {}}
@@ -42,7 +44,7 @@ describe('OCRReviewPanel', () => {
   it('renders no dots when all lines are high confidence', () => {
     const { container } = render(
       <OCRReviewPanel
-        pages={[makePage({ lowConfidenceLines: [], lowConfidenceCount: 0 }) as any]}
+        pages={[makePage({ lowConfidenceLines: [], lowConfidenceCount: 0 })]}
         documentName="Test"
         onDone={() => {}}
         onBack={() => {}}
@@ -55,7 +57,7 @@ describe('OCRReviewPanel', () => {
   it('renders multiple dots for multiple low-confidence lines', () => {
     const { container } = render(
       <OCRReviewPanel
-        pages={[makePage({ lowConfidenceLines: [0, 2], lowConfidenceCount: 2 }) as any]}
+        pages={[makePage({ lowConfidenceLines: [0, 2], lowConfidenceCount: 2 })]}
         documentName="Test"
         onDone={() => {}}
         onBack={() => {}}
