@@ -748,6 +748,7 @@ export namespace wails {
 	    ocrResults: remarkable.OCRResult[];
 	    text: string;
 	    lowConfidenceCount: number;
+	    lowConfidenceLines: number[];
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -761,6 +762,7 @@ export namespace wails {
 	        this.ocrResults = this.convertValues(source["ocrResults"], remarkable.OCRResult);
 	        this.text = source["text"];
 	        this.lowConfidenceCount = source["lowConfidenceCount"];
+	        this.lowConfidenceLines = source["lowConfidenceLines"] || [];
 	        this.error = source["error"];
 	    }
 	
