@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Folder, NotebookPen, FileText, BookOpen, File, ChevronRight } from 'lucide-react'
-import { ListRemarkableDocuments, IsRemarkableRegistered, ImportRemarkablePages } from '../../wailsjs/go/wails/App'
+import { useState } from 'react'
+import { Folder, NotebookPen, FileText, BookOpen, File, ChevronRight, RefreshCw } from 'lucide-react'
+import { ImportRemarkablePages } from '../../wailsjs/go/wails/App'
 import { remarkable, wails } from '../../wailsjs/go/models'
 import { OCRReviewPanel } from './OCRReviewPanel'
 
-type Step = 'loading' | 'not-registered' | 'document-list' | 'importing' | 'review'
+type Step = 'document-list' | 'importing' | 'review'
 
 interface RemarkableViewProps {
   onNavigateToSettings: () => void
+  documents: remarkable.Document[]
+  isRegistered: boolean | null
+  isLoading: boolean
+  onRefresh: () => void
 }
 
 function isFolder(doc: remarkable.Document): boolean {
@@ -34,36 +38,13 @@ function formatDate(timestamp: string): string {
   return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
-export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
-  const [step, setStep] = useState<Step>('loading')
-  const [documents, setDocuments] = useState<remarkable.Document[]>([])
+export function RemarkableView({ onNavigateToSettings, documents, isRegistered, isLoading, onRefresh }: RemarkableViewProps) {
+  const [step, setStep] = useState<Step>('document-list')
   const [error, setError] = useState<string | null>(null)
   const [importResult, setImportResult] = useState<wails.ImportRemarkableResult | null>(null)
   const [selectedDocName, setSelectedDocName] = useState('')
   const [currentFolderId, setCurrentFolderId] = useState('')
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; name: string }[]>([])
-
-  const loadDocuments = useCallback(async function() {
-    try {
-      setError(null)
-      const docs = await ListRemarkableDocuments()
-      setDocuments(docs)
-      setStep('document-list')
-    } catch (err) {
-      setError(String(err))
-      setStep('document-list')
-    }
-  }, [])
-
-  useEffect(() => {
-    IsRemarkableRegistered().then(registered => {
-      if (!registered) {
-        setStep('not-registered')
-      } else {
-        loadDocuments()
-      }
-    })
-  }, [loadDocuments])
 
   function handleNavigateToFolder(folderId: string, folderName: string) {
     setCurrentFolderId(folderId)
@@ -110,11 +91,11 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
     }
   }
 
-  if (step === 'loading') {
+  if (isRegistered === null) {
     return <div className="p-6 text-muted-foreground">Loading...</div>
   }
 
-  if (step === 'not-registered') {
+  if (!isRegistered) {
     return (
       <div className="p-6 space-y-4">
         <p className="text-muted-foreground">
@@ -135,7 +116,7 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
       <div className="p-6 space-y-4">
         <p className="text-destructive">{error}</p>
         <button
-          onClick={loadDocuments}
+          onClick={() => { setError(null); onRefresh() }}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
         >
           Retry
@@ -163,7 +144,7 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
         onDone={() => {
           setStep('document-list')
           setImportResult(null)
-          loadDocuments()
+          onRefresh()
         }}
         onBack={() => {
           setStep('document-list')
@@ -195,11 +176,22 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
             </button>
           </span>
         ))}
+        <div className="flex-1" />
+        <button
+          onClick={onRefresh}
+          disabled={isLoading}
+          className="p-1 hover:text-foreground transition-colors disabled:opacity-50"
+          title="Refresh"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {docs.length === 0 ? (
-          <p className="p-6 text-muted-foreground">This folder is empty.</p>
+          <p className="p-6 text-muted-foreground">
+            {isLoading ? 'Loading...' : 'This folder is empty.'}
+          </p>
         ) : (
           <div className="divide-y divide-border">
             {docs.map(doc => {
