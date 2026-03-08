@@ -64,7 +64,7 @@ func (c *Client) RegisterDevice(ctx context.Context, code string) (string, error
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("registration failed: status %d", resp.StatusCode)
@@ -88,7 +88,7 @@ func (c *Client) RefreshUserToken(ctx context.Context, deviceToken string) (stri
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("token refresh failed: status %d", resp.StatusCode)
@@ -117,7 +117,7 @@ func (c *Client) GetRootHash(ctx context.Context, deviceToken string) (string, i
 	if err != nil {
 		return "", 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", 0, fmt.Errorf("get root hash failed: status %d", resp.StatusCode)
@@ -141,7 +141,7 @@ func (c *Client) GetEntries(ctx context.Context, userToken string, hash string) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get entries failed: status %d", resp.StatusCode)
@@ -187,7 +187,7 @@ func (c *Client) GetFileContent(ctx context.Context, userToken string, hash stri
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("get file failed: status %d", resp.StatusCode)
@@ -212,7 +212,7 @@ func (c *Client) getRootEntries(ctx context.Context, deviceToken string) (string
 	if err != nil {
 		return "", nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var root RootHashResponse
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxMetaSize)).Decode(&root); err != nil {

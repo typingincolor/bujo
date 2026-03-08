@@ -25,7 +25,7 @@ func RenderDaysWithOverdue(days []service.DayEntries, overdue []domain.Entry, to
 	var sb strings.Builder
 
 	if len(overdue) > 0 {
-		sb.WriteString(fmt.Sprintf("⚠️  %s\n", Red(Bold("OVERDUE"))))
+		fmt.Fprintf(&sb, "⚠️  %s\n", Red(Bold("OVERDUE")))
 		renderEntryTreeWithOverdue(&sb, overdue, 0, true, today)
 		sb.WriteString("\n")
 	}
@@ -122,7 +122,7 @@ func renderEntry(entry domain.Entry, depth int, forceOverdue bool, today time.Ti
 func RenderHabitTracker(status *service.TrackerStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", Cyan(Bold("Habit Tracker"))))
+	fmt.Fprintf(&sb, "🔥 %s\n\n", Cyan(Bold("Habit Tracker")))
 
 	if len(status.Habits) == 0 {
 		sb.WriteString(Dimmed("No habits tracked yet\n"))
@@ -135,7 +135,7 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 			streakColor = Red
 		}
 
-		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
+		fmt.Fprintf(&sb, "%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak)))
 
 		sparkline := renderSparkline(habit.DayHistory)
 		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
@@ -207,7 +207,7 @@ func RenderHabitMonth(status *service.TrackerStatus) string {
 			streakColor = Red
 		}
 
-		sb.WriteString(fmt.Sprintf("%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak))))
+		fmt.Fprintf(&sb, "%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak)))
 
 		sb.WriteString(renderMonthCalendar(habit.DayHistory))
 

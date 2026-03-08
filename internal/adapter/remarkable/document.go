@@ -60,7 +60,7 @@ func ExtractTextFromZIP(data []byte) ([]string, error) {
 				return nil, fmt.Errorf("failed to open %s: %w", f.Name, err)
 			}
 			content, err := io.ReadAll(rc)
-			rc.Close()
+			_ = rc.Close()
 			if err != nil {
 				return nil, fmt.Errorf("failed to read %s: %w", f.Name, err)
 			}

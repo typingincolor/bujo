@@ -17,16 +17,7 @@ func NormalizeOCRIndentation(text string) string {
 			continue
 		}
 
-		spaces := 0
-		for _, ch := range line {
-			if ch == ' ' {
-				spaces++
-			} else if ch == '\t' {
-				spaces += 2
-			} else {
-				break
-			}
-		}
+		spaces := countLeadingSpaces(line)
 		depth := spaces / 2
 
 		if depth > maxDepth+1 {
@@ -45,4 +36,19 @@ func NormalizeOCRIndentation(text string) string {
 		result = append(result, prefix+trimmed)
 	}
 	return strings.Join(result, "\n")
+}
+
+func countLeadingSpaces(line string) int {
+	n := 0
+	for _, ch := range line {
+		switch ch {
+		case ' ':
+			n++
+		case '\t':
+			n += 2
+		default:
+			return n
+		}
+	}
+	return n
 }

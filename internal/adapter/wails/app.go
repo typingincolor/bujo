@@ -818,7 +818,7 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	var result ImportRemarkableResult
 	for _, page := range pages {
