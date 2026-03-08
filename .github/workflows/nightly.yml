@@ -85,6 +85,22 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Ensure Homebrew is available
+        shell: bash
+        run: |
+          if ! command -v brew >/dev/null 2>&1; then
+            if [ -x /opt/homebrew/bin/brew ]; then
+              eval "$(/opt/homebrew/bin/brew shellenv)"
+            elif [ -x /usr/local/bin/brew ]; then
+              eval "$(/usr/local/bin/brew shellenv)"
+            else
+              echo "Homebrew not found on runner"
+              exit 1
+            fi
+          fi
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+          brew --version
+
       - name: Create and push tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

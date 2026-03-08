@@ -39,7 +39,7 @@ archives:
       - LICENSE*
       - README*
       - src: tools/remarkable-ocr/remarkable-ocr
-        dst: .
+        dst: remarkable-ocr
         info:
           mode: 0755
 
@@ -76,9 +76,8 @@ brews:
     license: "MIT"
     install: |
       bin.install "bujo"
-      bin.install "remarkable-ocr" if File.exist? "remarkable-ocr"
-    post_install: |
-      (zsh_completion/"_bujo").write `#{bin}/bujo completion zsh`
+      bin.install "remarkable-ocr" if File.exist?("remarkable-ocr")
+      generate_completions_from_executable(bin/"bujo", "completion")
     test: |
       system "#{bin}/bujo", "version"
     caveats: |
