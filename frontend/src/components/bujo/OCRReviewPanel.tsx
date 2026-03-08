@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { ImportEntries } from '../../wailsjs/go/wails/App'
 import { wails } from '../../wailsjs/go/models'
 
@@ -17,9 +17,19 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
 
   const [editedTexts, setEditedTexts] = useState<string[]>(() => pages.map(p => p.text ?? ''))
 
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const gutterRef = useRef<HTMLDivElement>(null)
+  const lineHeight = 20
   const page = pages[currentPage]
   const hasError = page?.error
   const lowConfidenceCount = page?.lowConfidenceCount ?? 0
+  const lowConfidenceLines = page?.lowConfidenceLines ?? []
+
+  function syncScroll() {
+    if (textareaRef.current && gutterRef.current) {
+      gutterRef.current.scrollTop = textareaRef.current.scrollTop
+    }
+  }
 
   function updateText(index: number, text: string) {
     setEditedTexts(prev => {
@@ -124,12 +134,32 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
 
         {/* Right: Text editor */}
         <div className="w-1/2 overflow-auto p-4">
-          <textarea
-            value={editedTexts[currentPage] ?? ''}
-            onChange={e => updateText(currentPage, e.target.value)}
-            className="w-full h-full min-h-[400px] p-3 bg-background border border-border rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="OCR text will appear here..."
-          />
+          <div className="flex h-full min-h-[400px]">
+            {/* Confidence gutter */}
+            <div
+              ref={gutterRef}
+              className="flex-shrink-0 w-6 overflow-hidden font-mono text-sm"
+              style={{ paddingTop: '12px' }}
+            >
+              {(editedTexts[currentPage] ?? '').split('\n').map((_, i) => (
+                <div key={i} className="flex items-center justify-center" style={{ height: `${lineHeight}px` }}>
+                  {lowConfidenceLines.includes(i) && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500" title="Low confidence" />
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Editable text */}
+            <textarea
+              ref={textareaRef}
+              value={editedTexts[currentPage] ?? ''}
+              onChange={e => updateText(currentPage, e.target.value)}
+              onScroll={syncScroll}
+              className="flex-1 h-full p-3 bg-background border border-border rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ lineHeight: `${lineHeight}px` }}
+              placeholder="OCR text will appear here..."
+            />
+          </div>
           {lowConfidenceCount > 0 && (
             <p className="text-xs text-amber-500 mt-2">
               {lowConfidenceCount} low-confidence region(s) detected — review text carefully

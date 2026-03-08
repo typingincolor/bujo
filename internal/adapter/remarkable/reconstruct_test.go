@@ -87,6 +87,19 @@ func TestReconstructText_WordsStartingWithSymbolChars(t *testing.T) {
 	assert.Equal(t, "- adoption is Key\n- over budget\n- x-ray results", text)
 }
 
+func TestReconstructTextWithConfidence_ReportsLowConfidenceLines(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". clear", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.95},
+		{Text: ". fuzzy", X: 50, Y: 200, Width: 200, Height: 30, Confidence: 0.5},
+		{Text: ". also clear", X: 50, Y: 300, Width: 200, Height: 30, Confidence: 0.9},
+		{Text: ". also fuzzy", X: 50, Y: 400, Width: 200, Height: 30, Confidence: 0.7},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, []int{1, 3}, result.LowConfidenceLines)
+	assert.Equal(t, 2, result.LowConfidenceCount)
+}
+
 func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {
 	results := []OCRResult{
 		{Text: ". a", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},
