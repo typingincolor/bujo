@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry, GetPlatformCapabilities } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry, GetPlatformCapabilities, ListRemarkableDocuments, IsRemarkableRegistered } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { HabitTracker } from '@/components/bujo/HabitTrackerView'
 import { ListsView } from '@/components/bujo/ListsView'
@@ -28,6 +28,7 @@ import { JournalView } from '@/components/bujo/JournalView'
 import { InsightsView } from '@/components/bujo/InsightsView'
 import { RemarkableView } from '@/components/bujo/RemarkableView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
+import { remarkable } from './wailsjs/go/models'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
 import { toWailsTime } from '@/lib/wailsTime'
@@ -92,6 +93,10 @@ function App() {
   const initialLoadCompleteRef = useRef(false)
   const [highlightText, setHighlightText] = useState<string | null>(null)
   const [hasRemarkable, setHasRemarkable] = useState(false)
+  const [remarkableRegistered, setRemarkableRegistered] = useState<boolean | null>(null)
+  const [remarkableDocs, setRemarkableDocs] = useState<remarkable.Document[]>([])
+  const [remarkableLoading, setRemarkableLoading] = useState(false)
+  const [remarkableError, setRemarkableError] = useState<string | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   useEffect(() => {
@@ -99,6 +104,29 @@ function App() {
       setHasRemarkable(caps.hasOCR)
     })
   }, [])
+
+  const loadRemarkableDocs = useCallback(async () => {
+    setRemarkableLoading(true)
+    setRemarkableError(null)
+    try {
+      const docs = await ListRemarkableDocuments()
+      setRemarkableDocs(docs)
+    } catch (err) {
+      setRemarkableError(String(err))
+    } finally {
+      setRemarkableLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hasRemarkable) return
+    IsRemarkableRegistered().then(registered => {
+      setRemarkableRegistered(registered)
+      if (registered) {
+        loadRemarkableDocs()
+      }
+    })
+  }, [hasRemarkable, loadRemarkableDocs])
 
   const loadData = useCallback(async () => {
     // Only show loading spinner on initial load, not on refresh
@@ -839,7 +867,16 @@ function App() {
           )}
 
           {view === 'remarkable' && (
-            <RemarkableView onNavigateToSettings={() => handleViewChange('settings')} />
+            <div className="h-full flex flex-col">
+              <RemarkableView
+                onNavigateToSettings={() => handleViewChange('settings')}
+                documents={remarkableDocs}
+                isRegistered={remarkableRegistered}
+                isLoading={remarkableLoading}
+                loadError={remarkableError}
+                onRefresh={loadRemarkableDocs}
+              />
+            </div>
           )}
 
           {view === 'settings' && (
