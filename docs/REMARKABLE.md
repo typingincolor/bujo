@@ -117,6 +117,7 @@ The `TreeParser` (`internal/domain/parser.go`) handles OCR output gracefully:
 - File manager supports folders/breadcrumbs and document sorting.
 - Notebooks and PDFs are currently treated as importable in UI.
 - Review panel shows page image, editable OCR text, and low-confidence count warning.
+- Review panel includes a confidence gutter with amber dots beside lines where OCR confidence is below threshold.
 
 ## CLI Testing Guide
 
@@ -195,7 +196,6 @@ go test ./...
 ## Known Gaps / Drift From Plans
 
 - `GetPlatformCapabilities()` currently gates by OS, not confirmed binary presence.
-- Low-confidence output is a count; span-level confidence highlighting is not implemented.
 - PDF importability in UI may exceed backend page pipeline assumptions (`DownloadPages` is `.rm` page oriented).
 - OCR accuracy is limited by handwriting quality; typos in output are expected and can be corrected in the review panel.
 
