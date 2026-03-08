@@ -10,8 +10,8 @@ bujo follows **Hexagonal Architecture** (also known as Ports and Adapters), ensu
 ┌─────────────────────────────────────────────────────────────┐
 │                        Adapters                             │
 │  ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐            │
-│  │  CLI   │  │  TUI   │  │ Wails  │  │   AI   │            │
-│  │(Cobra) │  │(Bubble)│  │(Desktop│  │(Gemini)│            │
+│  │  CLI   │  │  TUI   │  │ Wails  │  │Insights│            │
+│  │(Cobra) │  │(Bubble)│  │(Desktop│  │(SQLite)│            │
 │  └───┬────┘  └───┬────┘  └───┬────┘  └───┬────┘            │
 └──────┼───────────┼───────────┼───────────┼─────────────────┘
        │           │           │           │
@@ -33,10 +33,10 @@ bujo follows **Hexagonal Architecture** (also known as Ports and Adapters), ensu
 │  │    Entry     │  │    List      │  │    Habit     │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │  ListItem    │  │  DayContext  │  │   Summary    │       │
+│  │  ListItem    │  │  DayContext  │  │    Goal      │       │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 │  ┌──────────────┐  ┌──────────────┐                         │
-│  │  TreeParser  │  │ VersionInfo  │                         │
+│  │  TreeParser  │  │   EntityID   │                         │
 │  └──────────────┘  └──────────────┘                         │
 └─────────────────────────────────────────────────────────────┘
           │                 │                 │
@@ -47,7 +47,7 @@ bujo follows **Hexagonal Architecture** (also known as Ports and Adapters), ensu
 │  │EntryRepository│ │ListRepository│  │HabitRepository│      │
 │  └──────────────┘  └──────────────┘  └──────────────┘       │
 │  ┌──────────────┐  ┌──────────────┐                         │
-│  │ListItemRepo  │  │ContextRepo   │                         │
+│  │ListItemRepo  │  │DayContextRepo│                         │
 │  └──────────────┘  └──────────────┘                         │
 └─────────────────────────────────────────────────────────────┘
           │
@@ -79,32 +79,38 @@ bujo/
 │   │   ├── habit.go             # Habit and HabitLog
 │   │   ├── list.go              # List management
 │   │   ├── list_item.go         # List items (separate from entries)
-│   │   ├── summary.go           # AI summary types
 │   │   ├── context.go           # Day context (location, mood, weather)
+│   │   ├── goal.go              # Monthly goals
+│   │   ├── insights.go          # Insights read models
 │   │   ├── parser.go            # TreeParser for hierarchical input
 │   │   ├── entity_id.go         # UUID-based entity identification
-│   │   ├── version.go           # Event sourcing version info
+│   │   ├── version.go           # Version metadata (for versioned entities)
 │   │   └── repository.go        # Repository interfaces
 │   │
 │   ├── service/                 # Application services
 │   │   ├── bujo.go              # BujoService (entries, agenda)
 │   │   ├── list.go              # ListService
 │   │   ├── habit.go             # HabitService
+│   │   ├── goal.go              # GoalService
+│   │   ├── stats.go             # StatsService
 │   │   ├── backup.go            # BackupService
-│   │   ├── archive.go           # ArchiveService (version cleanup)
-│   │   └── history.go           # HistoryService (version queries)
+│   │   ├── archive.go           # ArchiveService (list item version cleanup)
+│   │   └── history.go           # HistoryService (list item history)
 │   │
 │   ├── repository/sqlite/       # SQLite implementations
 │   │   ├── entry_repository.go
 │   │   ├── list_repository.go
 │   │   ├── list_item_repository.go
 │   │   ├── habit_repository.go
-│   │   ├── context_repository.go
+│   │   ├── day_context_repository.go
+│   │   ├── goal_repository.go
+│   │   ├── insights_repository.go
 │   │   └── migrations/          # Database migrations
 │   │
 │   ├── adapter/
 │   │   ├── cli/                 # CLI adapter helpers
-│   │   ├── ai/                  # Gemini AI integration
+│   │   ├── http/                # HTTP API + bookmarklet endpoint
+│   │   ├── remarkable/          # reMarkable import and OCR pipeline
 │   │   └── wails/               # Desktop app adapter
 │   │       └── app.go           # Wails bindings to services
 │   │
@@ -112,7 +118,7 @@ bujo/
 │       ├── model.go             # TUI state model
 │       ├── update.go            # Event handling
 │       ├── view.go              # Rendering
-│       ├── keys.go              # Key bindings
+│       ├── keymap.go            # Key bindings
 │       ├── styles.go            # Lipgloss styles
 │       └── draft.go             # Draft persistence
 │
@@ -137,7 +143,7 @@ bujo/
 
 The domain layer contains pure business logic with no external dependencies. It defines:
 
-- **Entity types**: `Entry`, `List`, `ListItem`, `Habit`, `HabitLog`, `DayContext`, `Summary`
+- **Entity types**: `Entry`, `List`, `ListItem`, `Habit`, `HabitLog`, `DayContext`, `Goal`
 - **Value objects**: `EntryType`, `EntityID`, `VersionInfo`, `OpType`
 - **Business rules**: Validation, type conversions, date calculations
 - **Repository interfaces**: Contracts for data access
@@ -154,8 +160,8 @@ Services orchestrate business operations by combining domain logic with reposito
 | `ListService` | List management, item operations |
 | `HabitService` | Habit tracking, streaks, goals |
 | `BackupService` | Database backup creation and verification |
-| `ArchiveService` | Old version cleanup |
-| `HistoryService` | Version history queries and restoration |
+| `ArchiveService` | List-item history cleanup |
+| `HistoryService` | List-item version queries and restoration |
 
 Services are stateless and depend only on repository interfaces.
 
@@ -164,8 +170,8 @@ Services are stateless and depend only on repository interfaces.
 SQLite implementations of domain repository interfaces. Uses:
 
 - **golang-migrate** for schema migrations
-- **Event sourcing** pattern for audit trails
-- **Soft deletes** via `valid_to` timestamps
+- A **hybrid persistence model** (mutable `entries`, versioned append for list/habit/context/goal entities)
+- Version tombstones (`op_type='DELETE'`) and `valid_to` for versioned entities
 
 ### Adapter Layer
 
@@ -205,65 +211,37 @@ Desktop application adapter using [Wails](https://wails.io/). Exposes service me
 - Generated bindings in `wailsjs/` directory
 - Components mirror TUI functionality
 
-#### AI Adapter (`internal/adapter/ai/`)
+#### HTTP/Insights/Import Adapters
 
-Gemini API integration for AI-powered summaries and reflections.
+- `internal/adapter/http/`: local HTTP server and integration endpoints (for example Gmail bookmarklet install/API)
+- `internal/adapter/remarkable/`: reMarkable sync/import, rendering, OCR normalization
+- Insights are stored/read through `internal/repository/sqlite/insights_repository.go` and surfaced in TUI/Wails
 
 ## Data Model
 
-### Event Sourcing (MANDATORY)
+### Hybrid Persistence Model (Current)
 
-**All repository mutations MUST create new versioned rows. No in-place updates.**
+bujo does **not** use one persistence strategy for every table.
 
-All tables use event sourcing with these columns:
+#### Mutable table
 
-```sql
-row_id INTEGER PRIMARY KEY,     -- Unique version identifier
-entity_id TEXT NOT NULL,        -- UUID, stable across versions
-version INTEGER NOT NULL,       -- Incremental counter
-valid_from TEXT NOT NULL,       -- When this version became active
-valid_to TEXT,                  -- NULL = current, set when superseded
-op_type TEXT NOT NULL           -- INSERT, UPDATE, or DELETE
-```
+- `entries` currently uses in-place updates/deletes in `entry_repository.go`.
+- Entry history rows were purged by migration `000029_purge_event_sourcing_history.up.sql`.
 
-#### Repository Mutation Pattern
+#### Versioned append tables
 
-Every `Update` method must:
-1. Get current version by ID
-2. Begin transaction
-3. Close current version (`SET valid_to = now`)
-4. Get next version number (`MAX(version) + 1`)
-5. Insert new row with `op_type = 'UPDATE'`
-6. Commit transaction
+These tables still use versioning columns (`entity_id`, `version`, `valid_from`, `valid_to`, `op_type`) with current-row filters:
+- `lists`
+- `list_items`
+- `habits`
+- `habit_logs`
+- `day_context`
+- `goals`
 
-```go
-// CORRECT: Event sourcing pattern
-func (r *Repo) Update(ctx, entity) error {
-    current := r.GetByID(ctx, entity.ID)
-    tx.Exec("UPDATE table SET valid_to = ? WHERE entity_id = ?", now, current.EntityID)
-    tx.Exec("INSERT INTO table (..., op_type) VALUES (..., 'UPDATE')")
-}
+#### Archive/History Scope
 
-// WRONG: In-place update destroys history
-func (r *Repo) Update(ctx, entity) error {
-    r.db.Exec("UPDATE table SET col = ? WHERE id = ?", val, id)  // NEVER DO THIS
-}
-```
-
-#### GetByID Semantics
-
-`GetByID(id)` follows the entity through versions:
-1. Look up `entity_id` for the given row `id`
-2. Return current version (`valid_to IS NULL AND op_type != 'DELETE'`)
-
-This ensures IDs remain stable references even after updates.
-
-#### Benefits
-
-- Complete audit trails
-- Point-in-time queries (`GetAsOf`)
-- Safe undo/restore of deleted items
-- No data loss from updates
+- `ArchiveService` and `HistoryService` operate on **list items**.
+- `bujo history ...` is list-item history, not global entry history.
 
 ### Tables
 
@@ -275,7 +253,7 @@ This ensures IDs remain stable references even after updates.
 | `habits` | Habit definitions |
 | `habit_logs` | Habit completion logs |
 | `day_context` | Daily location, mood, weather |
-| `summaries` | Cached AI summaries |
+| `insights` (separate DB) | Read-only AI/analysis data loaded from `~/.bujo/claude-insights.db` when available |
 
 ### Entry Types
 
@@ -295,11 +273,11 @@ This ensures IDs remain stable references even after updates.
 
 **Trade-off**: More boilerplate (interfaces, dependency injection) but better long-term maintainability.
 
-### Event Sourcing for Data
+### Hybrid Persistence for Data
 
-**Why**: Provides audit trails, enables undo, and supports temporal queries.
+**Why**: Keeps high-churn journal entries simple and fast, while preserving version history where restore/audit is needed most (lists, habits, goals, day context).
 
-**Trade-off**: Database grows over time (mitigated by archive command).
+**Trade-off**: Semantics differ by entity type, so docs/tests must be explicit about which operations are versioned.
 
 ### Separate List Items Table
 
@@ -337,7 +315,6 @@ All code follows TDD: tests written before implementation.
 | Environment Variable | Purpose | Default |
 |---------------------|---------|---------|
 | `DB_PATH` | Database file location | `~/.bujo/bujo.db` |
-| `GEMINI_API_KEY` | AI features API key | (none) |
 
 ## Dependencies
 
@@ -350,4 +327,4 @@ All code follows TDD: tests written before implementation.
 | `github.com/mattn/go-sqlite3` | SQLite driver |
 | `github.com/golang-migrate/migrate` | Schema migrations |
 | `github.com/google/uuid` | Entity ID generation |
-| `github.com/araddon/dateparse` | Natural language dates |
+| `github.com/tj/go-naturaldate` | Natural language dates |

@@ -223,19 +223,6 @@ bujo export --format csv > journal.csv
 bujo export 42 -o project_notes.md
 ```
 
-## AI Reflections
+## Insights
 
-Generate AI-powered summaries (requires AI setup):
-
-```bash
-# Daily summary
-bujo summary
-
-# Weekly reflection
-bujo summary --weekly
-
-# Regenerate for past date
-bujo summary --date yesterday --refresh
-```
-
-See [AI Setup](AI_SETUP.md) for configuration.
+bujo can surface pre-computed insights when a `~/.bujo/claude-insights.db` file is present. See [AI / Insights](AI_SETUP.md) for details.

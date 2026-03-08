@@ -233,25 +233,6 @@ bujo uncancel <id>
 bujo uncancel 42
 ```
 
-### deleted
-
-List entries that have been deleted but can still be restored.
-
-```bash
-bujo deleted
-```
-
-Each entry shows its entity ID which can be used with `bujo restore` to bring it back.
-
-### restore
-
-Restore a previously deleted entry.
-
-```bash
-bujo deleted              # See deleted entries and their entity IDs
-bujo restore <entity-id>  # Restore entry by entity ID
-```
-
 ### search
 
 Search through entries.
@@ -571,24 +552,6 @@ bujo weather show --from "last week"      # View weather history
 bujo weather clear -d yesterday           # Clear a day's weather
 ```
 
-## AI Commands
-
-### summary
-
-Generate AI-powered summaries. Requires AI configuration (see [AI Setup](AI_SETUP.md)).
-
-```bash
-bujo summary           # Daily summary
-bujo summary --weekly  # Weekly reflection
-bujo summary --date yesterday
-```
-
-| Flag | Description |
-|------|-------------|
-| `--weekly` | Generate weekly reflection |
-| `-d, --date` | Reference date |
-| `--refresh` | Force regenerate even for completed periods |
-
 ## Statistics
 
 ### stats
@@ -756,10 +719,4 @@ Most commands accept natural language dates:
 
 | Variable | Description |
 |----------|-------------|
-| `BUJO_AI_ENABLED` | Enable AI features: `true` or `false` (default: false) |
-| `BUJO_AI_PROVIDER` | AI provider: `local` or `gemini` |
-| `BUJO_MODEL` | Model name for local AI (default: llama3.2:3b) |
-| `GEMINI_API_KEY` | API key for Google Gemini |
 | `DB_PATH` | Default database path |
-
-See [AI Setup](AI_SETUP.md) for detailed AI configuration.

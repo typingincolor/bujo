@@ -107,56 +107,13 @@ If SQLite reports corruption:
 **On macOS:**
 - Check System Preferences > Keyboard > Shortcuts for conflicts
 
-## AI Features
-
-### "AI features disabled"
-
-Enable AI in configuration:
-```bash
-export BUJO_AI_ENABLED=true
-```
-
-### Local AI not responding
-
-1. Check Ollama is running:
-   ```bash
-   ollama list
-   ```
-
-2. Pull required model:
-   ```bash
-   ollama pull llama3.2:3b
-   ```
-
-3. Verify connection:
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
-
-### Gemini API errors
-
-**"API key not valid":**
-- Verify key is set: `echo $GEMINI_API_KEY`
-- Get a new key from [Google AI Studio](https://aistudio.google.com/)
-
-**"Quota exceeded":**
-- Wait for quota reset (usually daily)
-- Consider local AI as alternative
-
-**Rate limiting:**
-- Reduce frequency of summary requests
-- Cached summaries avoid repeated API calls
-
 ## Command Issues
 
 ### "entry not found"
 
-The entry ID may refer to an old version.
+The entry ID may not exist or the entry was deleted.
 
 ```bash
-# Check if entry was deleted
-bujo deleted
-
 # Try searching for it
 bujo search "partial content"
 ```

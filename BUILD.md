@@ -133,10 +133,4 @@ ollama pull llama3.2:3b
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `BUJO_AI_ENABLED` | Enable AI features | `false` |
-| `BUJO_AI_PROVIDER` | AI provider: `local` or `gemini` | `local` |
-| `BUJO_MODEL` | Local AI model name | `llama3.2:3b` |
-| `GEMINI_API_KEY` | API key for Gemini provider | (none) |
 | `DB_PATH` | Database file location | `~/.bujo/bujo.db` |
-
-See [AI Setup](docs/AI_SETUP.md) for detailed AI configuration.

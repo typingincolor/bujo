@@ -168,4 +168,4 @@ bujo mood show --from "last week"
 - [CLI Reference](CLI.md) - Full command documentation
 - [TUI Guide](TUI.md) - Interactive terminal UI
 - [Desktop App](FRONTEND.md) - Native macOS application
-- [AI Setup](AI_SETUP.md) - Enable AI-powered summaries
+- [AI / Insights](AI_SETUP.md) - Insights system

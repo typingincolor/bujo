@@ -127,7 +127,7 @@ See [integrations/gmail/README.md](integrations/gmail/README.md) for details.
 
 **Reference:**
 - [Data Management](docs/DATA.md) - Backup, export, and storage
-- [AI Setup](docs/AI_SETUP.md) - Configure local or cloud AI
+- [AI / Insights](docs/AI_SETUP.md) - Insights system
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Architecture](docs/ARCHITECTURE.md) - Technical design overview
 

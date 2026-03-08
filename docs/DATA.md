@@ -23,22 +23,28 @@ Or set the `DB_PATH` environment variable:
 export DB_PATH=~/Documents/journal.db
 ```
 
-## Event Sourcing
+## Persistence Model
 
-bujo uses event sourcing for all data modifications. This means:
+bujo uses a hybrid persistence model:
 
-- **No data is ever overwritten** - updates create new versions
-- **Full audit trail** - see the history of any item
-- **Safe undo** - deleted items can be restored
+### Mutable tables
 
-### How It Works
+- **`entries`** uses standard CRUD (in-place update/delete). Entry history was purged in migration 000029.
 
-When you edit an entry:
+### Versioned tables
+
+These tables use append-only versioning (`entity_id`, `version`, `valid_from`, `valid_to`, `op_type`) for full audit trails:
+
+- `lists`, `list_items`, `habits`, `habit_logs`, `day_context`, `goals`
+
+When you edit a versioned entity:
 1. The current version is marked with an end timestamp
 2. A new version is created with the changes
 3. Both versions remain in the database
 
 ### Viewing History
+
+History commands apply to **list items** only:
 
 ```bash
 # See version history for a list item
@@ -180,21 +186,7 @@ Archiving:
 
 ## Deleted Items
 
-### View Deleted Items
-
-```bash
-bujo deleted
-```
-
-This shows entries that have been deleted but can still be restored.
-
-### Restore Deleted Items
-
-```bash
-bujo restore <entity-id>
-```
-
-Items are restorable because of event sourcing - the delete operation creates a new version rather than removing data.
+Deleted versioned entities (lists, list items, habits, etc.) are preserved in the database as tombstone records (`op_type='DELETE'`). They can potentially be restored through the history commands for list items.
 
 ## Database Location Best Practices
 
@@ -240,9 +232,9 @@ bujo uses these main tables:
 | `habits` | Habit definitions |
 | `habit_logs` | Habit completion records |
 | `day_context` | Daily location, mood, weather |
-| `summaries` | Cached AI summaries |
+| `goals` | Monthly goals |
 
-All tables (except summaries) include event sourcing columns for version tracking.
+The `entries` table uses standard CRUD. All other tables include event sourcing columns for version tracking.
 
 ## Troubleshooting
 

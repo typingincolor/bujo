@@ -12,9 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with AI-powered reflections using Google's Gemini API.
+bujo is a high-performance, Go-based command-line Bullet Journal for macOS. It captures tasks, notes, events, habits, and locations with a local insights system.
 
-**Tech Stack:** Go 1.23, SQLite, Cobra CLI, Gemini API
+**Tech Stack:** Go 1.24, SQLite, Cobra CLI, Wails + React desktop UI
 
 **UI Mockup:** [bujo-canvas](https://github.com/typingincolor/bujo-canvas) - Lovable.dev mockup showing target UI design
 
@@ -60,13 +60,15 @@ internal/
   domain/           Core business logic (100% TDD coverage required)
     entry.go        Entry types: Task (.), Note (-), Event (o), Done (x), Migrated (>)
     habit.go        Habit tracking with multi-log support
-    summary.go      AI summary types
+    insights.go     Insights read models
+    goal.go         Monthly goals
     parser.go       TreeParser for hierarchical input
   service/          Stateless services (BujoService, HabitService)
   repository/       SQLite repository implementations
   adapter/
     cli/            Cobra command handlers
-    ai/             Gemini integration
+    http/            HTTP API + bookmarklet endpoint
+    remarkable/      reMarkable import and OCR pipeline
 ```
 
 **Key Principle:** Business logic isolated in `internal/domain`. CLI and future web server are adapters to shared logic.
@@ -74,11 +76,13 @@ internal/
 ## Data Model
 
 SQLite with these tables:
-- `entries`: Hierarchical items with `parent_id` for tree structure
-- `habits`: Recurring habits with `goal_per_day`
-- `habit_logs`: Multiple logs per habit per day
-- `day_context`: Daily location, mood, weather
-- `summaries`: Cached AI summaries (daily/weekly/quarterly/annual)
+- `entries`: Hierarchical items with `parent_id` for tree structure (mutable CRUD)
+- `lists`: Named lists (versioned)
+- `list_items`: Items within lists (versioned)
+- `habits`: Recurring habits with `goal_per_day` (versioned)
+- `habit_logs`: Multiple logs per habit per day (versioned)
+- `day_context`: Daily location, mood, weather (versioned)
+- `goals`: Monthly goals (versioned)
 
 ## Event Sourcing
 
@@ -86,7 +90,7 @@ Most entities use event sourcing — every mutation creates a new versioned row.
 
 **Exceptions:**
 - **`entries`**: Uses standard CRUD (delete-by-date + reinsert). The editable journal view replaces all entries for a date on save, making event sourcing impractical. Migration `000029` removed event sourcing columns from this table.
-- **`summaries`**: Does not use event sourcing. Summaries are cached AI-generated content that can be regenerated via the Gemini API.
+- **`summaries`**: Table was dropped in migration 000031. Replaced by the insights system.
 
 ### Event Sourcing Columns (on event-sourced tables)
 
@@ -208,7 +212,7 @@ Without `--admin`, you will see: `the base branch policy prohibits the merge`
 
 ## 12-Factor Patterns
 
-- **Config:** Environment variables (`GEMINI_API_KEY`, `DB_PATH`)
+- **Config:** Environment variables (`DB_PATH`)
 - **Logs:** Diagnostic messages to stderr, data output to stdout
 - **Dependencies:** Strict via go.mod
 
@@ -218,7 +222,7 @@ Without `--admin`, you will see: `the base branch policy prohibits the merge`
 2. Service Layer: BujoService, HabitService (UI-agnostic)
 3. Infrastructure: SQLite repositories with golang-migrate
 4. Adapter (CLI): Cobra commands
-5. Adapter (AI): Gemini with rolling summary logic
+5. Adapters: HTTP, reMarkable, Wails desktop
 
 For detailed specifications, see `spec.md`.
 
