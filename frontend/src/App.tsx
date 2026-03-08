@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext'
 import { EventsOn } from './wailsjs/runtime/runtime'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { DateNavigator } from '@/components/bujo/DateNavigator'
-import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry } from './wailsjs/go/wails/App'
+import { GetDayEntries, GetOverdue, GetHabits, GetLists, GetGoals, GetOutstandingQuestions, MarkEntryDone, MarkEntryUndone, EditEntry, DeleteEntry, HasChildren, MigrateEntry, MoveEntryToList, GetEntryContext, CyclePriority, RetypeEntry, CancelEntry, UncancelEntry, GetPlatformCapabilities } from './wailsjs/go/wails/App'
 import { Sidebar, ViewType } from '@/components/bujo/Sidebar'
 import { HabitTracker } from '@/components/bujo/HabitTrackerView'
 import { ListsView } from '@/components/bujo/ListsView'
@@ -26,6 +26,7 @@ import { ContextTree } from '@/components/bujo/ContextTree'
 import { buildTree } from '@/lib/buildTree'
 import { JournalView } from '@/components/bujo/JournalView'
 import { InsightsView } from '@/components/bujo/InsightsView'
+import { RemarkableView } from '@/components/bujo/RemarkableView'
 import { DayEntries, Habit, BujoList, Goal, Entry } from '@/types/bujo'
 import { transformDayEntries, transformEntry, transformHabit, transformList, transformGoal } from '@/lib/transforms'
 import { startOfDay } from '@/lib/utils'
@@ -48,7 +49,7 @@ function flattenEntries(entries: Entry[]): Entry[] {
   return result
 }
 
-const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'insights', 'settings']
+const validViews: ViewType[] = ['today', 'pending', 'week', 'questions', 'habits', 'lists', 'goals', 'search', 'stats', 'insights', 'settings', 'remarkable']
 
 function isValidView(view: unknown): view is ViewType {
   return validViews.includes(view as ViewType)
@@ -90,7 +91,14 @@ function App() {
   const [pendingContextTree, setPendingContextTree] = useState<Entry[]>([])
   const initialLoadCompleteRef = useRef(false)
   const [highlightText, setHighlightText] = useState<string | null>(null)
+  const [hasRemarkable, setHasRemarkable] = useState(false)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
+
+  useEffect(() => {
+    GetPlatformCapabilities().then(caps => {
+      setHasRemarkable(caps.hasOCR)
+    })
+  }, [])
 
   const loadData = useCallback(async () => {
     // Only show loading spinner on initial load, not on refresh
@@ -641,6 +649,7 @@ function App() {
     insights: 'Insights',
     settings: 'Settings',
     editable: 'Edit Journal',
+    remarkable: 'reMarkable Import',
   }
 
   if (loading) {
@@ -675,7 +684,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar currentView={view} onViewChange={handleViewChange} />
+      <Sidebar currentView={view} onViewChange={handleViewChange} hasRemarkable={hasRemarkable} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
@@ -827,6 +836,10 @@ function App() {
             <div className="h-full">
               <InsightsView />
             </div>
+          )}
+
+          {view === 'remarkable' && (
+            <RemarkableView onNavigateToSettings={() => handleViewChange('settings')} />
           )}
 
           {view === 'settings' && (

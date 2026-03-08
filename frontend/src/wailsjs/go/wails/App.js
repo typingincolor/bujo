@@ -186,6 +186,10 @@ export function GetOverdue() {
   return window['go']['wails']['App']['GetOverdue']();
 }
 
+export function GetPlatformCapabilities() {
+  return window['go']['wails']['App']['GetPlatformCapabilities']();
+}
+
 export function GetVersion() {
   return window['go']['wails']['App']['GetVersion']();
 }
@@ -198,8 +202,24 @@ export function HasChildren(arg1) {
   return window['go']['wails']['App']['HasChildren'](arg1);
 }
 
+export function ImportEntries(arg1, arg2) {
+  return window['go']['wails']['App']['ImportEntries'](arg1, arg2);
+}
+
+export function ImportRemarkablePages(arg1) {
+  return window['go']['wails']['App']['ImportRemarkablePages'](arg1);
+}
+
 export function IsInsightsAvailable() {
   return window['go']['wails']['App']['IsInsightsAvailable']();
+}
+
+export function IsRemarkableRegistered() {
+  return window['go']['wails']['App']['IsRemarkableRegistered']();
+}
+
+export function ListRemarkableDocuments() {
+  return window['go']['wails']['App']['ListRemarkableDocuments']();
 }
 
 export function LogHabit(arg1, arg2) {
@@ -260,6 +280,10 @@ export function OpenFileDialog() {
 
 export function ReadFile(arg1) {
   return window['go']['wails']['App']['ReadFile'](arg1);
+}
+
+export function RegisterRemarkableDevice(arg1) {
+  return window['go']['wails']['App']['RegisterRemarkableDevice'](arg1);
 }
 
 export function RemoveListItem(arg1) {

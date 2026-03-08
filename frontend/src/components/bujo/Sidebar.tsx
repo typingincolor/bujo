@@ -11,14 +11,16 @@ import {
   BarChart3,
   HelpCircle,
   FileEdit,
-  Lightbulb
+  Lightbulb,
+  Tablet
 } from 'lucide-react';
 
-export type ViewType = 'today' | 'pending' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'insights' | 'settings' | 'editable';
+export type ViewType = 'today' | 'pending' | 'week' | 'questions' | 'habits' | 'lists' | 'goals' | 'search' | 'stats' | 'insights' | 'settings' | 'editable' | 'remarkable';
 
 interface SidebarProps {
   currentView: ViewType;
   onViewChange: (view: ViewType) => void;
+  hasRemarkable?: boolean;
 }
 
 const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
@@ -34,7 +36,7 @@ const navItems: { view: ViewType; icon: React.ElementType; label: string }[] = [
   { view: 'insights', icon: Lightbulb, label: 'Insights' },
 ];
 
-export function Sidebar({ currentView, onViewChange }: SidebarProps) {
+export function Sidebar({ currentView, onViewChange, hasRemarkable }: SidebarProps) {
   return (
     <aside className="w-56 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
@@ -64,8 +66,23 @@ export function Sidebar({ currentView, onViewChange }: SidebarProps) {
             {label}
           </button>
         ))}
+        {hasRemarkable && (
+          <button
+            onClick={() => onViewChange('remarkable')}
+            aria-pressed={currentView === 'remarkable'}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+              currentView === 'remarkable'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent/50'
+            )}
+          >
+            <Tablet className="w-4 h-4" />
+            reMarkable
+          </button>
+        )}
       </nav>
-      
+
       {/* Footer */}
       <div className="p-3">
         <button
