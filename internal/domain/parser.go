@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -144,12 +143,18 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 		depth, rest := ParseIndentation(line)
 		entryType := ParseEntryType(rest)
 
+		var rawContent string
 		if !entryType.IsValid() {
 			entryType = EntryTypeNote
+			rawContent = strings.TrimSpace(rest)
+		} else {
+			rawContent = ParseContent(rest)
 		}
-
-		rawContent := ParseContent(rest)
 		content, priority := ParsePriorityAndContent(rawContent)
+
+		if depth > 0 && depth > len(parentStack) {
+			depth = len(parentStack)
+		}
 
 		entry := Entry{
 			Type:     entryType,
@@ -164,10 +169,6 @@ func (p *TreeParser) Parse(input string) ([]Entry, error) {
 			parentStack = []int{len(entries)}
 			entries = append(entries, entry)
 			continue
-		}
-
-		if depth > len(parentStack) {
-			return nil, errors.New("invalid indentation: child without parent at correct depth")
 		}
 
 		parentStack = parentStack[:depth]

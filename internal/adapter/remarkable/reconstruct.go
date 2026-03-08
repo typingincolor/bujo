@@ -4,6 +4,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -54,7 +55,11 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 		}
 
 		indent := strings.Repeat("  ", depth)
-		lines = append(lines, indent+r.Text)
+		text := r.Text
+		if !hasBujoPrefix(text) {
+			text = "- " + text
+		}
+		lines = append(lines, indent+text)
 
 		if r.Confidence < threshold {
 			lowConfidenceCount++
@@ -65,4 +70,16 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 		Text:               strings.Join(lines, "\n"),
 		LowConfidenceCount: lowConfidenceCount,
 	}
+}
+
+var bujoSymbols = map[rune]bool{
+	'.': true, '-': true, 'o': true, 'x': true,
+	'>': true, '?': true, 'a': true,
+	'•': true, '–': true, '○': true, '✓': true,
+	'→': true, '★': true, '↳': true,
+}
+
+func hasBujoPrefix(text string) bool {
+	r, _ := utf8.DecodeRuneInString(text)
+	return bujoSymbols[r]
 }
