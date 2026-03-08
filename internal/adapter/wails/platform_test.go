@@ -58,7 +58,7 @@ func TestImportResult_JSONSerialization(t *testing.T) {
 					{Text: "hello", X: 10, Y: 20, Width: 100, Height: 30, Confidence: 0.95},
 				},
 				Text:               "hello",
-				LowConfidenceCount: 0,
+				LowConfidenceCount: 1,
 				LowConfidenceLines: []int{0},
 			},
 		},
@@ -67,7 +67,7 @@ func TestImportResult_JSONSerialization(t *testing.T) {
 	assert.Equal(t, "page-1", result.Pages[0].PageID)
 	assert.Equal(t, float32(0.95), result.Pages[0].OCRResults[0].Confidence)
 	assert.Equal(t, "hello", result.Pages[0].Text)
-	assert.Equal(t, 0, result.Pages[0].LowConfidenceCount)
+	assert.Equal(t, 1, result.Pages[0].LowConfidenceCount)
 	assert.Equal(t, []int{0}, result.Pages[0].LowConfidenceLines)
 }
 

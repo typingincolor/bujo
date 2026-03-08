@@ -42,7 +42,7 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 
 	var lines []string
 	var lowConfidenceCount int
-	var lowConfidenceLines []int
+	lowConfidenceLines := []int{}
 	var maxDepth int
 
 	for i, r := range sorted {
