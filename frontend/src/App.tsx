@@ -839,7 +839,9 @@ function App() {
           )}
 
           {view === 'remarkable' && (
-            <RemarkableView onNavigateToSettings={() => handleViewChange('settings')} />
+            <div className="h-full flex flex-col">
+              <RemarkableView onNavigateToSettings={() => handleViewChange('settings')} />
+            </div>
           )}
 
           {view === 'settings' && (
