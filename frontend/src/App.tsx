@@ -96,6 +96,7 @@ function App() {
   const [remarkableRegistered, setRemarkableRegistered] = useState<boolean | null>(null)
   const [remarkableDocs, setRemarkableDocs] = useState<remarkable.Document[]>([])
   const [remarkableLoading, setRemarkableLoading] = useState(false)
+  const [remarkableError, setRemarkableError] = useState<string | null>(null)
   const { canGoBack, pushHistory, goBack, clearHistory } = useNavigationHistory()
 
   useEffect(() => {
@@ -106,11 +107,12 @@ function App() {
 
   const loadRemarkableDocs = useCallback(async () => {
     setRemarkableLoading(true)
+    setRemarkableError(null)
     try {
       const docs = await ListRemarkableDocuments()
       setRemarkableDocs(docs)
-    } catch {
-      // Error handled in RemarkableView via empty docs
+    } catch (err) {
+      setRemarkableError(String(err))
     } finally {
       setRemarkableLoading(false)
     }
@@ -871,6 +873,7 @@ function App() {
                 documents={remarkableDocs}
                 isRegistered={remarkableRegistered}
                 isLoading={remarkableLoading}
+                loadError={remarkableError}
                 onRefresh={loadRemarkableDocs}
               />
             </div>

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Folder, NotebookPen, FileText, BookOpen, File, ChevronRight, RefreshCw } from 'lucide-react'
 import { ImportRemarkablePages } from '../../wailsjs/go/wails/App'
 import { remarkable, wails } from '../../wailsjs/go/models'
 import { OCRReviewPanel } from './OCRReviewPanel'
+import { isFolder, isImportable, formatDate, sortDocuments } from './remarkableUtils'
 
 type Step = 'document-list' | 'importing' | 'review'
 
@@ -11,15 +12,8 @@ interface RemarkableViewProps {
   documents: remarkable.Document[]
   isRegistered: boolean | null
   isLoading: boolean
+  loadError: string | null
   onRefresh: () => void
-}
-
-function isFolder(doc: remarkable.Document): boolean {
-  return doc.FileType === ''
-}
-
-function isImportable(doc: remarkable.Document): boolean {
-  return doc.FileType === 'notebook' || doc.FileType === 'pdf'
 }
 
 function fileIcon(doc: remarkable.Document) {
@@ -32,19 +26,15 @@ function fileIcon(doc: remarkable.Document) {
   }
 }
 
-function formatDate(timestamp: string): string {
-  const ms = parseInt(timestamp, 10)
-  if (isNaN(ms)) return timestamp
-  return new Date(ms).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-export function RemarkableView({ onNavigateToSettings, documents, isRegistered, isLoading, onRefresh }: RemarkableViewProps) {
+export function RemarkableView({ onNavigateToSettings, documents, isRegistered, isLoading, loadError, onRefresh }: RemarkableViewProps) {
   const [step, setStep] = useState<Step>('document-list')
-  const [error, setError] = useState<string | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   const [importResult, setImportResult] = useState<wails.ImportRemarkableResult | null>(null)
   const [selectedDocName, setSelectedDocName] = useState('')
   const [currentFolderId, setCurrentFolderId] = useState('')
   const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; name: string }[]>([])
+
+  const docs = useMemo(() => sortDocuments(documents, currentFolderId), [documents, currentFolderId])
 
   function handleNavigateToFolder(folderId: string, folderName: string) {
     setCurrentFolderId(folderId)
@@ -62,13 +52,6 @@ export function RemarkableView({ onNavigateToSettings, documents, isRegistered, 
     }
   }
 
-  function currentDocuments(): remarkable.Document[] {
-    const filtered = documents.filter(doc => doc.Parent === currentFolderId)
-    const folders = filtered.filter(isFolder).sort((a, b) => a.VisibleName.localeCompare(b.VisibleName))
-    const files = filtered.filter(d => !isFolder(d)).sort((a, b) => a.VisibleName.localeCompare(b.VisibleName))
-    return [...folders, ...files]
-  }
-
   async function handleSelectDocument(doc: remarkable.Document) {
     if (isFolder(doc)) {
       handleNavigateToFolder(doc.ID, doc.VisibleName)
@@ -79,14 +62,14 @@ export function RemarkableView({ onNavigateToSettings, documents, isRegistered, 
     }
     setSelectedDocName(doc.VisibleName)
     setStep('importing')
-    setError(null)
+    setImportError(null)
 
     try {
       const result = await ImportRemarkablePages(doc.ID)
       setImportResult(result)
       setStep('review')
     } catch (err) {
-      setError(String(err))
+      setImportError(String(err))
       setStep('document-list')
     }
   }
@@ -111,12 +94,13 @@ export function RemarkableView({ onNavigateToSettings, documents, isRegistered, 
     )
   }
 
-  if (error) {
+  const displayError = loadError || importError
+  if (displayError) {
     return (
       <div className="p-6 space-y-4">
-        <p className="text-destructive">{error}</p>
+        <p className="text-destructive">{displayError}</p>
         <button
-          onClick={() => { setError(null); onRefresh() }}
+          onClick={() => { setImportError(null); onRefresh() }}
           className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
         >
           Retry
@@ -154,8 +138,6 @@ export function RemarkableView({ onNavigateToSettings, documents, isRegistered, 
     )
   }
 
-  const docs = currentDocuments()
-
   return (
     <div className="flex flex-col h-full min-h-0">
       <div className="flex items-center gap-1 px-4 py-2 text-sm text-muted-foreground border-b border-border flex-shrink-0">
@@ -166,7 +148,7 @@ export function RemarkableView({ onNavigateToSettings, documents, isRegistered, 
           My files
         </button>
         {breadcrumbs.map((crumb, i) => (
-          <span key={crumb.id} className="flex items-center gap-1">
+          <span key={i} className="flex items-center gap-1">
             <ChevronRight className="w-3 h-3" />
             <button
               onClick={() => handleBreadcrumbClick(i)}
