@@ -102,7 +102,7 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
   if (step === 'review' && importResult) {
     return (
       <OCRReviewPanel
-        pages={importResult.Pages}
+        pages={importResult.pages}
         documentName={selectedDocName}
         onDone={() => {
           setStep('document-list')

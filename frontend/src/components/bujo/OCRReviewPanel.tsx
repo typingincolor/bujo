@@ -12,16 +12,16 @@ interface OCRReviewPanelProps {
 function reconstructTextWithConfidence(results: remarkable.OCRResult[], threshold = 0.8): { text: string, lowConfidenceCount: number } {
   if (!results || results.length === 0) return { text: '', lowConfidenceCount: 0 }
 
-  const sorted = [...results].sort((a, b) => a.Y - b.Y)
-  const minX = Math.min(...sorted.map(r => r.X))
+  const sorted = [...results].sort((a, b) => a.y - b.y)
+  const minX = Math.min(...sorted.map(r => r.x))
   const indentWidth = 50
 
   let lowConfidenceCount = 0
-  const text = sorted.map((r, i) => {
-    const depth = Math.round((r.X - minX) / indentWidth)
+  const text = sorted.map((r) => {
+    const depth = Math.round((r.x - minX) / indentWidth)
     const indent = '  '.repeat(depth)
-    if (r.Confidence < threshold) lowConfidenceCount++
-    return indent + r.Text
+    if (r.confidence < threshold) lowConfidenceCount++
+    return indent + r.text
   }).join('\n')
 
   return { text, lowConfidenceCount }
@@ -34,13 +34,13 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
   const [error, setError] = useState<string | null>(null)
 
   const pageData = useMemo(() => {
-    return pages.map(p => reconstructTextWithConfidence(p.OCRResults))
+    return pages.map(p => reconstructTextWithConfidence(p.ocrResults))
   }, [pages])
 
   const [editedTexts, setEditedTexts] = useState<string[]>(() => pageData.map(d => d.text))
 
   const page = pages[currentPage]
-  const hasError = page?.Error
+  const hasError = page?.error
   const { lowConfidenceCount } = pageData[currentPage] ?? { lowConfidenceCount: 0 }
 
   function updateText(index: number, text: string) {
@@ -132,10 +132,10 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
         {/* Left: PNG preview */}
         <div className="w-1/2 overflow-auto border-r border-border p-4">
           {hasError ? (
-            <div className="text-destructive text-sm">{page.Error}</div>
-          ) : page?.PNG ? (
+            <div className="text-destructive text-sm">{page.error}</div>
+          ) : page?.png ? (
             <img
-              src={`data:image/png;base64,${page.PNG}`}
+              src={`data:image/png;base64,${page.png}`}
               alt={`Page ${currentPage + 1}`}
               className="max-w-full"
             />
