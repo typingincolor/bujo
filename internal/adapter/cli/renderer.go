@@ -138,7 +138,7 @@ func RenderHabitTracker(status *service.TrackerStatus) string {
 		fmt.Fprintf(&sb, "%s %s\n", Bold(habit.Name), streakColor(fmt.Sprintf("(%d day streak)", habit.CurrentStreak)))
 
 		sparkline := renderSparkline(habit.DayHistory)
-		sb.WriteString(fmt.Sprintf("  %s\n", sparkline))
+		fmt.Fprintf(&sb, "  %s\n", sparkline)
 
 		sb.WriteString(renderHabitProgress(habit, ""))
 	}
@@ -194,7 +194,7 @@ func renderSparkline(days []service.DayStatus) string {
 func RenderHabitMonth(status *service.TrackerStatus) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("🔥 %s\n\n", Cyan(Bold("Habit Tracker - Month View"))))
+	fmt.Fprintf(&sb, "🔥 %s\n\n", Cyan(Bold("Habit Tracker - Month View")))
 
 	if len(status.Habits) == 0 {
 		sb.WriteString(Dimmed("No habits tracked yet\n"))
@@ -275,27 +275,27 @@ func FormatDate(t time.Time) string {
 func RenderHabitInspect(details *service.HabitDetails) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("%s\n", Cyan(Bold(details.Name))))
+	fmt.Fprintf(&sb, "%s\n", Cyan(Bold(details.Name)))
 
 	streakColor := Green
 	if details.CurrentStreak == 0 {
 		streakColor = Red
 	}
-	sb.WriteString(fmt.Sprintf("Streak: %s\n", streakColor(fmt.Sprintf("%d days", details.CurrentStreak))))
+	fmt.Fprintf(&sb, "Streak: %s\n", streakColor(fmt.Sprintf("%d days", details.CurrentStreak)))
 
 	sb.WriteString("\nGoals:\n")
 	if details.GoalPerDay > 0 {
-		sb.WriteString(fmt.Sprintf("  Daily:   %d/day\n", details.GoalPerDay))
+		fmt.Fprintf(&sb, "  Daily:   %d/day\n", details.GoalPerDay)
 	}
 	if details.GoalPerWeek > 0 {
-		sb.WriteString(fmt.Sprintf("  Weekly:  %d/week  %s\n",
+		fmt.Fprintf(&sb, "  Weekly:  %d/week  %s\n",
 			details.GoalPerWeek,
-			formatProgress(details.WeeklyProgress)))
+			formatProgress(details.WeeklyProgress))
 	}
 	if details.GoalPerMonth > 0 {
-		sb.WriteString(fmt.Sprintf("  Monthly: %d/month %s\n",
+		fmt.Fprintf(&sb, "  Monthly: %d/month %s\n",
 			details.GoalPerMonth,
-			formatProgress(details.MonthlyProgress)))
+			formatProgress(details.MonthlyProgress))
 	}
 	if details.GoalPerDay == 0 && details.GoalPerWeek == 0 && details.GoalPerMonth == 0 {
 		sb.WriteString(Dimmed("  No goals set\n"))
@@ -308,14 +308,14 @@ func RenderHabitInspect(details *service.HabitDetails) string {
 		sb.WriteString(Bold("Logs:\n"))
 		sb.WriteString(Dimmed("  ID      Date         Count\n"))
 		for _, log := range details.Logs {
-			sb.WriteString(fmt.Sprintf("  %-6d  %-11s  %d\n",
+			fmt.Fprintf(&sb, "  %-6d  %-11s  %d\n",
 				log.ID,
 				log.LoggedAt.Format("Jan 2, 2006"),
-				log.Count))
+				log.Count)
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("\n%s %d\n", Dimmed("Habit ID:"), details.ID))
+	fmt.Fprintf(&sb, "\n%s %d\n", Dimmed("Habit ID:"), details.ID)
 
 	return sb.String()
 }
@@ -338,7 +338,7 @@ func RenderGoalsSection(goals []domain.Goal, month time.Time) string {
 	var sb strings.Builder
 	monthName := month.Format("January")
 
-	sb.WriteString(fmt.Sprintf("🎯 %s\n", Cyan(Bold(monthName+" Goals"))))
+	fmt.Fprintf(&sb, "🎯 %s\n", Cyan(Bold(monthName+" Goals")))
 
 	doneCount := 0
 	for _, goal := range goals {
@@ -352,11 +352,11 @@ func RenderGoalsSection(goals []domain.Goal, month time.Time) string {
 			status = Dimmed("○")
 			content = goal.Content
 		}
-		sb.WriteString(fmt.Sprintf("  %s %s\n", status, content))
+		fmt.Fprintf(&sb, "  %s %s\n", status, content)
 	}
 
 	progress := float64(doneCount) / float64(len(goals)) * 100
-	sb.WriteString(fmt.Sprintf("  %s\n", Dimmed(fmt.Sprintf("Progress: %s", formatProgress(progress)))))
+	fmt.Fprintf(&sb, "  %s\n", Dimmed(fmt.Sprintf("Progress: %s", formatProgress(progress))))
 	sb.WriteString("\n")
 
 	return sb.String()

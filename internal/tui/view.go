@@ -244,7 +244,7 @@ func (m Model) renderJournalContent() string {
 		sb.WriteString("\n")
 		now := time.Now()
 		monthName := now.Format("January")
-		sb.WriteString(fmt.Sprintf("🎯 %s Goals\n", monthName))
+		fmt.Fprintf(&sb, "🎯 %s Goals\n", monthName)
 
 		doneCount := 0
 		for _, goal := range m.journalGoals {
@@ -258,7 +258,7 @@ func (m Model) renderJournalContent() string {
 				status = HelpStyle.Render("○")
 				content = goal.Content
 			}
-			sb.WriteString(fmt.Sprintf("  %s %s\n", status, content))
+			fmt.Fprintf(&sb, "  %s %s\n", status, content)
 		}
 
 		progress := float64(doneCount) / float64(len(m.journalGoals)) * 100
@@ -466,7 +466,7 @@ func (m Model) renderListItemsContent() string {
 			break
 		}
 	}
-	sb.WriteString(fmt.Sprintf("📋 %s\n", listName))
+	fmt.Fprintf(&sb, "📋 %s\n", listName)
 	sb.WriteString("────────────────────────────────────────\n")
 
 	if len(m.listState.items) == 0 {
@@ -631,7 +631,7 @@ func (m Model) renderPresetPicker() string {
 			if i == m.presetPicker.selectedIdx {
 				sb.WriteString(SelectedStyle.Render(fmt.Sprintf("  > %s", item)))
 			} else {
-				sb.WriteString(fmt.Sprintf("    %s", item))
+				fmt.Fprintf(&sb, "    %s", item)
 			}
 			sb.WriteString("\n")
 		}
@@ -648,7 +648,7 @@ func (m Model) renderSearchInput() string {
 		direction = "reverse"
 	}
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("Search (%s): %s█", direction, m.searchMode.query))
+	fmt.Fprintf(&sb, "Search (%s): %s█", direction, m.searchMode.query)
 	sb.WriteString("\n\nEnter to find, Ctrl+S/R to find next/prev, Esc to cancel")
 
 	if m.selectedIdx >= 0 && m.selectedIdx < len(m.entries) {
@@ -816,7 +816,7 @@ func (m Model) renderCommandPalette() string {
 
 	sb.WriteString("Command Palette\n")
 	sb.WriteString("────────────────────────────────────────\n")
-	sb.WriteString(fmt.Sprintf("> %s█\n\n", m.commandPalette.query))
+	fmt.Fprintf(&sb, "> %s█\n\n", m.commandPalette.query)
 
 	for i, cmd := range m.commandPalette.filtered {
 		prefix := "  "
@@ -853,9 +853,9 @@ func (m Model) renderSearchContent() string {
 		sb.WriteString(HelpStyle.Render("  Type to search entries"))
 		sb.WriteString("\n")
 	} else if len(m.searchView.results) == 0 {
-		sb.WriteString(fmt.Sprintf("  No results found for %q\n", m.searchView.query))
+		fmt.Fprintf(&sb, "  No results found for %q\n", m.searchView.query)
 	} else {
-		sb.WriteString(fmt.Sprintf("  Found %d result(s)\n\n", len(m.searchView.results)))
+		fmt.Fprintf(&sb, "  Found %d result(s)\n\n", len(m.searchView.results))
 		for i, entry := range m.searchView.results {
 			line := m.renderSearchResultLine(entry, i == m.searchView.selectedIdx)
 			sb.WriteString(line)
@@ -917,9 +917,9 @@ func (m Model) renderStatsContent() string {
 	var sb strings.Builder
 
 	if m.statsViewState.stats != nil {
-		sb.WriteString(fmt.Sprintf("📊 Statistics (%s to %s)\n",
+		fmt.Fprintf(&sb, "📊 Statistics (%s to %s)\n",
 			m.statsViewState.from.Format("Jan 2"),
-			m.statsViewState.to.Format("Jan 2, 2006")))
+			m.statsViewState.to.Format("Jan 2, 2006"))
 	} else {
 		sb.WriteString("📊 Statistics\n")
 	}
@@ -936,57 +936,57 @@ func (m Model) renderStatsContent() string {
 		sb.WriteString(HelpStyle.Render("No statistics available"))
 		sb.WriteString("\n\n")
 	} else {
-		sb.WriteString(fmt.Sprintf("Entries: %d total\n", stats.EntryCounts.Total))
+		fmt.Fprintf(&sb, "Entries: %d total\n", stats.EntryCounts.Total)
 		if stats.EntryCounts.Tasks > 0 {
 			pct := float64(stats.EntryCounts.Tasks) / float64(stats.EntryCounts.Total) * 100
-			sb.WriteString(fmt.Sprintf("  • Tasks:     %d (%.0f%%)\n", stats.EntryCounts.Tasks, pct))
+			fmt.Fprintf(&sb, "  • Tasks:     %d (%.0f%%)\n", stats.EntryCounts.Tasks, pct)
 		}
 		if stats.EntryCounts.Notes > 0 {
 			pct := float64(stats.EntryCounts.Notes) / float64(stats.EntryCounts.Total) * 100
-			sb.WriteString(fmt.Sprintf("  – Notes:     %d (%.0f%%)\n", stats.EntryCounts.Notes, pct))
+			fmt.Fprintf(&sb, "  – Notes:     %d (%.0f%%)\n", stats.EntryCounts.Notes, pct)
 		}
 		if stats.EntryCounts.Events > 0 {
 			pct := float64(stats.EntryCounts.Events) / float64(stats.EntryCounts.Total) * 100
-			sb.WriteString(fmt.Sprintf("  ○ Events:    %d (%.0f%%)\n", stats.EntryCounts.Events, pct))
+			fmt.Fprintf(&sb, "  ○ Events:    %d (%.0f%%)\n", stats.EntryCounts.Events, pct)
 		}
 		if stats.EntryCounts.Done > 0 {
 			pct := float64(stats.EntryCounts.Done) / float64(stats.EntryCounts.Total) * 100
-			sb.WriteString(fmt.Sprintf("  ✓ Completed: %d (%.0f%%)\n", stats.EntryCounts.Done, pct))
+			fmt.Fprintf(&sb, "  ✓ Completed: %d (%.0f%%)\n", stats.EntryCounts.Done, pct)
 		}
 		sb.WriteString("\n")
 
 		if stats.TaskCompletion.Total > 0 {
-			sb.WriteString(fmt.Sprintf("Task completion: %.0f%% (%d/%d)\n",
+			fmt.Fprintf(&sb, "Task completion: %.0f%% (%d/%d)\n",
 				stats.TaskCompletion.Rate,
 				stats.TaskCompletion.Completed,
-				stats.TaskCompletion.Total))
+				stats.TaskCompletion.Total)
 		}
 
 		if stats.Productivity.AveragePerDay > 0 {
-			sb.WriteString(fmt.Sprintf("Average entries/day: %.1f\n", stats.Productivity.AveragePerDay))
+			fmt.Fprintf(&sb, "Average entries/day: %.1f\n", stats.Productivity.AveragePerDay)
 		}
 		if stats.Productivity.MostProductive.Average > 0 {
-			sb.WriteString(fmt.Sprintf("\nMost productive: %ss (avg %.1f)\n",
+			fmt.Fprintf(&sb, "\nMost productive: %ss (avg %.1f)\n",
 				stats.Productivity.MostProductive.Day.String(),
-				stats.Productivity.MostProductive.Average))
+				stats.Productivity.MostProductive.Average)
 		}
 		if stats.Productivity.LeastProductive.Average > 0 {
-			sb.WriteString(fmt.Sprintf("Least productive: %ss (avg %.1f)\n",
+			fmt.Fprintf(&sb, "Least productive: %ss (avg %.1f)\n",
 				stats.Productivity.LeastProductive.Day.String(),
-				stats.Productivity.LeastProductive.Average))
+				stats.Productivity.LeastProductive.Average)
 		}
 
 		if stats.HabitStats.Active > 0 {
-			sb.WriteString(fmt.Sprintf("\nHabits: %d active\n", stats.HabitStats.Active))
+			fmt.Fprintf(&sb, "\nHabits: %d active\n", stats.HabitStats.Active)
 			if stats.HabitStats.BestStreak.Days > 0 {
-				sb.WriteString(fmt.Sprintf("  Best streak: %s (%d days)\n",
+				fmt.Fprintf(&sb, "  Best streak: %s (%d days)\n",
 					stats.HabitStats.BestStreak.HabitName,
-					stats.HabitStats.BestStreak.Days))
+					stats.HabitStats.BestStreak.Days)
 			}
 			if stats.HabitStats.MostLogged.Count > 0 {
-				sb.WriteString(fmt.Sprintf("  Most logged: %s (%d logs)\n",
+				fmt.Fprintf(&sb, "  Most logged: %s (%d logs)\n",
 					stats.HabitStats.MostLogged.HabitName,
-					stats.HabitStats.MostLogged.Count))
+					stats.HabitStats.MostLogged.Count)
 			}
 		}
 		sb.WriteString("\n")
@@ -999,7 +999,7 @@ func (m Model) renderGoalsContent() string {
 	var sb strings.Builder
 
 	monthName := m.goalState.viewMonth.Format("January 2006")
-	sb.WriteString(fmt.Sprintf("🎯 Monthly Goals - %s\n\n", monthName))
+	fmt.Fprintf(&sb, "🎯 Monthly Goals - %s\n\n", monthName)
 
 	if len(m.goalState.goals) == 0 {
 		sb.WriteString(HelpStyle.Render("No goals for this month. Press 'a' to add one."))
@@ -1053,10 +1053,10 @@ func (m Model) renderSettingsContent() string {
 	}
 
 	sb.WriteString("Application\n")
-	sb.WriteString(fmt.Sprintf("  Version:       %s\n", version))
-	sb.WriteString(fmt.Sprintf("  Commit:        %s\n", commit))
-	sb.WriteString(fmt.Sprintf("  Built:         %s\n", buildDate))
-	sb.WriteString(fmt.Sprintf("  Database:      %s\n", dbPath))
+	fmt.Fprintf(&sb, "  Version:       %s\n", version)
+	fmt.Fprintf(&sb, "  Commit:        %s\n", commit)
+	fmt.Fprintf(&sb, "  Built:         %s\n", buildDate)
+	fmt.Fprintf(&sb, "  Database:      %s\n", dbPath)
 	sb.WriteString("\n")
 
 	sb.WriteString("Keyboard Shortcuts\n")
@@ -1132,7 +1132,7 @@ func (m Model) renderInsightsDashboard() string {
 	d := m.insightsState.dashboard
 
 	if d.LatestSummary != nil {
-		sb.WriteString(fmt.Sprintf("Latest Summary (%s to %s)\n", d.LatestSummary.WeekStart, d.LatestSummary.WeekEnd))
+		fmt.Fprintf(&sb, "Latest Summary (%s to %s)\n", d.LatestSummary.WeekStart, d.LatestSummary.WeekEnd)
 		sb.WriteString(strings.Repeat("─", 40))
 		sb.WriteString("\n")
 		sb.WriteString(d.LatestSummary.SummaryText)
@@ -1143,13 +1143,13 @@ func (m Model) renderInsightsDashboard() string {
 	}
 
 	if d.DaysSinceLastSummary > 0 {
-		sb.WriteString(fmt.Sprintf("Days since last summary: %d\n\n", d.DaysSinceLastSummary))
+		fmt.Fprintf(&sb, "Days since last summary: %d\n\n", d.DaysSinceLastSummary)
 	}
 
 	if len(d.ActiveInitiatives) > 0 {
 		sb.WriteString("Active Initiatives\n")
 		for _, init := range d.ActiveInitiatives {
-			sb.WriteString(fmt.Sprintf("  • %s (%s)\n", init.Name, init.Status))
+			fmt.Fprintf(&sb, "  • %s (%s)\n", init.Name, init.Status)
 		}
 		sb.WriteString("\n")
 	}
@@ -1157,7 +1157,7 @@ func (m Model) renderInsightsDashboard() string {
 	if len(d.HighPriorityActions) > 0 {
 		sb.WriteString("High Priority Actions\n")
 		for _, action := range d.HighPriorityActions {
-			sb.WriteString(fmt.Sprintf("  ‼ %s\n", action.ActionText))
+			fmt.Fprintf(&sb, "  ‼ %s\n", action.ActionText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1165,7 +1165,7 @@ func (m Model) renderInsightsDashboard() string {
 	if len(d.RecentDecisions) > 0 {
 		sb.WriteString("Recent Decisions\n")
 		for _, dec := range d.RecentDecisions {
-			sb.WriteString(fmt.Sprintf("  → %s\n", dec.DecisionText))
+			fmt.Fprintf(&sb, "  → %s\n", dec.DecisionText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1178,7 +1178,7 @@ func (m Model) renderInsightsSummaries() string {
 
 	weekStart := m.insightsState.weekAnchor.Format("Jan 2")
 	weekEnd := m.insightsState.weekAnchor.AddDate(0, 0, 6).Format("Jan 2, 2006")
-	sb.WriteString(fmt.Sprintf("Week: %s - %s\n\n", weekStart, weekEnd))
+	fmt.Fprintf(&sb, "Week: %s - %s\n\n", weekStart, weekEnd)
 
 	if m.insightsState.weekSummary == nil {
 		sb.WriteString(HelpStyle.Render("No summary for this week."))
@@ -1198,8 +1198,8 @@ func (m Model) renderInsightsSummaries() string {
 			if topic.Importance == "high" {
 				importance = " ‼"
 			}
-			sb.WriteString(fmt.Sprintf("  %s%s\n", topic.Topic, importance))
-			sb.WriteString(fmt.Sprintf("    %s\n", topic.Content))
+			fmt.Fprintf(&sb, "  %s%s\n", topic.Topic, importance)
+			fmt.Fprintf(&sb, "    %s\n", topic.Content)
 		}
 		sb.WriteString("\n")
 	}
@@ -1216,7 +1216,7 @@ func (m Model) renderInsightsWeeklyReport() string {
 	sb.WriteString("\n\n")
 
 	if report.Summary != nil {
-		sb.WriteString(fmt.Sprintf("%s to %s\n", report.Summary.WeekStart, report.Summary.WeekEnd))
+		fmt.Fprintf(&sb, "%s to %s\n", report.Summary.WeekStart, report.Summary.WeekEnd)
 		sb.WriteString(strings.Repeat("─", 30))
 		sb.WriteString("\n")
 		sb.WriteString(report.Summary.SummaryText)
@@ -1232,8 +1232,8 @@ func (m Model) renderInsightsWeeklyReport() string {
 			if topic.Importance == "high" {
 				importance = " ‼"
 			}
-			sb.WriteString(fmt.Sprintf("  %s%s\n", topic.Topic, importance))
-			sb.WriteString(fmt.Sprintf("    %s\n", topic.Content))
+			fmt.Fprintf(&sb, "  %s%s\n", topic.Topic, importance)
+			fmt.Fprintf(&sb, "    %s\n", topic.Content)
 		}
 		sb.WriteString("\n")
 	}
@@ -1243,8 +1243,8 @@ func (m Model) renderInsightsWeeklyReport() string {
 		sb.WriteString(strings.Repeat("─", 30))
 		sb.WriteString("\n")
 		for _, update := range report.InitiativeUpdates {
-			sb.WriteString(fmt.Sprintf("  %s\n", update.InitiativeName))
-			sb.WriteString(fmt.Sprintf("    %s\n", update.UpdateText))
+			fmt.Fprintf(&sb, "  %s\n", update.InitiativeName)
+			fmt.Fprintf(&sb, "    %s\n", update.UpdateText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1258,7 +1258,7 @@ func (m Model) renderInsightsWeeklyReport() string {
 			if action.Priority == "high" {
 				priority = " ‼"
 			}
-			sb.WriteString(fmt.Sprintf("  [%s] %s%s\n", action.Status, action.ActionText, priority))
+			fmt.Fprintf(&sb, "  [%s] %s%s\n", action.Status, action.ActionText, priority)
 		}
 		sb.WriteString("\n")
 	}
@@ -1271,7 +1271,7 @@ func (m Model) renderInsightsActions() string {
 
 	weekStart := m.insightsState.weekAnchor.Format("Jan 2")
 	weekEnd := m.insightsState.weekAnchor.AddDate(0, 0, 6).Format("Jan 2, 2006")
-	sb.WriteString(fmt.Sprintf("Week: %s - %s\n\n", weekStart, weekEnd))
+	fmt.Fprintf(&sb, "Week: %s - %s\n\n", weekStart, weekEnd)
 
 	if len(m.insightsState.weekActions) == 0 {
 		sb.WriteString(HelpStyle.Render("No actions for this week."))
@@ -1288,7 +1288,7 @@ func (m Model) renderInsightsActions() string {
 		if action.Status == "done" {
 			status = "✓"
 		}
-		sb.WriteString(fmt.Sprintf("  %s %s %s\n", status, priority, action.ActionText))
+		fmt.Fprintf(&sb, "  %s %s %s\n", status, priority, action.ActionText)
 	}
 	sb.WriteString("\n")
 
@@ -1308,19 +1308,19 @@ func (m Model) renderInsightsInitiatives() string {
 	for i, init := range m.insightsState.initiatives {
 		if init.Status != currentStatus {
 			currentStatus = init.Status
-			sb.WriteString(fmt.Sprintf("\n%s\n", currentStatus))
+			fmt.Fprintf(&sb, "\n%s\n", currentStatus)
 		}
 		prefix := "  "
 		if i == m.insightsState.initiativeSelectedIdx {
 			prefix = "> "
 		}
 		mentions := fmt.Sprintf("(%d mentions)", init.MentionCount)
-		sb.WriteString(fmt.Sprintf("%s%s  %s\n", prefix, init.Name, HelpStyle.Render(mentions)))
+		fmt.Fprintf(&sb, "%s%s  %s\n", prefix, init.Name, HelpStyle.Render(mentions))
 		if init.Description != "" {
-			sb.WriteString(fmt.Sprintf("    %s\n", init.Description))
+			fmt.Fprintf(&sb, "    %s\n", init.Description)
 		}
 		if init.LastMentionWeek != "" {
-			sb.WriteString(fmt.Sprintf("    Last: %s\n", init.LastMentionWeek))
+			fmt.Fprintf(&sb, "    Last: %s\n", init.LastMentionWeek)
 		}
 	}
 	sb.WriteString("\n")
@@ -1332,16 +1332,16 @@ func (m Model) renderInsightsInitiativeDetail() string {
 	var sb strings.Builder
 	d := m.insightsState.initiativeDetail
 
-	sb.WriteString(fmt.Sprintf("%s  [%s]\n", d.Initiative.Name, d.Initiative.Status))
+	fmt.Fprintf(&sb, "%s  [%s]\n", d.Initiative.Name, d.Initiative.Status)
 	if d.Initiative.Description != "" {
-		sb.WriteString(fmt.Sprintf("%s\n", d.Initiative.Description))
+		fmt.Fprintf(&sb, "%s\n", d.Initiative.Description)
 	}
 	sb.WriteString("\n")
 
 	if len(d.Updates) > 0 {
 		sb.WriteString("Timeline\n")
 		for _, u := range d.Updates {
-			sb.WriteString(fmt.Sprintf("  %s - %s\n", u.WeekStart, u.UpdateText))
+			fmt.Fprintf(&sb, "  %s - %s\n", u.WeekStart, u.UpdateText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1349,7 +1349,7 @@ func (m Model) renderInsightsInitiativeDetail() string {
 	if len(d.PendingActions) > 0 {
 		sb.WriteString("Pending Actions\n")
 		for _, a := range d.PendingActions {
-			sb.WriteString(fmt.Sprintf("  [%s] %s\n", a.Priority, a.ActionText))
+			fmt.Fprintf(&sb, "  [%s] %s\n", a.Priority, a.ActionText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1357,7 +1357,7 @@ func (m Model) renderInsightsInitiativeDetail() string {
 	if len(d.Decisions) > 0 {
 		sb.WriteString("Decisions\n")
 		for _, dec := range d.Decisions {
-			sb.WriteString(fmt.Sprintf("  %s\n", dec.DecisionText))
+			fmt.Fprintf(&sb, "  %s\n", dec.DecisionText)
 		}
 		sb.WriteString("\n")
 	}
@@ -1385,7 +1385,7 @@ func (m Model) renderInsightsTopicsList() string {
 		if i == m.insightsState.topicSelectedIdx {
 			prefix = "> "
 		}
-		sb.WriteString(fmt.Sprintf("%s%s\n", prefix, topic))
+		fmt.Fprintf(&sb, "%s%s\n", prefix, topic)
 	}
 	sb.WriteString("\n")
 	sb.WriteString(HelpStyle.Render("Enter: view timeline  j/k: navigate"))
@@ -1397,7 +1397,7 @@ func (m Model) renderInsightsTopicsList() string {
 func (m Model) renderInsightsTopicTimeline() string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Topic: %s\n", m.insightsState.selectedTopic))
+	fmt.Fprintf(&sb, "Topic: %s\n", m.insightsState.selectedTopic)
 	sb.WriteString(strings.Repeat("─", 30))
 	sb.WriteString("\n\n")
 
@@ -1412,9 +1412,9 @@ func (m Model) renderInsightsTopicTimeline() string {
 		if entry.Importance == "high" {
 			importance = " ‼"
 		}
-		sb.WriteString(fmt.Sprintf("  %s - %s%s\n", entry.WeekStart, entry.WeekEnd, importance))
+		fmt.Fprintf(&sb, "  %s - %s%s\n", entry.WeekStart, entry.WeekEnd, importance)
 		if entry.Content != "" {
-			sb.WriteString(fmt.Sprintf("    %s\n", entry.Content))
+			fmt.Fprintf(&sb, "    %s\n", entry.Content)
 		}
 		sb.WriteString("\n")
 	}
@@ -1434,20 +1434,20 @@ func (m Model) renderInsightsDecisions() string {
 		return sb.String()
 	}
 
-	sb.WriteString(fmt.Sprintf("Decision Log (%d)\n", len(m.insightsState.decisions)))
+	fmt.Fprintf(&sb, "Decision Log (%d)\n", len(m.insightsState.decisions))
 	sb.WriteString(strings.Repeat("─", 30))
 	sb.WriteString("\n\n")
 
 	for _, d := range m.insightsState.decisions {
-		sb.WriteString(fmt.Sprintf("  %s  %s\n", d.DecisionDate, d.DecisionText))
+		fmt.Fprintf(&sb, "  %s  %s\n", d.DecisionDate, d.DecisionText)
 		if d.Rationale != "" {
-			sb.WriteString(fmt.Sprintf("    Rationale: %s\n", d.Rationale))
+			fmt.Fprintf(&sb, "    Rationale: %s\n", d.Rationale)
 		}
 		if d.Participants != "" {
-			sb.WriteString(fmt.Sprintf("    Participants: %s\n", d.Participants))
+			fmt.Fprintf(&sb, "    Participants: %s\n", d.Participants)
 		}
 		if d.Initiatives != "" {
-			sb.WriteString(fmt.Sprintf("    Initiatives: %s\n", d.Initiatives))
+			fmt.Fprintf(&sb, "    Initiatives: %s\n", d.Initiatives)
 		}
 		sb.WriteString("\n")
 	}
@@ -1471,7 +1471,7 @@ func (m Model) renderPendingTasksContent() string {
 		return sb.String()
 	}
 
-	sb.WriteString(fmt.Sprintf("Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries)))
+	fmt.Fprintf(&sb, "Found %d outstanding task(s)\n\n", len(m.pendingTasksState.entries))
 
 	parentChains := m.pendingTasksState.parentChains
 	if parentChains == nil {
@@ -1607,7 +1607,7 @@ func (m Model) renderParentChain(chain []domain.Entry) string {
 	for i := len(chain) - 1; i >= 0; i-- {
 		ancestor := chain[i]
 		indent := strings.Repeat("  ", len(chain)-1-i)
-		sb.WriteString(fmt.Sprintf("  %s> %s %s\n", indent, ancestor.Type.Symbol(), HelpStyle.Render(ancestor.Content)))
+		fmt.Fprintf(&sb, "  %s> %s %s\n", indent, ancestor.Type.Symbol(), HelpStyle.Render(ancestor.Content))
 	}
 
 	return sb.String()
@@ -1629,7 +1629,7 @@ func (m Model) renderQuestionsContent() string {
 		return sb.String()
 	}
 
-	sb.WriteString(fmt.Sprintf("Found %d open question(s)\n\n", len(m.questionsState.entries)))
+	fmt.Fprintf(&sb, "Found %d open question(s)\n\n", len(m.questionsState.entries))
 
 	for i, entry := range m.questionsState.entries {
 		line := m.renderEntryLine(entry, i == m.questionsState.selectedIdx)
@@ -1677,7 +1677,7 @@ func (m Model) renderMoveGoalInput() string {
 func (m Model) renderMigrateToGoalInput() string {
 	var sb strings.Builder
 	sb.WriteString("Convert task to goal:\n")
-	sb.WriteString(fmt.Sprintf("Task: %s\n\n", m.migrateToGoalMode.content))
+	fmt.Fprintf(&sb, "Task: %s\n\n", m.migrateToGoalMode.content)
 	sb.WriteString("Target month (YYYY-MM):\n")
 	sb.WriteString(m.migrateToGoalMode.input.View())
 	sb.WriteString("\n\nEnter to convert, Esc to cancel")
@@ -1695,9 +1695,9 @@ func (m Model) renderMoveListItemModal() string {
 		}
 		num := i + 1
 		if num <= 9 {
-			sb.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, num, list.Name))
+			fmt.Fprintf(&sb, "%s%d. %s\n", prefix, num, list.Name)
 		} else {
-			sb.WriteString(fmt.Sprintf("%s   %s\n", prefix, list.Name))
+			fmt.Fprintf(&sb, "%s   %s\n", prefix, list.Name)
 		}
 	}
 
@@ -1724,9 +1724,9 @@ func (m Model) renderMoveToListModal() string {
 		}
 		num := i + 1
 		if num <= 9 {
-			sb.WriteString(fmt.Sprintf("%s%d. %s\n", prefix, num, list.Name))
+			fmt.Fprintf(&sb, "%s%d. %s\n", prefix, num, list.Name)
 		} else {
-			sb.WriteString(fmt.Sprintf("%s   %s\n", prefix, list.Name))
+			fmt.Fprintf(&sb, "%s   %s\n", prefix, list.Name)
 		}
 	}
 
