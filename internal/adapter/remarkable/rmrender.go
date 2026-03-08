@@ -18,13 +18,15 @@ func RenderStrokes(strokes []rmStroke) ([]byte, error) {
 	dc.SetRGB(0, 0, 0)
 	dc.SetLineWidth(1)
 
+	xOffset := float64(remarkableScreenWidth) / 2
+
 	for _, stroke := range strokes {
 		if len(stroke.Points) < 2 {
 			continue
 		}
-		dc.MoveTo(float64(stroke.Points[0].X), float64(stroke.Points[0].Y))
+		dc.MoveTo(float64(stroke.Points[0].X)+xOffset, float64(stroke.Points[0].Y))
 		for _, p := range stroke.Points[1:] {
-			dc.LineTo(float64(p.X), float64(p.Y))
+			dc.LineTo(float64(p.X)+xOffset, float64(p.Y))
 		}
 		dc.Stroke()
 	}

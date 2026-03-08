@@ -144,8 +144,8 @@ func (r *rmReader) readBlock() (blockType uint8, version uint8, content []byte, 
 		return 0, 0, nil, err
 	}
 
-	contentLen := int(length) - 4
-	if contentLen < 0 || r.remaining() < contentLen {
+	contentLen := int(length)
+	if r.remaining() < contentLen {
 		return 0, 0, nil, fmt.Errorf("invalid block length %d at offset %d", length, r.pos)
 	}
 

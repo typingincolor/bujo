@@ -51,3 +51,30 @@ func TestRenderStrokes_WhiteBackground(t *testing.T) {
 	assert.Equal(t, uint32(0xFFFF), b)
 	assert.Equal(t, uint32(0xFFFF), a)
 }
+
+func TestRenderStrokes_CenteredCoordinates(t *testing.T) {
+	// reMarkable coordinates have X centered at 0 (range ~ -702 to +702)
+	// A horizontal stroke at X=-100 to X=100, Y=100 should render
+	// at screen pixels X=602 to X=802, Y=100
+	strokes := []rmStroke{
+		{Points: []rmPoint{{X: -100, Y: 100}, {X: 100, Y: 100}}},
+	}
+
+	data, err := RenderStrokes(strokes)
+	require.NoError(t, err)
+
+	img, err := png.Decode(bytes.NewReader(data))
+	require.NoError(t, err)
+
+	// Center of stroke should have dark pixels (screen X=702, Y=100)
+	r, g, b, _ := img.At(remarkableScreenWidth/2, 100).RGBA()
+	assert.Less(t, r, uint32(0x8000), "center pixel should be dark")
+	assert.Less(t, g, uint32(0x8000))
+	assert.Less(t, b, uint32(0x8000))
+
+	// Far left (X=0) should be white — the stroke doesn't reach there
+	r2, g2, b2, _ := img.At(0, 100).RGBA()
+	assert.Equal(t, uint32(0xFFFF), r2)
+	assert.Equal(t, uint32(0xFFFF), g2)
+	assert.Equal(t, uint32(0xFFFF), b2)
+}

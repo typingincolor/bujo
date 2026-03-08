@@ -72,9 +72,9 @@ func TestReadBlock_TruncatedData(t *testing.T) {
 	assert.ErrorContains(t, err, "reading block length")
 }
 
-func TestReadBlock_LengthLessThanFour(t *testing.T) {
+func TestReadBlock_ContentExceedsFile(t *testing.T) {
 	block := make([]byte, 0, 8)
-	block = binary.LittleEndian.AppendUint32(block, 3)
+	block = binary.LittleEndian.AppendUint32(block, 100)
 	block = append(block, 0x00, 0x01, 0x01, 0x05)
 	r := newRMReader(block)
 	_, _, _, err := r.readBlock()
@@ -84,7 +84,7 @@ func TestReadBlock_LengthLessThanFour(t *testing.T) {
 func TestReadBlock(t *testing.T) {
 	content := []byte{0xAA, 0xBB}
 	block := make([]byte, 0, 8+len(content))
-	block = binary.LittleEndian.AppendUint32(block, uint32(len(content)+4))
+	block = binary.LittleEndian.AppendUint32(block, uint32(len(content)))
 	block = append(block, 0x00)       // unknown
 	block = append(block, 0x01)       // min_version
 	block = append(block, 0x01)       // current_version
@@ -114,8 +114,12 @@ func TestReadTag(t *testing.T) {
 
 func buildTestRM(t *testing.T, points []rmPoint) []byte {
 	t.Helper()
+	return buildTestRMMultiStroke(t, [][]rmPoint{points})
+}
 
-	// Build point data: v1 format, 24 bytes per point (6 x float32)
+func buildSceneLineItemBlock(t *testing.T, points []rmPoint) []byte {
+	t.Helper()
+
 	pointData := make([]byte, 0, len(points)*24)
 	for _, p := range points {
 		pointData = binary.LittleEndian.AppendUint32(pointData, math.Float32bits(p.X))
@@ -126,68 +130,48 @@ func buildTestRM(t *testing.T, points []rmPoint) []byte {
 		pointData = binary.LittleEndian.AppendUint32(pointData, 0) // pressure
 	}
 
-	// Build value subblock content (inside field 6)
 	var valueSub []byte
 	valueSub = append(valueSub, 0x03) // item_type = line
-
-	// Field 1 (tool): tag = (1 << 4) | 0x4 = 0x14, value = uint32(0)
 	valueSub = append(valueSub, 0x14)
 	valueSub = binary.LittleEndian.AppendUint32(valueSub, 0)
-
-	// Field 2 (color): tag = (2 << 4) | 0x4 = 0x24, value = uint32(0)
 	valueSub = append(valueSub, 0x24)
 	valueSub = binary.LittleEndian.AppendUint32(valueSub, 0)
-
-	// Field 3 (thickness): tag = (3 << 4) | 0x8 = 0x38, value = float64(1.0)
 	valueSub = append(valueSub, 0x38)
 	valueSub = binary.LittleEndian.AppendUint64(valueSub, math.Float64bits(1.0))
-
-	// Field 4 (starting_length): tag = (4 << 4) | 0x4 = 0x44, value = uint32(0)
 	valueSub = append(valueSub, 0x44)
 	valueSub = binary.LittleEndian.AppendUint32(valueSub, 0)
-
-	// Field 5 (points): tag = (5 << 4) | 0xC = 0x5C, length = uint32, then point data
 	valueSub = append(valueSub, 0x5C)
 	valueSub = binary.LittleEndian.AppendUint32(valueSub, uint32(len(pointData)))
 	valueSub = append(valueSub, pointData...)
 
-	// Build block content (SceneLineItem fields)
 	var blockContent []byte
-
-	// Field 1 (parent_id): tag = (1 << 4) | 0xF = 0x1F, CrdtID = part(1) + varuint(1)
 	blockContent = append(blockContent, 0x1F, 0x01, 0x01)
-
-	// Field 2 (item_id): tag = (2 << 4) | 0xF = 0x2F
 	blockContent = append(blockContent, 0x2F, 0x01, 0x01)
-
-	// Field 3 (left_id): tag = (3 << 4) | 0xF = 0x3F
 	blockContent = append(blockContent, 0x3F, 0x01, 0x01)
-
-	// Field 4 (right_id): tag = (4 << 4) | 0xF = 0x4F
 	blockContent = append(blockContent, 0x4F, 0x01, 0x01)
-
-	// Field 5 (deleted_length): tag = (5 << 4) | 0x4 = 0x54, value = uint32(0)
 	blockContent = append(blockContent, 0x54)
 	blockContent = binary.LittleEndian.AppendUint32(blockContent, 0)
-
-	// Field 6 (value): tag = (6 << 4) | 0xC = 0x6C, length = uint32, then valueSub
 	blockContent = append(blockContent, 0x6C)
 	blockContent = binary.LittleEndian.AppendUint32(blockContent, uint32(len(valueSub)))
 	blockContent = append(blockContent, valueSub...)
 
-	// Build full block: 4 bytes length + 1 unknown + 1 min_ver + 1 cur_ver + 1 block_type + content
 	var block []byte
-	block = binary.LittleEndian.AppendUint32(block, uint32(len(blockContent)+4))
-	block = append(block, 0x00) // unknown
-	block = append(block, 0x01) // min_version
-	block = append(block, 0x01) // current_version = 1 (v1 point format)
+	block = binary.LittleEndian.AppendUint32(block, uint32(len(blockContent)))
+	block = append(block, 0x00)
+	block = append(block, 0x01)
+	block = append(block, 0x01)
 	block = append(block, blockTypeSceneLineItem)
 	block = append(block, blockContent...)
+	return block
+}
 
-	// Build full .rm file: header + block
+func buildTestRMMultiStroke(t *testing.T, strokePoints [][]rmPoint) []byte {
+	t.Helper()
 	var rm []byte
 	rm = append(rm, []byte(rmHeaderV6)...)
-	rm = append(rm, block...)
+	for _, points := range strokePoints {
+		rm = append(rm, buildSceneLineItemBlock(t, points)...)
+	}
 	return rm
 }
 
