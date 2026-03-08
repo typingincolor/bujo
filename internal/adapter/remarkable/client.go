@@ -19,9 +19,9 @@ const (
 )
 
 const (
-	maxTokenSize   = 10 * 1024        // 10KB for JWT tokens
-	maxMetaSize    = 1024 * 1024       // 1MB for metadata/entries
-	maxFileSize    = 50 * 1024 * 1024  // 50MB for file content (.rm, pdf)
+	maxTokenSize = 10 * 1024        // 10KB for JWT tokens
+	maxMetaSize  = 1024 * 1024      // 1MB for metadata/entries
+	maxFileSize  = 50 * 1024 * 1024 // 50MB for file content (.rm, pdf)
 )
 
 type Client struct {

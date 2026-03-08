@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultIndentWidth      = 50.0
+	defaultIndentWidth         = 50.0
 	defaultConfidenceThreshold = 0.8
 )
 
