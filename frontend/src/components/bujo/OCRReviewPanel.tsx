@@ -17,8 +17,15 @@ function reconstructTextWithConfidence(results: remarkable.OCRResult[], threshol
   const indentWidth = 50
 
   let lowConfidenceCount = 0
+  let maxDepth = 0
   const text = sorted.map((r) => {
-    const depth = Math.round((r.x - minX) / indentWidth)
+    let depth = Math.round((r.x - minX) / indentWidth)
+    if (depth > maxDepth + 1) depth = maxDepth + 1
+    if (depth === 0) {
+      maxDepth = 0
+    } else {
+      maxDepth = depth
+    }
     const indent = '  '.repeat(depth)
     if (r.confidence < threshold) lowConfidenceCount++
     return indent + r.text

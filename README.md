@@ -34,6 +34,7 @@ bujo provides three ways to interact with your journal:
 - **Monthly Goals** - Set and track goals by month
 - **Day Context** - Record location, mood, and weather
 - **Local AI Summaries** - Generate journal reflections with complete privacy (runs offline)
+- **reMarkable Import** - Import handwritten notes from reMarkable tablets with OCR (macOS)
 - **Backup & Restore** - Built-in database backups with version history
 
 ## Installation

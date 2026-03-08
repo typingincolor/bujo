@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ListRemarkableDocuments, IsRemarkableRegistered, ImportRemarkablePages } from '../../wailsjs/go/wails/App'
 import { remarkable, wails } from '../../wailsjs/go/models'
 import { OCRReviewPanel } from './OCRReviewPanel'
@@ -16,17 +16,7 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
   const [importResult, setImportResult] = useState<wails.ImportRemarkableResult | null>(null)
   const [selectedDocName, setSelectedDocName] = useState('')
 
-  useEffect(() => {
-    IsRemarkableRegistered().then(registered => {
-      if (!registered) {
-        setStep('not-registered')
-        return
-      }
-      loadDocuments()
-    })
-  }, [])
-
-  async function loadDocuments() {
+  const loadDocuments = useCallback(async function() {
     try {
       setError(null)
       const docs = await ListRemarkableDocuments()
@@ -36,7 +26,17 @@ export function RemarkableView({ onNavigateToSettings }: RemarkableViewProps) {
       setError(String(err))
       setStep('document-list')
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    IsRemarkableRegistered().then(registered => {
+      if (!registered) {
+        setStep('not-registered')
+      } else {
+        loadDocuments()
+      }
+    })
+  }, [loadDocuments])
 
   async function handleSelectDocument(docID: string) {
     const doc = documents.find(d => d.ID === docID)

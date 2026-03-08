@@ -728,27 +728,30 @@ func encodeBase64(data []byte) string {
 }
 
 func findOCRBinary(execDir string) string {
+	// Check next to executable (production bundle)
 	ocrPath := filepath.Join(execDir, "remarkable-ocr")
 	if _, err := os.Stat(ocrPath); err == nil {
 		return ocrPath
 	}
+	// Check tools directory relative to working directory (dev mode)
+	if cwd, err := os.Getwd(); err == nil {
+		devPath := filepath.Join(cwd, "tools", "remarkable-ocr", "remarkable-ocr")
+		if _, err := os.Stat(devPath); err == nil {
+			return devPath
+		}
+	}
 	return ""
 }
 
-func buildPlatformCapabilities(ocrPath string) PlatformCapabilities {
+func buildPlatformCapabilities() PlatformCapabilities {
 	return PlatformCapabilities{
-		HasOCR:   goruntime.GOOS == "darwin" && ocrPath != "",
+		HasOCR:   goruntime.GOOS == "darwin",
 		Platform: goruntime.GOOS,
 	}
 }
 
 func (a *App) GetPlatformCapabilities() PlatformCapabilities {
-	execPath, err := os.Executable()
-	if err != nil {
-		return buildPlatformCapabilities("")
-	}
-	ocrPath := findOCRBinary(filepath.Dir(execPath))
-	return buildPlatformCapabilities(ocrPath)
+	return buildPlatformCapabilities()
 }
 
 func (a *App) ListRemarkableDocuments() ([]remarkable.Document, error) {
@@ -847,6 +850,47 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 	return &result, nil
 }
 
+func normalizeOCRIndentation(text string) string {
+	lines := strings.Split(text, "\n")
+	result := make([]string, 0, len(lines))
+	maxDepth := 0
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+
+		spaces := 0
+		for _, ch := range line {
+			if ch == ' ' {
+				spaces++
+			} else if ch == '\t' {
+				spaces += 2
+			} else {
+				break
+			}
+		}
+		depth := spaces / 2
+
+		if depth > maxDepth+1 {
+			depth = maxDepth + 1
+		}
+		if depth > 0 {
+			maxDepth = depth
+		} else {
+			maxDepth = 0
+		}
+
+		prefix := strings.Repeat("  ", depth)
+		if !domain.ParseEntryType(trimmed).IsValid() {
+			trimmed = "- " + trimmed
+		}
+		result = append(result, prefix+trimmed)
+	}
+	return strings.Join(result, "\n")
+}
+
 func (a *App) ImportEntries(text string, date string) error {
 	if strings.TrimSpace(text) == "" {
 		return fmt.Errorf("empty text — nothing to import")
@@ -857,7 +901,8 @@ func (a *App) ImportEntries(text string, date string) error {
 		return fmt.Errorf("invalid date format (expected YYYY-MM-DD): %w", err)
 	}
 
-	_, err = a.services.Bujo.LogEntries(a.ctx, text, service.LogEntriesOptions{Date: parsedDate})
+	normalized := normalizeOCRIndentation(text)
+	_, err = a.services.Bujo.LogEntries(a.ctx, normalized, service.LogEntriesOptions{Date: parsedDate})
 	if err != nil {
 		return fmt.Errorf("failed to import entries: %w", err)
 	}

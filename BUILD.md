@@ -13,6 +13,7 @@ This guide covers building the CLI, TUI, and desktop application.
 
 - Node.js 18+ and npm
 - [Wails CLI](https://wails.io/docs/gettingstarted/installation)
+- macOS (required for reMarkable OCR via Apple Vision framework)
 
 ```bash
 # Install Wails CLI

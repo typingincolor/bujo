@@ -27,22 +27,17 @@ func TestFindOCRBinary_NotFound(t *testing.T) {
 }
 
 func TestPlatformCapabilities_Platform(t *testing.T) {
-	caps := buildPlatformCapabilities("")
+	caps := buildPlatformCapabilities()
 	assert.Equal(t, runtime.GOOS, caps.Platform)
 }
 
-func TestPlatformCapabilities_HasOCR_WhenBinaryExists(t *testing.T) {
-	caps := buildPlatformCapabilities("/some/path/remarkable-ocr")
+func TestPlatformCapabilities_HasOCR_OnDarwin(t *testing.T) {
+	caps := buildPlatformCapabilities()
 	if runtime.GOOS == "darwin" {
 		assert.True(t, caps.HasOCR)
 	} else {
 		assert.False(t, caps.HasOCR)
 	}
-}
-
-func TestPlatformCapabilities_HasOCR_WhenBinaryMissing(t *testing.T) {
-	caps := buildPlatformCapabilities("")
-	assert.False(t, caps.HasOCR)
 }
 
 func TestListRemarkableDocuments_NoConfig(t *testing.T) {
@@ -82,6 +77,24 @@ func TestImportEntries_InvalidDate(t *testing.T) {
 	err := app.ImportEntries(". buy milk", "not-a-date")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "date")
+}
+
+func TestNormalizeOCRIndentation_FlattensSkippedDepths(t *testing.T) {
+	input := "heading\n    deeply indented"
+	result := normalizeOCRIndentation(input)
+	assert.Equal(t, "- heading\n  - deeply indented", result)
+}
+
+func TestNormalizeOCRIndentation_PreservesBujoMarkers(t *testing.T) {
+	input := ". buy milk\n  - organic"
+	result := normalizeOCRIndentation(input)
+	assert.Equal(t, ". buy milk\n  - organic", result)
+}
+
+func TestNormalizeOCRIndentation_AddsNotePrefix(t *testing.T) {
+	input := "plain text"
+	result := normalizeOCRIndentation(input)
+	assert.Equal(t, "- plain text", result)
 }
 
 func TestRegisterRemarkableDevice_EmptyCode(t *testing.T) {

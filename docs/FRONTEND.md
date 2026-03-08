@@ -27,6 +27,7 @@ Navigate between views using the sidebar:
 | Search | Search through all entries |
 | Stats | Usage statistics and insights |
 | Insights | AI-powered journal analysis |
+| reMarkable | Import handwritten notes from reMarkable tablets (macOS) |
 | Settings | App configuration |
 
 ## Today View
@@ -131,6 +132,33 @@ View usage statistics including entry counts, streaks, and activity patterns.
 ![Insights](images/insights-view.png)
 
 AI-powered analysis of your journal with dashboards for summaries, actions, initiatives, topics, and decisions.
+
+## reMarkable Import
+
+Import handwritten notes from reMarkable tablets with automatic OCR (macOS only).
+
+### Setup
+
+1. Connect your reMarkable tablet to the reMarkable cloud
+2. Open the reMarkable view from the sidebar
+3. Enter a one-time registration code from [my.remarkable.com](https://my.remarkable.com/device/browser/connect)
+4. Once registered, your documents appear automatically
+
+### Import Workflow
+
+1. Select a document from the list
+2. Review the side-by-side view: rendered strokes on the left, OCR text on the right
+3. Edit the recognized text as needed (low-confidence regions are highlighted)
+4. Choose a date for the import
+5. Click "Import to Journal" to add entries to your journal
+
+The OCR text is automatically formatted with bujo entry markers (`- ` for notes) and normalized indentation. You can edit the text before importing to correct any recognition errors or adjust the structure.
+
+### Requirements
+
+- macOS only (uses Apple Vision framework for OCR)
+- reMarkable cloud account with device registration
+- The `remarkable-ocr` binary (bundled with the desktop app)
 
 ## Settings
 
