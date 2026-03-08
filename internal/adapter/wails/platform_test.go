@@ -59,6 +59,7 @@ func TestImportResult_JSONSerialization(t *testing.T) {
 				},
 				Text:               "hello",
 				LowConfidenceCount: 0,
+				LowConfidenceLines: []int{0},
 			},
 		},
 	}
@@ -67,6 +68,7 @@ func TestImportResult_JSONSerialization(t *testing.T) {
 	assert.Equal(t, float32(0.95), result.Pages[0].OCRResults[0].Confidence)
 	assert.Equal(t, "hello", result.Pages[0].Text)
 	assert.Equal(t, 0, result.Pages[0].LowConfidenceCount)
+	assert.Equal(t, []int{0}, result.Pages[0].LowConfidenceLines)
 }
 
 func TestImportEntries_EmptyText(t *testing.T) {
