@@ -15,6 +15,7 @@ const (
 type ReconstructResult struct {
 	Text               string
 	LowConfidenceCount int
+	LowConfidenceLines []int
 }
 
 func ReconstructText(results []OCRResult) string {
@@ -41,9 +42,10 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 
 	var lines []string
 	var lowConfidenceCount int
+	var lowConfidenceLines []int
 	var maxDepth int
 
-	for _, r := range sorted {
+	for i, r := range sorted {
 		depth := int(math.Round((r.X - minX) / defaultIndentWidth))
 		if depth > maxDepth+1 {
 			depth = maxDepth + 1
@@ -63,12 +65,14 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 
 		if r.Confidence < threshold {
 			lowConfidenceCount++
+			lowConfidenceLines = append(lowConfidenceLines, i)
 		}
 	}
 
 	return ReconstructResult{
 		Text:               strings.Join(lines, "\n"),
 		LowConfidenceCount: lowConfidenceCount,
+		LowConfidenceLines: lowConfidenceLines,
 	}
 }
 
