@@ -3,11 +3,38 @@ package remarkable
 import (
 	"bytes"
 	"image/png"
+	"math"
 
 	"github.com/fogleman/gg"
 )
 
 const remarkableScreenHeight = 1872
+
+func detectXOffset(strokes []rmStroke) float64 {
+	halfWidth := float64(remarkableScreenWidth) / 2
+	if len(strokes) == 0 {
+		return halfWidth
+	}
+
+	minX, maxX := math.MaxFloat64, -math.MaxFloat64
+	for _, s := range strokes {
+		for _, p := range s.Points {
+			x := float64(p.X)
+			if x < minX {
+				minX = x
+			}
+			if x > maxX {
+				maxX = x
+			}
+		}
+	}
+
+	centerX := (minX + maxX) / 2
+	if math.Abs(centerX) < math.Abs(centerX-halfWidth) {
+		return halfWidth
+	}
+	return 0
+}
 
 func RenderStrokes(strokes []rmStroke) ([]byte, error) {
 	dc := gg.NewContext(remarkableScreenWidth, remarkableScreenHeight)
@@ -18,7 +45,7 @@ func RenderStrokes(strokes []rmStroke) ([]byte, error) {
 	dc.SetRGB(0, 0, 0)
 	dc.SetLineWidth(1)
 
-	xOffset := float64(remarkableScreenWidth) / 2
+	xOffset := detectXOffset(strokes)
 
 	for _, stroke := range strokes {
 		if len(stroke.Points) < 2 {

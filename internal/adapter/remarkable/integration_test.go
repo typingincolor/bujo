@@ -14,12 +14,12 @@ import (
 )
 
 func TestRenderPageToPNG_Integration(t *testing.T) {
-	// Use centered X coordinates (reMarkable origin is top-center)
-	// X=-200 to X=100 maps to screen pixels 502 to 802
+	// reMarkable v6 native uses centered coordinates: X ~ -702..+702
+	// These coordinates get auto-detected as centered → offset 702 applied
 	rmData := buildTestRM(t, []rmPoint{
+		{X: -500.0, Y: 100.0},
 		{X: -200.0, Y: 100.0},
-		{X: 100.0, Y: 100.0},
-		{X: 100.0, Y: 300.0},
+		{X: -200.0, Y: 300.0},
 	})
 
 	dir := t.TempDir()
@@ -38,11 +38,12 @@ func TestRenderPageToPNG_Integration(t *testing.T) {
 	assert.Equal(t, remarkableScreenWidth, bounds.Max.X)
 	assert.Equal(t, remarkableScreenHeight, bounds.Max.Y)
 
-	xOff := remarkableScreenWidth / 2
-	assert.True(t, hasNonWhitePixels(img, -200+xOff, 95, 100+xOff, 105),
+	// After +702 offset: horizontal stroke from pixel 202 to 502
+	assert.True(t, hasNonWhitePixels(img, 202, 95, 502, 105),
 		"expected black pixels along horizontal stroke")
 
-	assert.True(t, hasNonWhitePixels(img, 100+xOff-5, 100, 100+xOff+5, 300),
+	// After +702 offset: vertical stroke at pixel 502
+	assert.True(t, hasNonWhitePixels(img, 497, 100, 507, 300),
 		"expected black pixels along vertical stroke")
 
 	assert.False(t, hasNonWhitePixels(img, 0, 700, 100, 800),
@@ -50,9 +51,9 @@ func TestRenderPageToPNG_Integration(t *testing.T) {
 }
 
 func TestRenderPageToPNG_MultipleStrokes(t *testing.T) {
-	// Centered X coordinates: -300 to -100 maps to screen 402 to 602
-	stroke1 := []rmPoint{{X: -300, Y: 50}, {X: -100, Y: 50}}
-	stroke2 := []rmPoint{{X: -300, Y: 500}, {X: -100, Y: 500}}
+	// reMarkable v6 native uses centered coordinates
+	stroke1 := []rmPoint{{X: -600, Y: 50}, {X: -300, Y: 50}}
+	stroke2 := []rmPoint{{X: -600, Y: 500}, {X: -300, Y: 500}}
 
 	rmData := buildTestRMMultiStroke(t, [][]rmPoint{stroke1, stroke2})
 
@@ -67,14 +68,14 @@ func TestRenderPageToPNG_MultipleStrokes(t *testing.T) {
 	img, err := png.Decode(f)
 	require.NoError(t, err)
 
-	xOff := remarkableScreenWidth / 2
-	assert.True(t, hasNonWhitePixels(img, -300+xOff, 45, -100+xOff, 55),
+	// After +702 offset: stroke1 at pixels 102-402, stroke2 at pixels 102-402
+	assert.True(t, hasNonWhitePixels(img, 102, 45, 402, 55),
 		"expected pixels along first stroke")
 
-	assert.True(t, hasNonWhitePixels(img, -300+xOff, 495, -100+xOff, 505),
+	assert.True(t, hasNonWhitePixels(img, 102, 495, 402, 505),
 		"expected pixels along second stroke")
 
-	assert.False(t, hasNonWhitePixels(img, -300+xOff, 250, -100+xOff, 260),
+	assert.False(t, hasNonWhitePixels(img, 102, 250, 402, 260),
 		"expected no strokes between the two lines")
 }
 
@@ -104,10 +105,10 @@ func TestReconstructAndParseIntegration(t *testing.T) {
 }
 
 func TestRenderAndDecodeRoundTrip(t *testing.T) {
-	// Use centered X coordinates
+	// Centered coordinates: strokes span negative to positive X
 	strokes := []rmStroke{
-		{Points: []rmPoint{{X: -400, Y: 10}, {X: -300, Y: 100}}},
-		{Points: []rmPoint{{X: 200, Y: 500}, {X: 300, Y: 600}}},
+		{Points: []rmPoint{{X: -600, Y: 10}, {X: -500, Y: 100}}},
+		{Points: []rmPoint{{X: 100, Y: 500}, {X: 200, Y: 600}}},
 	}
 
 	data, err := RenderStrokes(strokes)
@@ -116,16 +117,9 @@ func TestRenderAndDecodeRoundTrip(t *testing.T) {
 	img, err := png.Decode(bytes.NewReader(data))
 	require.NoError(t, err)
 
-	xOff := remarkableScreenWidth / 2
-	// Near first stroke: screen X ~302 to ~402, Y ~10 to ~100
-	nearStroke := img.At(-350+xOff, 50)
-	r, g, b, _ := nearStroke.RGBA()
-	isNearStroke := r != 0xFFFF || g != 0xFFFF || b != 0xFFFF
-	_ = isNearStroke
-
-	// Far from any strokes
+	// Far from any strokes (pixel 702+350=1052, Y=300)
 	white := color.RGBA{255, 255, 255, 255}
-	farAway := img.At(50, 300)
+	farAway := img.At(1052, 300)
 	fr, fg, fb, _ := farAway.RGBA()
 	wr, wg, wb, _ := white.RGBA()
 	assert.Equal(t, wr, fr, "expected white far from strokes (R)")

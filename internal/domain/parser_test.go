@@ -199,16 +199,64 @@ func TestTreeParser_Parse_SkipsEmptyLines(t *testing.T) {
 	require.Len(t, entries, 2)
 }
 
-func TestTreeParser_Parse_InvalidIndentation(t *testing.T) {
+func TestTreeParser_Parse_InvalidIndentation_ClampedToMaxValid(t *testing.T) {
 	parser := NewTreeParser()
-	// Child without parent (jumps to depth 2 without depth 1)
+	// Child jumps to depth 3 but only depth 1 is valid — clamp to depth 1
 	input := `. Root task
-      . Invalid grandchild`
+      . Deep grandchild`
 
-	_, err := parser.Parse(input)
+	entries, err := parser.Parse(input)
 
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid indentation")
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Equal(t, 1, entries[1].Depth)
+	require.NotNil(t, entries[1].ParentID)
+	assert.Equal(t, int64(0), *entries[1].ParentID)
+}
+
+func TestTreeParser_Parse_OrphanedIndentedLines(t *testing.T) {
+	parser := NewTreeParser()
+	// OCR output that starts with indented lines (no root parent)
+	input := `  - backward compatibility.
+  - balancing new features
+    - value
+- dependencies`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 4)
+	// First orphan clamped to depth 0 (becomes root)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Equal(t, "backward compatibility.", entries[0].Content)
+	// Second line at same indentation becomes child of first
+	assert.Equal(t, 1, entries[1].Depth)
+	// Third line indented further becomes child of second
+	assert.Equal(t, 2, entries[2].Depth)
+	// Root-level line stays at depth 0
+	assert.Equal(t, 0, entries[3].Depth)
+}
+
+func TestTreeParser_Parse_OCRTextWithMixedIndentation(t *testing.T) {
+	parser := NewTreeParser()
+	input := `  = US
+    - International
+      - SAMS CUB
+Responsible for observability
+- dealing with regulators`
+
+	entries, err := parser.Parse(input)
+
+	require.NoError(t, err)
+	require.Len(t, entries, 5)
+	assert.Equal(t, 0, entries[0].Depth)
+	assert.Equal(t, "= US", entries[0].Content)
+	assert.Equal(t, EntryTypeNote, entries[0].Type)
+	assert.Equal(t, 1, entries[1].Depth)
+	assert.Equal(t, 2, entries[2].Depth)
+	assert.Equal(t, 0, entries[3].Depth)
+	assert.Equal(t, 0, entries[4].Depth)
 }
 
 func TestTreeParser_Parse_UnknownSymbol_DefaultsToNote(t *testing.T) {
@@ -219,9 +267,11 @@ func TestTreeParser_Parse_UnknownSymbol_DefaultsToNote(t *testing.T) {
 		input   string
 		content string
 	}{
-		{"number prefix", "1 Numbered item", "Numbered item"},
-		{"hash prefix", "# Heading style", "Heading style"},
-		{"asterisk prefix", "* Bullet point", "Bullet point"},
+		{"number prefix", "1 Numbered item", "1 Numbered item"},
+		{"hash prefix", "# Heading style", "# Heading style"},
+		{"asterisk prefix", "* Bullet point", "* Bullet point"},
+		{"plain text", "Meeting notes from today", "Meeting notes from today"},
+		{"capitalized word", "Responsible for observability", "Responsible for observability"},
 	}
 
 	for _, tt := range tests {
@@ -249,7 +299,7 @@ func TestTreeParser_Parse_UnknownSymbol_PreservesHierarchy(t *testing.T) {
 
 	assert.Equal(t, EntryTypeTask, entries[0].Type)
 	assert.Equal(t, EntryTypeNote, entries[1].Type, "Unknown symbol should default to note")
-	assert.Equal(t, "Unknown child symbol", entries[1].Content)
+	assert.Equal(t, "# Unknown child symbol", entries[1].Content)
 	assert.NotNil(t, entries[1].ParentID)
 	assert.Equal(t, EntryTypeNote, entries[2].Type)
 }

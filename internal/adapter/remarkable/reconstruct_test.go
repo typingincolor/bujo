@@ -64,6 +64,29 @@ func TestReconstructTextWithConfidence_CountsLowConfidence(t *testing.T) {
 	assert.Equal(t, 2, result.LowConfidenceCount)
 }
 
+func TestReconstructText_PrependsNoteSymbolToUnprefixedLines(t *testing.T) {
+	results := []OCRResult{
+		{Text: "Responsible for observability", X: 50, Y: 100, Width: 300, Height: 30},
+		{Text: ". buy milk", X: 50, Y: 140, Width: 200, Height: 30},
+		{Text: "streams platform", X: 50, Y: 180, Width: 250, Height: 30},
+		{Text: "= US", X: 100, Y: 220, Width: 100, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, "- Responsible for observability\n. buy milk\n- streams platform\n  - = US", text)
+}
+
+func TestReconstructText_WordsStartingWithSymbolChars(t *testing.T) {
+	results := []OCRResult{
+		{Text: "adoption is Key", X: 50, Y: 100, Width: 300, Height: 30},
+		{Text: "over budget", X: 50, Y: 140, Width: 200, Height: 30},
+		{Text: "x-ray results", X: 50, Y: 180, Width: 250, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, "- adoption is Key\n- over budget\n- x-ray results", text)
+}
+
 func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {
 	results := []OCRResult{
 		{Text: ". a", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},
