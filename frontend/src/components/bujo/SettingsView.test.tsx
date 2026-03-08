@@ -8,6 +8,8 @@ import * as WailsRuntime from '@/wailsjs/runtime/runtime'
 
 vi.mock('@/wailsjs/go/wails/App', () => ({
   GetVersion: vi.fn(() => Promise.resolve('1.0.0')),
+  GetPlatformCapabilities: vi.fn().mockResolvedValue({ hasOCR: false, platform: 'darwin' }),
+  IsRemarkableRegistered: vi.fn().mockResolvedValue(false),
 }))
 
 vi.mock('@/wailsjs/runtime/runtime', () => ({

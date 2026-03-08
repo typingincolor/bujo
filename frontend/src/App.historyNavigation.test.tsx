@@ -54,6 +54,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
     CurrentStreak: 0,
   }),
   GetVersion: vi.fn().mockResolvedValue('1.0.0'),
+  GetPlatformCapabilities: vi.fn().mockResolvedValue({ hasOCR: false, platform: 'darwin' }),
+  IsRemarkableRegistered: vi.fn().mockResolvedValue(false),
 }))
 
 import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App'

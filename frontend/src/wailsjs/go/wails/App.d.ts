@@ -4,6 +4,7 @@ import {time} from '../models';
 import {wails} from '../models';
 import {domain} from '../models';
 import {service} from '../models';
+import {remarkable} from '../models';
 import {context} from '../models';
 
 export function AddChildEntry(arg1:number,arg2:string,arg3:time.Time):Promise<Array<number>>;
@@ -98,13 +99,23 @@ export function GetOutstandingQuestions():Promise<Array<domain.Entry>>;
 
 export function GetOverdue():Promise<Array<domain.Entry>>;
 
+export function GetPlatformCapabilities():Promise<wails.PlatformCapabilities>;
+
 export function GetVersion():Promise<string>;
 
 export function Greet(arg1:string):Promise<string>;
 
 export function HasChildren(arg1:number):Promise<boolean>;
 
+export function ImportEntries(arg1:string,arg2:string):Promise<void>;
+
+export function ImportRemarkablePages(arg1:string):Promise<wails.ImportRemarkableResult>;
+
 export function IsInsightsAvailable():Promise<boolean>;
+
+export function IsRemarkableRegistered():Promise<boolean>;
+
+export function ListRemarkableDocuments():Promise<Array<remarkable.Document>>;
 
 export function LogHabit(arg1:number,arg2:number):Promise<void>;
 
@@ -135,6 +146,8 @@ export function MoveListItem(arg1:number,arg2:number):Promise<void>;
 export function OpenFileDialog():Promise<string>;
 
 export function ReadFile(arg1:string):Promise<string>;
+
+export function RegisterRemarkableDevice(arg1:string):Promise<void>;
 
 export function RemoveListItem(arg1:number):Promise<void>;
 

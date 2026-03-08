@@ -2,12 +2,17 @@ package wails
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
+	goruntime "runtime"
+	"strings"
 	"time"
 
 	"github.com/typingincolor/bujo/cmd/bujo/cmd"
 	bujohttp "github.com/typingincolor/bujo/internal/adapter/http"
+	"github.com/typingincolor/bujo/internal/adapter/remarkable"
 	"github.com/typingincolor/bujo/internal/app"
 	"github.com/typingincolor/bujo/internal/dateutil"
 	"github.com/typingincolor/bujo/internal/domain"
@@ -711,4 +716,195 @@ func (a *App) ResolveDate(input string) (*ResolvedDate, error) {
 		ISO:     parsed.Format("2006-01-02"),
 		Display: parsed.Format("Mon, Jan 2, 2006"),
 	}, nil
+}
+
+type PlatformCapabilities struct {
+	HasOCR   bool   `json:"hasOCR"`
+	Platform string `json:"platform"`
+}
+
+func encodeBase64(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data)
+}
+
+func findOCRBinary(execDir string) string {
+	// Check next to executable (production bundle)
+	ocrPath := filepath.Join(execDir, "remarkable-ocr")
+	if _, err := os.Stat(ocrPath); err == nil {
+		return ocrPath
+	}
+	// Check tools directory relative to working directory (dev mode)
+	if cwd, err := os.Getwd(); err == nil {
+		devPath := filepath.Join(cwd, "tools", "remarkable-ocr", "remarkable-ocr")
+		if _, err := os.Stat(devPath); err == nil {
+			return devPath
+		}
+	}
+	return ""
+}
+
+func buildPlatformCapabilities() PlatformCapabilities {
+	return PlatformCapabilities{
+		HasOCR:   goruntime.GOOS == "darwin",
+		Platform: goruntime.GOOS,
+	}
+}
+
+func (a *App) GetPlatformCapabilities() PlatformCapabilities {
+	return buildPlatformCapabilities()
+}
+
+func (a *App) ListRemarkableDocuments() ([]remarkable.Document, error) {
+	configPath, err := remarkable.DefaultConfigPath()
+	if err != nil {
+		return nil, fmt.Errorf("not registered: %w", err)
+	}
+	cfg, err := remarkable.LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("not registered — configure in Settings: %w", err)
+	}
+
+	client := remarkable.NewClient(remarkable.DefaultAuthHost)
+	client.SetSyncHost(remarkable.DefaultSyncHost)
+
+	docs, err := client.ListDocuments(a.ctx, cfg.DeviceToken)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list documents: %w", err)
+	}
+	return docs, nil
+}
+
+type ImportedPage struct {
+	PageID             string                 `json:"pageID"`
+	PNG                string                 `json:"png"`
+	OCRResults         []remarkable.OCRResult `json:"ocrResults"`
+	Text               string                 `json:"text"`
+	LowConfidenceCount int                    `json:"lowConfidenceCount"`
+	Error              string                 `json:"error,omitempty"`
+}
+
+type ImportRemarkableResult struct {
+	Pages []ImportedPage `json:"pages"`
+}
+
+func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, error) {
+	configPath, err := remarkable.DefaultConfigPath()
+	if err != nil {
+		return nil, fmt.Errorf("not registered: %w", err)
+	}
+	cfg, err := remarkable.LoadConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("not registered — configure in Settings: %w", err)
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine executable path: %w", err)
+	}
+	ocrPath := findOCRBinary(filepath.Dir(execPath))
+	if ocrPath == "" {
+		return nil, fmt.Errorf("OCR binary not found")
+	}
+
+	client := remarkable.NewClient(remarkable.DefaultAuthHost)
+	client.SetSyncHost(remarkable.DefaultSyncHost)
+
+	pages, err := client.DownloadPages(a.ctx, cfg.DeviceToken, docID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download pages: %w", err)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "remarkable-import-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	var result ImportRemarkableResult
+	for _, page := range pages {
+		imported := ImportedPage{PageID: page.PageID}
+
+		pngPath, err := remarkable.RenderPageToPNG(tmpDir, page.PageID, page.Data)
+		if err != nil {
+			imported.Error = fmt.Sprintf("render failed: %v", err)
+			result.Pages = append(result.Pages, imported)
+			continue
+		}
+
+		pngData, err := os.ReadFile(pngPath)
+		if err != nil {
+			imported.Error = fmt.Sprintf("read PNG failed: %v", err)
+			result.Pages = append(result.Pages, imported)
+			continue
+		}
+		imported.PNG = encodeBase64(pngData)
+
+		ocrResults, err := remarkable.RunOCR(ocrPath, pngPath)
+		if err != nil {
+			imported.Error = fmt.Sprintf("OCR failed: %v", err)
+			result.Pages = append(result.Pages, imported)
+			continue
+		}
+		imported.OCRResults = ocrResults
+		reconstructed := remarkable.ReconstructTextWithConfidence(ocrResults, 0.8)
+		imported.Text = reconstructed.Text
+		imported.LowConfidenceCount = reconstructed.LowConfidenceCount
+		result.Pages = append(result.Pages, imported)
+	}
+
+	return &result, nil
+}
+
+func (a *App) ImportEntries(text string, date string) error {
+	if strings.TrimSpace(text) == "" {
+		return fmt.Errorf("empty text — nothing to import")
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return fmt.Errorf("invalid date format (expected YYYY-MM-DD): %w", err)
+	}
+
+	normalized := remarkable.NormalizeOCRIndentation(text)
+	_, err = a.services.Bujo.LogEntries(a.ctx, normalized, service.LogEntriesOptions{Date: parsedDate})
+	if err != nil {
+		return fmt.Errorf("failed to import entries: %w", err)
+	}
+
+	runtime.EventsEmit(a.ctx, eventDataChanged)
+	return nil
+}
+
+func (a *App) RegisterRemarkableDevice(code string) error {
+	if strings.TrimSpace(code) == "" {
+		return fmt.Errorf("registration code is required")
+	}
+
+	client := remarkable.NewClient(remarkable.DefaultAuthHost)
+
+	deviceToken, err := client.RegisterDevice(a.ctx, code)
+	if err != nil {
+		return fmt.Errorf("registration failed: %w", err)
+	}
+
+	configPath, err := remarkable.DefaultConfigPath()
+	if err != nil {
+		return fmt.Errorf("failed to determine config path: %w", err)
+	}
+
+	cfg := remarkable.Config{DeviceToken: deviceToken}
+	if err := remarkable.SaveConfig(configPath, cfg); err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+
+	return nil
+}
+
+func (a *App) IsRemarkableRegistered() bool {
+	configPath, err := remarkable.DefaultConfigPath()
+	if err != nil {
+		return false
+	}
+	_, err = remarkable.LoadConfig(configPath)
+	return err == nil
 }

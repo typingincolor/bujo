@@ -36,3 +36,6 @@ node_modules/
 # Git worktrees
 .worktrees/
 
+# Compiled tools
+tools/remarkable-ocr/remarkable-ocr
+

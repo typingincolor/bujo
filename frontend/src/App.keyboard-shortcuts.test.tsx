@@ -61,6 +61,8 @@ vi.mock('./wailsjs/go/wails/App', () => ({
   GetInsightsActionsForWeek: vi.fn().mockResolvedValue([]),
   GetAllMentions: vi.fn().mockResolvedValue([]),
   SearchByMentions: vi.fn().mockResolvedValue([]),
+  GetPlatformCapabilities: vi.fn().mockResolvedValue({ hasOCR: false, platform: 'darwin' }),
+  IsRemarkableRegistered: vi.fn().mockResolvedValue(false),
 }));
 
 import { GetDayEntries, GetOverdue } from './wailsjs/go/wails/App';
