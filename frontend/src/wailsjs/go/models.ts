@@ -784,6 +784,7 @@ export namespace wails {
 	    lowConfidenceCount: number;
 	    lowConfidenceLines: number[];
 	    uncertainLines: number[];
+	    concatenatedLines: number[];
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -799,6 +800,7 @@ export namespace wails {
 	        this.lowConfidenceCount = source["lowConfidenceCount"];
 	        this.lowConfidenceLines = source["lowConfidenceLines"];
 	        this.uncertainLines = source["uncertainLines"];
+	        this.concatenatedLines = source["concatenatedLines"];
 	        this.error = source["error"];
 	    }
 	
