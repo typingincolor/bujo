@@ -5,7 +5,11 @@ import type { Theme, DefaultView } from '../../types/settings';
 import { GetVersion, IsRemarkableRegistered, RegisterRemarkableDevice } from '@/wailsjs/go/wails/App';
 import { BrowserOpenURL } from '@/wailsjs/runtime/runtime';
 
-export function SettingsView() {
+interface SettingsViewProps {
+  onRemarkableRegistered?: () => void
+}
+
+export function SettingsView({ onRemarkableRegistered }: SettingsViewProps) {
   const { theme, setTheme, defaultView, setDefaultView } = useSettings();
   const [version, setVersion] = useState<string>('Loading...');
   const [remarkableRegistered, setRemarkableRegistered] = useState<boolean | null>(null);
@@ -29,6 +33,7 @@ export function SettingsView() {
       setRemarkableRegistered(true);
       setRemarkableSuccess(true);
       setRemarkableCode('');
+      onRemarkableRegistered?.();
     } catch (err) {
       setRemarkableError(String(err));
     } finally {
