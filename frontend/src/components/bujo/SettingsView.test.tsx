@@ -10,6 +10,7 @@ vi.mock('@/wailsjs/go/wails/App', () => ({
   GetVersion: vi.fn(() => Promise.resolve('1.0.0')),
   GetPlatformCapabilities: vi.fn().mockResolvedValue({ hasOCR: false, platform: 'darwin' }),
   IsRemarkableRegistered: vi.fn().mockResolvedValue(false),
+  RegisterRemarkableDevice: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/wailsjs/runtime/runtime', () => ({
@@ -270,6 +271,54 @@ describe('SettingsView', () => {
     expect(WailsRuntime.BrowserOpenURL).toHaveBeenCalledWith(
       'http://127.0.0.1:8743/install'
     )
+  })
+
+  it('calls onRemarkableRegistered callback after successful registration', async () => {
+    const user = userEvent.setup()
+    const onRemarkableRegistered = vi.fn()
+    vi.mocked(WailsApp.IsRemarkableRegistered).mockResolvedValue(false)
+
+    render(
+      <SettingsProvider>
+        <SettingsView onRemarkableRegistered={onRemarkableRegistered} />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('One-time code')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText('One-time code'), 'test-code')
+    await user.click(screen.getByRole('button', { name: 'Register' }))
+
+    await waitFor(() => {
+      expect(onRemarkableRegistered).toHaveBeenCalled()
+    })
+  })
+
+  it('does not call onRemarkableRegistered when registration fails', async () => {
+    const user = userEvent.setup()
+    const onRemarkableRegistered = vi.fn()
+    vi.mocked(WailsApp.IsRemarkableRegistered).mockResolvedValue(false)
+    vi.mocked(WailsApp.RegisterRemarkableDevice).mockRejectedValue(new Error('Invalid code'))
+
+    render(
+      <SettingsProvider>
+        <SettingsView onRemarkableRegistered={onRemarkableRegistered} />
+      </SettingsProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('One-time code')).toBeInTheDocument()
+    })
+
+    await user.type(screen.getByPlaceholderText('One-time code'), 'bad-code')
+    await user.click(screen.getByRole('button', { name: 'Register' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Error: Invalid code')).toBeInTheDocument()
+    })
+    expect(onRemarkableRegistered).not.toHaveBeenCalled()
   })
 
   it('displays backend version from API', async () => {

@@ -882,7 +882,10 @@ function App() {
           {view === 'settings' && (
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="max-w-4xl mx-auto">
-                <SettingsView />
+                <SettingsView onRemarkableRegistered={() => {
+                  setRemarkableRegistered(true)
+                  loadRemarkableDocs()
+                }} />
               </div>
             </div>
           )}
