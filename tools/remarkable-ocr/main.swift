@@ -1,6 +1,7 @@
 import Foundation
 import Vision
 import AppKit
+import CoreImage
 
 struct OCRCandidate: Codable {
     let text: String
@@ -18,7 +19,7 @@ struct OCRResult: Codable {
 }
 
 guard CommandLine.arguments.count > 1 else {
-    fputs("Usage: remarkable-ocr <image-path>\n", stderr)
+    fputs("Usage: remarkable-ocr <image-path> [--custom-words <file>]\n", stderr)
     exit(1)
 }
 
@@ -29,12 +30,27 @@ guard let image = NSImage(contentsOfFile: imagePath),
     exit(1)
 }
 
+var customWords: [String] = []
+if let idx = CommandLine.arguments.firstIndex(of: "--custom-words"), idx + 1 < CommandLine.arguments.count {
+    let wordsPath = CommandLine.arguments[idx + 1]
+    if let content = try? String(contentsOfFile: wordsPath, encoding: .utf8) {
+        customWords = content.components(separatedBy: .newlines).filter { !$0.isEmpty }
+    }
+}
+
+let processedImage = cgImage
+
 let request = VNRecognizeTextRequest()
 request.recognitionLevel = .accurate
+request.revision = VNRecognizeTextRequestRevision3
 request.usesLanguageCorrection = true
 request.recognitionLanguages = ["en"]
+request.minimumTextHeight = 0.02
+if !customWords.isEmpty {
+    request.customWords = customWords
+}
 
-let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+let handler = VNImageRequestHandler(cgImage: processedImage, options: [:])
 try handler.perform([request])
 
 guard let observations = request.results else {
@@ -42,12 +58,12 @@ guard let observations = request.results else {
     exit(0)
 }
 
-let imageHeight = Double(cgImage.height)
-let imageWidth = Double(cgImage.width)
+let imageHeight = Double(processedImage.height)
+let imageWidth = Double(processedImage.width)
 
 var results: [OCRResult] = []
 for observation in observations {
-    let topCandidates = observation.topCandidates(5)
+    let topCandidates = observation.topCandidates(10)
     guard let best = topCandidates.first else { continue }
     let box = observation.boundingBox
 

@@ -77,9 +77,11 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 			lowConfidenceCount++
 			lowConfidenceLines = append(lowConfidenceLines, i)
 		}
-		// Multi-fragment lines skip uncertainty: fragments are separate OCR observations
+		// Multi-fragment lines skip candidate uncertainty: fragments are separate OCR observations
 		// joined by position, so per-fragment candidates don't map to the merged text.
 		if len(m.fragments) == 1 && hasCandidateDisagreement(m.fragments[0]) {
+			uncertainLines = append(uncertainLines, i)
+		} else if hasUnknownWords(text) {
 			uncertainLines = append(uncertainLines, i)
 		}
 	}

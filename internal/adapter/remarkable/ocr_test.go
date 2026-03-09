@@ -1,6 +1,8 @@
 package remarkable
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,6 +52,42 @@ func TestParseOCRResults_WithCandidates(t *testing.T) {
 	require.Len(t, results[0].Candidates, 3)
 	assert.Equal(t, "Test task", results[0].Candidates[1].Text)
 	assert.InDelta(t, 0.80, float64(results[0].Candidates[1].Confidence), 0.01)
+}
+
+func TestOCRCustomWords_NotEmpty(t *testing.T) {
+	words := OCRCustomWords()
+	assert.NotEmpty(t, words)
+}
+
+func TestOCRCustomWords_ContainsBujoTerms(t *testing.T) {
+	words := OCRCustomWords()
+	wordSet := make(map[string]bool)
+	for _, w := range words {
+		wordSet[w] = true
+	}
+	assert.True(t, wordSet["Engagement"], "should contain 'Engagement'")
+	assert.True(t, wordSet["Architecture"], "should contain 'Architecture'")
+	assert.True(t, wordSet["Derek"], "should contain 'Derek'")
+}
+
+func TestOCRCustomWords_SkipsComments(t *testing.T) {
+	words := OCRCustomWords()
+	for _, w := range words {
+		assert.False(t, strings.HasPrefix(w, "#"), "should not contain comment: %s", w)
+	}
+}
+
+func TestWriteOCRCustomWordsFile_CreatesFile(t *testing.T) {
+	path, cleanup, err := writeOCRCustomWordsFile()
+	require.NoError(t, err)
+	defer cleanup()
+
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+
+	content := string(data)
+	assert.Contains(t, content, "Engagement")
+	assert.Contains(t, content, "Architecture")
 }
 
 func TestParseOCRResults_WithoutCandidatesBackwardCompat(t *testing.T) {
