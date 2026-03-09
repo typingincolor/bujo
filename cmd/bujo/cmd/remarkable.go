@@ -151,6 +151,9 @@ var remarkableImportCmd = &cobra.Command{
 			if reconstructed.LowConfidenceCount > 0 {
 				fmt.Printf("Low confidence lines: %v (%d total)\n", reconstructed.LowConfidenceLines, reconstructed.LowConfidenceCount)
 			}
+			if len(reconstructed.ConcatenatedLines) > 0 {
+				fmt.Printf("Concatenated lines: %v\n", reconstructed.ConcatenatedLines)
+			}
 			if len(reconstructed.UncertainLines) > 0 {
 				fmt.Printf("Uncertain lines (candidate disagreement): %v\n", reconstructed.UncertainLines)
 			}

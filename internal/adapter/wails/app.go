@@ -782,6 +782,7 @@ type ImportedPage struct {
 	LowConfidenceCount int                    `json:"lowConfidenceCount"`
 	LowConfidenceLines []int                  `json:"lowConfidenceLines"`
 	UncertainLines     []int                  `json:"uncertainLines"`
+	ConcatenatedLines  []int                  `json:"concatenatedLines"`
 	Error              string                 `json:"error,omitempty"`
 }
 
@@ -853,6 +854,7 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 		imported.LowConfidenceCount = reconstructed.LowConfidenceCount
 		imported.LowConfidenceLines = reconstructed.LowConfidenceLines
 		imported.UncertainLines = reconstructed.UncertainLines
+		imported.ConcatenatedLines = reconstructed.ConcatenatedLines
 		result.Pages = append(result.Pages, imported)
 	}
 
