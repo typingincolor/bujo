@@ -144,10 +144,18 @@ var remarkableImportCmd = &cobra.Command{
 				continue
 			}
 
-			text := remarkable.ReconstructText(results)
+			reconstructed := remarkable.ReconstructTextWithConfidence(results, remarkable.DefaultConfidenceThreshold)
 
 			fmt.Printf("\n--- Page %d ---\n", i+1)
-			fmt.Printf("Reconstructed text:\n%s\n", text)
+			fmt.Printf("Reconstructed text:\n%s\n", reconstructed.Text)
+			if reconstructed.LowConfidenceCount > 0 {
+				fmt.Printf("Low confidence lines: %v (%d total)\n", reconstructed.LowConfidenceLines, reconstructed.LowConfidenceCount)
+			}
+			if len(reconstructed.UncertainLines) > 0 {
+				fmt.Printf("Uncertain lines (candidate disagreement): %v\n", reconstructed.UncertainLines)
+			}
+
+			text := reconstructed.Text
 
 			entries, err := parser.Parse(text)
 			if err != nil {

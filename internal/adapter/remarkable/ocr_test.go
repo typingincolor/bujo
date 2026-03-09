@@ -32,3 +32,31 @@ func TestParseOCRResultsInvalidJSON(t *testing.T) {
 	_, err := ParseOCRResults([]byte("not json"))
 	assert.Error(t, err)
 }
+
+func TestParseOCRResults_WithCandidates(t *testing.T) {
+	jsonData := `[
+		{"text": "Fest task", "x": 50.0, "y": 100.0, "width": 200.0, "height": 30.0, "confidence": 0.85,
+		 "candidates": [
+			{"text": "Fest task", "confidence": 0.85},
+			{"text": "Test task", "confidence": 0.80},
+			{"text": "Best task", "confidence": 0.75}
+		 ]}
+	]`
+
+	results, err := ParseOCRResults([]byte(jsonData))
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "Fest task", results[0].Text)
+	require.Len(t, results[0].Candidates, 3)
+	assert.Equal(t, "Test task", results[0].Candidates[1].Text)
+	assert.InDelta(t, 0.80, float64(results[0].Candidates[1].Confidence), 0.01)
+}
+
+func TestParseOCRResults_WithoutCandidatesBackwardCompat(t *testing.T) {
+	jsonData := `[{"text": ". task", "x": 50.0, "y": 100.0, "width": 200.0, "height": 30.0, "confidence": 0.9}]`
+
+	results, err := ParseOCRResults([]byte(jsonData))
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Nil(t, results[0].Candidates)
+}

@@ -100,6 +100,230 @@ func TestReconstructTextWithConfidence_ReportsLowConfidenceLines(t *testing.T) {
 	assert.Equal(t, 2, result.LowConfidenceCount)
 }
 
+func TestReconstructText_MergesFragmentsOnSameLine(t *testing.T) {
+	results := []OCRResult{
+		{Text: "- note", X: 50, Y: 200, Width: 120, Height: 30},
+		{Text: "2", X: 180, Y: 205, Width: 30, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, "- note 2", text)
+}
+
+func TestReconstructText_MergesMultipleFragmentsOnSameLine(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". buy", X: 50, Y: 100, Width: 80, Height: 30},
+		{Text: "milk", X: 140, Y: 103, Width: 70, Height: 30},
+		{Text: "today", X: 220, Y: 98, Width: 80, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, ". buy milk today", text)
+}
+
+func TestReconstructText_DoesNotMergeDistantLines(t *testing.T) {
+	results := []OCRResult{
+		{Text: "- first line", X: 50, Y: 100, Width: 200, Height: 30},
+		{Text: "- second line", X: 50, Y: 200, Width: 200, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, "- first line\n- second line", text)
+}
+
+func TestReconstructText_MergedLineUsesLowestConfidence(t *testing.T) {
+	results := []OCRResult{
+		{Text: "- note", X: 50, Y: 200, Width: 120, Height: 30, Confidence: 0.95},
+		{Text: "2", X: 180, Y: 205, Width: 30, Height: 30, Confidence: 0.5},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, "- note 2", result.Text)
+	assert.Equal(t, 1, result.LowConfidenceCount)
+	assert.Equal(t, []int{0}, result.LowConfidenceLines)
+}
+
+func TestReconstructText_SelectsBestCandidateWithBujoPrefix(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "Fest task 1", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.85,
+			Candidates: []OCRCandidate{
+				{Text: "Fest task 1", Confidence: 0.85},
+				{Text: ". Test task 1", Confidence: 0.80},
+				{Text: "Best task 1", Confidence: 0.75},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, ". Test task 1", result.Text)
+}
+
+func TestReconstructText_KeepsTopCandidateWhenNoBujoPrefixFound(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "some text", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.85,
+			Candidates: []OCRCandidate{
+				{Text: "some text", Confidence: 0.85},
+				{Text: "same text", Confidence: 0.80},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, "- some text", result.Text)
+}
+
+func TestReconstructText_UncertainWhenAlternativeIsValidWord(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "• Fest task 1", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "• Fest task 1", Confidence: 1.0},
+				{Text: "• Test task 1", Confidence: 1.0},
+				{Text: "• test task 1", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, []int{0}, result.UncertainLines)
+}
+
+func TestReconstructText_UncertainWhenNeitherWordValid(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "- moh stuff", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "- moh stuff", Confidence: 1.0},
+				{Text: "- mol stuff", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, []int{0}, result.UncertainLines)
+}
+
+func TestReconstructText_DetectsUncertaintyWhenBothWordsValid(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "- test note", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "- test note", Confidence: 1.0},
+				{Text: "- best note", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, []int{0}, result.UncertainLines)
+}
+
+func TestReconstructText_NoUncertaintyWhenCandidatesAgree(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "- Test note", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "- Test note", Confidence: 1.0},
+				{Text: "-Test note", Confidence: 1.0},
+				{Text: "Test note", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_NoUncertaintyWithoutCandidates(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". task", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_UncertaintyIgnoresCaseDifferences(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "• Task 2", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "• Task 2", Confidence: 1.0},
+				{Text: "• task 2", Confidence: 1.0},
+				{Text: "o Task 2", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_UncertaintyIgnoresTruncation(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "- Test note here", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "- Test note here", Confidence: 1.0},
+				{Text: "- Test note", Confidence: 1.0},
+				{Text: "- Test", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_UncertaintyIgnoresSpacingVariants(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "o Test event", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "o Test event", Confidence: 1.0},
+				{Text: "o Testevent", Confidence: 1.0},
+				{Text: "oTest event", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_UncertaintyIgnoresWordJoining(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "- note 3", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "- note 3", Confidence: 1.0},
+				{Text: "- note3", Confidence: 1.0},
+				{Text: "-note 3", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_NoUncertaintyWhenPrimaryIsCommonButAlternativeIsGarbled(t *testing.T) {
+	results := []OCRResult{
+		{
+			Text: "• task 2", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 1.0,
+			Candidates: []OCRCandidate{
+				{Text: "• task 2", Confidence: 1.0},
+				{Text: "• Fask 2", Confidence: 1.0},
+			},
+		},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
 func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {
 	results := []OCRResult{
 		{Text: ". a", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},

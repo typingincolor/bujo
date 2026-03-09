@@ -781,6 +781,7 @@ type ImportedPage struct {
 	Text               string                 `json:"text"`
 	LowConfidenceCount int                    `json:"lowConfidenceCount"`
 	LowConfidenceLines []int                  `json:"lowConfidenceLines"`
+	UncertainLines     []int                  `json:"uncertainLines"`
 	Error              string                 `json:"error,omitempty"`
 }
 
@@ -847,10 +848,11 @@ func (a *App) ImportRemarkablePages(docID string) (*ImportRemarkableResult, erro
 			continue
 		}
 		imported.OCRResults = ocrResults
-		reconstructed := remarkable.ReconstructTextWithConfidence(ocrResults, 0.8)
+		reconstructed := remarkable.ReconstructTextWithConfidence(ocrResults, remarkable.DefaultConfidenceThreshold)
 		imported.Text = reconstructed.Text
 		imported.LowConfidenceCount = reconstructed.LowConfidenceCount
 		imported.LowConfidenceLines = reconstructed.LowConfidenceLines
+		imported.UncertainLines = reconstructed.UncertainLines
 		result.Pages = append(result.Pages, imported)
 	}
 
