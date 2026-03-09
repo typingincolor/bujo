@@ -527,6 +527,20 @@ export namespace remarkable {
 	        this.FileType = source["FileType"];
 	    }
 	}
+	export class OCRCandidate {
+	    text: string;
+	    confidence: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new OCRCandidate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.confidence = source["confidence"];
+	    }
+	}
 	export class OCRResult {
 	    text: string;
 	    x: number;
@@ -534,6 +548,7 @@ export namespace remarkable {
 	    width: number;
 	    height: number;
 	    confidence: number;
+	    candidates?: OCRCandidate[];
 	
 	    static createFrom(source: any = {}) {
 	        return new OCRResult(source);
@@ -547,7 +562,26 @@ export namespace remarkable {
 	        this.width = source["width"];
 	        this.height = source["height"];
 	        this.confidence = source["confidence"];
+	        this.candidates = this.convertValues(source["candidates"], OCRCandidate);
 	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }
@@ -749,6 +783,7 @@ export namespace wails {
 	    text: string;
 	    lowConfidenceCount: number;
 	    lowConfidenceLines: number[];
+	    uncertainLines: number[];
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -763,6 +798,7 @@ export namespace wails {
 	        this.text = source["text"];
 	        this.lowConfidenceCount = source["lowConfidenceCount"];
 	        this.lowConfidenceLines = source["lowConfidenceLines"];
+	        this.uncertainLines = source["uncertainLines"];
 	        this.error = source["error"];
 	    }
 	

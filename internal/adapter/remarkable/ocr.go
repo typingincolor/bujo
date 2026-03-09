@@ -6,13 +6,19 @@ import (
 	"os/exec"
 )
 
-type OCRResult struct {
+type OCRCandidate struct {
 	Text       string  `json:"text"`
-	X          float64 `json:"x"`
-	Y          float64 `json:"y"`
-	Width      float64 `json:"width"`
-	Height     float64 `json:"height"`
 	Confidence float32 `json:"confidence"`
+}
+
+type OCRResult struct {
+	Text       string         `json:"text"`
+	X          float64        `json:"x"`
+	Y          float64        `json:"y"`
+	Width      float64        `json:"width"`
+	Height     float64        `json:"height"`
+	Confidence float32        `json:"confidence"`
+	Candidates []OCRCandidate `json:"candidates,omitempty"`
 }
 
 func ParseOCRResults(data []byte) ([]OCRResult, error) {

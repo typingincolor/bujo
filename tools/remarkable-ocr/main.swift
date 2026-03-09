@@ -2,6 +2,11 @@ import Foundation
 import Vision
 import AppKit
 
+struct OCRCandidate: Codable {
+    let text: String
+    let confidence: Float
+}
+
 struct OCRResult: Codable {
     let text: String
     let x: Double
@@ -9,6 +14,7 @@ struct OCRResult: Codable {
     let width: Double
     let height: Double
     let confidence: Float
+    let candidates: [OCRCandidate]?
 }
 
 guard CommandLine.arguments.count > 1 else {
@@ -26,6 +32,7 @@ guard let image = NSImage(contentsOfFile: imagePath),
 let request = VNRecognizeTextRequest()
 request.recognitionLevel = .accurate
 request.usesLanguageCorrection = true
+request.recognitionLanguages = ["en"]
 
 let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
 try handler.perform([request])
@@ -40,15 +47,22 @@ let imageWidth = Double(cgImage.width)
 
 var results: [OCRResult] = []
 for observation in observations {
-    guard let candidate = observation.topCandidates(1).first else { continue }
+    let topCandidates = observation.topCandidates(5)
+    guard let best = topCandidates.first else { continue }
     let box = observation.boundingBox
+
+    let candidates: [OCRCandidate]? = topCandidates.count > 1 ? topCandidates.map {
+        OCRCandidate(text: $0.string, confidence: $0.confidence)
+    } : nil
+
     results.append(OCRResult(
-        text: candidate.string,
+        text: best.string,
         x: box.origin.x * imageWidth,
         y: (1 - box.origin.y - box.height) * imageHeight,
         width: box.width * imageWidth,
         height: box.height * imageHeight,
-        confidence: candidate.confidence
+        confidence: best.confidence,
+        candidates: candidates
     ))
 }
 

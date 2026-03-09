@@ -24,6 +24,7 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
   const hasError = page?.error
   const lowConfidenceCount = page?.lowConfidenceCount ?? 0
   const lowConfidenceLines = page?.lowConfidenceLines ?? []
+  const uncertainLines = page?.uncertainLines ?? []
 
   function syncScroll() {
     if (textareaRef.current && gutterRef.current) {
@@ -133,35 +134,40 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
         </div>
 
         {/* Right: Text editor */}
-        <div className="w-1/2 overflow-auto p-4">
-          <div className="flex h-full min-h-[400px]">
-            {/* Confidence gutter */}
-            <div
-              ref={gutterRef}
-              className="flex-shrink-0 w-6 overflow-hidden font-mono text-sm"
-              style={{ paddingTop: '12px' }}
-            >
-              {(editedTexts[currentPage] ?? '').split('\n').map((_, i) => (
-                <div key={i} className="flex items-center justify-center" style={{ height: `${lineHeight}px` }}>
-                  {lowConfidenceLines.includes(i) && (
-                    <span className="w-2 h-2 rounded-full bg-amber-500" title="Low confidence" />
-                  )}
-                </div>
-              ))}
+        <div className="w-1/2 flex flex-col p-4">
+          <div className="flex-1 min-h-0 overflow-auto">
+            <div className="flex h-full min-h-[400px]">
+              {/* Confidence gutter */}
+              <div
+                ref={gutterRef}
+                className="flex-shrink-0 w-6 overflow-hidden font-mono text-sm"
+                style={{ paddingTop: '12px' }}
+              >
+                {(editedTexts[currentPage] ?? '').split('\n').map((_, i) => (
+                  <div key={i} className="flex items-center justify-center gap-px" style={{ height: `${lineHeight}px` }}>
+                    {lowConfidenceLines.includes(i) && (
+                      <span className="w-1 h-full rounded-sm bg-amber-500" title="Low confidence" />
+                    )}
+                    {uncertainLines.includes(i) && (
+                      <span className="w-1 h-full rounded-sm bg-blue-500" title="Uncertain — candidates disagree" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Editable text */}
+              <textarea
+                ref={textareaRef}
+                value={editedTexts[currentPage] ?? ''}
+                onChange={e => updateText(currentPage, e.target.value)}
+                onScroll={syncScroll}
+                className="flex-1 h-full p-3 bg-background border border-border rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                style={{ lineHeight: `${lineHeight}px` }}
+                placeholder="OCR text will appear here..."
+              />
             </div>
-            {/* Editable text */}
-            <textarea
-              ref={textareaRef}
-              value={editedTexts[currentPage] ?? ''}
-              onChange={e => updateText(currentPage, e.target.value)}
-              onScroll={syncScroll}
-              className="flex-1 h-full p-3 bg-background border border-border rounded font-mono text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ lineHeight: `${lineHeight}px` }}
-              placeholder="OCR text will appear here..."
-            />
           </div>
           {lowConfidenceCount > 0 && (
-            <p className="text-xs text-amber-500 mt-2">
+            <p className="flex-shrink-0 text-xs text-amber-500 mt-2">
               {lowConfidenceCount} low-confidence region(s) detected — review text carefully
             </p>
           )}
