@@ -25,8 +25,8 @@ func TestRenderPageToPNG_WritesFile(t *testing.T) {
 	img, err := png.Decode(f)
 	require.NoError(t, err)
 	bounds := img.Bounds()
-	assert.Equal(t, remarkableScreenWidth, bounds.Max.X)
-	assert.Equal(t, remarkableScreenHeight, bounds.Max.Y)
+	assert.Equal(t, remarkableScreenWidth*renderScale, bounds.Max.X)
+	assert.Equal(t, remarkableScreenHeight*renderScale, bounds.Max.Y)
 }
 
 func TestRenderPageToPNG_InvalidRM(t *testing.T) {

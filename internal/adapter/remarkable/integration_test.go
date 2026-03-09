@@ -35,18 +35,19 @@ func TestRenderPageToPNG_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	bounds := img.Bounds()
-	assert.Equal(t, remarkableScreenWidth, bounds.Max.X)
-	assert.Equal(t, remarkableScreenHeight, bounds.Max.Y)
+	assert.Equal(t, remarkableScreenWidth*renderScale, bounds.Max.X)
+	assert.Equal(t, remarkableScreenHeight*renderScale, bounds.Max.Y)
 
-	// After +702 offset: horizontal stroke from pixel 202 to 502
-	assert.True(t, hasNonWhitePixels(img, 202, 95, 502, 105),
+	s := renderScale
+	// After +702 offset: horizontal stroke from pixel 202 to 502, scaled
+	assert.True(t, hasNonWhitePixels(img, 202*s, 95*s, 502*s, 105*s),
 		"expected black pixels along horizontal stroke")
 
-	// After +702 offset: vertical stroke at pixel 502
-	assert.True(t, hasNonWhitePixels(img, 497, 100, 507, 300),
+	// After +702 offset: vertical stroke at pixel 502, scaled
+	assert.True(t, hasNonWhitePixels(img, 497*s, 100*s, 507*s, 300*s),
 		"expected black pixels along vertical stroke")
 
-	assert.False(t, hasNonWhitePixels(img, 0, 700, 100, 800),
+	assert.False(t, hasNonWhitePixels(img, 0, 700*s, 100*s, 800*s),
 		"expected no strokes in empty region")
 }
 
@@ -68,14 +69,15 @@ func TestRenderPageToPNG_MultipleStrokes(t *testing.T) {
 	img, err := png.Decode(f)
 	require.NoError(t, err)
 
-	// After +702 offset: stroke1 at pixels 102-402, stroke2 at pixels 102-402
-	assert.True(t, hasNonWhitePixels(img, 102, 45, 402, 55),
+	s := renderScale
+	// After +702 offset: stroke1 at pixels 102-402, stroke2 at pixels 102-402, scaled
+	assert.True(t, hasNonWhitePixels(img, 102*s, 45*s, 402*s, 55*s),
 		"expected pixels along first stroke")
 
-	assert.True(t, hasNonWhitePixels(img, 102, 495, 402, 505),
+	assert.True(t, hasNonWhitePixels(img, 102*s, 495*s, 402*s, 505*s),
 		"expected pixels along second stroke")
 
-	assert.False(t, hasNonWhitePixels(img, 102, 250, 402, 260),
+	assert.False(t, hasNonWhitePixels(img, 102*s, 250*s, 402*s, 260*s),
 		"expected no strokes between the two lines")
 }
 
@@ -117,9 +119,9 @@ func TestRenderAndDecodeRoundTrip(t *testing.T) {
 	img, err := png.Decode(bytes.NewReader(data))
 	require.NoError(t, err)
 
-	// Far from any strokes (pixel 702+350=1052, Y=300)
+	// Far from any strokes (pixel (702+350)*scale, Y=300*scale)
 	white := color.RGBA{255, 255, 255, 255}
-	farAway := img.At(1052, 300)
+	farAway := img.At(1052*renderScale, 300*renderScale)
 	fr, fg, fb, _ := farAway.RGBA()
 	wr, wg, wb, _ := white.RGBA()
 	assert.Equal(t, wr, fr, "expected white far from strokes (R)")

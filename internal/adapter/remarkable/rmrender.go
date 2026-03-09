@@ -9,6 +9,7 @@ import (
 )
 
 const remarkableScreenHeight = 1872
+const renderScale = 2
 
 func detectXOffset(strokes []rmStroke) float64 {
 	halfWidth := float64(remarkableScreenWidth) / 2
@@ -55,17 +56,37 @@ func detectYOffset(strokes []rmStroke) float64 {
 	return 0
 }
 
+func computeCanvasSize(strokes []rmStroke, xOffset, yOffset float64) (int, int) {
+	w := remarkableScreenWidth
+	h := remarkableScreenHeight
+	for _, s := range strokes {
+		for _, p := range s.Points {
+			px := int(float64(p.X)+xOffset) + 1
+			py := int(float64(p.Y)+yOffset) + 1
+			if px > w {
+				w = px
+			}
+			if py > h {
+				h = py
+			}
+		}
+	}
+	return w, h
+}
+
 func RenderStrokes(strokes []rmStroke) ([]byte, error) {
 	xOffset := detectXOffset(strokes)
 	yOffset := detectYOffset(strokes)
 
-	dc := gg.NewContext(remarkableScreenWidth, remarkableScreenHeight)
+	canvasW, canvasH := computeCanvasSize(strokes, xOffset, yOffset)
+	dc := gg.NewContext(canvasW*renderScale, canvasH*renderScale)
+	dc.Scale(renderScale, renderScale)
 
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
 
 	dc.SetRGB(0, 0, 0)
-	dc.SetLineWidth(1)
+	dc.SetLineWidth(2 * renderScale)
 
 	for _, stroke := range strokes {
 		if len(stroke.Points) < 2 {
