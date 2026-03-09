@@ -36,7 +36,29 @@ func detectXOffset(strokes []rmStroke) float64 {
 	return 0
 }
 
+func detectYOffset(strokes []rmStroke) float64 {
+	if len(strokes) == 0 {
+		return 0
+	}
+	minY := math.MaxFloat64
+	for _, s := range strokes {
+		for _, p := range s.Points {
+			y := float64(p.Y)
+			if y < minY {
+				minY = y
+			}
+		}
+	}
+	if minY < 0 {
+		return -minY
+	}
+	return 0
+}
+
 func RenderStrokes(strokes []rmStroke) ([]byte, error) {
+	xOffset := detectXOffset(strokes)
+	yOffset := detectYOffset(strokes)
+
 	dc := gg.NewContext(remarkableScreenWidth, remarkableScreenHeight)
 
 	dc.SetRGB(1, 1, 1)
@@ -45,15 +67,13 @@ func RenderStrokes(strokes []rmStroke) ([]byte, error) {
 	dc.SetRGB(0, 0, 0)
 	dc.SetLineWidth(1)
 
-	xOffset := detectXOffset(strokes)
-
 	for _, stroke := range strokes {
 		if len(stroke.Points) < 2 {
 			continue
 		}
-		dc.MoveTo(float64(stroke.Points[0].X)+xOffset, float64(stroke.Points[0].Y))
+		dc.MoveTo(float64(stroke.Points[0].X)+xOffset, float64(stroke.Points[0].Y)+yOffset)
 		for _, p := range stroke.Points[1:] {
-			dc.LineTo(float64(p.X)+xOffset, float64(p.Y))
+			dc.LineTo(float64(p.X)+xOffset, float64(p.Y)+yOffset)
 		}
 		dc.Stroke()
 	}
