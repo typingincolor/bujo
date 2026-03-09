@@ -23,3 +23,24 @@ func TestIsCommonWord_CaseInsensitive(t *testing.T) {
 	assert.True(t, isCommonWord("Test"))
 	assert.True(t, isCommonWord("MILK"))
 }
+
+func TestHasUnknownWords_AllKnown(t *testing.T) {
+	assert.False(t, hasUnknownWords("- can we hook into existing channels?"))
+}
+
+func TestHasUnknownWords_GarbledWord(t *testing.T) {
+	assert.True(t, hasUnknownWords("- did Stephen I cecil prensentation change anything?"))
+}
+
+func TestHasUnknownWords_SkipsProperNouns(t *testing.T) {
+	assert.False(t, hasUnknownWords("- @Emma is going to help"))
+}
+
+func TestHasUnknownWords_SkipsShortWords(t *testing.T) {
+	assert.False(t, hasUnknownWords("- Al is ok"))
+}
+
+func TestHasUnknownWords_FlagsMisspelledCommonWords(t *testing.T) {
+	assert.True(t, hasUnknownWords("- Benck is going to get us a slot"))
+	assert.True(t, hasUnknownWords("- Getty survey going out next week"))
+}

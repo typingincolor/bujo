@@ -2,6 +2,7 @@ package remarkable
 
 import (
 	_ "embed"
+	"regexp"
 	"strings"
 )
 
@@ -23,4 +24,26 @@ func init() {
 
 func isCommonWord(word string) bool {
 	return commonWords[strings.ToLower(word)]
+}
+
+var wordPattern = regexp.MustCompile(`[a-zA-Z]+`)
+
+func hasUnknownWords(text string) bool {
+	stripped := stripBujoPrefix(text)
+	tokens := strings.Fields(stripped)
+	for _, token := range tokens {
+		if strings.HasPrefix(token, "@") {
+			continue
+		}
+		words := wordPattern.FindAllString(token, -1)
+		for _, w := range words {
+			if len(w) <= 2 {
+				continue
+			}
+			if !isCommonWord(w) {
+				return true
+			}
+		}
+	}
+	return false
 }

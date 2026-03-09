@@ -324,6 +324,26 @@ func TestReconstructText_NoUncertaintyWhenPrimaryIsCommonButAlternativeIsGarbled
 	assert.Empty(t, result.UncertainLines)
 }
 
+func TestReconstructText_UncertainWhenLineHasUnknownWords(t *testing.T) {
+	results := []OCRResult{
+		{Text: "- Benck is going to get us a slot", X: 50, Y: 100, Width: 300, Height: 30, Confidence: 1.0},
+		{Text: "- can we hook into existing channels?", X: 50, Y: 200, Width: 300, Height: 30, Confidence: 1.0},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, []int{0}, result.UncertainLines)
+}
+
+func TestReconstructText_NotUncertainWhenAllWordsKnown(t *testing.T) {
+	results := []OCRResult{
+		{Text: "- can we hook into existing channels?", X: 50, Y: 100, Width: 300, Height: 30, Confidence: 1.0},
+		{Text: "- meeting with the team", X: 50, Y: 200, Width: 300, Height: 30, Confidence: 1.0},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Empty(t, result.UncertainLines)
+}
+
 func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {
 	results := []OCRResult{
 		{Text: ". a", X: 50, Y: 100, Width: 200, Height: 30, Confidence: 0.9},
