@@ -45,13 +45,13 @@ func writeOCRCustomWordsFile() (string, func(), error) {
 	}
 	words := strings.Join(OCRCustomWords(), "\n")
 	if _, err := f.WriteString(words); err != nil {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 		return "", nil, err
 	}
-	f.Close()
+	_ = f.Close()
 	path := f.Name()
-	return path, func() { os.Remove(path) }, nil
+	return path, func() { _ = os.Remove(path) }, nil
 }
 
 func ParseOCRResults(data []byte) ([]OCRResult, error) {
