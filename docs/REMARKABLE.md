@@ -20,6 +20,7 @@ This document describes the current reMarkable integration in bujo based on code
 - `.rm` parser/renderer: `internal/adapter/remarkable/rmparse.go`, `rmrender.go`, `render.go`
 - OCR runner: `internal/adapter/remarkable/ocr.go`
 - Text reconstruction/normalization: `internal/adapter/remarkable/reconstruct.go`, `normalize.go`
+- Dictionary for uncertainty detection: `internal/adapter/remarkable/dictionary.go`, `words.txt`
 - Wails backend methods: `internal/adapter/wails/app.go`
 - Desktop UI: `frontend/src/components/bujo/RemarkableView.tsx`, `OCRReviewPanel.tsx`
 - Frontend helpers: `frontend/src/components/bujo/remarkableUtils.ts`
@@ -50,6 +51,10 @@ Pages created natively on reMarkable v6 firmware use centered coordinates where 
 
 Pages migrated from older firmware versions use absolute coordinates where X ranges from approximately **0 to 1404**. The origin is at the top-left corner.
 
+### Negative Y Coordinates
+
+Some notebooks (e.g., Quick Sheets) have strokes with negative Y coordinates (observed range: -210 to 1529). The renderer applies a Y offset via `detectYOffset()` to shift all strokes into the visible canvas when the minimum Y is below 0.
+
 ### Auto-Detection
 
 The renderer (`rmrender.go`) auto-detects which coordinate system a page uses by examining the center of the X range across all strokes:
@@ -57,7 +62,7 @@ The renderer (`rmrender.go`) auto-detects which coordinate system a page uses by
 - If the center of X values is closer to 0 → **centered** coordinates → apply +702 pixel offset
 - If the center of X values is closer to 702 → **absolute** coordinates → no offset applied
 
-This happens per-page via `detectXOffset()`, so a single notebook can contain pages with different coordinate systems.
+This happens per-page via `detectXOffset()`, so a single notebook can contain pages with different coordinate systems. Similarly, `detectYOffset()` runs per-page to handle negative Y values.
 
 ### Screen Dimensions
 
@@ -66,12 +71,28 @@ This happens per-page via `detectXOffset()`, so a single notebook can contain pa
 
 ## Text Reconstruction
 
-The `ReconstructText` function (`reconstruct.go`) converts OCR results into structured text:
+The `ReconstructTextWithConfidence` function (`reconstruct.go`) converts OCR results into structured text with quality metadata:
 
 - OCR results are sorted by Y position (top to bottom)
+- Fragments on the same line (vertically overlapping) are merged into a single line
 - Indentation depth is calculated from X position relative to the leftmost text
-- Depth normalization prevents jumps greater than 1 level
+- Depth normalization prevents jumps greater than 1 level; depth resets when returning to root X position
 - **Lines without a recognized bujo symbol prefix automatically get `- ` prepended** (note type), ensuring every line has a valid entry type for the parser
+
+### OCR Candidate Selection
+
+Apple Vision's `topCandidates(5)` returns multiple text alternatives, often all with confidence 1.0. The reconstruction pipeline uses these candidates in two ways:
+
+1. **Auto-correction** (`selectBestText`): Prefers candidates that have a recognized bujo prefix (`. `, `- `, `o `, etc.) over unprefixed alternatives. This corrects cases where OCR misreads the bullet symbol.
+
+2. **Uncertainty detection** (`hasCandidateDisagreement`): Compares content words across candidates to flag lines where OCR may have misread text. Uses an embedded 10K English word dictionary (`words.txt`, loaded via `go:embed`). The logic flags a line as uncertain when: `!isCommonWord(primary) || isCommonWord(alternative)` — i.e., flag UNLESS the primary word is a known dictionary word AND the alternative is not.
+
+### Quality Metadata
+
+`ReconstructResult` includes:
+- `LowConfidenceLines`: Line indices where OCR confidence is below `DefaultConfidenceThreshold` (0.8)
+- `UncertainLines`: Line indices where candidates meaningfully disagree (different words, not just spacing/case/truncation variants)
+- Multi-fragment merged lines skip uncertainty analysis since per-fragment candidates don't map to the merged text
 
 ### Recognized Bujo Symbols
 
@@ -117,7 +138,7 @@ The `TreeParser` (`internal/domain/parser.go`) handles OCR output gracefully:
 - File manager supports folders/breadcrumbs and document sorting.
 - Notebooks and PDFs are currently treated as importable in UI.
 - Review panel shows page image, editable OCR text, and low-confidence count warning.
-- Review panel includes a confidence gutter with amber dots beside lines where OCR confidence is below threshold.
+- Review panel includes a confidence gutter with colored bars: amber for low-confidence lines, blue for uncertain lines (candidate disagreement).
 
 ## CLI Testing Guide
 
@@ -185,6 +206,7 @@ go test -v ./internal/adapter/remarkable/...
 go test -v -run TestRenderStrokes ./internal/adapter/remarkable/...
 go test -v -run TestReconstructText ./internal/adapter/remarkable/...
 go test -v -run TestDetectXOffset ./internal/adapter/remarkable/...
+go test -v -run TestDetectYOffset ./internal/adapter/remarkable/...
 
 # Parser tests (domain layer)
 go test -v -run TestTreeParser ./internal/domain/...

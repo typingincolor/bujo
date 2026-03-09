@@ -103,6 +103,60 @@ func TestRenderStrokes_WhiteBackground(t *testing.T) {
 	assert.Equal(t, uint32(0xFFFF), a)
 }
 
+func TestDetectYOffset_NegativeCoordinates(t *testing.T) {
+	strokes := []rmStroke{
+		{Points: []rmPoint{{X: 100, Y: -210}, {X: 300, Y: 500}}},
+	}
+	offset := detectYOffset(strokes)
+	assert.Equal(t, float64(210), offset)
+}
+
+func TestDetectYOffset_PositiveCoordinates(t *testing.T) {
+	strokes := []rmStroke{
+		{Points: []rmPoint{{X: 100, Y: 50}, {X: 300, Y: 500}}},
+	}
+	offset := detectYOffset(strokes)
+	assert.Equal(t, float64(0), offset)
+}
+
+func TestDetectYOffset_EmptyStrokes(t *testing.T) {
+	offset := detectYOffset(nil)
+	assert.Equal(t, float64(0), offset)
+}
+
+func TestRenderStrokes_NegativeYCoordinates(t *testing.T) {
+	// Quick Sheets notebook has Y range from -210 to 1529
+	// Strokes with negative Y should still be visible in the rendered image
+	// Use wide X range so detectXOffset returns 0 (absolute coordinates)
+	strokes := []rmStroke{
+		{Points: []rmPoint{{X: 100, Y: -100}, {X: 1300, Y: -100}}},
+		{Points: []rmPoint{{X: 100, Y: 500}, {X: 1300, Y: 500}}},
+	}
+
+	data, err := RenderStrokes(strokes)
+	require.NoError(t, err)
+
+	img, err := png.Decode(bytes.NewReader(data))
+	require.NoError(t, err)
+
+	// Y=-100 with yOffset=100 → renders at pixel Y=0
+	// Check that there are dark pixels in the top portion (first 10 rows)
+	foundDark := false
+	for y := 0; y < 10; y++ {
+		for x := 100; x < 1300; x++ {
+			r, _, _, _ := img.At(x, y).RGBA()
+			if r < 0x8000 {
+				foundDark = true
+				break
+			}
+		}
+		if foundDark {
+			break
+		}
+	}
+	assert.True(t, foundDark, "stroke at negative Y should be visible in rendered image")
+}
+
 func TestRenderStrokes_AbsoluteCoordinates(t *testing.T) {
 	// Migrated pages have absolute coordinates spanning ~0 to ~1404
 	// Center of X range (~700) is close to 702 → no offset applied
