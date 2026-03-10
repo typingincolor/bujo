@@ -24,6 +24,7 @@ const makePage = (overrides: Partial<wails.ImportedPage> = {}): wails.ImportedPa
   lowConfidenceCount: 1,
   lowConfidenceLines: [1],
   uncertainLines: [],
+  concatenatedLines: [],
   error: '',
   ...overrides,
 } as wails.ImportedPage)
@@ -98,6 +99,20 @@ describe('OCRReviewPanel', () => {
     const blueBars = container.querySelectorAll('.bg-blue-500')
     expect(amberBars).toHaveLength(1)
     expect(blueBars).toHaveLength(1)
+  })
+
+  it('renders green bars for concatenated lines', () => {
+    const { container } = render(
+      <OCRReviewPanel
+        pages={[makePage({ concatenatedLines: [0], lowConfidenceLines: [], lowConfidenceCount: 0 })]}
+        documentName="Test"
+        onDone={() => {}}
+        onBack={() => {}}
+      />
+    )
+    const bars = container.querySelectorAll('.bg-green-500')
+    expect(bars).toHaveLength(1)
+    expect(bars[0].getAttribute('title')).toBe('Lines concatenated')
   })
 
   it('renders confidence warning as a sibling below the scrollable editor, not inside it', () => {

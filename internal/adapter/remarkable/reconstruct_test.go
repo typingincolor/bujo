@@ -64,7 +64,7 @@ func TestReconstructTextWithConfidence_CountsLowConfidence(t *testing.T) {
 	assert.Equal(t, 2, result.LowConfidenceCount)
 }
 
-func TestReconstructText_PrependsNoteSymbolToUnprefixedLines(t *testing.T) {
+func TestReconstructText_ConcatenatesUnprefixedLinesToAbove(t *testing.T) {
 	results := []OCRResult{
 		{Text: "Responsible for observability", X: 50, Y: 100, Width: 300, Height: 30},
 		{Text: ". buy milk", X: 50, Y: 140, Width: 200, Height: 30},
@@ -73,10 +73,10 @@ func TestReconstructText_PrependsNoteSymbolToUnprefixedLines(t *testing.T) {
 	}
 
 	text := ReconstructText(results)
-	assert.Equal(t, "- Responsible for observability\n. buy milk\n- streams platform\n  - = US", text)
+	assert.Equal(t, "- Responsible for observability\n. buy milk streams platform = US", text)
 }
 
-func TestReconstructText_WordsStartingWithSymbolChars(t *testing.T) {
+func TestReconstructText_ConcatenatesAllUnprefixedLines(t *testing.T) {
 	results := []OCRResult{
 		{Text: "adoption is Key", X: 50, Y: 100, Width: 300, Height: 30},
 		{Text: "over budget", X: 50, Y: 140, Width: 200, Height: 30},
@@ -84,7 +84,7 @@ func TestReconstructText_WordsStartingWithSymbolChars(t *testing.T) {
 	}
 
 	text := ReconstructText(results)
-	assert.Equal(t, "- adoption is Key\n- over budget\n- x-ray results", text)
+	assert.Equal(t, "- adoption is Key over budget x-ray results", text)
 }
 
 func TestReconstructTextWithConfidence_ReportsLowConfidenceLines(t *testing.T) {
@@ -342,6 +342,38 @@ func TestReconstructText_NotUncertainWhenAllWordsKnown(t *testing.T) {
 
 	result := ReconstructTextWithConfidence(results, 0.8)
 	assert.Empty(t, result.UncertainLines)
+}
+
+func TestReconstructText_ConcatenatesUnprefixedLineToAbove(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". buy milk", X: 50, Y: 100, Width: 200, Height: 30},
+		{Text: "and eggs", X: 50, Y: 140, Width: 200, Height: 30},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, ". buy milk and eggs", result.Text)
+	assert.Equal(t, []int{0}, result.ConcatenatedLines)
+}
+
+func TestReconstructText_FirstUnprefixedLineGetsDashPrefix(t *testing.T) {
+	results := []OCRResult{
+		{Text: "just a note", X: 50, Y: 100, Width: 200, Height: 30},
+	}
+
+	text := ReconstructText(results)
+	assert.Equal(t, "- just a note", text)
+}
+
+func TestReconstructText_ConcatenatedLineNotDuplicated(t *testing.T) {
+	results := []OCRResult{
+		{Text: ". task one", X: 50, Y: 100, Width: 200, Height: 30},
+		{Text: "continued here", X: 50, Y: 140, Width: 200, Height: 30},
+		{Text: ". task two", X: 50, Y: 200, Width: 200, Height: 30},
+	}
+
+	result := ReconstructTextWithConfidence(results, 0.8)
+	assert.Equal(t, ". task one continued here\n. task two", result.Text)
+	assert.Equal(t, []int{0}, result.ConcatenatedLines)
 }
 
 func TestReconstructTextWithConfidence_DepthResetsOnRoot(t *testing.T) {

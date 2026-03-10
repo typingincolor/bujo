@@ -18,6 +18,7 @@ type ReconstructResult struct {
 	LowConfidenceCount int
 	LowConfidenceLines []int
 	UncertainLines     []int
+	ConcatenatedLines  []int
 }
 
 type mergedLine struct {
@@ -48,9 +49,10 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 	var lowConfidenceCount int
 	lowConfidenceLines := []int{}
 	uncertainLines := []int{}
+	concatenatedLines := []int{}
 	var maxDepth int
 
-	for i, m := range merged {
+	for _, m := range merged {
 		depth := int(math.Round((m.minX - minX) / defaultIndentWidth))
 		if depth > maxDepth+1 {
 			depth = maxDepth + 1
@@ -69,20 +71,24 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 			text = joinFragments(m.fragments)
 		}
 		if !hasBujoPrefix(text) {
+			if len(lines) > 0 {
+				lines[len(lines)-1] += " " + text
+				concatenatedLines = append(concatenatedLines, len(lines)-1)
+				continue
+			}
 			text = "- " + text
 		}
 		lines = append(lines, indent+text)
 
+		lineIdx := len(lines) - 1
 		if m.confidence < threshold {
 			lowConfidenceCount++
-			lowConfidenceLines = append(lowConfidenceLines, i)
+			lowConfidenceLines = append(lowConfidenceLines, lineIdx)
 		}
-		// Multi-fragment lines skip candidate uncertainty: fragments are separate OCR observations
-		// joined by position, so per-fragment candidates don't map to the merged text.
 		if len(m.fragments) == 1 && hasCandidateDisagreement(m.fragments[0]) {
-			uncertainLines = append(uncertainLines, i)
+			uncertainLines = append(uncertainLines, lineIdx)
 		} else if hasUnknownWords(text) {
-			uncertainLines = append(uncertainLines, i)
+			uncertainLines = append(uncertainLines, lineIdx)
 		}
 	}
 
@@ -91,6 +97,7 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 		LowConfidenceCount: lowConfidenceCount,
 		LowConfidenceLines: lowConfidenceLines,
 		UncertainLines:     uncertainLines,
+		ConcatenatedLines:  concatenatedLines,
 	}
 }
 

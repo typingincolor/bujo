@@ -25,6 +25,7 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
   const lowConfidenceCount = page?.lowConfidenceCount ?? 0
   const lowConfidenceLines = page?.lowConfidenceLines ?? []
   const uncertainLines = page?.uncertainLines ?? []
+  const concatenatedLines = page?.concatenatedLines ?? []
 
   function syncScroll() {
     if (textareaRef.current && gutterRef.current) {
@@ -150,6 +151,9 @@ export function OCRReviewPanel({ pages, documentName, onDone, onBack }: OCRRevie
                     )}
                     {uncertainLines.includes(i) && (
                       <span className="w-1 h-full rounded-sm bg-blue-500" title="Uncertain — candidates disagree" />
+                    )}
+                    {concatenatedLines.includes(i) && (
+                      <span className="w-1 h-full rounded-sm bg-green-500" title="Lines concatenated" />
                     )}
                   </div>
                 ))}
