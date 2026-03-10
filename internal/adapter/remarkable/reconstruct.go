@@ -11,6 +11,7 @@ const (
 	defaultIndentWidth         = 50.0
 	DefaultConfidenceThreshold = 0.8
 	lineOverlapThreshold       = 0.5
+	zeroNormConfidenceMax      = 0.75
 )
 
 type ReconstructResult struct {
@@ -51,8 +52,10 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 	uncertainLines := []int{}
 	concatenatedLines := []int{}
 	var maxDepth int
+	var prevLine *mergedLine
 
-	for _, m := range merged {
+	for i := range merged {
+		m := &merged[i]
 		depth := int(math.Round((m.minX - minX) / defaultIndentWidth))
 		if depth > maxDepth+1 {
 			depth = maxDepth + 1
@@ -71,7 +74,7 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 			text = joinFragments(m.fragments)
 		}
 		if !hasBujoPrefix(text) {
-			if len(lines) > 0 {
+			if len(lines) > 0 && isNearbyConcatenation(prevLine, m) {
 				lines[len(lines)-1] += " " + text
 				concatenatedLines = append(concatenatedLines, len(lines)-1)
 				continue
@@ -79,6 +82,7 @@ func ReconstructTextWithConfidence(results []OCRResult, threshold float32) Recon
 			text = "- " + text
 		}
 		lines = append(lines, indent+text)
+		prevLine = m
 
 		lineIdx := len(lines) - 1
 		if m.confidence < threshold {
@@ -142,6 +146,29 @@ func mergeLines(results []OCRResult) []mergedLine {
 	return merged
 }
 
+func lineYExtent(m *mergedLine) (top, bottom float64) {
+	top = math.MaxFloat64
+	bottom = -math.MaxFloat64
+	for _, f := range m.fragments {
+		if f.Y < top {
+			top = f.Y
+		}
+		if f.Y+f.Height > bottom {
+			bottom = f.Y + f.Height
+		}
+	}
+	return top, bottom
+}
+
+func isNearbyConcatenation(prev, curr *mergedLine) bool {
+	if prev == nil {
+		return false
+	}
+	_, prevBottom := lineYExtent(prev)
+	currTop, _ := lineYExtent(curr)
+	return currTop < prevBottom
+}
+
 func overlapsVertically(a, b OCRResult) bool {
 	aTop := a.Y
 	aBottom := a.Y + a.Height
@@ -161,8 +188,12 @@ func overlapsVertically(a, b OCRResult) bool {
 
 func joinFragments(fragments []OCRResult) string {
 	var parts []string
-	for _, f := range fragments {
-		parts = append(parts, f.Text)
+	for i, f := range fragments {
+		text := f.Text
+		if i == 0 && text == "0" && f.Confidence < zeroNormConfidenceMax {
+			text = "o"
+		}
+		parts = append(parts, text)
 	}
 	return strings.Join(parts, " ")
 }

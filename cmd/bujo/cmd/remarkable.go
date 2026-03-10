@@ -96,6 +96,7 @@ var remarkableImportCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		docID := args[0]
+		providerName, _ := cmd.Flags().GetString("provider")
 
 		configPath, err := remarkable.DefaultConfigPath()
 		if err != nil {
@@ -106,16 +107,17 @@ var remarkableImportCmd = &cobra.Command{
 			return fmt.Errorf("not registered — run 'bujo remarkable register <code>' first: %w", err)
 		}
 
-		ocrTool := findOCRTool()
-		if ocrTool == "" {
-			return fmt.Errorf("OCR tool not found — build with: make ocr")
+		provider, err := newOCRProvider(providerName)
+		if err != nil {
+			return err
 		}
 
 		client := remarkable.NewClient(remarkable.DefaultAuthHost)
 		client.SetSyncHost(remarkable.DefaultSyncHost)
 
+		ctx := context.Background()
 		fmt.Fprintf(os.Stderr, "Downloading pages for %s...\n", docID)
-		pages, err := client.DownloadPages(context.Background(), cfg.DeviceToken, docID)
+		pages, err := client.DownloadPages(ctx, cfg.DeviceToken, docID)
 		if err != nil {
 			return fmt.Errorf("failed to download pages: %w", err)
 		}
@@ -137,8 +139,8 @@ var remarkableImportCmd = &cobra.Command{
 				continue
 			}
 
-			fmt.Fprintf(os.Stderr, "OCR page %d/%d...\n", i+1, len(pages))
-			results, err := remarkable.RunOCR(ocrTool, pngPath)
+			fmt.Fprintf(os.Stderr, "OCR page %d/%d (provider: %s)...\n", i+1, len(pages), providerName)
+			results, err := provider.RecognizeText(ctx, pngPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: OCR failed for page %s: %v\n", page.PageID, err)
 				continue
@@ -265,16 +267,32 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+func newOCRProvider(providerName string) (remarkable.OCRProvider, error) {
+	switch providerName {
+	case "apple":
+		ocrTool := findOCRTool()
+		if ocrTool == "" {
+			return nil, fmt.Errorf("OCR tool not found — build with: make ocr")
+		}
+		return &remarkable.AppleVisionOCR{ToolPath: ocrTool}, nil
+	case "google":
+		return &remarkable.GoogleVisionOCR{}, nil
+	default:
+		return nil, fmt.Errorf("unknown OCR provider: %s (supported: apple, google)", providerName)
+	}
+}
+
 var remarkableOcrCmd = &cobra.Command{
 	Use:   "ocr <png-path-or-dir>",
-	Short: "Run Apple Vision OCR on PNG(s), output text with bounding boxes",
+	Short: "Run OCR on PNG(s), output text with bounding boxes",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := args[0]
+		providerName, _ := cmd.Flags().GetString("provider")
 
-		ocrTool := findOCRTool()
-		if ocrTool == "" {
-			return fmt.Errorf("OCR tool not found — build with: make ocr")
+		provider, err := newOCRProvider(providerName)
+		if err != nil {
+			return err
 		}
 
 		info, err := os.Stat(target)
@@ -297,9 +315,10 @@ var remarkableOcrCmd = &cobra.Command{
 			pngFiles = []string{target}
 		}
 
+		ctx := context.Background()
 		for i, png := range pngFiles {
-			fmt.Fprintf(os.Stderr, "OCR page %d/%d: %s\n", i+1, len(pngFiles), filepath.Base(png))
-			results, err := remarkable.RunOCR(ocrTool, png)
+			fmt.Fprintf(os.Stderr, "OCR page %d/%d: %s (provider: %s)\n", i+1, len(pngFiles), filepath.Base(png), providerName)
+			results, err := provider.RecognizeText(ctx, png)
 			if err != nil {
 				return fmt.Errorf("OCR failed on %s: %w", png, err)
 			}
@@ -313,6 +332,8 @@ var remarkableOcrCmd = &cobra.Command{
 
 func init() {
 	remarkableRenderCmd.Flags().String("out-dir", "", "Output directory for PNGs (default: temp dir)")
+	remarkableOcrCmd.Flags().String("provider", "apple", "OCR provider: apple, google")
+	remarkableImportCmd.Flags().String("provider", "apple", "OCR provider: apple, google")
 	remarkableCmd.AddCommand(remarkableRegisterCmd)
 	remarkableCmd.AddCommand(remarkableListCmd)
 	remarkableCmd.AddCommand(remarkableImportCmd)
