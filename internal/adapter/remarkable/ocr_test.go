@@ -90,6 +90,10 @@ func TestWriteOCRCustomWordsFile_CreatesFile(t *testing.T) {
 	assert.Contains(t, content, "Architecture")
 }
 
+func TestAppleVisionOCR_ImplementsOCRProvider(t *testing.T) {
+	var _ OCRProvider = &AppleVisionOCR{}
+}
+
 func TestParseOCRResults_WithoutCandidatesBackwardCompat(t *testing.T) {
 	jsonData := `[{"text": ". task", "x": 50.0, "y": 100.0, "width": 200.0, "height": 30.0, "confidence": 0.9}]`
 

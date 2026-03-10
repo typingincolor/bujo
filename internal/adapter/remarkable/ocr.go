@@ -1,6 +1,7 @@
 package remarkable
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,18 @@ type OCRResult struct {
 	Height     float64        `json:"height"`
 	Confidence float32        `json:"confidence"`
 	Candidates []OCRCandidate `json:"candidates,omitempty"`
+}
+
+type OCRProvider interface {
+	RecognizeText(ctx context.Context, imagePath string) ([]OCRResult, error)
+}
+
+type AppleVisionOCR struct {
+	ToolPath string
+}
+
+func (a *AppleVisionOCR) RecognizeText(ctx context.Context, imagePath string) ([]OCRResult, error) {
+	return RunOCR(a.ToolPath, imagePath)
 }
 
 //go:embed ocr_words.txt
