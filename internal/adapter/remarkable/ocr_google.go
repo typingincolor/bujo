@@ -17,7 +17,7 @@ func (g *GoogleVisionOCR) RecognizeText(ctx context.Context, imagePath string) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vision client: %w", err)
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	imgBytes, err := os.ReadFile(imagePath)
 	if err != nil {
