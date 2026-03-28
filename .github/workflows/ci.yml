@@ -68,7 +68,7 @@ jobs:
     name: Test Go (macOS)
     needs: [changes]
     if: needs.changes.outputs.go == 'true'
-    runs-on: [self-hosted, xcode26]
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -127,7 +127,7 @@ jobs:
   build-cli-macos:
     name: Build CLI (macOS)
     needs: [lint]
-    runs-on: [self-hosted, xcode26]
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -219,7 +219,7 @@ jobs:
     name: Build Desktop App (macOS)
     needs: [lint, frontend]
     if: github.event_name == 'push'
-    runs-on: [self-hosted, xcode26]
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
 
