@@ -82,7 +82,7 @@ jobs:
         run: go test -v -coverprofile=coverage.out ./cmd/... ./internal/...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           flags: backend
@@ -205,7 +205,7 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload frontend coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: frontend/coverage/lcov.info
