@@ -204,7 +204,7 @@ jobs:
           "$hash  bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip" | Out-File -Encoding ASCII "bujo-desktop-${BUILD_TAG}-${{ matrix.platform.artifact-name }}.zip.sha256"
 
       - name: Upload to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v0.0.0-nightly.${{ needs.check-changes.outputs.build_number }}
           files: |
