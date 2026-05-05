@@ -3,7 +3,7 @@ module github.com/typingincolor/bujo
 go 1.25.0
 
 require (
-	cloud.google.com/go/vision/v2 v2.12.0
+	cloud.google.com/go/vision/v2 v2.13.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834
