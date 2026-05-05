@@ -8,8 +8,8 @@ cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdB
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
 cloud.google.com/go/longrunning v0.9.0 h1:0EzbDEGsAvOZNbqXopgniY0w0a1phvu5IdUFq8grmqY=
 cloud.google.com/go/longrunning v0.9.0/go.mod h1:pkTz846W7bF4o2SzdWJ40Hu0Re+UoNT6Q5t+igIcb8E=
-cloud.google.com/go/vision/v2 v2.12.0 h1:GHCFhIlvpEX0IEwKCrIqS3KlOpxzINa3gucvdjoWBCE=
-cloud.google.com/go/vision/v2 v2.12.0/go.mod h1:ODlLCajJOq4t8thoi1uVvbnfIfix73HsYWhZuIveagQ=
+cloud.google.com/go/vision/v2 v2.13.0 h1:H+luz5OKzSWXPaR0ITZMPaJfqskMXmXCtRj9R9JzL9U=
+cloud.google.com/go/vision/v2 v2.13.0/go.mod h1:ODlLCajJOq4t8thoi1uVvbnfIfix73HsYWhZuIveagQ=
 git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 h1:N3IGoHHp9pb6mj1cbXbuaSXV/UMKwmbKLf53nQmtqMA=
 git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3/go.mod h1:QtOLZGz8olr4qH2vWK0QH0w0O4T9fEIjMuWpKUsH7nc=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
