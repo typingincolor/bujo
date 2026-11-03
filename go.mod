@@ -19,7 +19,7 @@ require (
 	github.com/tj/go-naturaldate v1.3.0
 	github.com/wailsapp/wails/v2 v2.17.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 )
 
 require (
